@@ -1,12 +1,6 @@
 {
   "permissions": {
-    "defaultMode": "default",
-    "ask": [
-      "Write",
-      "Edit",
-      "MultiEdit",
-      "Bash"
-    ]
+    "defaultMode": "default"
   },
   "hooks": {
     "PreToolUse": [
