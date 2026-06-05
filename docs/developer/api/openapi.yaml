@@ -1,0 +1,56 @@
+openapi: 3.0.3
+info:
+  title: <API 名>
+  version: 0.1.0
+  description: |
+    TODO: API の概要。方針は overview.md を参照。
+
+servers:
+  - url: https://api.example.com/v1
+    description: TODO 環境名
+
+tags:
+  - name: example
+    description: TODO
+
+paths:
+  /examples:
+    get:
+      tags: [example]
+      summary: 一覧取得
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Example"
+        "default":
+          description: エラー
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  schemas:
+    Example:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+      required: [id, name]
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string

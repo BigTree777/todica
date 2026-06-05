@@ -1,0 +1,8 @@
+# Issue テンプレートの設定。
+# blank_issues_enabled: false にすると、上記テンプレート以外の空 Issue 作成を禁止できる。
+blank_issues_enabled: true
+
+contact_links:
+  - name: 質問・相談
+    url: TODO_DISCUSSIONS_OR_CONTACT_URL
+    about: バグ報告・機能要望以外の質問はこちら。
