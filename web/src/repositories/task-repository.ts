@@ -237,10 +237,31 @@ export class HttpTaskRepository implements TaskRepository {
   /**
    * BL-003 / FR-006: タスク完了アクション.
    *
-   * 本メソッドは test-designer が追加したスタブ. 呼び出されると必ず throw する.
-   * 本実装は implementer が green 化する.
+   * POST /api/v1/tasks/{id}/complete に対応. 成功時は 200 OK で `{ task }` が返るため
+   * 更新後 Task を返す. 412 衝突時は OptimisticLockError を throw する.
    */
-  async complete(_cmd: CompleteTaskCommand): Promise<Task> {
-    throw new Error("HttpTaskRepository.complete: not implemented (BL-003 stub)");
+  async complete(cmd: CompleteTaskCommand): Promise<Task> {
+    const idemKey = uuidV4();
+
+    const res = await fetch(`${this.baseUrl}/api/v1/tasks/${cmd.id}/complete`, {
+      method: "POST",
+      headers: this.authHeaders({
+        "Idempotency-Key": idemKey,
+        "If-Match": String(cmd.ifMatch),
+      }),
+    });
+
+    if (res.status === 412) {
+      const errBody = (await res.json()) as { task?: Task };
+      throw new OptimisticLockError(
+        "optimistic lock conflict on complete",
+        errBody.task,
+      );
+    }
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: failed to complete task`);
+    }
+    const ok = (await res.json()) as { task: Task };
+    return ok.task;
   }
 }

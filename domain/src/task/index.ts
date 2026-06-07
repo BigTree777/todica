@@ -229,10 +229,17 @@ export function isTrashed(task: Task): boolean {
  * trashedReason = "completed" に書き換える. version +1, updatedAt 更新.
  * 既にゴミ箱状態 (trashedReason === "completed" / "deleted" のいずれでも) なら
  * no-op 冪等扱いで入力を変更せず返す (plan.md D-003).
- *
- * 本関数は test-designer が追加したシグネチャのみのスタブ. 本実装は implementer が
- * green 化する.
  */
-export function completeTask(_current: Task, _clock: Clock): Task {
-  throw new Error("completeTask: not implemented (BL-003 stub)");
+export function completeTask(current: Task, clock: Clock): Task {
+  if (current.trashedAt !== null) {
+    return { ...current };
+  }
+  const now = clock.now();
+  return {
+    ...current,
+    trashedAt: now,
+    trashedReason: "completed",
+    updatedAt: now,
+    version: current.version + 1,
+  };
 }

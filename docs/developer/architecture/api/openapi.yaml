@@ -144,12 +144,26 @@ paths:
       - $ref: "#/components/parameters/EntityId"
     post:
       tags: [tasks]
-      summary: タスク完了（FR-006）
+      summary: タスク完了（FR-006 / FR-060）
+      description: |
+        対象タスクを完了状態（`trashedAt != null`, `trashedReason = "completed"`）に遷移させる.
+        既にゴミ箱状態（`trashedReason` が `"completed"` / `"deleted"` のいずれか）の場合は
+        no-op 冪等扱いで 200 OK + 現行 task を返す（If-Match 検証もスキップする. BL-003 plan.md §D-003）.
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/IfMatch"
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [task]
+                properties:
+                  task:
+                    $ref: "#/components/schemas/Task"
+        "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
         "412": { $ref: "#/components/responses/PreconditionFailed" }

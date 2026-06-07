@@ -9,6 +9,7 @@ import { Hono } from "hono";
 import type { Context, MiddlewareHandler } from "hono";
 import type { Clock } from "@todica/domain/clock";
 import {
+  completeTask,
   createTask,
   trashTask,
   updateTask,
@@ -295,16 +296,46 @@ export function createApp(deps: AppDeps): Hono {
   });
 
   // ---------- POST /api/v1/tasks/:id/complete (BL-003 / FR-006 / FR-060) ----------
-  // test-designer が追加したスタブ. 本実装は implementer が green 化する.
-  // 501 を返すことで red を確実にする (どの分岐シナリオも green にならない).
+  // plan.md §処理フロー: findById → 既ゴミ箱なら no-op 200 (If-Match 検証スキップ, D-003)
+  //  → If-Match 検証 → version 比較 → completeTask → update → saveAndReturn.
   app.post("/api/v1/tasks/:id/complete", async (c) => {
-    return c.json(
-      {
-        code: "NOT_IMPLEMENTED",
-        message: "POST /api/v1/tasks/:id/complete is a BL-003 stub",
-      },
-      501 as 200 | 201 | 400 | 401 | 404 | 412 | 500,
-    );
+    const id = c.req.param("id");
+
+    const current = await deps.taskRepository.findById(id);
+    if (!current) {
+      return saveAndReturn(c, deps, 404, {
+        code: "TASK_NOT_FOUND",
+        message: "task not found",
+      });
+    }
+
+    // 既にゴミ箱状態 (completed / deleted いずれでも) → no-op 冪等で 200 OK + 現行 task.
+    // If-Match 検証はスキップ (plan.md D-003).
+    if (current.trashedAt !== null) {
+      return saveAndReturn(c, deps, 200, { task: current });
+    }
+
+    const ifMatchHeader = c.req.header("If-Match") ?? c.req.header("if-match");
+    if (!ifMatchHeader) {
+      return saveAndReturn(c, deps, 400, {
+        code: "MISSING_IF_MATCH",
+        message: "If-Match header is required",
+      });
+    }
+    const ifMatch = Number.parseInt(ifMatchHeader, 10);
+    if (!Number.isFinite(ifMatch)) {
+      return saveAndReturn(c, deps, 400, {
+        code: "MISSING_IF_MATCH",
+        message: "If-Match header must be a numeric version",
+      });
+    }
+    if (current.version !== ifMatch) {
+      return saveAndReturn(c, deps, 412, { task: current });
+    }
+
+    const completed = completeTask(current, deps.clock);
+    await deps.taskRepository.update(completed);
+    return saveAndReturn(c, deps, 200, { task: completed });
   });
 
   // ---------- DELETE /api/v1/tasks/:id ----------

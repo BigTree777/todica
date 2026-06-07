@@ -9,6 +9,13 @@ coverage/
 .tsbuildinfo
 *.tsbuildinfo
 
+# tsc が rootDir 経由でテストソース横に吐く成果物
+# (vitest は .ts を直接実行するため, 同梱されると古い JS / 型宣言が混入する)
+**/__tests__/**/*.js
+**/__tests__/**/*.d.ts
+**/__tests__/**/*.js.map
+**/__tests__/**/*.d.ts.map
+
 # 永続化機構（SQLite）/ ローカル DB
 *.db
 *.db-journal
