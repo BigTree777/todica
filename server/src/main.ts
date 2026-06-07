@@ -3,11 +3,13 @@
  *
  * - better-sqlite3 で SQLite ファイルを開く.
  * - drizzle-orm でラップし, Drizzle ベースの Repository を構築.
- * - Hono アプリを @hono/node-server で listen する.
+ * - 起動時に server/drizzle/*.sql のマイグレーションを `--> statement-breakpoint` で
+ *   split して `sqlite.exec()` で適用する (drizzle-orm の migrator は使わない).
+ * - Hono の `app` (fetch ハンドラ) を default export する. 実 listen
+ *   (`@hono/node-server` 等での `serve()` 呼び出し) は後続 feature で配線する.
  *
  * 環境変数:
  *   - DATABASE_PATH (default: ./todica.db)
- *   - PORT (default: 3000)
  *   - AUTH_TOKEN (必須: Bearer 認証用の固定トークン)
  */
 import { readFileSync, readdirSync, existsSync } from "node:fs";
