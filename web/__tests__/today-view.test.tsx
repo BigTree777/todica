@@ -1055,11 +1055,11 @@ describe("TodayView (BL-008 今日の完了数表示)", () => {
 
     // 「完了: 2」または「今日の完了: 2」などのラベル + 数値が DOM に存在する.
     // 文言・装飾は UI 実装の裁量とし, 「数値 2」と「完了を意味するラベル」が共存することだけを要求.
+    // leaf 要素 (children.length === 0) に絞って textContent のアンセスター伝播による多重マッチを回避.
     const completionCountText = await screen.findByText((_content, element) => {
-      const text = element?.textContent ?? "";
-      // 「完了」を含む要素のうち, 数値 "2" を含むものに合致.
-      // 「完了」ボタン (各タスク行) はラベルが「完了」だけで数値を含まないため除外される.
-      return /完了/.test(text) && /\b2\b/.test(text) && !/最優先|普通|後回し/.test(text);
+      if (!element || element.children.length > 0) return false;
+      const text = element.textContent ?? "";
+      return /完了/.test(text) && /\b2\b/.test(text);
     });
     expect(completionCountText).toBeInTheDocument();
   });
@@ -1085,8 +1085,9 @@ describe("TodayView (BL-008 今日の完了数表示)", () => {
     // 初期状態: 「完了: 0」相当が描画される.
     await screen.findByText("MILK");
     const before = await screen.findByText((_content, element) => {
-      const text = element?.textContent ?? "";
-      return /完了/.test(text) && /\b0\b/.test(text) && !/最優先|普通|後回し/.test(text);
+      if (!element || element.children.length > 0) return false;
+      const text = element.textContent ?? "";
+      return /完了/.test(text) && /\b0\b/.test(text);
     });
     expect(before).toBeInTheDocument();
 
@@ -1096,8 +1097,9 @@ describe("TodayView (BL-008 今日の完了数表示)", () => {
 
     // 再フェッチで todayMock の completionCount が 1 に増えて返るので, 画面表示も 1 に更新される.
     const after = await screen.findByText((_content, element) => {
-      const text = element?.textContent ?? "";
-      return /完了/.test(text) && /\b1\b/.test(text) && !/最優先|普通|後回し/.test(text);
+      if (!element || element.children.length > 0) return false;
+      const text = element.textContent ?? "";
+      return /完了/.test(text) && /\b1\b/.test(text);
     });
     expect(after).toBeInTheDocument();
   });
@@ -1129,15 +1131,17 @@ describe("TodayView (BL-008 今日の完了数表示)", () => {
     // 「完了: 2」相当の表示が存在しないことを確認する.
     expect(
       screen.queryByText((_c, element) => {
-        const text = element?.textContent ?? "";
-        return /完了/.test(text) && /\b2\b/.test(text) && !/最優先|普通|後回し/.test(text);
+        if (!element || element.children.length > 0) return false;
+        const text = element.textContent ?? "";
+        return /完了/.test(text) && /\b2\b/.test(text);
       }),
     ).toBeNull();
     // 「完了: 1」相当の表示は引き続き存在する.
     expect(
       screen.queryByText((_c, element) => {
-        const text = element?.textContent ?? "";
-        return /完了/.test(text) && /\b1\b/.test(text) && !/最優先|普通|後回し/.test(text);
+        if (!element || element.children.length > 0) return false;
+        const text = element.textContent ?? "";
+        return /完了/.test(text) && /\b1\b/.test(text);
       }),
     ).not.toBeNull();
   });
@@ -1168,15 +1172,17 @@ describe("TodayView (BL-008 今日の完了数表示)", () => {
     // 完了数は 1 のまま.
     expect(
       screen.queryByText((_c, element) => {
-        const text = element?.textContent ?? "";
-        return /完了/.test(text) && /\b1\b/.test(text) && !/最優先|普通|後回し/.test(text);
+        if (!element || element.children.length > 0) return false;
+        const text = element.textContent ?? "";
+        return /完了/.test(text) && /\b1\b/.test(text);
       }),
     ).not.toBeNull();
     // 2 になっていないことも確認.
     expect(
       screen.queryByText((_c, element) => {
-        const text = element?.textContent ?? "";
-        return /完了/.test(text) && /\b2\b/.test(text) && !/最優先|普通|後回し/.test(text);
+        if (!element || element.children.length > 0) return false;
+        const text = element.textContent ?? "";
+        return /完了/.test(text) && /\b2\b/.test(text);
       }),
     ).toBeNull();
   });
@@ -1202,7 +1208,8 @@ describe("TodayView (BL-008 今日の完了数表示)", () => {
 
     // 完了数表示が描画される.
     const completionLabel = await screen.findByText((_c, element) => {
-      const text = element?.textContent ?? "";
+      if (!element || element.children.length > 0) return false;
+      const text = element.textContent ?? "";
       return /完了/.test(text) && /\b5\b/.test(text);
     });
     expect(completionLabel).toBeInTheDocument();

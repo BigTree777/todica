@@ -21,7 +21,7 @@
 | BL-005 | 今日ビュー（入口・優先度順表示・"次の 1 つ" の一意化） | P0 | Done | FR-010, FR-011, NFR-013 / v0.1.0 / `features/today-view/` 完了. /api/v1/today 新設, 並び順 priority → createdAt → id |
 | BL-006 | 現在のタスク（フォーカス）と完了時の自動繰上げ | P0 | Done | FR-012, FR-013, NFR-011 / v0.1.0 / `features/focus-task/` 完了. GET/PUT /focus + /today に currentTaskId 同梱 + complete/delete/期限 tomorrow で自動解除 |
 | BL-007 | 今日 → 明日 への期限切替（今日ビュー導線） | P0 | Done | FR-005, FR-014 / v0.1.0 / BL-001 + BL-005 + BL-006 で完了. PATCH /tasks/{id} dueDate 受理 (BL-001), 「明日へ」「今日へ」トグルボタンと today 後の refetch (BL-005), today→tomorrow で focus 自動解除 (BL-006) |
-| BL-008 | 今日の完了タスク数カウントの表示 | P0 | Todo | FR-040 / v0.1.0 / `features/completion-counter/` 想定 |
+| BL-008 | 今日の完了タスク数カウントの表示 | P0 | Done | FR-040 / v0.1.0 / `features/completion-counter/` 完了. counter テーブル + GET /counter + complete で +1 + /today に completionCount 同梱 + UI 「今日の完了: N」表示 |
 | BL-009 | 境界時刻の設定（ユーザー設定値） | P0 | Todo | FR-041, FR-042, NFR-012 / v0.1.0 / `features/settings-day-boundary/` 想定 |
 | BL-010 | 日次リセット処理（カウント 0 クリア + 未完了繰越 + ゴミ箱清算）の冪等実行 | P0 | Todo | FR-043, FR-051, FR-062, NFR-020 / v0.1.0 / `features/daily-reset/` 想定. ADR-0011 の T3 ハイブリッド準拠. |
 | BL-011 | ゴミ箱（閲覧・復元・手動「空にする」） | P0 | Todo | FR-060, FR-061, FR-062 / v0.1.0 / `features/trash/` 想定 |

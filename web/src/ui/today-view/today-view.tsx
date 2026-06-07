@@ -64,6 +64,9 @@ export function TodayView(props: TodayViewProps): JSX.Element {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [nextTaskId, setNextTaskId] = useState<string | null>(null);
   const [focus, setFocus] = useState<FocusSelection | null>(null);
+  // BL-008 / FR-040 / NFR-013: 「今日の完了タスク数」のサーバ正本値.
+  // today() のレスポンス completionCount で更新される (plan.md D-008: 楽観 UI を持たない).
+  const [completionCount, setCompletionCount] = useState<number>(0);
   const [name, setName] = useState("");
   const [projectId, setProjectId] = useState("");
   const [dueDate, setDueDate] = useState<DueDate>("today");
@@ -83,6 +86,8 @@ export function TodayView(props: TodayViewProps): JSX.Element {
     setTasks(res.tasks);
     setNextTaskId(res.nextTaskId);
     setFocus(focusRes);
+    // BL-008 / FR-040: サーバ正本値の completionCount で更新 (未同梱なら 0 とみなす).
+    setCompletionCount(res.completionCount ?? 0);
   }, [repository]);
 
   // 初回マウント時の取得 (BL-005 D-004: today() を使う. list() は使わない).
@@ -98,6 +103,7 @@ export function TodayView(props: TodayViewProps): JSX.Element {
         setTasks(res.tasks);
         setNextTaskId(res.nextTaskId);
         setFocus(focusRes);
+        setCompletionCount(res.completionCount ?? 0);
       }
     })();
     return () => {
@@ -231,6 +237,13 @@ export function TodayView(props: TodayViewProps): JSX.Element {
   return (
     <main>
       <h1>今日</h1>
+
+      {/* BL-008 / FR-040 / NFR-013: 今日の完了タスク数を画面上部に常時表示する.
+          plan.md §UI 設計 D-008: 楽観 UI を持たず, サーバ正本値 (completionCount) を
+          再フェッチで反映する. */}
+      <div aria-label="今日の完了タスク数">
+        <span>今日の完了: {completionCount}</span>
+      </div>
 
       {/* 編集中は起票フォームを隠す (ラベル衝突回避). */}
       {!isEditing && (

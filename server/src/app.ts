@@ -290,10 +290,10 @@ export function createApp(deps: AppDeps): Hono {
 
   // ---------- GET /api/v1/counter (BL-008 / FR-040) ----------
   // spec.md §「Counter の初期状態」: 認証必須 / 読取専用 (If-Match / Idempotency-Key 不要).
-  // 本ハンドラは test-designer 段階のスタブ. implementer が
-  // counter-repository.get() を呼び 200 OK { counter } を返す本実装で green 化する.
+  // counter-repository.get() の戻り値をそのまま 200 OK で返す.
   app.get("/api/v1/counter", async (c) => {
-    return errorJson(c, 501, "NOT_IMPLEMENTED", "GET /api/v1/counter is not implemented yet");
+    const counter = await deps.counterRepository.get();
+    return c.json({ counter }, 200);
   });
 
   // ---------- GET /api/v1/today (BL-005 / FR-010 / FR-011 / NFR-013) ----------
@@ -310,8 +310,15 @@ export function createApp(deps: AppDeps): Hono {
     const nextTaskId = pickNextTaskId(todayTasks);
     // BL-006 / FR-012: FocusSelection.currentTaskId をミラーしてクライアントに返す.
     const focus = await deps.focusRepository.get();
+    // BL-008 / FR-040 (plan.md D-006): Counter.completedCount を /today に同梱する.
+    const counter = await deps.counterRepository.get();
     return c.json(
-      { tasks: todayTasks, nextTaskId, currentTaskId: focus.currentTaskId },
+      {
+        tasks: todayTasks,
+        nextTaskId,
+        currentTaskId: focus.currentTaskId,
+        completionCount: counter.completedCount,
+      },
       200,
     );
   });
@@ -476,6 +483,19 @@ export function createApp(deps: AppDeps): Hono {
 
     const completed = completeTask(current, deps.clock);
     await deps.taskRepository.update(completed);
+    // BL-008 / FR-006 / FR-040 (plan.md D-002 / D-007):
+    // 通常状態 → 完了の遷移が起きた直後だけ counter を +1 する.
+    // 既ゴミ箱状態への no-op 再 complete は上の `current.trashedAt !== null` 経路で
+    // 早期 return されるため, ここに到達した時点で「通常 → 完了」の遷移が確定している.
+    // version + 1, updatedAt は clock.now() で更新する.
+    const currentCounter = await deps.counterRepository.get();
+    const updatedCounter = {
+      ...currentCounter,
+      completedCount: currentCounter.completedCount + 1,
+      version: currentCounter.version + 1,
+      updatedAt: deps.clock.now(),
+    };
+    await deps.counterRepository.update(updatedCounter);
     // BL-006 / FR-013: 現在のタスクを完了したら focus を解除.
     await clearFocusIfMatches(deps, id);
     return saveAndReturn(c, deps, 200, { task: completed });
