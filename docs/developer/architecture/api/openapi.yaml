@@ -1,0 +1,445 @@
+openapi: 3.1.0
+info:
+  title: Todica Internal API
+  description: |
+    Todica の本人運用サーバとそのクライアント（Web / Android サーバモード）の間の内部 API.
+    共有 SaaS としての外部公開 API ではない（project.md §8 Out of Scope 遵守）.
+
+    本ファイルは骨格定義. 共通のプロトコル要素（認証 / 冪等性キー / 楽観ロック / 共通エラー）は
+    アーキテクチャ段階で確定済み. 個別エンドポイントのリクエスト / レスポンススキーマは
+    各 feature spec の進行に合わせて追記する（仕様策定方針: ADR-0010）.
+  version: 0.1.0
+  contact:
+    name: Todica Owner
+servers:
+  - url: https://example.invalid/api/v1
+    description: 本人運用サーバ（実 URL は運用時に確定）
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: tasks
+    description: タスク（FR-001 〜 FR-009, FR-014, FR-061）
+  - name: today
+    description: 今日ビュー（FR-010 〜 FR-013）
+  - name: focus
+    description: 現在のタスク参照（FR-012, FR-013）
+  - name: projects
+    description: プロジェクト（FR-020, FR-022, FR-060, FR-061）
+  - name: routines
+    description: ルーティン（FR-030, FR-031, FR-035）
+  - name: trash
+    description: ゴミ箱（FR-061, FR-062）
+  - name: counter
+    description: 今日の完了数（FR-040）
+  - name: settings
+    description: 設定（FR-042）
+  - name: reset
+    description: リセット処理（FR-043, NFR-020, 保守用）
+
+paths:
+  # ========== Tasks ==========
+  /tasks:
+    summary: タスク一覧 / 起票
+    get:
+      tags: [tasks]
+      summary: タスク一覧取得
+      description: 詳細フィルタ・ソート仕様は feature spec で追記.
+      responses:
+        "200": { description: OK }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [tasks]
+      summary: タスク起票
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "201": { description: Created }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /tasks/{id}:
+    parameters:
+      - $ref: "#/components/parameters/EntityId"
+    patch:
+      tags: [tasks]
+      summary: タスク編集（名称・期限・優先度）
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IfMatch"
+      responses:
+        "200": { description: OK }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "412": { $ref: "#/components/responses/PreconditionFailed" }
+    delete:
+      tags: [tasks]
+      summary: タスク削除（ゴミ箱へ. FR-007）
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IfMatch"
+      responses:
+        "204": { description: No Content }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "412": { $ref: "#/components/responses/PreconditionFailed" }
+
+  /tasks/{id}/complete:
+    parameters:
+      - $ref: "#/components/parameters/EntityId"
+    post:
+      tags: [tasks]
+      summary: タスク完了（FR-006）
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IfMatch"
+      responses:
+        "200": { description: OK }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "412": { $ref: "#/components/responses/PreconditionFailed" }
+
+  /tasks/{id}/restore:
+    parameters:
+      - $ref: "#/components/parameters/EntityId"
+    post:
+      tags: [tasks]
+      summary: ゴミ箱からのタスク復元（FR-061）
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IfMatch"
+      responses:
+        "200": { description: OK }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "412": { $ref: "#/components/responses/PreconditionFailed" }
+
+  # ========== Today ==========
+  /today:
+    summary: 今日ビュー
+    description: 期限=今日のタスク一覧（並び順込み）+ フォーカス参照を一括返却（FR-010 〜 FR-013）
+    get:
+      tags: [today]
+      responses:
+        "200": { description: OK }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ========== Focus ==========
+  /focus:
+    summary: 現在のタスク参照
+    get:
+      tags: [focus]
+      responses:
+        "200": { description: OK }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    put:
+      tags: [focus]
+      summary: 現在のタスクを更新（FR-012, FR-013）
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IfMatch"
+      responses:
+        "200": { description: OK }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "412": { $ref: "#/components/responses/PreconditionFailed" }
+
+  # ========== Projects ==========
+  /projects:
+    get:
+      tags: [projects]
+      summary: プロジェクト一覧
+      responses:
+        "200": { description: OK }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [projects]
+      summary: プロジェクト作成
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "201": { description: Created }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /projects/{id}:
+    parameters:
+      - $ref: "#/components/parameters/EntityId"
+    patch:
+      tags: [projects]
+      summary: プロジェクト編集（FR-022）
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IfMatch"
+      responses:
+        "200": { description: OK }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "412": { $ref: "#/components/responses/PreconditionFailed" }
+    delete:
+      tags: [projects]
+      summary: プロジェクト削除（ゴミ箱へ）
+      description: |
+        配下 Task の扱いはクエリパラメータ `cascade` で指定する.
+        UI がユーザーに確認した結果をそのまま送る（カスケード or 独立化）.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IfMatch"
+        - name: cascade
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: ["true", "false"]
+          description: |
+            `true` = 配下 Task もゴミ箱化. `false` = 配下 Task の `projectId` を `null` にする.
+      responses:
+        "204": { description: No Content }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "412": { $ref: "#/components/responses/PreconditionFailed" }
+
+  /projects/{id}/restore:
+    parameters:
+      - $ref: "#/components/parameters/EntityId"
+    post:
+      tags: [projects]
+      summary: プロジェクト復元
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IfMatch"
+      responses:
+        "200": { description: OK }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "412": { $ref: "#/components/responses/PreconditionFailed" }
+
+  # ========== Routines ==========
+  /routines:
+    get:
+      tags: [routines]
+      summary: ルーティン一覧
+      responses:
+        "200": { description: OK }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [routines]
+      summary: ルーティン作成
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "201": { description: Created }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /routines/{id}:
+    parameters:
+      - $ref: "#/components/parameters/EntityId"
+    patch:
+      tags: [routines]
+      summary: ルーティン編集（FR-035）
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IfMatch"
+      responses:
+        "200": { description: OK }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "412": { $ref: "#/components/responses/PreconditionFailed" }
+    delete:
+      tags: [routines]
+      summary: ルーティン削除（ゴミ箱へ）
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IfMatch"
+      responses:
+        "204": { description: No Content }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "412": { $ref: "#/components/responses/PreconditionFailed" }
+
+  /routines/{id}/restore:
+    parameters:
+      - $ref: "#/components/parameters/EntityId"
+    post:
+      tags: [routines]
+      summary: ルーティン復元（FR-061）
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IfMatch"
+      responses:
+        "200": { description: OK }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "412": { $ref: "#/components/responses/PreconditionFailed" }
+
+  # ========== Trash ==========
+  /trash:
+    summary: ゴミ箱一覧 / 手動空にする
+    get:
+      tags: [trash]
+      summary: ゴミ箱一覧
+      responses:
+        "200": { description: OK }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    delete:
+      tags: [trash]
+      summary: ゴミ箱を空にする（FR-062）
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "204": { description: No Content }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ========== Counter ==========
+  /counter:
+    summary: 今日の完了数（FR-040）
+    get:
+      tags: [counter]
+      responses:
+        "200": { description: OK }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ========== Settings ==========
+  /settings:
+    summary: 設定（FR-042）
+    get:
+      tags: [settings]
+      responses:
+        "200": { description: OK }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    put:
+      tags: [settings]
+      summary: 設定更新
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IfMatch"
+      responses:
+        "200": { description: OK }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "412": { $ref: "#/components/responses/PreconditionFailed" }
+
+  # ========== Reset ==========
+  /reset:
+    summary: リセット処理の手動起動（保守用）
+    post:
+      tags: [reset]
+      summary: リセット処理を即時実行（NFR-020 冪等性）
+      description: |
+        冪等. 同じ境界時刻で既にリセット済みの場合は no-op の 200 OK を返し,
+        レスポンスボディに「適用済み境界時刻」を含めてクライアントが再実行か否かを判別できるようにする.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: |
+            OK. レスポンスボディに `executed` (boolean) と `appliedBoundaryAt` (ISO 8601) を含む.
+            既実行時は `executed = false`, 新規実行時は `executed = true`.
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+      description: |
+        単一ユーザー前提の最小実装. 詳細は ADR-0010 を参照.
+
+  parameters:
+    EntityId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: エンティティ ID（UUID v4. ドメイン層採番）
+
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+      description: |
+        書き込み API 共通の冪等性キー. 値は対象エンティティ ID（UUID v4）を使う.
+        サーバは直近一定期間内の同キー要求を no-op で扱い, 保存済み応答を返す.
+        詳細: ADR-0010 §「冪等性キーと楽観ロック」.
+
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      schema:
+        type: string
+      description: |
+        楽観ロック用. クライアントが保持するエンティティの `version` 整数値を文字列として送る.
+        サーバ側の現行 `version` と不一致なら 412 Precondition Failed を返す.
+        詳細: ADR-0010 §「冪等性キーと楽観ロック」.
+
+  responses:
+    BadRequest:
+      description: 入力バリデーション違反
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unauthorized:
+      description: 認証エラー（Bearer トークン未提示 / 無効）
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: 指定リソースが存在しない
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    PreconditionFailed:
+      description: |
+        楽観ロックの version 不一致. レスポンスボディにサーバ側の現行エンティティを含めるため,
+        クライアントは「サーバ値で上書き」or「クライアント値を強制再送」をユーザーに確認する.
+      content:
+        application/json:
+          schema:
+            type: object
+            description: 現行エンティティ全体（タスク / プロジェクト等の型はパスごと）
+    InternalServerError:
+      description: サーバ内部エラー
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+    # 詳細スキーマは feature spec で追記する. 本骨格では placeholder のみ.
+    Task:
+      type: object
+      description: タスク（schema.md と整合. feature spec で詳細化）
+    Project:
+      type: object
+      description: プロジェクト（同上）
+    Routine:
+      type: object
+      description: ルーティン（同上）
+    Counter:
+      type: object
+      description: 今日の完了数（同上）
+    Settings:
+      type: object
+      description: 設定（同上）
+    FocusSelection:
+      type: object
+      description: 現在のタスク参照（同上）
+    Error:
+      type: object
+      description: |
+        共通エラーレスポンス. `code` は feature spec で具体値を定義する
+        （例: `INVALID_DUE_DATE`, `TASK_NOT_FOUND`, `RESET_ALREADY_EXECUTED` 等）.
+      properties:
+        code:
+          type: string
+        message:
+          type: string

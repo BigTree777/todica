@@ -16,8 +16,8 @@
 
 ## ドキュメント
 
-- [ ] `api/openapi.yaml` にエンドポイント追記
-- [ ] `database/schema.md` にテーブル追記
+- [ ] `architecture/api/openapi.yaml` にエンドポイント追記
+- [ ] `architecture/database/schema.md` にテーブル追記
 
 ## 仕上げ
 
