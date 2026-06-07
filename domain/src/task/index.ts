@@ -2,7 +2,6 @@
  * Task ドメイン.
  *
  * 仕様の参照元: docs/developer/features/task-crud/spec.md, plan.md §データモデル.
- * 本ファイルは test-designer が用意したスタブ. 関数本体は implementer が実装する.
  */
 import type { Clock } from "../clock/index.js";
 
@@ -59,48 +58,153 @@ export type ValidationError =
   | { code: "INVALID_DUE_DATE"; message: string }
   | { code: "INVALID_PRIORITY"; message: string };
 
+const DUE_DATES: readonly DueDate[] = ["today", "tomorrow"];
+const PRIORITIES: readonly Priority[] = ["highest", "normal", "later"];
+
+const MAX_NAME_LENGTH = 200;
+/**
+ * 制御文字判定 (改行 / タブ / NUL を含む). plan.md D-005.
+ * Unicode の C0 (U+0000-U+001F) と DEL (U+007F), および C1 (U+0080-U+009F) を制御文字とする.
+ */
+function containsControlChar(value: string): boolean {
+  for (const ch of value) {
+    const code = ch.codePointAt(0);
+    if (code === undefined) continue;
+    if (code <= 0x1f || code === 0x7f) return true;
+    if (code >= 0x80 && code <= 0x9f) return true;
+  }
+  return false;
+}
+
 /** タスク名のバリデーション (plan.md D-005). */
-export function validateTaskName(_name: string): ValidationError | null {
-  throw new Error("not implemented: validateTaskName");
+export function validateTaskName(name: string): ValidationError | null {
+  if (typeof name !== "string") {
+    return { code: "INVALID_TASK_NAME", message: "name must be a string" };
+  }
+  if (name.length < 1) {
+    return { code: "INVALID_TASK_NAME", message: "name must be at least 1 character" };
+  }
+  if (name.length > MAX_NAME_LENGTH) {
+    return {
+      code: "INVALID_TASK_NAME",
+      message: `name must be at most ${MAX_NAME_LENGTH} characters`,
+    };
+  }
+  if (containsControlChar(name)) {
+    return { code: "INVALID_TASK_NAME", message: "name must not contain control characters" };
+  }
+  return null;
 }
 
 /** 期限のバリデーション (FR-002). */
-export function validateDueDate(_value: unknown): ValidationError | null {
-  throw new Error("not implemented: validateDueDate");
+export function validateDueDate(value: unknown): ValidationError | null {
+  if (typeof value !== "string") {
+    return { code: "INVALID_DUE_DATE", message: "dueDate must be 'today' or 'tomorrow'" };
+  }
+  if (!DUE_DATES.includes(value as DueDate)) {
+    return { code: "INVALID_DUE_DATE", message: "dueDate must be 'today' or 'tomorrow'" };
+  }
+  return null;
 }
 
 /** 優先度のバリデーション. */
-export function validatePriority(_value: unknown): ValidationError | null {
-  throw new Error("not implemented: validatePriority");
+export function validatePriority(value: unknown): ValidationError | null {
+  if (typeof value !== "string") {
+    return {
+      code: "INVALID_PRIORITY",
+      message: "priority must be 'highest' | 'normal' | 'later'",
+    };
+  }
+  if (!PRIORITIES.includes(value as Priority)) {
+    return {
+      code: "INVALID_PRIORITY",
+      message: "priority must be 'highest' | 'normal' | 'later'",
+    };
+  }
+  return null;
 }
 
 /**
  * タスク起票. 既定値補完 + バリデーション + version=1, createdAt=updatedAt=clock.now().
  */
 export function createTask(
-  _input: CreateTaskInput,
-  _clock: Clock,
+  input: CreateTaskInput,
+  clock: Clock,
 ): { ok: true; task: Task } | { ok: false; error: ValidationError } {
-  throw new Error("not implemented: createTask");
+  const nameError = validateTaskName(input.name);
+  if (nameError) return { ok: false, error: nameError };
+
+  const dueDate = input.dueDate ?? "today";
+  const dueError = validateDueDate(dueDate);
+  if (dueError) return { ok: false, error: dueError };
+
+  const priority = input.priority ?? "normal";
+  const priorityError = validatePriority(priority);
+  if (priorityError) return { ok: false, error: priorityError };
+
+  const now = clock.now();
+  const task: Task = {
+    id: input.id,
+    name: input.name,
+    projectId: input.projectId ?? null,
+    dueDate,
+    priority,
+    origin: "manual",
+    routineId: null,
+    createdAt: now,
+    updatedAt: now,
+    trashedAt: null,
+    trashedReason: null,
+    version: 1,
+  };
+  return { ok: true, task };
 }
 
 /**
  * タスク編集. 部分上書き + version+1 + updatedAt 更新. createdAt は不変.
  */
 export function updateTask(
-  _current: Task,
-  _patch: UpdateTaskInput,
-  _clock: Clock,
+  current: Task,
+  patch: UpdateTaskInput,
+  clock: Clock,
 ): { ok: true; task: Task } | { ok: false; error: ValidationError } {
-  throw new Error("not implemented: updateTask");
+  if (patch.name !== undefined) {
+    const nameError = validateTaskName(patch.name);
+    if (nameError) return { ok: false, error: nameError };
+  }
+  if (patch.dueDate !== undefined) {
+    const dueError = validateDueDate(patch.dueDate);
+    if (dueError) return { ok: false, error: dueError };
+  }
+
+  const next: Task = {
+    ...current,
+    name: patch.name !== undefined ? patch.name : current.name,
+    dueDate: patch.dueDate !== undefined ? patch.dueDate : current.dueDate,
+    projectId:
+      patch.projectId !== undefined ? patch.projectId : current.projectId,
+    updatedAt: clock.now(),
+    version: current.version + 1,
+  };
+  return { ok: true, task: next };
 }
 
 /**
  * タスクをゴミ箱に入れる (DELETE = 論理削除). trashedAt をセットし version+1.
  * 既にゴミ箱状態の場合は no-op (同じ値を返す) で冪等とする (plan.md D-003).
  */
-export function trashTask(_current: Task, _clock: Clock): Task {
-  throw new Error("not implemented: trashTask");
+export function trashTask(current: Task, clock: Clock): Task {
+  if (current.trashedAt !== null) {
+    return { ...current };
+  }
+  const now = clock.now();
+  return {
+    ...current,
+    trashedAt: now,
+    trashedReason: "deleted",
+    updatedAt: now,
+    version: current.version + 1,
+  };
 }
 
 /** 既にゴミ箱状態か判定するヘルパ. */
