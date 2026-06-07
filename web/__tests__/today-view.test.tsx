@@ -12,6 +12,7 @@ import type { Task } from "@todica/domain/task";
 import { TodayView } from "../src/ui/today-view/today-view.js";
 import type {
   CompleteTaskCommand,
+  Counter,
   CreateTaskCommand,
   DeleteTaskCommand,
   FocusSelection,
@@ -42,7 +43,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
 
 function makeMockRepository(
   initial: Task[] = [],
-  options: { initialFocus?: FocusSelection } = {},
+  options: { initialFocus?: FocusSelection; initialCounter?: Counter } = {},
 ): TaskRepository & {
   createMock: ReturnType<typeof vi.fn>;
   updateMock: ReturnType<typeof vi.fn>;
@@ -52,6 +53,7 @@ function makeMockRepository(
   todayMock: ReturnType<typeof vi.fn>;
   getFocusMock: ReturnType<typeof vi.fn>;
   setFocusMock: ReturnType<typeof vi.fn>;
+  getCounterMock: ReturnType<typeof vi.fn>;
 } {
   const state = [...initial];
   // BL-006 / FR-012: FocusSelection の mock state.
@@ -59,6 +61,17 @@ function makeMockRepository(
   let focusState: FocusSelection = options.initialFocus ?? {
     id: "singleton",
     currentTaskId: null,
+    version: 1,
+    updatedAt: NOW,
+  };
+  // BL-008 / FR-040: Counter (今日の完了タスク数) の mock state.
+  // 既定は 0 / version=1. 個別テストで initialCounter から上書き可.
+  // complete アクションが起きるたびに completeMock 内で completedCount を +1 する
+  // (= サーバ側 +1 集計を模倣).
+  let counterState: Counter = options.initialCounter ?? {
+    id: "singleton",
+    completedCount: 0,
+    lastResetExecutedAt: null,
     version: 1,
     updatedAt: NOW,
   };
@@ -90,10 +103,13 @@ function makeMockRepository(
     });
     // BL-006 / FR-012: currentTaskId は focusState のミラーを返す.
     // UI は currentTaskId ?? nextTaskId で強調対象を決める (plan.md D-001).
+    // BL-008 / FR-040: completionCount は counterState のミラーを返す
+    // (= /today レスポンスに同梱される正本値).
     return {
       tasks: sorted,
       nextTaskId: sorted[0]?.id ?? null,
       currentTaskId: focusState.currentTaskId,
+      completionCount: counterState.completedCount,
     };
   });
   const createMock = vi.fn(async (cmd: CreateTaskCommand) => {
@@ -128,13 +144,25 @@ function makeMockRepository(
     // ストアからは取り除かない (filter 表示は UI 側 / 一覧 API の責務).
     const idx = state.findIndex((t) => t.id === cmd.id);
     if (idx < 0) throw new Error("not found");
+    const prev = state[idx]!;
+    // BL-008 / FR-040: 通常状態 (trashedAt = null) → 完了の遷移のときだけ counter を +1.
+    // 既ゴミ箱状態への no-op 再 complete では counter を変えない (spec.md §「完了アクションによる +1」).
+    const wasActive = prev.trashedAt === null;
     const next: Task = {
-      ...state[idx]!,
+      ...prev,
       trashedAt: "2026-06-07T09:00:01.000Z",
       trashedReason: "completed",
-      version: (state[idx]!.version ?? 0) + 1,
+      version: (prev.version ?? 0) + 1,
     };
     state[idx] = next;
+    if (wasActive) {
+      counterState = {
+        ...counterState,
+        completedCount: counterState.completedCount + 1,
+        version: counterState.version + 1,
+        updatedAt: NOW,
+      };
+    }
     return next;
   });
   // BL-006 / FR-012: focus 取得 / 設定 mock.
@@ -151,6 +179,9 @@ function makeMockRepository(
     };
     return { ...focusState };
   });
+  // BL-008 / FR-040: 「今日の完了数」取得 mock.
+  // getCounter(): 現在の counterState を返す.
+  const getCounterMock = vi.fn(async () => ({ ...counterState }));
   return {
     list: listMock,
     create: createMock,
@@ -160,6 +191,7 @@ function makeMockRepository(
     today: todayMock,
     getFocus: getFocusMock,
     setFocus: setFocusMock,
+    getCounter: getCounterMock,
     listMock,
     createMock,
     updateMock,
@@ -168,6 +200,7 @@ function makeMockRepository(
     todayMock,
     getFocusMock,
     setFocusMock,
+    getCounterMock,
   };
 }
 
@@ -982,5 +1015,196 @@ describe("TodayView (BL-006 現在のタスク強調表示と操作)", () => {
 
     // 再フェッチが行われ getFocus() の累積呼出回数が増えている.
     expect(repo.getFocusMock.mock.calls.length).toBeGreaterThan(initialCalls);
+  });
+});
+
+// ============================================================
+// BL-008 / FR-040 / NFR-013: 今日の完了数表示 (Web UI)
+//
+// spec.md (completion-counter) §「Web クライアント UI (FR-040 / NFR-013)」と 1:1 対応する.
+// - TodayView に「今日の完了: N」相当の表示が常時存在する.
+// - サーバ正本値 (= today() レスポンスの completionCount) をそのまま表示する.
+// - 完了ボタンクリック後に再フェッチで数値が +1 更新される.
+// - 削除 / 期限切替では数値が変化しない.
+// - 今日のタスクが 0 件でも完了数表示は描画される.
+//
+// today-view.tsx 側はまだ completionCount を描画しない暫定実装のため,
+// 以下のテストはすべて red になる. implementer が green 化する.
+// ============================================================
+
+describe("TodayView (BL-008 今日の完了数表示)", () => {
+  it("シナリオ: 今日ビューに「今日の完了: 2」相当の表示が描画される", async () => {
+    // spec.md §「Web クライアント UI」第 1 ケース.
+    // counter=2 を初期 seed しておく. todayMock は completionCount=2 を返す.
+    const repo = makeMockRepository(
+      [makeTask({ id: "t1", name: "MILK", version: 1 })],
+      {
+        initialCounter: {
+          id: "singleton",
+          completedCount: 2,
+          lastResetExecutedAt: null,
+          version: 3,
+          updatedAt: NOW,
+        },
+      },
+    );
+    render(<TodayView repository={repo} />);
+
+    // 描画完了を待つために 1 件は描画されることを待つ.
+    await screen.findByText("MILK");
+
+    // 「完了: 2」または「今日の完了: 2」などのラベル + 数値が DOM に存在する.
+    // 文言・装飾は UI 実装の裁量とし, 「数値 2」と「完了を意味するラベル」が共存することだけを要求.
+    const completionCountText = await screen.findByText((_content, element) => {
+      const text = element?.textContent ?? "";
+      // 「完了」を含む要素のうち, 数値 "2" を含むものに合致.
+      // 「完了」ボタン (各タスク行) はラベルが「完了」だけで数値を含まないため除外される.
+      return /完了/.test(text) && /\b2\b/.test(text) && !/最優先|普通|後回し/.test(text);
+    });
+    expect(completionCountText).toBeInTheDocument();
+  });
+
+  it("シナリオ: 完了ボタンで完了すると, 今日ビューの完了数表示が +1 反映される", async () => {
+    // spec.md §「Web クライアント UI」第 2 ケース.
+    // 初期 completionCount = 0, 完了アクション後に 1 に更新される.
+    const repo = makeMockRepository(
+      [makeTask({ id: "t1", name: "MILK", version: 1 })],
+      {
+        initialCounter: {
+          id: "singleton",
+          completedCount: 0,
+          lastResetExecutedAt: null,
+          version: 1,
+          updatedAt: NOW,
+        },
+      },
+    );
+    const user = userEvent.setup();
+    render(<TodayView repository={repo} />);
+
+    // 初期状態: 「完了: 0」相当が描画される.
+    await screen.findByText("MILK");
+    const before = await screen.findByText((_content, element) => {
+      const text = element?.textContent ?? "";
+      return /完了/.test(text) && /\b0\b/.test(text) && !/最優先|普通|後回し/.test(text);
+    });
+    expect(before).toBeInTheDocument();
+
+    // 完了ボタンクリック.
+    const completeButton = await screen.findByRole("button", { name: /完了/ });
+    await user.click(completeButton);
+
+    // 再フェッチで todayMock の completionCount が 1 に増えて返るので, 画面表示も 1 に更新される.
+    const after = await screen.findByText((_content, element) => {
+      const text = element?.textContent ?? "";
+      return /完了/.test(text) && /\b1\b/.test(text) && !/最優先|普通|後回し/.test(text);
+    });
+    expect(after).toBeInTheDocument();
+  });
+
+  it("シナリオ: 削除ボタンでは完了数表示は変化しない (FR-007)", async () => {
+    // spec.md §「Web クライアント UI」第 3 ケース.
+    const repo = makeMockRepository(
+      [makeTask({ id: "t1", name: "MILK", version: 1 })],
+      {
+        initialCounter: {
+          id: "singleton",
+          completedCount: 1,
+          lastResetExecutedAt: null,
+          version: 2,
+          updatedAt: NOW,
+        },
+      },
+    );
+    const user = userEvent.setup();
+    render(<TodayView repository={repo} />);
+
+    await screen.findByText("MILK");
+
+    // 削除ボタンクリック.
+    const deleteButton = await screen.findByRole("button", { name: /削除/ });
+    await user.click(deleteButton);
+
+    // 完了数は 1 のまま (+1 されない).
+    // 「完了: 2」相当の表示が存在しないことを確認する.
+    expect(
+      screen.queryByText((_c, element) => {
+        const text = element?.textContent ?? "";
+        return /完了/.test(text) && /\b2\b/.test(text) && !/最優先|普通|後回し/.test(text);
+      }),
+    ).toBeNull();
+    // 「完了: 1」相当の表示は引き続き存在する.
+    expect(
+      screen.queryByText((_c, element) => {
+        const text = element?.textContent ?? "";
+        return /完了/.test(text) && /\b1\b/.test(text) && !/最優先|普通|後回し/.test(text);
+      }),
+    ).not.toBeNull();
+  });
+
+  it("シナリオ: 期限切替 (today → tomorrow) でも完了数表示は変化しない (FR-007 周辺)", async () => {
+    // spec.md §「Web クライアント UI」第 4 ケース.
+    const repo = makeMockRepository(
+      [makeTask({ id: "t1", name: "MILK", dueDate: "today", version: 1 })],
+      {
+        initialCounter: {
+          id: "singleton",
+          completedCount: 1,
+          lastResetExecutedAt: null,
+          version: 2,
+          updatedAt: NOW,
+        },
+      },
+    );
+    const user = userEvent.setup();
+    render(<TodayView repository={repo} />);
+
+    await screen.findByText("MILK");
+
+    // 期限切替 (明日へ) クリック.
+    const toggle = await screen.findByRole("button", { name: /明日へ|期限|今日へ/ });
+    await user.click(toggle);
+
+    // 完了数は 1 のまま.
+    expect(
+      screen.queryByText((_c, element) => {
+        const text = element?.textContent ?? "";
+        return /完了/.test(text) && /\b1\b/.test(text) && !/最優先|普通|後回し/.test(text);
+      }),
+    ).not.toBeNull();
+    // 2 になっていないことも確認.
+    expect(
+      screen.queryByText((_c, element) => {
+        const text = element?.textContent ?? "";
+        return /完了/.test(text) && /\b2\b/.test(text) && !/最優先|普通|後回し/.test(text);
+      }),
+    ).toBeNull();
+  });
+
+  it("シナリオ: 今日タスクが 0 件のときも完了数表示は描画される (例: 「今日の完了: 5」)", async () => {
+    // spec.md §「Web クライアント UI」第 5 ケース (ページ再読込でも復元される) と
+    // plan.md §UI 設計 (「今日のタスクが 0 件でも完了数表示は出す」).
+    const repo = makeMockRepository([], {
+      initialCounter: {
+        id: "singleton",
+        completedCount: 5,
+        lastResetExecutedAt: null,
+        version: 6,
+        updatedAt: NOW,
+      },
+    });
+    render(<TodayView repository={repo} />);
+
+    // 「今日」見出しが出る (タスク 0 件でも描画される既存仕様).
+    expect(
+      await screen.findByRole("heading", { name: "今日" }),
+    ).toBeInTheDocument();
+
+    // 完了数表示が描画される.
+    const completionLabel = await screen.findByText((_c, element) => {
+      const text = element?.textContent ?? "";
+      return /完了/.test(text) && /\b5\b/.test(text);
+    });
+    expect(completionLabel).toBeInTheDocument();
   });
 });

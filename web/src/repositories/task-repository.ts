@@ -77,6 +77,13 @@ export interface TodayViewResponse {
    * 過渡的に optional (旧 BL-005 実装との互換のため). implementer が必須化して良い.
    */
   currentTaskId?: string | null;
+  /**
+   * BL-008 / FR-040 で追加. サーバの Counter.completedCount と等価
+   * (= 「今日の完了タスク数」). 過渡的に optional とし, implementer が必須化して良い.
+   * 本フィールドは test-designer が追加した「型のみのスタブ」.
+   * サーバ側の同梱 / UI 側の表示は implementer が green 化する.
+   */
+  completionCount?: number;
 }
 
 /**
@@ -89,6 +96,22 @@ export interface TodayViewResponse {
 export interface FocusSelection {
   id: string;
   currentTaskId: string | null;
+  version: number;
+  updatedAt: string;
+}
+
+/**
+ * BL-008 / FR-040: Counter エンティティ (Web 側ミラー).
+ *
+ * 仕様: docs/developer/features/completion-counter/spec.md.
+ * 単一レコード前提 (id = "singleton"). サーバ Counter と同形.
+ * 本型は test-designer が追加した「型のみのスタブ」.
+ * HttpTaskRepository.getCounter / UI 連携は implementer が green 化する.
+ */
+export interface Counter {
+  id: string;
+  completedCount: number;
+  lastResetExecutedAt: string | null;
   version: number;
   updatedAt: string;
 }
@@ -141,6 +164,13 @@ export interface TaskRepository {
    * HttpTaskRepository.setFocus の本実装 / UI からの呼び出しは implementer が green 化する.
    */
   setFocus(cmd: SetFocusCommand): Promise<FocusSelection>;
+  /**
+   * BL-008 / FR-040: 今日の完了タスク数 (Counter) を取得する.
+   * GET /api/v1/counter に対応. 単一レコード前提.
+   * 本メソッドは test-designer が追加したインターフェース上のスタブ.
+   * HttpTaskRepository.getCounter の本実装 / UI からの呼び出しは implementer が green 化する.
+   */
+  getCounter(): Promise<Counter>;
 }
 
 /**
@@ -365,6 +395,23 @@ export class HttpTaskRepository implements TaskRepository {
     }
     const body = (await res.json()) as { focus: FocusSelection };
     return body.focus;
+  }
+
+  /**
+   * BL-008 / FR-040: 今日の完了タスク数 (Counter) を取得する.
+   * GET /api/v1/counter に対応.
+   * 本メソッドは test-designer 段階のスタブ. implementer が本実装で green 化する.
+   */
+  async getCounter(): Promise<Counter> {
+    const res = await fetch(`${this.baseUrl}/api/v1/counter`, {
+      method: "GET",
+      headers: this.authHeaders(),
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: failed to fetch counter`);
+    }
+    const body = (await res.json()) as { counter: Counter };
+    return body.counter;
   }
 
   /**

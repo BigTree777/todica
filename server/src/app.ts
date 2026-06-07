@@ -20,6 +20,7 @@ import type { TaskRepository } from "./data/task-repository.js";
 import type { ProjectRepository } from "./data/project-repository.js";
 import type { IdempotencyStore } from "./data/idempotency-store.js";
 import type { FocusRepository } from "./data/focus-repository.js";
+import type { CounterRepository } from "./data/counter-repository.js";
 import { filterToday, pickNextTaskId, sortToday } from "./today.js";
 
 /**
@@ -35,6 +36,13 @@ export interface AppDeps {
    * complete / delete / patch のフォーカス連動) は implementer が green 化する.
    */
   focusRepository: FocusRepository;
+  /**
+   * BL-008 / completion-counter: Counter (今日の完了タスク数) の永続化.
+   * 本フィールドは test-designer 段階の依存. 本ハンドラ実装 (GET /api/v1/counter,
+   * complete ハンドラでの +1 集計, /today レスポンスへの completionCount 同梱) は
+   * implementer が green 化する.
+   */
+  counterRepository: CounterRepository;
   clock: Clock;
   /** Bearer 認証に使う固定トークン. テストでは任意の値を渡す. */
   authToken: string;
@@ -278,6 +286,14 @@ export function createApp(deps: AppDeps): Hono {
     };
     await deps.focusRepository.update(updated);
     return saveAndReturn(c, deps, 200, { focus: updated });
+  });
+
+  // ---------- GET /api/v1/counter (BL-008 / FR-040) ----------
+  // spec.md §「Counter の初期状態」: 認証必須 / 読取専用 (If-Match / Idempotency-Key 不要).
+  // 本ハンドラは test-designer 段階のスタブ. implementer が
+  // counter-repository.get() を呼び 200 OK { counter } を返す本実装で green 化する.
+  app.get("/api/v1/counter", async (c) => {
+    return errorJson(c, 501, "NOT_IMPLEMENTED", "GET /api/v1/counter is not implemented yet");
   });
 
   // ---------- GET /api/v1/today (BL-005 / FR-010 / FR-011 / NFR-013) ----------

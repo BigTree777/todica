@@ -20,6 +20,10 @@ import type {
   FocusRepository,
   FocusSelection,
 } from "../../src/data/focus-repository.js";
+import type {
+  Counter,
+  CounterRepository,
+} from "../../src/data/counter-repository.js";
 
 export class InMemoryTaskRepository implements TaskRepository {
   private store = new Map<string, Task>();
@@ -110,6 +114,43 @@ export class InMemoryFocusRepository implements FocusRepository {
 
   /** テスト補助: 現在値を取り出す (await 不要). */
   current(): FocusSelection {
+    return { ...this.state };
+  }
+}
+
+/**
+ * In-memory CounterRepository (BL-008 / completion-counter テスト用).
+ *
+ * - 単一レコード前提. 初期値は
+ *   `{ id: "singleton", completedCount: 0, lastResetExecutedAt: null, version: 1, updatedAt: TEST_INITIAL_TIME }`.
+ * - get() は常に値を返す (singleton 保証. spec.md §「Counter の初期状態」).
+ * - update() は version 含めて全フィールド上書き.
+ * - seed() / current() はテストの直接観察 / 直接操作用ヘルパ.
+ */
+export class InMemoryCounterRepository implements CounterRepository {
+  private state: Counter = {
+    id: "singleton",
+    completedCount: 0,
+    lastResetExecutedAt: null,
+    updatedAt: "2026-06-07T09:00:00.000Z",
+    version: 1,
+  };
+
+  async get(): Promise<Counter> {
+    return { ...this.state };
+  }
+
+  async update(counter: Counter): Promise<void> {
+    this.state = { ...counter };
+  }
+
+  /** テスト補助: 直接書き換える. */
+  seed(counter: Partial<Counter>): void {
+    this.state = { ...this.state, ...counter };
+  }
+
+  /** テスト補助: 現在値を取り出す (await 不要). */
+  current(): Counter {
     return { ...this.state };
   }
 }
