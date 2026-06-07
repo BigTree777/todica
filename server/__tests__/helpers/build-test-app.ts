@@ -8,6 +8,7 @@
 import { FakeClock } from "@todica/domain/clock";
 import { createApp } from "../../src/app.js";
 import {
+  InMemoryFocusRepository,
   InMemoryIdempotencyStore,
   InMemoryProjectRepository,
   InMemoryTaskRepository,
@@ -22,17 +23,26 @@ export function buildTestApp(options: {
   const taskRepository = new InMemoryTaskRepository();
   const projectRepository = new InMemoryProjectRepository();
   const idempotencyStore = new InMemoryIdempotencyStore();
+  const focusRepository = new InMemoryFocusRepository();
   const clock = new FakeClock(options.initialTime ?? TEST_INITIAL_TIME);
 
   const app = createApp({
     taskRepository,
     projectRepository,
     idempotencyStore,
+    focusRepository,
     clock,
     authToken: TEST_AUTH_TOKEN,
   });
 
-  return { app, taskRepository, projectRepository, idempotencyStore, clock };
+  return {
+    app,
+    taskRepository,
+    projectRepository,
+    idempotencyStore,
+    focusRepository,
+    clock,
+  };
 }
 
 /** 認証ヘッダを生成するヘルパ. */

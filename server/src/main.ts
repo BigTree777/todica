@@ -22,6 +22,30 @@ import { schema } from "./db/schema.js";
 import { DrizzleTaskRepository } from "./infra/persistence/drizzle/task-repository.js";
 import { DrizzleProjectRepository } from "./infra/persistence/drizzle/project-repository.js";
 import { DrizzleIdempotencyStore } from "./infra/persistence/drizzle/idempotency-store.js";
+import type { FocusRepository } from "./data/focus-repository.js";
+
+/**
+ * BL-006 / focus-task: 本実装までの placeholder.
+ *
+ * test-designer 段階では `server/src/infra/persistence/drizzle/focus-repository.ts`
+ * (相当の Drizzle 実装) はまだ存在しない. main.ts (production 起動経路) で
+ * createApp() の AppDeps を満たすため最小スタブを注入する.
+ *
+ * implementer が drizzle 本実装と差し替えるまで, GET/PUT /api/v1/focus を叩いた場合は
+ * 500 NOT_IMPLEMENTED が返る (app.ts のスタブ参照). production 経路でも同様.
+ */
+const placeholderFocusRepository: FocusRepository = {
+  async get() {
+    throw new Error(
+      "FocusRepository is not yet implemented. See docs/developer/features/focus-task/.",
+    );
+  },
+  async update() {
+    throw new Error(
+      "FocusRepository is not yet implemented. See docs/developer/features/focus-task/.",
+    );
+  },
+};
 
 const DATABASE_PATH = process.env.DATABASE_PATH ?? "./todica.db";
 const PORT = Number.parseInt(process.env.PORT ?? "3000", 10);
@@ -66,6 +90,7 @@ const app = createApp({
   taskRepository: new DrizzleTaskRepository({ db }),
   projectRepository: new DrizzleProjectRepository({ db }),
   idempotencyStore: new DrizzleIdempotencyStore({ db }),
+  focusRepository: placeholderFocusRepository,
   clock: new SystemClock(),
   authToken: AUTH_TOKEN,
 });

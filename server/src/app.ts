@@ -19,6 +19,7 @@ import {
 import type { TaskRepository } from "./data/task-repository.js";
 import type { ProjectRepository } from "./data/project-repository.js";
 import type { IdempotencyStore } from "./data/idempotency-store.js";
+import type { FocusRepository } from "./data/focus-repository.js";
 import { filterToday, pickNextTaskId, sortToday } from "./today.js";
 
 /**
@@ -28,6 +29,12 @@ export interface AppDeps {
   taskRepository: TaskRepository;
   projectRepository: ProjectRepository;
   idempotencyStore: IdempotencyStore;
+  /**
+   * BL-006 / focus-task: FocusSelection (現在のタスク) の永続化.
+   * 本フィールドは test-designer 段階の依存. 本ハンドラ実装 (GET/PUT /api/v1/focus,
+   * complete / delete / patch のフォーカス連動) は implementer が green 化する.
+   */
+  focusRepository: FocusRepository;
   clock: Clock;
   /** Bearer 認証に使う固定トークン. テストでは任意の値を渡す. */
   authToken: string;
@@ -36,7 +43,7 @@ export interface AppDeps {
 const WRITE_METHODS = new Set(["POST", "PATCH", "PUT", "DELETE"]);
 
 function errorJson(c: Context, status: number, code: string, message: string) {
-  return c.json({ code, message }, status as 400 | 401 | 404 | 412 | 500);
+  return c.json({ code, message }, status as 400 | 401 | 404 | 412 | 500 | 501);
 }
 
 /**
@@ -178,6 +185,26 @@ export function createApp(deps: AppDeps): Hono {
 
     await deps.taskRepository.insert(createResult.task);
     return saveAndReturn(c, deps, 201, { task: createResult.task });
+  });
+
+  // ---------- GET /api/v1/focus (BL-006 / FR-012) ----------
+  // test-designer のスタブ. spec.md §「GET /api/v1/focus」の受け入れ基準は
+  // implementer が green 化する. ここでは未実装を 501 で明示する.
+  // 認証ミドルウェアは先に走るため, Authorization 無しは 401 が先に返る.
+  app.get("/api/v1/focus", (c) => {
+    return errorJson(c, 500, "NOT_IMPLEMENTED", "GET /api/v1/focus is not implemented");
+  });
+
+  // ---------- PUT /api/v1/focus (BL-006 / FR-012) ----------
+  // test-designer のスタブ. spec.md §「PUT /api/v1/focus」の受け入れ基準
+  // (taskId 設定 / 解除 / 楽観ロック / 冪等性 / INVALID_FOCUS_TARGET) は
+  // implementer が green 化する.
+  // 認証 / Idempotency-Key ミドルウェアは先に走る (401 / MISSING_IDEMPOTENCY_KEY 経路).
+  app.put("/api/v1/focus", async (c) => {
+    return saveAndReturn(c, deps, 500, {
+      code: "NOT_IMPLEMENTED",
+      message: "PUT /api/v1/focus is not implemented",
+    });
   });
 
   // ---------- GET /api/v1/today (BL-005 / FR-010 / FR-011 / NFR-013) ----------
@@ -415,7 +442,7 @@ async function saveAndReturn(
   if (status === 204) {
     return c.body(null, 204);
   }
-  return c.json(body, status as 200 | 201 | 400 | 401 | 404 | 412);
+  return c.json(body, status as 200 | 201 | 400 | 401 | 404 | 412 | 500 | 501);
 }
 
 /**
