@@ -249,6 +249,17 @@ export function createApp(deps: AppDeps): Hono {
         message: "name must be a string",
       });
     }
+    if (
+      body.priority !== undefined &&
+      body.priority !== "highest" &&
+      body.priority !== "normal" &&
+      body.priority !== "later"
+    ) {
+      return saveAndReturn(c, deps, 400, {
+        code: "INVALID_PRIORITY",
+        message: "priority must be 'highest' | 'normal' | 'later'",
+      });
+    }
 
     if (
       body.projectId !== undefined &&
@@ -268,6 +279,8 @@ export function createApp(deps: AppDeps): Hono {
     if (body.name !== undefined) patch.name = body.name as string;
     if (body.dueDate !== undefined) patch.dueDate = body.dueDate as "today" | "tomorrow";
     if (body.projectId !== undefined) patch.projectId = body.projectId as string | null;
+    if (body.priority !== undefined)
+      patch.priority = body.priority as "highest" | "normal" | "later";
 
     const updateResult = updateTask(current, patch, deps.clock);
     if (!updateResult.ok) {

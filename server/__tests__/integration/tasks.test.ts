@@ -41,6 +41,235 @@ beforeEach(() => {
 });
 
 // ============================================================
+// 起票時の優先度 (BL-002 / FR-003)
+//
+// spec.md (task-priority) §「起票時の優先度 (FR-003)」 で本 feature に追加された
+// シナリオ. priority を省略すると "normal" になることは既存テスト
+// 「タスク名のみでタスクを起票できる」(L48-) で担保済のため再掲しない.
+// ここでは「priority を明示できる」2 ケースのみ新規追加する.
+// ============================================================
+
+describe("POST /api/v1/tasks (起票時の優先度 BL-002)", () => {
+  it("シナリオ: 起票時に priority = \"highest\" を明示できる (BL-002 / FR-003)", async () => {
+    const res = await app.request("/api/v1/tasks", {
+      method: "POST",
+      headers: authHeaders({ "Idempotency-Key": TASK_ID_1 }),
+      body: JSON.stringify({ id: TASK_ID_1, name: "x", priority: "highest" }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { task: { priority: string } };
+    expect(body.task.priority).toBe("highest");
+  });
+
+  it("シナリオ: 起票時に priority = \"later\" を明示できる (BL-002 / FR-003)", async () => {
+    const res = await app.request("/api/v1/tasks", {
+      method: "POST",
+      headers: authHeaders({ "Idempotency-Key": TASK_ID_1 }),
+      body: JSON.stringify({ id: TASK_ID_1, name: "x", priority: "later" }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { task: { priority: string } };
+    expect(body.task.priority).toBe("later");
+  });
+});
+
+// ============================================================
+// 優先度の変更 (BL-002 / FR-004)
+//
+// spec.md (task-priority) §「優先度の変更 (FR-004)」 と 1:1 対応.
+// PATCH /api/v1/tasks/{id} で priority を受理する経路を担保する.
+// 共通経路 (If-Match, Idempotency-Key, 楽観ロック, 404, 401) は BL-001 で担保済のため再掲しない.
+// ============================================================
+
+describe("PATCH /api/v1/tasks/{id} (優先度の変更 BL-002)", () => {
+  it("シナリオ: PATCH で priority を normal から highest に変更できる", async () => {
+    taskRepo.seed({
+      id: TASK_ID_1,
+      name: "x",
+      projectId: null,
+      dueDate: "today",
+      priority: "normal",
+      origin: "manual",
+      routineId: null,
+      createdAt: TEST_INITIAL_TIME,
+      updatedAt: TEST_INITIAL_TIME,
+      trashedAt: null,
+      trashedReason: null,
+      version: 1,
+    });
+
+    const res = await app.request(`/api/v1/tasks/${TASK_ID_1}`, {
+      method: "PATCH",
+      headers: authHeaders({
+        "If-Match": "1",
+        "Idempotency-Key": "patch-priority-1",
+      }),
+      body: JSON.stringify({ priority: "highest" }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      task: {
+        priority: string;
+        version: number;
+        createdAt: string;
+        name: string;
+        projectId: string | null;
+        dueDate: string;
+      };
+    };
+    expect(body.task.priority).toBe("highest");
+    expect(body.task.version).toBe(2);
+    // createdAt は変更されない (BL-001 既存挙動の継承)
+    expect(body.task.createdAt).toBe(TEST_INITIAL_TIME);
+    // 他のフィールドは変更されない
+    expect(body.task.name).toBe("x");
+    expect(body.task.projectId).toBeNull();
+    expect(body.task.dueDate).toBe("today");
+
+    // ストア側にも反映されている
+    const after = await taskRepo.findById(TASK_ID_1);
+    expect(after?.priority).toBe("highest");
+    expect(after?.version).toBe(2);
+  });
+
+  it("シナリオ: PATCH で priority を later から highest に変更できる", async () => {
+    taskRepo.seed({
+      id: TASK_ID_1,
+      name: "x",
+      projectId: null,
+      dueDate: "today",
+      priority: "later",
+      origin: "manual",
+      routineId: null,
+      createdAt: TEST_INITIAL_TIME,
+      updatedAt: TEST_INITIAL_TIME,
+      trashedAt: null,
+      trashedReason: null,
+      version: 3,
+    });
+
+    const res = await app.request(`/api/v1/tasks/${TASK_ID_1}`, {
+      method: "PATCH",
+      headers: authHeaders({
+        "If-Match": "3",
+        "Idempotency-Key": "patch-priority-2",
+      }),
+      body: JSON.stringify({ priority: "highest" }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { task: { priority: string; version: number } };
+    expect(body.task.priority).toBe("highest");
+    expect(body.task.version).toBe(4);
+  });
+
+  it("シナリオ: PATCH で priority を normal から later に変更できる", async () => {
+    taskRepo.seed({
+      id: TASK_ID_1,
+      name: "x",
+      projectId: null,
+      dueDate: "today",
+      priority: "normal",
+      origin: "manual",
+      routineId: null,
+      createdAt: TEST_INITIAL_TIME,
+      updatedAt: TEST_INITIAL_TIME,
+      trashedAt: null,
+      trashedReason: null,
+      version: 1,
+    });
+
+    const res = await app.request(`/api/v1/tasks/${TASK_ID_1}`, {
+      method: "PATCH",
+      headers: authHeaders({
+        "If-Match": "1",
+        "Idempotency-Key": "patch-priority-3",
+      }),
+      body: JSON.stringify({ priority: "later" }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { task: { priority: string; version: number } };
+    expect(body.task.priority).toBe("later");
+    expect(body.task.version).toBe(2);
+  });
+
+  it("シナリオ: PATCH で priority を値域外に変更しようとすると 400 INVALID_PRIORITY が返り, ストアは不変", async () => {
+    taskRepo.seed({
+      id: TASK_ID_1,
+      name: "x",
+      projectId: null,
+      dueDate: "today",
+      priority: "normal",
+      origin: "manual",
+      routineId: null,
+      createdAt: TEST_INITIAL_TIME,
+      updatedAt: TEST_INITIAL_TIME,
+      trashedAt: null,
+      trashedReason: null,
+      version: 1,
+    });
+
+    const res = await app.request(`/api/v1/tasks/${TASK_ID_1}`, {
+      method: "PATCH",
+      headers: authHeaders({
+        "If-Match": "1",
+        "Idempotency-Key": "patch-priority-invalid",
+      }),
+      body: JSON.stringify({ priority: "urgent" }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { code: string };
+    expect(body.code).toBe("INVALID_PRIORITY");
+
+    // ストアの T は priority "normal", version 1 のまま
+    const after = await taskRepo.findById(TASK_ID_1);
+    expect(after?.priority).toBe("normal");
+    expect(after?.version).toBe(1);
+  });
+
+  it("シナリオ: PATCH で name と priority を同時に変更できる", async () => {
+    taskRepo.seed({
+      id: TASK_ID_1,
+      name: "x",
+      projectId: null,
+      dueDate: "today",
+      priority: "normal",
+      origin: "manual",
+      routineId: null,
+      createdAt: TEST_INITIAL_TIME,
+      updatedAt: TEST_INITIAL_TIME,
+      trashedAt: null,
+      trashedReason: null,
+      version: 1,
+    });
+
+    const res = await app.request(`/api/v1/tasks/${TASK_ID_1}`, {
+      method: "PATCH",
+      headers: authHeaders({
+        "If-Match": "1",
+        "Idempotency-Key": "patch-priority-combined",
+      }),
+      body: JSON.stringify({ name: "y", priority: "later" }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      task: { name: string; priority: string; version: number };
+    };
+    expect(body.task).toMatchObject({
+      name: "y",
+      priority: "later",
+      version: 2,
+    });
+  });
+});
+
+// ============================================================
 // 起票 (FR-001 / FR-002 / NFR-010)
 // ============================================================
 
