@@ -395,27 +395,54 @@ describe("TodayView (BL-002 優先度 UI)", () => {
 
   it("シナリオ: 優先度変更後の一覧は priority 順に再描画される (NFR-013)", async () => {
     // 初期: A = normal, B = later. 並び (priority 順) は A → B.
-    const repo = makeMockRepository([
-      makeTask({
-        id: "task-A",
-        name: "AAA",
-        priority: "normal",
-        version: 1,
-        createdAt: "2026-06-07T08:00:00.000Z",
-      }),
-      makeTask({
-        id: "task-B",
-        name: "BBB",
-        priority: "later",
-        version: 1,
-        createdAt: "2026-06-07T08:00:01.000Z",
-      }),
-    ]);
+    //
+    // BL-006 / D-008 との整合:
+    //   強調セクションに表示するタスクは通常リスト (listitem) に出ない.
+    //   本テストは「priority 順の再描画」を listitem で検証する都合上,
+    //   並び先頭が強調セクションへ吸われると検証対象が消える.
+    //   そこで sentinel タスク (highest, 並び先頭) を 1 件追加し,
+    //   initialFocus.currentTaskId をその sentinel に固定して
+    //   強調セクションを sentinel で占有させる.
+    //   こうすると A, B は常に listitem に並び, 元の検証ロジックがそのまま使える.
+    const repo = makeMockRepository(
+      [
+        makeTask({
+          id: "task-focus",
+          name: "FOCUS-SENTINEL",
+          priority: "highest",
+          version: 1,
+          createdAt: "2026-06-07T07:00:00.000Z",
+        }),
+        makeTask({
+          id: "task-A",
+          name: "AAA",
+          priority: "normal",
+          version: 1,
+          createdAt: "2026-06-07T08:00:00.000Z",
+        }),
+        makeTask({
+          id: "task-B",
+          name: "BBB",
+          priority: "later",
+          version: 1,
+          createdAt: "2026-06-07T08:00:01.000Z",
+        }),
+      ],
+      {
+        initialFocus: {
+          id: "singleton",
+          currentTaskId: "task-focus",
+          version: 1,
+          updatedAt: NOW,
+        },
+      },
+    );
     const user = userEvent.setup();
     render(<TodayView repository={repo} />);
 
-    // 描画後, 初期並びを確認 (A, B).
+    // 描画後, 初期並びを確認 (A, B). sentinel は強調セクションに居て listitem には居ない.
     const itemsBefore = await screen.findAllByRole("listitem");
+    expect(itemsBefore).toHaveLength(2);
     expect(itemsBefore[0]?.textContent ?? "").toContain("AAA");
     expect(itemsBefore[1]?.textContent ?? "").toContain("BBB");
 
@@ -597,37 +624,62 @@ describe("TodayView (BL-005 今日ビュー本実装)", () => {
     //
     // mock の todayMock は priority → createdAt → id にソートして返すため,
     // ここでは「mock が返した順 = UI に表示された順」が一致することを検証する.
-    const repo = makeMockRepository([
-      // 投入順は混乱させる (UI が再ソートしなければ mock 内ソートの結果がそのまま出る).
-      makeTask({
-        id: "task-C",
-        name: "CCC",
-        priority: "later",
-        createdAt: "2026-06-08T08:00:00.000Z",
-        version: 1,
-      }),
-      makeTask({
-        id: "task-A",
-        name: "AAA",
-        priority: "highest",
-        createdAt: "2026-06-08T08:00:00.000Z",
-        version: 1,
-      }),
-      makeTask({
-        id: "task-B",
-        name: "BBB",
-        priority: "normal",
-        createdAt: "2026-06-08T08:00:00.000Z",
-        version: 1,
-      }),
-    ]);
+    //
+    // BL-006 / D-008 との整合:
+    //   強調セクションに表示するタスクは listitem に出ない.
+    //   本テストの関心事は「サーバ並びの並びがそのまま (再ソートなく) UI に出る」
+    //   ことであり, 「強調セクションが何を表示するか」ではない.
+    //   そのため currentTaskId を sentinel タスク (並び先頭) に固定し,
+    //   AAA / BBB / CCC を常に listitem に並ばせる構成にする.
+    const repo = makeMockRepository(
+      [
+        // 投入順は混乱させる (UI が再ソートしなければ mock 内ソートの結果がそのまま出る).
+        makeTask({
+          id: "task-focus",
+          name: "FOCUS-SENTINEL",
+          priority: "highest",
+          createdAt: "2026-06-08T07:00:00.000Z",
+          version: 1,
+        }),
+        makeTask({
+          id: "task-C",
+          name: "CCC",
+          priority: "later",
+          createdAt: "2026-06-08T08:00:00.000Z",
+          version: 1,
+        }),
+        makeTask({
+          id: "task-A",
+          name: "AAA",
+          priority: "highest",
+          createdAt: "2026-06-08T08:00:00.000Z",
+          version: 1,
+        }),
+        makeTask({
+          id: "task-B",
+          name: "BBB",
+          priority: "normal",
+          createdAt: "2026-06-08T08:00:00.000Z",
+          version: 1,
+        }),
+      ],
+      {
+        initialFocus: {
+          id: "singleton",
+          currentTaskId: "task-focus",
+          version: 1,
+          updatedAt: NOW,
+        },
+      },
+    );
     render(<TodayView repository={repo} />);
 
     // 描画を待つ.
     await screen.findByText("AAA");
 
     const items = await screen.findAllByRole("listitem");
-    // 期待: A (highest) → B (normal) → C (later).
+    // 期待: sentinel は強調セクションへ. listitem は A (highest) → B (normal) → C (later).
+    expect(items).toHaveLength(3);
     expect(items[0]?.textContent ?? "").toContain("AAA");
     expect(items[1]?.textContent ?? "").toContain("BBB");
     expect(items[2]?.textContent ?? "").toContain("CCC");
