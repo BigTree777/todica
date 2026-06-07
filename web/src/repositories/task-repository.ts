@@ -55,6 +55,21 @@ export interface CompleteTaskCommand {
   ifMatch: number;
 }
 
+/**
+ * BL-005 / FR-010 / FR-011: 今日ビュー API のレスポンス形状.
+ *
+ * - `tasks`: dueDate = "today" かつ trashedAt = null のタスクを
+ *   priority (highest→normal→later) → createdAt 昇順 → id 昇順 で並べた一覧.
+ * - `nextTaskId`: 並びの先頭タスクの id. tasks が空のとき null (= 「次の 1 つ」が存在しない).
+ *
+ * 本型は test-designer が追加した「型のみのスタブ」.
+ * HttpTaskRepository.today / UI からの呼び出しは implementer が green 化する.
+ */
+export interface TodayViewResponse {
+  tasks: Task[];
+  nextTaskId: string | null;
+}
+
 export interface TaskRepository {
   list(): Promise<Task[]>;
   create(cmd: CreateTaskCommand): Promise<Task>;
@@ -67,6 +82,16 @@ export interface TaskRepository {
    * HttpTaskRepository の本実装は implementer が green 化する.
    */
   complete(cmd: CompleteTaskCommand): Promise<Task>;
+  /**
+   * BL-005 / FR-010 / FR-011: 今日ビューの取得.
+   *
+   * GET /api/v1/today を叩き, `{ tasks, nextTaskId }` を返す.
+   * `tasks` はサーバ側で priority → createdAt → id の順に並べ替えられており,
+   * クライアントは再ソートせずそのまま表示する (plan.md D-004).
+   * 本メソッドは test-designer が追加したインターフェース上のスタブ.
+   * HttpTaskRepository.today の本実装 / UI からの呼び出しは implementer が green 化する.
+   */
+  today(): Promise<TodayViewResponse>;
 }
 
 /**
@@ -232,6 +257,25 @@ export class HttpTaskRepository implements TaskRepository {
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: failed to delete task`);
     }
+  }
+
+  /**
+   * BL-005 / FR-010 / FR-011: 今日ビュー取得.
+   *
+   * GET /api/v1/today を叩き, `{ tasks, nextTaskId }` を返す.
+   * tasks はサーバ側で priority → createdAt → id の順に並んでおり,
+   * クライアントは再ソートせずそのまま表示する (plan.md D-004).
+   */
+  async today(): Promise<TodayViewResponse> {
+    const res = await fetch(`${this.baseUrl}/api/v1/today`, {
+      method: "GET",
+      headers: this.authHeaders(),
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: failed to fetch today view`);
+    }
+    const body = (await res.json()) as TodayViewResponse;
+    return body;
   }
 
   /**

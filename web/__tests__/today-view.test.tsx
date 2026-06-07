@@ -44,9 +44,37 @@ function makeMockRepository(initial: Task[] = []): TaskRepository & {
   deleteMock: ReturnType<typeof vi.fn>;
   completeMock: ReturnType<typeof vi.fn>;
   listMock: ReturnType<typeof vi.fn>;
+  todayMock: ReturnType<typeof vi.fn>;
 } {
   const state = [...initial];
   const listMock = vi.fn(async () => [...state]);
+  // BL-005 / FR-010: 今日ビュー mock.
+  //   - dueDate === "today" かつ trashedAt === null のものだけを返す.
+  //   - priority (highest→normal→later) → createdAt 昇順 → id 昇順 にソートする (plan.md D-002).
+  //   - nextTaskId = tasks[0]?.id ?? null.
+  // 既存テストは list() を起点に書かれているが, BL-005 で UI が today() を呼ぶように変わる.
+  // 既存テストの初期 seed は今日扱い (dueDate "today") のため, today() でも同じ並びで返れば
+  // 既存テスト挙動を壊さない.
+  const PRIORITY_ORDER_LOCAL: Record<string, number> = {
+    highest: 0,
+    normal: 1,
+    later: 2,
+  };
+  const todayMock = vi.fn(async () => {
+    const filtered = state.filter(
+      (t) => t.dueDate === "today" && t.trashedAt === null,
+    );
+    const sorted = [...filtered].sort((a, b) => {
+      const p =
+        (PRIORITY_ORDER_LOCAL[a.priority] ?? 99) -
+        (PRIORITY_ORDER_LOCAL[b.priority] ?? 99);
+      if (p !== 0) return p;
+      const c = a.createdAt.localeCompare(b.createdAt);
+      if (c !== 0) return c;
+      return a.id.localeCompare(b.id);
+    });
+    return { tasks: sorted, nextTaskId: sorted[0]?.id ?? null };
+  });
   const createMock = vi.fn(async (cmd: CreateTaskCommand) => {
     const t = makeTask({
       id: cmd.id,
@@ -94,11 +122,13 @@ function makeMockRepository(initial: Task[] = []): TaskRepository & {
     update: updateMock,
     delete: deleteMock,
     complete: completeMock,
+    today: todayMock,
     listMock,
     createMock,
     updateMock,
     deleteMock,
     completeMock,
+    todayMock,
   };
 }
 
@@ -466,5 +496,147 @@ describe("TodayView (BL-003 完了ボタン)", () => {
 
     expect(repo.completeMock).toHaveBeenCalledTimes(1);
     expect(repo.deleteMock).not.toHaveBeenCalled();
+  });
+});
+
+// ============================================================
+// BL-005 / FR-010 / FR-011 / NFR-001 / NFR-013: 今日ビュー本実装 (UI 層)
+//
+// spec.md (today-view) §「入口」「表示対象の絞り込み」「並び順の本仕様」
+// 「\"次の 1 つ\" の一意化」「既存実装との整合 (暫定 → 本実装の差し替え担保)」と 1:1 対応する.
+//
+// plan.md §影響範囲 §UI / D-004 に従い, UI は:
+//   - 一覧取得を `repository.today()` に切り替える (旧 `repository.list()` ベースから移行).
+//   - クライアント側で再ソートしない (= サーバ並びをそのまま表示).
+//   - tomorrow タスクが today() の戻り値に含まれない以上, UI にも出ない.
+//
+// today-view.tsx 側はまだ `repository.list()` を呼ぶ暫定実装のため,
+// 以下のテストは red になる. implementer が `repository.today()` への切替で green 化する.
+// ============================================================
+
+describe("TodayView (BL-005 今日ビュー本実装)", () => {
+  it("シナリオ: TodayView は起動時に repository.today() を呼ぶ (旧 list() ではない)", async () => {
+    // spec.md §「既存実装との整合」: 取得経路が today() に置き換わっている.
+    const repo = makeMockRepository([
+      makeTask({ id: "t1", name: "牛乳", dueDate: "today", version: 1 }),
+    ]);
+    render(<TodayView repository={repo} />);
+
+    // 描画完了を待つために 1 件は描画されることを待つ.
+    await screen.findByText("牛乳");
+
+    // today() が呼ばれている.
+    expect(repo.todayMock).toHaveBeenCalledTimes(1);
+    // list() は今日ビューの取得経路では呼ばれない (D-004).
+    expect(repo.listMock).not.toHaveBeenCalled();
+  });
+
+  it("シナリオ: tomorrow タスクは TodayView に表示されない (today() が today のみ返す前提)", async () => {
+    // spec.md §「表示対象の絞り込み」: T_today は含まれるが T_tomorrow は含まれない.
+    // makeMockRepository.todayMock は dueDate === "today" だけを返すよう実装している.
+    const repo = makeMockRepository([
+      makeTask({ id: "today-1", name: "TODAY-TASK", dueDate: "today", version: 1 }),
+      makeTask({
+        id: "tomorrow-1",
+        name: "TOMORROW-TASK",
+        dueDate: "tomorrow",
+        version: 1,
+      }),
+    ]);
+    render(<TodayView repository={repo} />);
+
+    // today は描画される.
+    expect(await screen.findByText("TODAY-TASK")).toBeInTheDocument();
+    // tomorrow は描画されない.
+    expect(screen.queryByText("TOMORROW-TASK")).toBeNull();
+  });
+
+  it("シナリオ: TodayView はサーバ並び (priority → createdAt → id) をそのまま表示する (D-004 再ソート禁止)", async () => {
+    // spec.md §「並び順の本仕様」と plan.md D-004:
+    // クライアントは today() の戻り順をそのまま map するだけで,
+    // 自前の sortTasks を持たない.
+    //
+    // mock の todayMock は priority → createdAt → id にソートして返すため,
+    // ここでは「mock が返した順 = UI に表示された順」が一致することを検証する.
+    const repo = makeMockRepository([
+      // 投入順は混乱させる (UI が再ソートしなければ mock 内ソートの結果がそのまま出る).
+      makeTask({
+        id: "task-C",
+        name: "CCC",
+        priority: "later",
+        createdAt: "2026-06-08T08:00:00.000Z",
+        version: 1,
+      }),
+      makeTask({
+        id: "task-A",
+        name: "AAA",
+        priority: "highest",
+        createdAt: "2026-06-08T08:00:00.000Z",
+        version: 1,
+      }),
+      makeTask({
+        id: "task-B",
+        name: "BBB",
+        priority: "normal",
+        createdAt: "2026-06-08T08:00:00.000Z",
+        version: 1,
+      }),
+    ]);
+    render(<TodayView repository={repo} />);
+
+    // 描画を待つ.
+    await screen.findByText("AAA");
+
+    const items = await screen.findAllByRole("listitem");
+    // 期待: A (highest) → B (normal) → C (later).
+    expect(items[0]?.textContent ?? "").toContain("AAA");
+    expect(items[1]?.textContent ?? "").toContain("BBB");
+    expect(items[2]?.textContent ?? "").toContain("CCC");
+  });
+
+  it("シナリオ: 期限を today → tomorrow に切り替えると, 再取得後に該当タスクが今日ビューから消える", async () => {
+    // spec.md §「tomorrow タスクの扱い」第 1 ケース:
+    // PATCH /api/v1/tasks/{id} で dueDate を tomorrow にし, 再フェッチ後に消える.
+    //
+    // updateMock は state[idx] の dueDate を tomorrow に書き換えるため,
+    // 次回 todayMock が呼ばれた時点で対象タスクは戻り値から外れる.
+    const repo = makeMockRepository([
+      makeTask({ id: "t1", name: "MOVE-ME", dueDate: "today", version: 1 }),
+    ]);
+    const user = userEvent.setup();
+    render(<TodayView repository={repo} />);
+
+    expect(await screen.findByText("MOVE-ME")).toBeInTheDocument();
+
+    // 期限切替トグル.
+    const toggle = await screen.findByRole("button", { name: /明日へ|期限|今日へ/ });
+    await user.click(toggle);
+
+    // update が呼ばれていることを確認.
+    expect(repo.updateMock).toHaveBeenCalled();
+
+    // 期限切替後の再フェッチで today() が再度呼ばれる (D-007: 書き込み成功時に再取得).
+    // todayMock の累積呼出回数が初回 (起動時) より増えていること.
+    expect(repo.todayMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+
+    // 一覧から MOVE-ME が消える.
+    expect(screen.queryByText("MOVE-ME")).toBeNull();
+  });
+
+  it("シナリオ: 今日タスクが 0 件のときも UI は描画でき, 何も並ばない", async () => {
+    // spec.md §「\"次の 1 つ\" の一意化」第 2 ケース:
+    // today タスクが 0 件 (mock は空配列を返す) でも UI が崩れず, listitem が描かれない.
+    const repo = makeMockRepository([]);
+    render(<TodayView repository={repo} />);
+
+    // 見出し「今日」(FR-010) が描画される. select の option と区別するため heading で指定.
+    expect(
+      await screen.findByRole("heading", { name: "今日" }),
+    ).toBeInTheDocument();
+    // タスク行は無い.
+    const items = screen.queryAllByRole("listitem");
+    expect(items).toHaveLength(0);
+    // today() は呼ばれている.
+    expect(repo.todayMock).toHaveBeenCalledTimes(1);
   });
 });

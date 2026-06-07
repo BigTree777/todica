@@ -47,7 +47,8 @@ paths:
       summary: タスク一覧取得（BL-001 / FR-001）
       description: |
         ゴミ箱状態の絞り込みはクエリパラメータ `trashed` で指定する.
-        並び順はサーバ側で「dueDate (today→tomorrow) → priority (highest→normal→later) → createdAt 昇順」.
+        並び順はサーバ側で「priority (highest→normal→later) → createdAt 昇順 → id 昇順」
+        に統一されている（BL-005 / plan.md D-003: 今日ビュー API と並び規則を共通化）.
       parameters:
         - name: trashed
           in: query
@@ -186,11 +187,20 @@ paths:
   # ========== Today ==========
   /today:
     summary: 今日ビュー
-    description: 期限=今日のタスク一覧（並び順込み）+ フォーカス参照を一括返却（FR-010 〜 FR-013）
+    description: |
+      期限=今日のタスク一覧（並び順込み）+ "次の 1 つ" を一括返却（FR-010 / FR-011 / NFR-013）.
+      並び順はサーバ側で priority (highest→normal→later) → createdAt 昇順 → id 昇順 に確定する.
+      クエリパラメータは存在しない（NFR-001 / spec.md §「並び順を変えるカスタマイズが存在しないこと」）.
     get:
       tags: [today]
+      summary: 今日ビューを取得（FR-010 / FR-011）
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TodayView"
         "401": { $ref: "#/components/responses/Unauthorized" }
 
   # ========== Focus ==========
@@ -569,6 +579,26 @@ components:
           type: string
           enum: [highest, normal, later]
           default: normal
+
+    TodayView:
+      type: object
+      description: |
+        BL-005 / FR-010 / FR-011: 今日ビューのレスポンス形状.
+        - tasks: dueDate = "today" かつ trashedAt = null のタスクを
+          priority (highest→normal→later) → createdAt 昇順 → id 昇順 で並べた一覧.
+        - nextTaskId: 並びの先頭タスクの id. tasks が空のとき null.
+          利用者・FocusSelection (BL-006) が「次の 1 つ」として参照する.
+      required:
+        - tasks
+        - nextTaskId
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/Task"
+        nextTaskId:
+          type: string
+          nullable: true
 
     TaskPatch:
       type: object
