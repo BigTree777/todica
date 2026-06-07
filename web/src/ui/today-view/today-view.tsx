@@ -1,12 +1,15 @@
 /**
- * 今日ビュー (BL-001 の最小ビュー兼用).
+ * 今日ビュー (BL-005 本実装 + BL-001 / BL-002 / BL-003 を統合).
  *
- * - 起票フォーム (タスク名のみ必須, 期限 = today/tomorrow の 2 値)
- * - タスク一覧 (各行に 編集 / 期限切替 / 削除 を表示)
+ * - 起票フォーム (タスク名のみ必須, 期限 = today/tomorrow の 2 値, 優先度 = 3 値)
+ * - タスク一覧 (各行に 編集 / 期限切替 / 完了 / 削除 / 優先度切替 を表示)
  * - 編集ダイアログ (名称変更)
  *
- * 本実装は Repository をプロパティ注入する. TanStack Query は本機能の単体テストの
- * 観点 (描画 / 引数 / 楽観 UI 反映) には不要なので, useState による最小実装に留める.
+ * BL-005 / FR-010 / FR-011 / NFR-013 / plan.md D-004:
+ *   - 取得は `repository.today()` を使用 (`list()` は使わない).
+ *   - サーバが priority → createdAt → id で並べて返すので, クライアント側で再ソートしない.
+ *   - 各書き込み mutation (create / update / delete / complete) の成功時に
+ *     `repository.today()` を再呼出して tasks / nextTaskId を更新する (plan.md D-007).
  */
 import { useCallback, useEffect, useState } from "react";
 import type { DueDate, Priority, Task } from "@todica/domain/task";
@@ -36,19 +39,6 @@ export interface TodayViewProps {
   repository: TaskRepository;
 }
 
-const PRIORITY_ORDER: Record<string, number> = { highest: 0, normal: 1, later: 2 };
-const DUE_DATE_ORDER: Record<string, number> = { today: 0, tomorrow: 1 };
-
-function sortTasks(tasks: Task[]): Task[] {
-  return [...tasks].sort((a, b) => {
-    const dd = (DUE_DATE_ORDER[a.dueDate] ?? 99) - (DUE_DATE_ORDER[b.dueDate] ?? 99);
-    if (dd !== 0) return dd;
-    const pp = (PRIORITY_ORDER[a.priority] ?? 99) - (PRIORITY_ORDER[b.priority] ?? 99);
-    if (pp !== 0) return pp;
-    return a.createdAt.localeCompare(b.createdAt);
-  });
-}
-
 /** UUID v4 風の文字列を生成する. crypto.randomUUID が無い jsdom 環境向けのフォールバック. */
 function generateId(): string {
   const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
@@ -62,6 +52,7 @@ function generateId(): string {
 export function TodayView(props: TodayViewProps): JSX.Element {
   const { repository } = props;
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [nextTaskId, setNextTaskId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [projectId, setProjectId] = useState("");
   const [dueDate, setDueDate] = useState<DueDate>("today");
@@ -69,12 +60,25 @@ export function TodayView(props: TodayViewProps): JSX.Element {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingName, setEditingName] = useState("");
 
-  // 一覧の取得
+  /**
+   * 今日ビューを再取得する (plan.md D-007: 書き込み mutation 成功時に再フェッチ).
+   * cancelled フラグでアンマウント後の setState を防ぐ.
+   */
+  const refetchToday = useCallback(async (): Promise<void> => {
+    const res = await repository.today();
+    setTasks(res.tasks);
+    setNextTaskId(res.nextTaskId);
+  }, [repository]);
+
+  // 初回マウント時の取得 (BL-005 D-004: today() を使う. list() は使わない).
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const list = await repository.list();
-      if (!cancelled) setTasks(list);
+      const res = await repository.today();
+      if (!cancelled) {
+        setTasks(res.tasks);
+        setNextTaskId(res.nextTaskId);
+      }
     })();
     return () => {
       cancelled = true;
@@ -92,14 +96,14 @@ export function TodayView(props: TodayViewProps): JSX.Element {
         dueDate,
         priority,
       };
-      const created = await repository.create(cmd);
-      setTasks((prev) => [...prev, created]);
+      await repository.create(cmd);
       setName("");
       setProjectId("");
       setDueDate("today");
       setPriority("normal");
+      await refetchToday();
     },
-    [name, projectId, dueDate, priority, repository],
+    [name, projectId, dueDate, priority, repository, refetchToday],
   );
 
   const openEdit = useCallback((task: Task) => {
@@ -121,11 +125,11 @@ export function TodayView(props: TodayViewProps): JSX.Element {
         ifMatch: editingTask.version,
         patch: { name: editingName },
       };
-      const updated = await repository.update(cmd);
-      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+      await repository.update(cmd);
       cancelEdit();
+      await refetchToday();
     },
-    [editingTask, editingName, repository, cancelEdit],
+    [editingTask, editingName, repository, cancelEdit, refetchToday],
   );
 
   const handleToggleDueDate = useCallback(
@@ -136,29 +140,36 @@ export function TodayView(props: TodayViewProps): JSX.Element {
         ifMatch: task.version,
         patch: { dueDate: next },
       };
-      const updated = await repository.update(cmd);
-      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+      await repository.update(cmd);
+      // 楽観 UI: today → tomorrow の場合は即座に今日ビューから除外する (D-007).
+      if (next === "tomorrow") {
+        setTasks((prev) => prev.filter((t) => t.id !== task.id));
+      }
+      await refetchToday();
     },
-    [repository],
+    [repository, refetchToday],
   );
 
   const handleDelete = useCallback(
     async (task: Task) => {
       const cmd: DeleteTaskCommand = { id: task.id, ifMatch: task.version };
       await repository.delete(cmd);
+      // 楽観 UI: 削除したタスクは即座に一覧から除外する (D-007).
       setTasks((prev) => prev.filter((t) => t.id !== task.id));
+      await refetchToday();
     },
-    [repository],
+    [repository, refetchToday],
   );
 
   const handleComplete = useCallback(
     async (task: Task) => {
       const cmd: CompleteTaskCommand = { id: task.id, ifMatch: task.version };
       await repository.complete(cmd);
-      // 楽観 UI: 完了したタスクは今日ビューから除外する (BL-003 / plan.md §処理フロー §2).
+      // 楽観 UI: 完了したタスクは即座に今日ビューから除外する (BL-003 / D-007).
       setTasks((prev) => prev.filter((t) => t.id !== task.id));
+      await refetchToday();
     },
-    [repository],
+    [repository, refetchToday],
   );
 
   const handleCyclePriority = useCallback(
@@ -169,14 +180,16 @@ export function TodayView(props: TodayViewProps): JSX.Element {
         ifMatch: task.version,
         patch: { priority: next },
       };
-      const updated = await repository.update(cmd);
-      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+      await repository.update(cmd);
+      await refetchToday();
     },
-    [repository],
+    [repository, refetchToday],
   );
 
-  const sorted = sortTasks(tasks);
   const isEditing = editingTask !== null;
+  // 並びはサーバが計算した順序 (plan.md D-004: クライアントで再ソートしない).
+  // nextTaskId は state に保持しているが視覚的強調は本 feature では任意 (plan.md §影響範囲 §UI).
+  void nextTaskId;
 
   return (
     <main>
@@ -251,7 +264,7 @@ export function TodayView(props: TodayViewProps): JSX.Element {
       )}
 
       <ul aria-label="タスク一覧">
-        {sorted.map((task) => (
+        {tasks.map((task) => (
           <li key={task.id}>
             <span>{task.name}</span>
             <span>[優先度: {PRIORITY_LABEL[task.priority]}]</span>

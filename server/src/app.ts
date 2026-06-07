@@ -19,6 +19,7 @@ import {
 import type { TaskRepository } from "./data/task-repository.js";
 import type { ProjectRepository } from "./data/project-repository.js";
 import type { IdempotencyStore } from "./data/idempotency-store.js";
+import { filterToday, pickNextTaskId, sortToday } from "./today.js";
 
 /**
  * テストおよびアプリ起動の双方で使う依存性の束.
@@ -180,17 +181,18 @@ export function createApp(deps: AppDeps): Hono {
   });
 
   // ---------- GET /api/v1/today (BL-005 / FR-010 / FR-011 / NFR-013) ----------
-  // test-designer スタブ: 501 NOT_IMPLEMENTED を返し, 新規テストを red にする.
-  // implementer が本実装 (filterToday → sortToday → pickNextTaskId + 200 OK
-  // { tasks, nextTaskId }) で green 化する. plan.md §処理フロー / D-001 / D-005.
+  // plan.md §処理フロー / D-001 / D-005:
+  //   1. task-repository.list({ trashed: "false" }) で全 active タスクを取得.
+  //   2. filterToday: dueDate === "today" のみに絞る.
+  //   3. sortToday:   priority → createdAt → id の 3 段で安定ソート.
+  //   4. nextTaskId = tasks[0]?.id ?? null.
+  //   5. 200 OK { tasks, nextTaskId }.
+  // クエリパラメータは存在しない (NFR-001 / spec.md §「並び順を変えるカスタマイズが存在しないこと」).
   app.get("/api/v1/today", async (c) => {
-    return c.json(
-      {
-        code: "NOT_IMPLEMENTED",
-        message: "GET /api/v1/today is a stub for BL-005 (today-view).",
-      },
-      501 as 501,
-    );
+    const active = await deps.taskRepository.list({ trashed: "false" });
+    const todayTasks = sortToday(filterToday(active));
+    const nextTaskId = pickNextTaskId(todayTasks);
+    return c.json({ tasks: todayTasks, nextTaskId }, 200);
   });
 
   // ---------- GET /api/v1/tasks ----------
@@ -417,17 +419,13 @@ async function saveAndReturn(
 }
 
 /**
- * 暫定 3 段ソート: dueDate (today→tomorrow), priority (highest→normal→later), createdAt 昇順.
- * plan.md §影響範囲 §UI.
+ * GET /api/v1/tasks のサーバ側ソート規則 (BL-005 / plan.md D-003).
+ *
+ * 本仕様の並び順 (priority → createdAt → id) に統一する.
+ * 暫定実装の第一キーだった dueDate (today→tomorrow) は本実装で削除.
+ * 今日ビュー (GET /api/v1/today) と並びの規則を揃え, monorepo 内で
+ * 「タスクの並び」の正本を 1 箇所に閉じ込める (sortToday と同等規則).
  */
 function sortTasks(tasks: Task[]): Task[] {
-  const dueDateOrder: Record<string, number> = { today: 0, tomorrow: 1 };
-  const priorityOrder: Record<string, number> = { highest: 0, normal: 1, later: 2 };
-  return [...tasks].sort((a, b) => {
-    const dd = (dueDateOrder[a.dueDate] ?? 99) - (dueDateOrder[b.dueDate] ?? 99);
-    if (dd !== 0) return dd;
-    const pp = (priorityOrder[a.priority] ?? 99) - (priorityOrder[b.priority] ?? 99);
-    if (pp !== 0) return pp;
-    return a.createdAt.localeCompare(b.createdAt);
-  });
+  return sortToday(tasks);
 }

@@ -260,15 +260,22 @@ export class HttpTaskRepository implements TaskRepository {
   }
 
   /**
-   * BL-005 / FR-010 / FR-011: 今日ビュー取得 (スタブ).
+   * BL-005 / FR-010 / FR-011: 今日ビュー取得.
    *
-   * test-designer 段階のため本メソッドは未実装. 呼び出すと throw する.
-   * implementer が GET /api/v1/today を叩く本実装で green 化する (plan.md §処理フロー).
+   * GET /api/v1/today を叩き, `{ tasks, nextTaskId }` を返す.
+   * tasks はサーバ側で priority → createdAt → id の順に並んでおり,
+   * クライアントは再ソートせずそのまま表示する (plan.md D-004).
    */
   async today(): Promise<TodayViewResponse> {
-    throw new Error(
-      "HttpTaskRepository.today is a stub for BL-005 (today-view). implementer must implement GET /api/v1/today.",
-    );
+    const res = await fetch(`${this.baseUrl}/api/v1/today`, {
+      method: "GET",
+      headers: this.authHeaders(),
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: failed to fetch today view`);
+    }
+    const body = (await res.json()) as TodayViewResponse;
+    return body;
   }
 
   /**
