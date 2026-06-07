@@ -179,6 +179,20 @@ export function createApp(deps: AppDeps): Hono {
     return saveAndReturn(c, deps, 201, { task: createResult.task });
   });
 
+  // ---------- GET /api/v1/today (BL-005 / FR-010 / FR-011 / NFR-013) ----------
+  // test-designer スタブ: 501 NOT_IMPLEMENTED を返し, 新規テストを red にする.
+  // implementer が本実装 (filterToday → sortToday → pickNextTaskId + 200 OK
+  // { tasks, nextTaskId }) で green 化する. plan.md §処理フロー / D-001 / D-005.
+  app.get("/api/v1/today", async (c) => {
+    return c.json(
+      {
+        code: "NOT_IMPLEMENTED",
+        message: "GET /api/v1/today is a stub for BL-005 (today-view).",
+      },
+      501 as 501,
+    );
+  });
+
   // ---------- GET /api/v1/tasks ----------
   app.get("/api/v1/tasks", async (c) => {
     const trashedParam = c.req.query("trashed");
