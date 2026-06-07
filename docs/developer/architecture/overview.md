@@ -266,8 +266,6 @@ Todica は **本人運用サーバとそのクライアントの間の内部 API
 
 | ADR | 内容 | 状態 |
 | --- | --- | --- |
-| [0001](../adr/0001-use-postgresql.md) | PostgreSQL 採用（雛形） | 廃止（→ 0002） |
-| [0002](../adr/0002-supersede-postgresql-adoption.md) | ADR-0001 廃止 | 承認（廃止理由の一部は 0006 / 0007 で更新） |
 | [0003](../adr/0003-tech-stack-web-first.md) | 技術スタック選定（旧 Web 単体前提） | 廃止（→ 0008 / 0009） |
 | [0004](../adr/0004-persistence-mechanism.md) | 永続化方式選定（旧 IndexedDB） | 廃止（→ 0007 / 0009） |
 | [0005](../adr/0005-no-external-api.md) | 外部 API を持たない | 廃止（→ 0010） |

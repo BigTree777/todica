@@ -2,7 +2,7 @@
 
 > 新しい機能を始めるときは `_template/` ディレクトリごとコピーして
 > `<feature-name>/` にリネームし、この spec → plan → tasks の順で埋める。
-> `<feature-name>` は**英語の kebab-case** で命名する（例: `password-reset`）。日本語名は使わない。
+> `<feature-name>` は**英語の kebab-case** で命名する（例: `task-crud`）。日本語名は使わない。
 
 - 状態: ドラフト / レビュー中 / 確定
 - 関連: [`../../planning/backlog.md`](../../planning/backlog.md) の <BL-XXX>

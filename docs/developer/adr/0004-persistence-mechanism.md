@@ -46,7 +46,7 @@
   - IndexedDB の生 API は使いにくい. ラッパーの選定（Dexie 等）は feature spec / implementer 側で決める.
   - エクスポート / インポートが必要になった場合の手段は別途仕様化する（本 ADR の範囲外）.
   - 「データの場所やアクセスする端末を制限しない」（NFR-021）について, 本決定では端末をまたぐ自動同期は提供しないが, 個別端末上で動作する条件は満たす. 端末間移行が必要になれば別途 ADR を起こす.
-- 関連: [`0003-tech-stack-web-first.md`](0003-tech-stack-web-first.md), [`0002-supersede-postgresql-adoption.md`](0002-supersede-postgresql-adoption.md), [`../architecture/database/overview.md`](../architecture/database/overview.md)
+- 関連: [`0003-tech-stack-web-first.md`](0003-tech-stack-web-first.md), [`../architecture/database/overview.md`](../architecture/database/overview.md)
 
 ## 廃止理由（2026-06-05 追記）
 

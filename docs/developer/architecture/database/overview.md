@@ -154,7 +154,7 @@ FocusSelection: 「現在のタスク」参照（単一レコード）
 - WAL モードの採用理由:
   - 単一ユーザーで同時書き込みの並行性は低いが, 読み取りと書き込みが並行できるため UI 応答が安定する.
   - クラッシュリカバリ特性が改善される.
-- ADR-0001（PostgreSQL 採用）/ ADR-0004（IndexedDB 採用）は廃止. 経緯は [ADR-0002](../../adr/0002-supersede-postgresql-adoption.md), [ADR-0007](../../adr/0007-server-tech-stack.md), [ADR-0009](../../adr/0009-android-client-tech-stack.md) を参照.
+- 旧 ADR-0004（IndexedDB 採用）は廃止. 採用方式の最新決定は [ADR-0007](../../adr/0007-server-tech-stack.md), [ADR-0009](../../adr/0009-android-client-tech-stack.md) を参照.
 
 ## 11. 実装上の注意点
 
@@ -175,4 +175,4 @@ FocusSelection: 「現在のタスク」参照（単一レコード）
 - 抽象アーキテクチャ: [`../overview.md`](../overview.md), [`../module-boundaries.md`](../module-boundaries.md)
 - サーバ実装: [`../server/overview.md`](../server/overview.md)
 - Android クライアント実装: [`../android-client/overview.md`](../android-client/overview.md)
-- ADR: [`../../adr/0006-distribution-topology.md`](../../adr/0006-distribution-topology.md), [`../../adr/0007-server-tech-stack.md`](../../adr/0007-server-tech-stack.md), [`../../adr/0009-android-client-tech-stack.md`](../../adr/0009-android-client-tech-stack.md), [`../../adr/0011-day-boundary-time-source.md`](../../adr/0011-day-boundary-time-source.md), [`../../adr/0002-supersede-postgresql-adoption.md`](../../adr/0002-supersede-postgresql-adoption.md)
+- ADR: [`../../adr/0006-distribution-topology.md`](../../adr/0006-distribution-topology.md), [`../../adr/0007-server-tech-stack.md`](../../adr/0007-server-tech-stack.md), [`../../adr/0009-android-client-tech-stack.md`](../../adr/0009-android-client-tech-stack.md), [`../../adr/0011-day-boundary-time-source.md`](../../adr/0011-day-boundary-time-source.md)
