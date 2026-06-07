@@ -287,6 +287,76 @@ describe("PATCH /api/v1/tasks/{id} (名称編集)", () => {
 });
 
 // ============================================================
+// 名称編集 (追加) - 不在 projectId の参照整合性 (plan.md §例外処理表)
+// ============================================================
+
+describe("PATCH /api/v1/tasks/{id} (projectId 参照整合性)", () => {
+  it("シナリオ: 編集時に不在の projectId を指定すると 400 PROJECT_NOT_FOUND が返る", async () => {
+    // plan.md §例外処理表で「PROJECT_NOT_FOUND は起票・編集の両方」と明記.
+    // 起票時の同名シナリオと同じ assert スタイル.
+    taskRepo.seed({
+      id: TASK_ID_1,
+      name: "x",
+      projectId: null,
+      dueDate: "today",
+      priority: "normal",
+      origin: "manual",
+      routineId: null,
+      createdAt: TEST_INITIAL_TIME,
+      updatedAt: TEST_INITIAL_TIME,
+      trashedAt: null,
+      trashedReason: null,
+      version: 1,
+    });
+    // projectRepo にはどのプロジェクトも seed しない (= 全 ID 不在)
+
+    const res = await app.request(`/api/v1/tasks/${TASK_ID_1}`, {
+      method: "PATCH",
+      headers: authHeaders({
+        "If-Match": "1",
+        "Idempotency-Key": "patch-project-missing",
+      }),
+      body: JSON.stringify({ projectId: "non-existent-project-id" }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { code: string };
+    expect(body.code).toBe("PROJECT_NOT_FOUND");
+
+    // ストアは変更されない (projectId 不変, version 不変)
+    const after = await taskRepo.findById(TASK_ID_1);
+    expect(after?.projectId).toBeNull();
+    expect(after?.version).toBe(1);
+  });
+});
+
+// ============================================================
+// Idempotency-Key 欠落 (NFR-020, plan.md §例外処理表, ADR-0010)
+// ============================================================
+
+describe("POST /api/v1/tasks (Idempotency-Key 必須)", () => {
+  it("シナリオ: Idempotency-Key ヘッダ欠落の起票は 400 MISSING_IDEMPOTENCY_KEY が返る", async () => {
+    // 全書き込み系で Idempotency-Key は必須 (plan.md §例外処理表, ADR-0010).
+    const res = await app.request("/api/v1/tasks", {
+      method: "POST",
+      headers: {
+        // 認証は通すが Idempotency-Key だけ意図的に外す.
+        Authorization: `Bearer ${TEST_AUTH_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ id: TASK_ID_1, name: "x" }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { code: string };
+    expect(body.code).toBe("MISSING_IDEMPOTENCY_KEY");
+
+    // タスクは作成されない
+    expect(taskRepo.all()).toHaveLength(0);
+  });
+});
+
+// ============================================================
 // 期限切替 (FR-005)
 // ============================================================
 

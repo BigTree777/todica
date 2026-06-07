@@ -37,6 +37,25 @@ export interface TaskRepository {
 }
 
 /**
+ * 楽観ロック衝突 (HTTP 412) を表す例外.
+ *
+ * サーバが 412 Precondition Failed を返したとき, HttpTaskRepository は本例外を throw する.
+ * ボディに含まれる現行 task はキャッチ側で再フェッチ / 強制再送等の判断に使う.
+ * 詳細は plan.md §処理フロー (PATCH / DELETE の 412 経路).
+ *
+ * test-designer 段階ではクラスシグネチャのみ. 本実装は implementer が担当.
+ */
+export class OptimisticLockError extends Error {
+  constructor(
+    message: string,
+    public readonly currentTask?: Task,
+  ) {
+    super(message);
+    this.name = "OptimisticLockError";
+  }
+}
+
+/**
  * スタブ実装. implementer が HTTP 呼び出しを実装する.
  */
 export class HttpTaskRepository implements TaskRepository {
