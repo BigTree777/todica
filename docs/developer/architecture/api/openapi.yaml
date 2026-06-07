@@ -568,6 +568,10 @@ components:
         projectId:
           type: string
           nullable: true
+        priority:
+          type: string
+          enum: [highest, normal, later]
+          description: BL-002 / FR-004. 値域外は 400 INVALID_PRIORITY を返す.
 
     # ---------- 他エンティティ (feature spec で詳細化) ----------
     Project:

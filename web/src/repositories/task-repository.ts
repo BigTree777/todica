@@ -133,6 +133,7 @@ export class HttpTaskRepository implements TaskRepository {
     };
     if (cmd.projectId !== undefined) body.projectId = cmd.projectId;
     if (cmd.dueDate !== undefined) body.dueDate = cmd.dueDate;
+    if (cmd.priority !== undefined) body.priority = cmd.priority;
 
     // Idempotency-Key は UUID v4. クライアントが採番した task id をそのまま使う方針
     // (plan.md §処理フロー: 「id を Idempotency-Key として送る」).
@@ -163,6 +164,7 @@ export class HttpTaskRepository implements TaskRepository {
     if (cmd.patch.name !== undefined) body.name = cmd.patch.name;
     if (cmd.patch.dueDate !== undefined) body.dueDate = cmd.patch.dueDate;
     if (cmd.patch.projectId !== undefined) body.projectId = cmd.patch.projectId;
+    if (cmd.patch.priority !== undefined) body.priority = cmd.patch.priority;
 
     // PATCH の Idempotency-Key は task id とは独立に採番する (同じ id でも複数回 PATCH しうる).
     const idemKey = uuidV4();

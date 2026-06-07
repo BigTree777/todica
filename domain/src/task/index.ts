@@ -50,6 +50,11 @@ export interface UpdateTaskInput {
   name?: string;
   dueDate?: DueDate;
   projectId?: string | null;
+  /**
+   * BL-002 / FR-004: 編集時の優先度. 指定された場合のみ部分上書きする.
+   * 値域外は INVALID_PRIORITY を返す.
+   */
+  priority?: Priority;
 }
 
 /** ドメインバリデーション結果. */
@@ -176,6 +181,10 @@ export function updateTask(
     const dueError = validateDueDate(patch.dueDate);
     if (dueError) return { ok: false, error: dueError };
   }
+  if (patch.priority !== undefined) {
+    const priorityError = validatePriority(patch.priority);
+    if (priorityError) return { ok: false, error: priorityError };
+  }
 
   const next: Task = {
     ...current,
@@ -183,6 +192,7 @@ export function updateTask(
     dueDate: patch.dueDate !== undefined ? patch.dueDate : current.dueDate,
     projectId:
       patch.projectId !== undefined ? patch.projectId : current.projectId,
+    priority: patch.priority !== undefined ? patch.priority : current.priority,
     updatedAt: clock.now(),
     version: current.version + 1,
   };

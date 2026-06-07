@@ -9,13 +9,27 @@
  * 観点 (描画 / 引数 / 楽観 UI 反映) には不要なので, useState による最小実装に留める.
  */
 import { useCallback, useEffect, useState } from "react";
-import type { DueDate, Task } from "@todica/domain/task";
+import type { DueDate, Priority, Task } from "@todica/domain/task";
 import type {
   CreateTaskCommand,
   DeleteTaskCommand,
   TaskRepository,
   UpdateTaskCommand,
 } from "../../repositories/task-repository.js";
+
+/** 優先度の日本語表記 (plan.md D-004 「最優先 / 普通 / 後回し」). */
+const PRIORITY_LABEL: Record<Priority, string> = {
+  highest: "最優先",
+  normal: "普通",
+  later: "後回し",
+};
+
+/** cycle ボタンの次段階 (plan.md D-001: normal → highest → later → normal). */
+const NEXT_PRIORITY: Record<Priority, Priority> = {
+  normal: "highest",
+  highest: "later",
+  later: "normal",
+};
 
 export interface TodayViewProps {
   repository: TaskRepository;
@@ -50,6 +64,7 @@ export function TodayView(props: TodayViewProps): JSX.Element {
   const [name, setName] = useState("");
   const [projectId, setProjectId] = useState("");
   const [dueDate, setDueDate] = useState<DueDate>("today");
+  const [priority, setPriority] = useState<Priority>("normal");
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingName, setEditingName] = useState("");
 
@@ -74,14 +89,16 @@ export function TodayView(props: TodayViewProps): JSX.Element {
         name,
         projectId: projectId ? projectId : null,
         dueDate,
+        priority,
       };
       const created = await repository.create(cmd);
       setTasks((prev) => [...prev, created]);
       setName("");
       setProjectId("");
       setDueDate("today");
+      setPriority("normal");
     },
-    [name, projectId, dueDate, repository],
+    [name, projectId, dueDate, priority, repository],
   );
 
   const openEdit = useCallback((task: Task) => {
@@ -133,6 +150,20 @@ export function TodayView(props: TodayViewProps): JSX.Element {
     [repository],
   );
 
+  const handleCyclePriority = useCallback(
+    async (task: Task) => {
+      const next = NEXT_PRIORITY[task.priority];
+      const cmd: UpdateTaskCommand = {
+        id: task.id,
+        ifMatch: task.version,
+        patch: { priority: next },
+      };
+      const updated = await repository.update(cmd);
+      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+    },
+    [repository],
+  );
+
   const sorted = sortTasks(tasks);
   const isEditing = editingTask !== null;
 
@@ -173,6 +204,18 @@ export function TodayView(props: TodayViewProps): JSX.Element {
               <option value="tomorrow">明日</option>
             </select>
           </div>
+          <div>
+            <label htmlFor="task-priority">優先度</label>
+            <select
+              id="task-priority"
+              value={priority}
+              onChange={(e) => setPriority(e.target.value as Priority)}
+            >
+              <option value="highest">最優先</option>
+              <option value="normal">普通</option>
+              <option value="later">後回し</option>
+            </select>
+          </div>
           <button type="submit">追加</button>
         </form>
       )}
@@ -200,6 +243,14 @@ export function TodayView(props: TodayViewProps): JSX.Element {
         {sorted.map((task) => (
           <li key={task.id}>
             <span>{task.name}</span>
+            <span>[優先度: {PRIORITY_LABEL[task.priority]}]</span>
+            <button
+              type="button"
+              onClick={() => handleCyclePriority(task)}
+              aria-label={`優先度を切替 (現在: ${PRIORITY_LABEL[task.priority]})`}
+            >
+              優先度: {PRIORITY_LABEL[task.priority]}
+            </button>
             <button type="button" onClick={() => openEdit(task)}>
               編集
             </button>
