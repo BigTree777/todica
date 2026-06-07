@@ -1,8 +1,9 @@
 /**
- * 今日ビュー (BL-005 本実装 + BL-001 / BL-002 / BL-003 を統合).
+ * 今日ビュー (BL-005 本実装 + BL-001 / BL-002 / BL-003 / BL-006 を統合).
  *
  * - 起票フォーム (タスク名のみ必須, 期限 = today/tomorrow の 2 値, 優先度 = 3 値)
- * - タスク一覧 (各行に 編集 / 期限切替 / 完了 / 削除 / 優先度切替 を表示)
+ * - タスク一覧 (各行に 編集 / 期限切替 / 完了 / 削除 / 優先度切替 / 現在に設定 を表示)
+ * - 現在のタスクの強調セクション (BL-006 / FR-012 / NFR-011)
  * - 編集ダイアログ (名称変更)
  *
  * BL-005 / FR-010 / FR-011 / NFR-013 / plan.md D-004:
@@ -10,6 +11,13 @@
  *   - サーバが priority → createdAt → id で並べて返すので, クライアント側で再ソートしない.
  *   - 各書き込み mutation (create / update / delete / complete) の成功時に
  *     `repository.today()` を再呼出して tasks / nextTaskId を更新する (plan.md D-007).
+ *
+ * BL-006 / FR-012 / FR-013 / NFR-011 (plan.md D-001 / D-008):
+ *   - 起動時に `repository.getFocus()` を並列フェッチ.
+ *   - 強調対象 = `currentTaskId ?? nextTaskId` (暗黙フォールバック).
+ *   - 強調セクションのタスクは通常リストに含めない (D-008 重複表示禁止).
+ *   - 「現在に設定」「現在解除」操作で `setFocus({ taskId, ifMatch })` を送る.
+ *   - 各 mutation 成功時に `getFocus()` も再フェッチする.
  */
 import { useCallback, useEffect, useState } from "react";
 import type { DueDate, Priority, Task } from "@todica/domain/task";
@@ -17,6 +25,8 @@ import type {
   CompleteTaskCommand,
   CreateTaskCommand,
   DeleteTaskCommand,
+  FocusSelection,
+  SetFocusCommand,
   TaskRepository,
   UpdateTaskCommand,
 } from "../../repositories/task-repository.js";
@@ -53,6 +63,7 @@ export function TodayView(props: TodayViewProps): JSX.Element {
   const { repository } = props;
   const [tasks, setTasks] = useState<Task[]>([]);
   const [nextTaskId, setNextTaskId] = useState<string | null>(null);
+  const [focus, setFocus] = useState<FocusSelection | null>(null);
   const [name, setName] = useState("");
   const [projectId, setProjectId] = useState("");
   const [dueDate, setDueDate] = useState<DueDate>("today");
@@ -61,23 +72,32 @@ export function TodayView(props: TodayViewProps): JSX.Element {
   const [editingName, setEditingName] = useState("");
 
   /**
-   * 今日ビューを再取得する (plan.md D-007: 書き込み mutation 成功時に再フェッチ).
-   * cancelled フラグでアンマウント後の setState を防ぐ.
+   * 今日ビューと現在のタスクを再取得する (plan.md D-007: 書き込み mutation 成功時に再フェッチ).
+   * BL-006: focus も同時に再取得する.
    */
   const refetchToday = useCallback(async (): Promise<void> => {
-    const res = await repository.today();
+    const [res, focusRes] = await Promise.all([
+      repository.today(),
+      repository.getFocus(),
+    ]);
     setTasks(res.tasks);
     setNextTaskId(res.nextTaskId);
+    setFocus(focusRes);
   }, [repository]);
 
   // 初回マウント時の取得 (BL-005 D-004: today() を使う. list() は使わない).
+  // BL-006: 並列で getFocus() も呼ぶ.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const res = await repository.today();
+      const [res, focusRes] = await Promise.all([
+        repository.today(),
+        repository.getFocus(),
+      ]);
       if (!cancelled) {
         setTasks(res.tasks);
         setNextTaskId(res.nextTaskId);
+        setFocus(focusRes);
       }
     })();
     return () => {
@@ -186,10 +206,27 @@ export function TodayView(props: TodayViewProps): JSX.Element {
     [repository, refetchToday],
   );
 
+  // BL-006 / FR-012: 「現在に設定」/「現在解除」操作 (plan.md D-009).
+  const handleSetFocus = useCallback(
+    async (taskId: string | null) => {
+      if (!focus) return;
+      const cmd: SetFocusCommand = { taskId, ifMatch: focus.version };
+      await repository.setFocus(cmd);
+      await refetchToday();
+    },
+    [focus, repository, refetchToday],
+  );
+
   const isEditing = editingTask !== null;
-  // 並びはサーバが計算した順序 (plan.md D-004: クライアントで再ソートしない).
-  // nextTaskId は state に保持しているが視覚的強調は本 feature では任意 (plan.md §影響範囲 §UI).
-  void nextTaskId;
+  // BL-006: 強調対象 = currentTaskId ?? nextTaskId (plan.md D-001 暗黙フォールバック).
+  const focusedId: string | null = focus?.currentTaskId ?? nextTaskId;
+  const focusedTask: Task | null = focusedId
+    ? tasks.find((t) => t.id === focusedId) ?? null
+    : null;
+  // 通常リストから強調対象を除外 (D-008 重複表示禁止).
+  const otherTasks = focusedTask
+    ? tasks.filter((t) => t.id !== focusedTask.id)
+    : tasks;
 
   return (
     <main>
@@ -263,8 +300,41 @@ export function TodayView(props: TodayViewProps): JSX.Element {
         </form>
       )}
 
+      {/* BL-006: 現在のタスク強調セクション (NFR-011 "大きく単独で表示"). */}
+      {focusedTask && (
+        <section aria-label="現在のタスク">
+          <h2>現在のタスク</h2>
+          <div>
+            <span>{focusedTask.name}</span>
+            <span>[優先度: {PRIORITY_LABEL[focusedTask.priority]}]</span>
+            <button
+              type="button"
+              onClick={() => handleCyclePriority(focusedTask)}
+              aria-label={`優先度を切替 (現在: ${PRIORITY_LABEL[focusedTask.priority]})`}
+            >
+              優先度: {PRIORITY_LABEL[focusedTask.priority]}
+            </button>
+            <button type="button" onClick={() => openEdit(focusedTask)}>
+              編集
+            </button>
+            <button type="button" onClick={() => handleToggleDueDate(focusedTask)}>
+              {focusedTask.dueDate === "today" ? "明日へ" : "今日へ"}
+            </button>
+            <button type="button" onClick={() => handleComplete(focusedTask)}>
+              完了
+            </button>
+            <button type="button" onClick={() => handleDelete(focusedTask)}>
+              削除
+            </button>
+            <button type="button" onClick={() => handleSetFocus(null)}>
+              現在解除
+            </button>
+          </div>
+        </section>
+      )}
+
       <ul aria-label="タスク一覧">
-        {tasks.map((task) => (
+        {otherTasks.map((task) => (
           <li key={task.id}>
             <span>{task.name}</span>
             <span>[優先度: {PRIORITY_LABEL[task.priority]}]</span>
@@ -286,6 +356,9 @@ export function TodayView(props: TodayViewProps): JSX.Element {
             </button>
             <button type="button" onClick={() => handleDelete(task)}>
               削除
+            </button>
+            <button type="button" onClick={() => handleSetFocus(task.id)}>
+              現在に設定
             </button>
           </li>
         ))}

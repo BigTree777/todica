@@ -16,6 +16,10 @@ import type {
   IdempotencyRecord,
   IdempotencyStore,
 } from "../../src/data/idempotency-store.js";
+import type {
+  FocusRepository,
+  FocusSelection,
+} from "../../src/data/focus-repository.js";
 
 export class InMemoryTaskRepository implements TaskRepository {
   private store = new Map<string, Task>();
@@ -72,5 +76,40 @@ export class InMemoryIdempotencyStore implements IdempotencyStore {
 
   async save(key: string, record: IdempotencyRecord): Promise<void> {
     this.store.set(key, record);
+  }
+}
+
+/**
+ * In-memory FocusRepository (BL-006 / focus-task テスト用).
+ *
+ * - 単一レコード前提. 初期値は `{ id: "singleton", currentTaskId: null, version: 1, updatedAt: TEST_INITIAL_TIME }`.
+ * - get() は常に値を返す (singleton 保証. spec.md §「初回アクセス時の FocusSelection」).
+ * - update() は version 含めて全フィールド上書き.
+ * - seed() / current() はテストの直接観察 / 直接操作用ヘルパ.
+ */
+export class InMemoryFocusRepository implements FocusRepository {
+  private state: FocusSelection = {
+    id: "singleton",
+    currentTaskId: null,
+    updatedAt: "2026-06-07T09:00:00.000Z",
+    version: 1,
+  };
+
+  async get(): Promise<FocusSelection> {
+    return { ...this.state };
+  }
+
+  async update(focus: FocusSelection): Promise<void> {
+    this.state = { ...focus };
+  }
+
+  /** テスト補助: 直接書き換える. */
+  seed(focus: Partial<FocusSelection>): void {
+    this.state = { ...this.state, ...focus };
+  }
+
+  /** テスト補助: 現在値を取り出す (await 不要). */
+  current(): FocusSelection {
+    return { ...this.state };
   }
 }

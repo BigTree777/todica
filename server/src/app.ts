@@ -19,6 +19,7 @@ import {
 import type { TaskRepository } from "./data/task-repository.js";
 import type { ProjectRepository } from "./data/project-repository.js";
 import type { IdempotencyStore } from "./data/idempotency-store.js";
+import type { FocusRepository } from "./data/focus-repository.js";
 import { filterToday, pickNextTaskId, sortToday } from "./today.js";
 
 /**
@@ -28,6 +29,12 @@ export interface AppDeps {
   taskRepository: TaskRepository;
   projectRepository: ProjectRepository;
   idempotencyStore: IdempotencyStore;
+  /**
+   * BL-006 / focus-task: FocusSelection (現在のタスク) の永続化.
+   * 本フィールドは test-designer 段階の依存. 本ハンドラ実装 (GET/PUT /api/v1/focus,
+   * complete / delete / patch のフォーカス連動) は implementer が green 化する.
+   */
+  focusRepository: FocusRepository;
   clock: Clock;
   /** Bearer 認証に使う固定トークン. テストでは任意の値を渡す. */
   authToken: string;
@@ -36,7 +43,7 @@ export interface AppDeps {
 const WRITE_METHODS = new Set(["POST", "PATCH", "PUT", "DELETE"]);
 
 function errorJson(c: Context, status: number, code: string, message: string) {
-  return c.json({ code, message }, status as 400 | 401 | 404 | 412 | 500);
+  return c.json({ code, message }, status as 400 | 401 | 404 | 412 | 500 | 501);
 }
 
 /**
@@ -180,6 +187,99 @@ export function createApp(deps: AppDeps): Hono {
     return saveAndReturn(c, deps, 201, { task: createResult.task });
   });
 
+  // ---------- GET /api/v1/focus (BL-006 / FR-012) ----------
+  // spec.md §「GET /api/v1/focus」: 認証必須 / 読取専用 (If-Match / Idempotency-Key 不要).
+  // focus-selection-repository.get() の戻り値をそのまま 200 OK で返す.
+  app.get("/api/v1/focus", async (c) => {
+    const focus = await deps.focusRepository.get();
+    return c.json({ focus }, 200);
+  });
+
+  // ---------- PUT /api/v1/focus (BL-006 / FR-012) ----------
+  // spec.md §「PUT /api/v1/focus」: body { taskId: string | null } を受け,
+  // If-Match で楽観ロック, Idempotency-Key 必須 (middleware で確認済).
+  // INVALID_FOCUS_TARGET: 存在しない / ゴミ箱中 / dueDate !== "today".
+  app.put("/api/v1/focus", async (c) => {
+    // If-Match 検証.
+    const ifMatchHeader = c.req.header("If-Match") ?? c.req.header("if-match");
+    if (!ifMatchHeader) {
+      return saveAndReturn(c, deps, 400, {
+        code: "MISSING_IF_MATCH",
+        message: "If-Match header is required",
+      });
+    }
+    const ifMatch = Number.parseInt(ifMatchHeader, 10);
+    if (!Number.isFinite(ifMatch)) {
+      return saveAndReturn(c, deps, 400, {
+        code: "MISSING_IF_MATCH",
+        message: "If-Match header must be a numeric version",
+      });
+    }
+
+    // body 解析.
+    let body: Record<string, unknown>;
+    try {
+      body = (await c.req.json()) as Record<string, unknown>;
+    } catch {
+      return saveAndReturn(c, deps, 400, {
+        code: "INVALID_REQUEST_BODY",
+        message: "request body must be valid JSON",
+      });
+    }
+
+    if (!("taskId" in body)) {
+      return saveAndReturn(c, deps, 400, {
+        code: "INVALID_REQUEST_BODY",
+        message: "taskId is required",
+      });
+    }
+    const taskId = body.taskId;
+    if (taskId !== null && typeof taskId !== "string") {
+      return saveAndReturn(c, deps, 400, {
+        code: "INVALID_FOCUS_TARGET",
+        message: "taskId must be string or null",
+      });
+    }
+
+    // 楽観ロック.
+    const current = await deps.focusRepository.get();
+    if (current.version !== ifMatch) {
+      return saveAndReturn(c, deps, 412, { focus: current });
+    }
+
+    // 設定値の妥当性検証 (null は解除なので skip).
+    if (taskId !== null) {
+      const task = await deps.taskRepository.findById(taskId);
+      if (!task) {
+        return saveAndReturn(c, deps, 400, {
+          code: "INVALID_FOCUS_TARGET",
+          message: "task not found",
+        });
+      }
+      if (task.trashedAt !== null) {
+        return saveAndReturn(c, deps, 400, {
+          code: "INVALID_FOCUS_TARGET",
+          message: "task is trashed",
+        });
+      }
+      if (task.dueDate !== "today") {
+        return saveAndReturn(c, deps, 400, {
+          code: "INVALID_FOCUS_TARGET",
+          message: "task dueDate is not today",
+        });
+      }
+    }
+
+    const updated = {
+      ...current,
+      currentTaskId: taskId,
+      version: current.version + 1,
+      updatedAt: deps.clock.now(),
+    };
+    await deps.focusRepository.update(updated);
+    return saveAndReturn(c, deps, 200, { focus: updated });
+  });
+
   // ---------- GET /api/v1/today (BL-005 / FR-010 / FR-011 / NFR-013) ----------
   // plan.md §処理フロー / D-001 / D-005:
   //   1. task-repository.list({ trashed: "false" }) で全 active タスクを取得.
@@ -192,7 +292,12 @@ export function createApp(deps: AppDeps): Hono {
     const active = await deps.taskRepository.list({ trashed: "false" });
     const todayTasks = sortToday(filterToday(active));
     const nextTaskId = pickNextTaskId(todayTasks);
-    return c.json({ tasks: todayTasks, nextTaskId }, 200);
+    // BL-006 / FR-012: FocusSelection.currentTaskId をミラーしてクライアントに返す.
+    const focus = await deps.focusRepository.get();
+    return c.json(
+      { tasks: todayTasks, nextTaskId, currentTaskId: focus.currentTaskId },
+      200,
+    );
   });
 
   // ---------- GET /api/v1/tasks ----------
@@ -308,6 +413,10 @@ export function createApp(deps: AppDeps): Hono {
     }
 
     await deps.taskRepository.update(updateResult.task);
+    // BL-006 / FR-013: 期限を tomorrow に変更したタスクが currentTaskId と一致するなら null に解除.
+    if (patch.dueDate === "tomorrow") {
+      await clearFocusIfMatches(deps, id);
+    }
     return saveAndReturn(c, deps, 200, { task: updateResult.task });
   });
 
@@ -351,6 +460,8 @@ export function createApp(deps: AppDeps): Hono {
 
     const completed = completeTask(current, deps.clock);
     await deps.taskRepository.update(completed);
+    // BL-006 / FR-013: 現在のタスクを完了したら focus を解除.
+    await clearFocusIfMatches(deps, id);
     return saveAndReturn(c, deps, 200, { task: completed });
   });
 
@@ -392,10 +503,31 @@ export function createApp(deps: AppDeps): Hono {
 
     const trashed = trashTask(current, deps.clock);
     await deps.taskRepository.update(trashed);
+    // BL-006 / FR-013: 削除対象が現在のタスクなら focus を解除.
+    await clearFocusIfMatches(deps, id);
     return saveAndReturn(c, deps, 204, null);
   });
 
   return app;
+}
+
+/**
+ * BL-006 / FR-013: focus.currentTaskId が targetId と一致するなら null に解除する.
+ *
+ * 完了 / 削除 / 期限変更 (today → tomorrow) の各経路で呼び出す.
+ * version は +1, updatedAt は clock.now() で更新.
+ * 一致しない / null の場合は no-op (副作用なし).
+ */
+async function clearFocusIfMatches(deps: AppDeps, targetId: string): Promise<void> {
+  const focus = await deps.focusRepository.get();
+  if (focus.currentTaskId !== targetId) return;
+  const updated = {
+    ...focus,
+    currentTaskId: null,
+    version: focus.version + 1,
+    updatedAt: deps.clock.now(),
+  };
+  await deps.focusRepository.update(updated);
 }
 
 /**
@@ -415,7 +547,7 @@ async function saveAndReturn(
   if (status === 204) {
     return c.body(null, 204);
   }
-  return c.json(body, status as 200 | 201 | 400 | 401 | 404 | 412);
+  return c.json(body, status as 200 | 201 | 400 | 401 | 404 | 412 | 500 | 501);
 }
 
 /**

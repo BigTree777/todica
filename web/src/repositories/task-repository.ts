@@ -61,6 +61,10 @@ export interface CompleteTaskCommand {
  * - `tasks`: dueDate = "today" かつ trashedAt = null のタスクを
  *   priority (highest→normal→later) → createdAt 昇順 → id 昇順 で並べた一覧.
  * - `nextTaskId`: 並びの先頭タスクの id. tasks が空のとき null (= 「次の 1 つ」が存在しない).
+ * - `currentTaskId`: BL-006 / FR-012 で追加された FocusSelection.currentTaskId のミラー.
+ *   サーバ側で FocusSelection.currentTaskId と等しい値を返す (明示未選択時は null).
+ *   暗黙フォールバックは UI 側で `currentTaskId ?? nextTaskId` の式で表現する.
+ *   BL-006 では型レベルで optional とし, 実装側 (implementer) が必ず返す形に詰める.
  *
  * 本型は test-designer が追加した「型のみのスタブ」.
  * HttpTaskRepository.today / UI からの呼び出しは implementer が green 化する.
@@ -68,6 +72,36 @@ export interface CompleteTaskCommand {
 export interface TodayViewResponse {
   tasks: Task[];
   nextTaskId: string | null;
+  /**
+   * BL-006 / FR-012 で追加. サーバの FocusSelection.currentTaskId と等価.
+   * 過渡的に optional (旧 BL-005 実装との互換のため). implementer が必須化して良い.
+   */
+  currentTaskId?: string | null;
+}
+
+/**
+ * BL-006 / FR-012: FocusSelection エンティティ (Web 側ミラー).
+ *
+ * 仕様: docs/developer/features/focus-task/spec.md.
+ * 本型は test-designer が追加した「型のみのスタブ」.
+ * HttpTaskRepository.getFocus / setFocus / UI 連携は implementer が green 化する.
+ */
+export interface FocusSelection {
+  id: string;
+  currentTaskId: string | null;
+  version: number;
+  updatedAt: string;
+}
+
+/**
+ * BL-006 / FR-012: 現在のタスクを設定 / 解除するコマンド.
+ *
+ * - taskId === null は「現在のタスク解除」を意味する.
+ * - ifMatch は現行 FocusSelection.version. HTTP では If-Match ヘッダに乗る.
+ */
+export interface SetFocusCommand {
+  taskId: string | null;
+  ifMatch: number;
 }
 
 export interface TaskRepository {
@@ -85,13 +119,28 @@ export interface TaskRepository {
   /**
    * BL-005 / FR-010 / FR-011: 今日ビューの取得.
    *
-   * GET /api/v1/today を叩き, `{ tasks, nextTaskId }` を返す.
+   * GET /api/v1/today を叩き, `{ tasks, nextTaskId, currentTaskId? }` を返す.
    * `tasks` はサーバ側で priority → createdAt → id の順に並べ替えられており,
    * クライアントは再ソートせずそのまま表示する (plan.md D-004).
+   * BL-006 で `currentTaskId` が追加された (FocusSelection のミラー).
    * 本メソッドは test-designer が追加したインターフェース上のスタブ.
    * HttpTaskRepository.today の本実装 / UI からの呼び出しは implementer が green 化する.
    */
   today(): Promise<TodayViewResponse>;
+  /**
+   * BL-006 / FR-012: 現在のタスク (FocusSelection) を取得する.
+   * GET /api/v1/focus に対応. 単一レコード前提.
+   * 本メソッドは test-designer が追加したインターフェース上のスタブ.
+   * HttpTaskRepository.getFocus の本実装 / UI からの呼び出しは implementer が green 化する.
+   */
+  getFocus(): Promise<FocusSelection>;
+  /**
+   * BL-006 / FR-012: 現在のタスクを設定 / 解除する.
+   * PUT /api/v1/focus に対応. 412 衝突時は OptimisticLockError を throw する.
+   * 本メソッドは test-designer が追加したインターフェース上のスタブ.
+   * HttpTaskRepository.setFocus の本実装 / UI からの呼び出しは implementer が green 化する.
+   */
+  setFocus(cmd: SetFocusCommand): Promise<FocusSelection>;
 }
 
 /**
@@ -276,6 +325,46 @@ export class HttpTaskRepository implements TaskRepository {
     }
     const body = (await res.json()) as TodayViewResponse;
     return body;
+  }
+
+  /**
+   * BL-006 / FR-012: 現在のタスク (FocusSelection) を取得する.
+   * GET /api/v1/focus に対応.
+   */
+  async getFocus(): Promise<FocusSelection> {
+    const res = await fetch(`${this.baseUrl}/api/v1/focus`, {
+      method: "GET",
+      headers: this.authHeaders(),
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: failed to fetch focus`);
+    }
+    const body = (await res.json()) as { focus: FocusSelection };
+    return body.focus;
+  }
+
+  /**
+   * BL-006 / FR-012: 現在のタスクを設定 / 解除する.
+   * PUT /api/v1/focus に対応. 412 衝突時は OptimisticLockError を throw する.
+   */
+  async setFocus(cmd: SetFocusCommand): Promise<FocusSelection> {
+    const idemKey = uuidV4();
+    const res = await fetch(`${this.baseUrl}/api/v1/focus`, {
+      method: "PUT",
+      headers: this.authHeaders({
+        "Idempotency-Key": idemKey,
+        "If-Match": String(cmd.ifMatch),
+      }),
+      body: JSON.stringify({ taskId: cmd.taskId }),
+    });
+    if (res.status === 412) {
+      throw new OptimisticLockError("optimistic lock conflict on setFocus");
+    }
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: failed to set focus`);
+    }
+    const body = (await res.json()) as { focus: FocusSelection };
+    return body.focus;
   }
 
   /**

@@ -6,7 +6,7 @@
  * - TodayView は test-designer のスタブのため, ここでも全テストは red になる想定.
  */
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Task } from "@todica/domain/task";
 import { TodayView } from "../src/ui/today-view/today-view.js";
@@ -14,6 +14,8 @@ import type {
   CompleteTaskCommand,
   CreateTaskCommand,
   DeleteTaskCommand,
+  FocusSelection,
+  SetFocusCommand,
   TaskRepository,
   UpdateTaskCommand,
 } from "../src/repositories/task-repository.js";
@@ -38,15 +40,28 @@ function makeTask(overrides: Partial<Task> = {}): Task {
   };
 }
 
-function makeMockRepository(initial: Task[] = []): TaskRepository & {
+function makeMockRepository(
+  initial: Task[] = [],
+  options: { initialFocus?: FocusSelection } = {},
+): TaskRepository & {
   createMock: ReturnType<typeof vi.fn>;
   updateMock: ReturnType<typeof vi.fn>;
   deleteMock: ReturnType<typeof vi.fn>;
   completeMock: ReturnType<typeof vi.fn>;
   listMock: ReturnType<typeof vi.fn>;
   todayMock: ReturnType<typeof vi.fn>;
+  getFocusMock: ReturnType<typeof vi.fn>;
+  setFocusMock: ReturnType<typeof vi.fn>;
 } {
   const state = [...initial];
+  // BL-006 / FR-012: FocusSelection の mock state.
+  // 既定は明示未選択 (currentTaskId=null, version=1). 個別テストで上書き可.
+  let focusState: FocusSelection = options.initialFocus ?? {
+    id: "singleton",
+    currentTaskId: null,
+    version: 1,
+    updatedAt: NOW,
+  };
   const listMock = vi.fn(async () => [...state]);
   // BL-005 / FR-010: 今日ビュー mock.
   //   - dueDate === "today" かつ trashedAt === null のものだけを返す.
@@ -73,7 +88,13 @@ function makeMockRepository(initial: Task[] = []): TaskRepository & {
       if (c !== 0) return c;
       return a.id.localeCompare(b.id);
     });
-    return { tasks: sorted, nextTaskId: sorted[0]?.id ?? null };
+    // BL-006 / FR-012: currentTaskId は focusState のミラーを返す.
+    // UI は currentTaskId ?? nextTaskId で強調対象を決める (plan.md D-001).
+    return {
+      tasks: sorted,
+      nextTaskId: sorted[0]?.id ?? null,
+      currentTaskId: focusState.currentTaskId,
+    };
   });
   const createMock = vi.fn(async (cmd: CreateTaskCommand) => {
     const t = makeTask({
@@ -116,6 +137,20 @@ function makeMockRepository(initial: Task[] = []): TaskRepository & {
     state[idx] = next;
     return next;
   });
+  // BL-006 / FR-012: focus 取得 / 設定 mock.
+  // - getFocus(): 現在の focusState を返す (UI 起動時に呼ばれる前提).
+  // - setFocus({ taskId, ifMatch }): focusState を更新し version++ する.
+  //   ifMatch 不一致時はテストで個別検証するので mock では throw しない.
+  const getFocusMock = vi.fn(async () => ({ ...focusState }));
+  const setFocusMock = vi.fn(async (cmd: SetFocusCommand) => {
+    focusState = {
+      ...focusState,
+      currentTaskId: cmd.taskId,
+      version: focusState.version + 1,
+      updatedAt: NOW,
+    };
+    return { ...focusState };
+  });
   return {
     list: listMock,
     create: createMock,
@@ -123,12 +158,16 @@ function makeMockRepository(initial: Task[] = []): TaskRepository & {
     delete: deleteMock,
     complete: completeMock,
     today: todayMock,
+    getFocus: getFocusMock,
+    setFocus: setFocusMock,
     listMock,
     createMock,
     updateMock,
     deleteMock,
     completeMock,
     todayMock,
+    getFocusMock,
+    setFocusMock,
   };
 }
 
@@ -356,27 +395,54 @@ describe("TodayView (BL-002 優先度 UI)", () => {
 
   it("シナリオ: 優先度変更後の一覧は priority 順に再描画される (NFR-013)", async () => {
     // 初期: A = normal, B = later. 並び (priority 順) は A → B.
-    const repo = makeMockRepository([
-      makeTask({
-        id: "task-A",
-        name: "AAA",
-        priority: "normal",
-        version: 1,
-        createdAt: "2026-06-07T08:00:00.000Z",
-      }),
-      makeTask({
-        id: "task-B",
-        name: "BBB",
-        priority: "later",
-        version: 1,
-        createdAt: "2026-06-07T08:00:01.000Z",
-      }),
-    ]);
+    //
+    // BL-006 / D-008 との整合:
+    //   強調セクションに表示するタスクは通常リスト (listitem) に出ない.
+    //   本テストは「priority 順の再描画」を listitem で検証する都合上,
+    //   並び先頭が強調セクションへ吸われると検証対象が消える.
+    //   そこで sentinel タスク (highest, 並び先頭) を 1 件追加し,
+    //   initialFocus.currentTaskId をその sentinel に固定して
+    //   強調セクションを sentinel で占有させる.
+    //   こうすると A, B は常に listitem に並び, 元の検証ロジックがそのまま使える.
+    const repo = makeMockRepository(
+      [
+        makeTask({
+          id: "task-focus",
+          name: "FOCUS-SENTINEL",
+          priority: "highest",
+          version: 1,
+          createdAt: "2026-06-07T07:00:00.000Z",
+        }),
+        makeTask({
+          id: "task-A",
+          name: "AAA",
+          priority: "normal",
+          version: 1,
+          createdAt: "2026-06-07T08:00:00.000Z",
+        }),
+        makeTask({
+          id: "task-B",
+          name: "BBB",
+          priority: "later",
+          version: 1,
+          createdAt: "2026-06-07T08:00:01.000Z",
+        }),
+      ],
+      {
+        initialFocus: {
+          id: "singleton",
+          currentTaskId: "task-focus",
+          version: 1,
+          updatedAt: NOW,
+        },
+      },
+    );
     const user = userEvent.setup();
     render(<TodayView repository={repo} />);
 
-    // 描画後, 初期並びを確認 (A, B).
+    // 描画後, 初期並びを確認 (A, B). sentinel は強調セクションに居て listitem には居ない.
     const itemsBefore = await screen.findAllByRole("listitem");
+    expect(itemsBefore).toHaveLength(2);
     expect(itemsBefore[0]?.textContent ?? "").toContain("AAA");
     expect(itemsBefore[1]?.textContent ?? "").toContain("BBB");
 
@@ -558,37 +624,62 @@ describe("TodayView (BL-005 今日ビュー本実装)", () => {
     //
     // mock の todayMock は priority → createdAt → id にソートして返すため,
     // ここでは「mock が返した順 = UI に表示された順」が一致することを検証する.
-    const repo = makeMockRepository([
-      // 投入順は混乱させる (UI が再ソートしなければ mock 内ソートの結果がそのまま出る).
-      makeTask({
-        id: "task-C",
-        name: "CCC",
-        priority: "later",
-        createdAt: "2026-06-08T08:00:00.000Z",
-        version: 1,
-      }),
-      makeTask({
-        id: "task-A",
-        name: "AAA",
-        priority: "highest",
-        createdAt: "2026-06-08T08:00:00.000Z",
-        version: 1,
-      }),
-      makeTask({
-        id: "task-B",
-        name: "BBB",
-        priority: "normal",
-        createdAt: "2026-06-08T08:00:00.000Z",
-        version: 1,
-      }),
-    ]);
+    //
+    // BL-006 / D-008 との整合:
+    //   強調セクションに表示するタスクは listitem に出ない.
+    //   本テストの関心事は「サーバ並びの並びがそのまま (再ソートなく) UI に出る」
+    //   ことであり, 「強調セクションが何を表示するか」ではない.
+    //   そのため currentTaskId を sentinel タスク (並び先頭) に固定し,
+    //   AAA / BBB / CCC を常に listitem に並ばせる構成にする.
+    const repo = makeMockRepository(
+      [
+        // 投入順は混乱させる (UI が再ソートしなければ mock 内ソートの結果がそのまま出る).
+        makeTask({
+          id: "task-focus",
+          name: "FOCUS-SENTINEL",
+          priority: "highest",
+          createdAt: "2026-06-08T07:00:00.000Z",
+          version: 1,
+        }),
+        makeTask({
+          id: "task-C",
+          name: "CCC",
+          priority: "later",
+          createdAt: "2026-06-08T08:00:00.000Z",
+          version: 1,
+        }),
+        makeTask({
+          id: "task-A",
+          name: "AAA",
+          priority: "highest",
+          createdAt: "2026-06-08T08:00:00.000Z",
+          version: 1,
+        }),
+        makeTask({
+          id: "task-B",
+          name: "BBB",
+          priority: "normal",
+          createdAt: "2026-06-08T08:00:00.000Z",
+          version: 1,
+        }),
+      ],
+      {
+        initialFocus: {
+          id: "singleton",
+          currentTaskId: "task-focus",
+          version: 1,
+          updatedAt: NOW,
+        },
+      },
+    );
     render(<TodayView repository={repo} />);
 
     // 描画を待つ.
     await screen.findByText("AAA");
 
     const items = await screen.findAllByRole("listitem");
-    // 期待: A (highest) → B (normal) → C (later).
+    // 期待: sentinel は強調セクションへ. listitem は A (highest) → B (normal) → C (later).
+    expect(items).toHaveLength(3);
     expect(items[0]?.textContent ?? "").toContain("AAA");
     expect(items[1]?.textContent ?? "").toContain("BBB");
     expect(items[2]?.textContent ?? "").toContain("CCC");
@@ -638,5 +729,258 @@ describe("TodayView (BL-005 今日ビュー本実装)", () => {
     expect(items).toHaveLength(0);
     // today() は呼ばれている.
     expect(repo.todayMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ============================================================
+// BL-006 / FR-012 / FR-013 / NFR-011: 現在のタスク (フォーカス) UI
+//
+// spec.md (focus-task) §「受け入れ基準」§「UI: 視覚的強調」「UI: 操作」と 1:1 対応する.
+// - 起動時に repository.getFocus() が呼ばれる.
+// - currentTaskId == null のとき暗黙フォールバック (= 並び先頭) が強調される.
+// - currentTaskId != null のとき該当タスクが強調セクションに描画される.
+// - 強調セクションのタスクは通常リスト (listitem) には含まれない (D-008 重複表示なし).
+// - 「現在に設定」ボタンクリックで setFocus({ taskId, ifMatch }) が呼ばれる.
+// - 「現在解除」ボタンクリックで setFocus({ taskId: null, ifMatch }) が呼ばれる.
+// - 今日のタスク 0 件のとき強調セクションは描画されない.
+//
+// today-view.tsx 側はまだ getFocus / setFocus を呼ばない暫定実装のため,
+// 以下のテストはすべて red になる. implementer が green 化する.
+// ============================================================
+
+describe("TodayView (BL-006 現在のタスク強調表示と操作)", () => {
+  it("シナリオ: TodayView は起動時に repository.getFocus() を呼ぶ", async () => {
+    // spec.md §「UI: 視覚的強調」: 強調対象を決めるため focus を取得する必要がある.
+    const repo = makeMockRepository([
+      makeTask({ id: "t1", name: "MILK", version: 1 }),
+    ]);
+    render(<TodayView repository={repo} />);
+
+    // 描画完了を待つ.
+    await screen.findByText("MILK");
+
+    expect(repo.getFocusMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("シナリオ: currentTaskId が null のとき, 並び先頭タスクが「現在のタスク」として強調表示される (暗黙フォールバック)", async () => {
+    // spec.md §「UI: 視覚的強調」第 2 ケース.
+    // 並び先頭 = AAA (highest), 残り BBB / CCC は通常リスト.
+    const repo = makeMockRepository([
+      makeTask({
+        id: "task-A",
+        name: "AAA",
+        priority: "highest",
+        createdAt: "2026-06-07T08:00:00.000Z",
+        version: 1,
+      }),
+      makeTask({
+        id: "task-B",
+        name: "BBB",
+        priority: "normal",
+        createdAt: "2026-06-07T08:00:01.000Z",
+        version: 1,
+      }),
+      makeTask({
+        id: "task-C",
+        name: "CCC",
+        priority: "later",
+        createdAt: "2026-06-07T08:00:02.000Z",
+        version: 1,
+      }),
+    ]);
+    render(<TodayView repository={repo} />);
+
+    // 「現在のタスク」セクションが存在する (見出し or region).
+    // 厳格な UI 形に依存しないよう, アクセシブルな region / heading どちらかで取得.
+    const focusSection = await screen.findByRole("region", { name: /現在のタスク/ });
+    expect(focusSection).toBeInTheDocument();
+    // 強調セクションに AAA が含まれる.
+    expect(within(focusSection).getByText("AAA")).toBeInTheDocument();
+
+    // 通常リスト (listitem) には AAA が含まれない (D-008 重複表示禁止).
+    // 通常リストは BBB / CCC のみ.
+    const items = await screen.findAllByRole("listitem");
+    const itemTexts = items.map((li) => li.textContent ?? "");
+    expect(itemTexts.some((t) => t.includes("BBB"))).toBe(true);
+    expect(itemTexts.some((t) => t.includes("CCC"))).toBe(true);
+    expect(itemTexts.some((t) => t.includes("AAA"))).toBe(false);
+  });
+
+  it("シナリオ: currentTaskId が設定済みのとき, 該当タスクが強調セクションに描画される", async () => {
+    // spec.md §「UI: 視覚的強調」第 1 ケース.
+    // currentTaskId = task-B → 並び先頭 (task-A) ではなく task-B が強調される.
+    const repo = makeMockRepository(
+      [
+        makeTask({
+          id: "task-A",
+          name: "AAA",
+          priority: "highest",
+          createdAt: "2026-06-07T08:00:00.000Z",
+          version: 1,
+        }),
+        makeTask({
+          id: "task-B",
+          name: "BBB",
+          priority: "normal",
+          createdAt: "2026-06-07T08:00:01.000Z",
+          version: 1,
+        }),
+      ],
+      {
+        initialFocus: {
+          id: "singleton",
+          currentTaskId: "task-B",
+          version: 3,
+          updatedAt: NOW,
+        },
+      },
+    );
+    render(<TodayView repository={repo} />);
+
+    const focusSection = await screen.findByRole("region", { name: /現在のタスク/ });
+    expect(within(focusSection).getByText("BBB")).toBeInTheDocument();
+    // 強調されていない方 (AAA) は通常リストにある.
+    const items = await screen.findAllByRole("listitem");
+    const itemTexts = items.map((li) => li.textContent ?? "");
+    expect(itemTexts.some((t) => t.includes("AAA"))).toBe(true);
+    expect(itemTexts.some((t) => t.includes("BBB"))).toBe(false);
+  });
+
+  it("シナリオ: 通常リストの行から「現在に設定」を押すと setFocus({ taskId, ifMatch: focus.version }) が呼ばれる", async () => {
+    // spec.md §「UI: 操作」第 1 ケース.
+    const repo = makeMockRepository(
+      [
+        makeTask({
+          id: "task-A",
+          name: "AAA",
+          priority: "highest",
+          createdAt: "2026-06-07T08:00:00.000Z",
+          version: 1,
+        }),
+        makeTask({
+          id: "task-B",
+          name: "BBB",
+          priority: "normal",
+          createdAt: "2026-06-07T08:00:01.000Z",
+          version: 1,
+        }),
+      ],
+      {
+        initialFocus: {
+          id: "singleton",
+          currentTaskId: "task-A",
+          version: 7,
+          updatedAt: NOW,
+        },
+      },
+    );
+    const user = userEvent.setup();
+    render(<TodayView repository={repo} />);
+
+    // 「現在のタスク」セクションには AAA, 通常リストには BBB がいる.
+    const focusSection = await screen.findByRole("region", { name: /現在のタスク/ });
+    expect(within(focusSection).getByText("AAA")).toBeInTheDocument();
+
+    // 通常リストの BBB 行を取得.
+    const items = await screen.findAllByRole("listitem");
+    const bRow = items.find((li) => (li.textContent ?? "").includes("BBB"));
+    expect(bRow).toBeDefined();
+
+    // 「現在に設定」ボタンを行内で探してクリック.
+    const setFocusButton = within(bRow!).getByRole("button", {
+      name: /現在に設定/,
+    });
+    await user.click(setFocusButton);
+
+    expect(repo.setFocusMock).toHaveBeenCalledTimes(1);
+    const arg = repo.setFocusMock.mock.calls[0]?.[0] as SetFocusCommand;
+    expect(arg.taskId).toBe("task-B");
+    expect(arg.ifMatch).toBe(7);
+  });
+
+  it("シナリオ: 強調セクションの「現在解除」ボタンを押すと setFocus({ taskId: null, ifMatch: focus.version }) が呼ばれる", async () => {
+    // spec.md §「UI: 操作」第 2 ケース.
+    const repo = makeMockRepository(
+      [
+        makeTask({
+          id: "task-A",
+          name: "AAA",
+          priority: "highest",
+          createdAt: "2026-06-07T08:00:00.000Z",
+          version: 1,
+        }),
+        makeTask({
+          id: "task-B",
+          name: "BBB",
+          priority: "normal",
+          createdAt: "2026-06-07T08:00:01.000Z",
+          version: 1,
+        }),
+      ],
+      {
+        initialFocus: {
+          id: "singleton",
+          currentTaskId: "task-A",
+          version: 9,
+          updatedAt: NOW,
+        },
+      },
+    );
+    const user = userEvent.setup();
+    render(<TodayView repository={repo} />);
+
+    const focusSection = await screen.findByRole("region", { name: /現在のタスク/ });
+    const clearButton = within(focusSection).getByRole("button", {
+      name: /現在解除/,
+    });
+    await user.click(clearButton);
+
+    expect(repo.setFocusMock).toHaveBeenCalledTimes(1);
+    const arg = repo.setFocusMock.mock.calls[0]?.[0] as SetFocusCommand;
+    expect(arg.taskId).toBeNull();
+    expect(arg.ifMatch).toBe(9);
+  });
+
+  it("シナリオ: 今日のタスクが 0 件のとき, 「現在のタスク」セクションは描画されない", async () => {
+    // spec.md §「UI: 視覚的強調」第 3 ケース.
+    const repo = makeMockRepository([]);
+    render(<TodayView repository={repo} />);
+
+    // 「今日」見出しは出る.
+    expect(
+      await screen.findByRole("heading", { name: "今日" }),
+    ).toBeInTheDocument();
+
+    // 「現在のタスク」セクションは無い.
+    expect(screen.queryByRole("region", { name: /現在のタスク/ })).toBeNull();
+  });
+
+  it("シナリオ: 完了 / 削除 / 期限切替後にも repository.getFocus() が再フェッチされる (サーバ側で自動解除されている可能性)", async () => {
+    // plan より「各書き込み mutation 後は today() と focus() を両方再フェッチする」.
+    const repo = makeMockRepository(
+      [makeTask({ id: "t1", name: "MILK", version: 1 })],
+      {
+        initialFocus: {
+          id: "singleton",
+          currentTaskId: "t1",
+          version: 1,
+          updatedAt: NOW,
+        },
+      },
+    );
+    const user = userEvent.setup();
+    render(<TodayView repository={repo} />);
+
+    // 初回マウントで 1 回 getFocus() が呼ばれている.
+    await screen.findByRole("region", { name: /現在のタスク/ });
+    const initialCalls = repo.getFocusMock.mock.calls.length;
+    expect(initialCalls).toBeGreaterThanOrEqual(1);
+
+    // 「完了」ボタン (強調セクション内 or どこか) をクリック.
+    const completeButton = await screen.findByRole("button", { name: /完了/ });
+    await user.click(completeButton);
+
+    // 再フェッチが行われ getFocus() の累積呼出回数が増えている.
+    expect(repo.getFocusMock.mock.calls.length).toBeGreaterThan(initialCalls);
   });
 });
