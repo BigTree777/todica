@@ -85,9 +85,26 @@ export const idempotencyKeys = sqliteTable("idempotency_keys", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
+/**
+ * focus_selection テーブル (BL-006 / focus-task).
+ *
+ * docs/developer/features/focus-task/plan.md §「データモデル」.
+ * - 単一レコード前提 (id = "singleton" 固定).
+ * - currentTaskId は tasks.id への弱参照 (FK 制約は張らない. D-006).
+ * - 整合性 (現在のタスクが今日ビューに居ない id を指し続けない) はアプリケーション層で担保する.
+ */
+export const focusSelection = sqliteTable("focus_selection", {
+  id: text("id").primaryKey().notNull(),
+  currentTaskId: text("current_task_id"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+  version: integer("version").notNull().default(1),
+});
+
 /** schema 全体を Drizzle に渡すためのオブジェクト. */
 export const schema = {
   tasks,
   projects,
   idempotencyKeys,
+  focusSelection,
 };

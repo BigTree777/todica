@@ -329,20 +329,42 @@ export class HttpTaskRepository implements TaskRepository {
 
   /**
    * BL-006 / FR-012: 現在のタスク (FocusSelection) を取得する.
-   * GET /api/v1/focus に対応. 本メソッドは test-designer のスタブ. throw する.
-   * implementer が green 化する.
+   * GET /api/v1/focus に対応.
    */
   async getFocus(): Promise<FocusSelection> {
-    throw new Error("HttpTaskRepository.getFocus is not implemented yet");
+    const res = await fetch(`${this.baseUrl}/api/v1/focus`, {
+      method: "GET",
+      headers: this.authHeaders(),
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: failed to fetch focus`);
+    }
+    const body = (await res.json()) as { focus: FocusSelection };
+    return body.focus;
   }
 
   /**
    * BL-006 / FR-012: 現在のタスクを設定 / 解除する.
-   * PUT /api/v1/focus に対応. 本メソッドは test-designer のスタブ. throw する.
-   * implementer が green 化する.
+   * PUT /api/v1/focus に対応. 412 衝突時は OptimisticLockError を throw する.
    */
-  async setFocus(_cmd: SetFocusCommand): Promise<FocusSelection> {
-    throw new Error("HttpTaskRepository.setFocus is not implemented yet");
+  async setFocus(cmd: SetFocusCommand): Promise<FocusSelection> {
+    const idemKey = uuidV4();
+    const res = await fetch(`${this.baseUrl}/api/v1/focus`, {
+      method: "PUT",
+      headers: this.authHeaders({
+        "Idempotency-Key": idemKey,
+        "If-Match": String(cmd.ifMatch),
+      }),
+      body: JSON.stringify({ taskId: cmd.taskId }),
+    });
+    if (res.status === 412) {
+      throw new OptimisticLockError("optimistic lock conflict on setFocus");
+    }
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: failed to set focus`);
+    }
+    const body = (await res.json()) as { focus: FocusSelection };
+    return body.focus;
   }
 
   /**

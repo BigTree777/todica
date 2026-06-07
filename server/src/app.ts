@@ -188,23 +188,96 @@ export function createApp(deps: AppDeps): Hono {
   });
 
   // ---------- GET /api/v1/focus (BL-006 / FR-012) ----------
-  // test-designer のスタブ. spec.md §「GET /api/v1/focus」の受け入れ基準は
-  // implementer が green 化する. ここでは未実装を 501 で明示する.
-  // 認証ミドルウェアは先に走るため, Authorization 無しは 401 が先に返る.
-  app.get("/api/v1/focus", (c) => {
-    return errorJson(c, 500, "NOT_IMPLEMENTED", "GET /api/v1/focus is not implemented");
+  // spec.md §「GET /api/v1/focus」: 認証必須 / 読取専用 (If-Match / Idempotency-Key 不要).
+  // focus-selection-repository.get() の戻り値をそのまま 200 OK で返す.
+  app.get("/api/v1/focus", async (c) => {
+    const focus = await deps.focusRepository.get();
+    return c.json({ focus }, 200);
   });
 
   // ---------- PUT /api/v1/focus (BL-006 / FR-012) ----------
-  // test-designer のスタブ. spec.md §「PUT /api/v1/focus」の受け入れ基準
-  // (taskId 設定 / 解除 / 楽観ロック / 冪等性 / INVALID_FOCUS_TARGET) は
-  // implementer が green 化する.
-  // 認証 / Idempotency-Key ミドルウェアは先に走る (401 / MISSING_IDEMPOTENCY_KEY 経路).
+  // spec.md §「PUT /api/v1/focus」: body { taskId: string | null } を受け,
+  // If-Match で楽観ロック, Idempotency-Key 必須 (middleware で確認済).
+  // INVALID_FOCUS_TARGET: 存在しない / ゴミ箱中 / dueDate !== "today".
   app.put("/api/v1/focus", async (c) => {
-    return saveAndReturn(c, deps, 500, {
-      code: "NOT_IMPLEMENTED",
-      message: "PUT /api/v1/focus is not implemented",
-    });
+    // If-Match 検証.
+    const ifMatchHeader = c.req.header("If-Match") ?? c.req.header("if-match");
+    if (!ifMatchHeader) {
+      return saveAndReturn(c, deps, 400, {
+        code: "MISSING_IF_MATCH",
+        message: "If-Match header is required",
+      });
+    }
+    const ifMatch = Number.parseInt(ifMatchHeader, 10);
+    if (!Number.isFinite(ifMatch)) {
+      return saveAndReturn(c, deps, 400, {
+        code: "MISSING_IF_MATCH",
+        message: "If-Match header must be a numeric version",
+      });
+    }
+
+    // body 解析.
+    let body: Record<string, unknown>;
+    try {
+      body = (await c.req.json()) as Record<string, unknown>;
+    } catch {
+      return saveAndReturn(c, deps, 400, {
+        code: "INVALID_REQUEST_BODY",
+        message: "request body must be valid JSON",
+      });
+    }
+
+    if (!("taskId" in body)) {
+      return saveAndReturn(c, deps, 400, {
+        code: "INVALID_REQUEST_BODY",
+        message: "taskId is required",
+      });
+    }
+    const taskId = body.taskId;
+    if (taskId !== null && typeof taskId !== "string") {
+      return saveAndReturn(c, deps, 400, {
+        code: "INVALID_FOCUS_TARGET",
+        message: "taskId must be string or null",
+      });
+    }
+
+    // 楽観ロック.
+    const current = await deps.focusRepository.get();
+    if (current.version !== ifMatch) {
+      return saveAndReturn(c, deps, 412, { focus: current });
+    }
+
+    // 設定値の妥当性検証 (null は解除なので skip).
+    if (taskId !== null) {
+      const task = await deps.taskRepository.findById(taskId);
+      if (!task) {
+        return saveAndReturn(c, deps, 400, {
+          code: "INVALID_FOCUS_TARGET",
+          message: "task not found",
+        });
+      }
+      if (task.trashedAt !== null) {
+        return saveAndReturn(c, deps, 400, {
+          code: "INVALID_FOCUS_TARGET",
+          message: "task is trashed",
+        });
+      }
+      if (task.dueDate !== "today") {
+        return saveAndReturn(c, deps, 400, {
+          code: "INVALID_FOCUS_TARGET",
+          message: "task dueDate is not today",
+        });
+      }
+    }
+
+    const updated = {
+      ...current,
+      currentTaskId: taskId,
+      version: current.version + 1,
+      updatedAt: deps.clock.now(),
+    };
+    await deps.focusRepository.update(updated);
+    return saveAndReturn(c, deps, 200, { focus: updated });
   });
 
   // ---------- GET /api/v1/today (BL-005 / FR-010 / FR-011 / NFR-013) ----------
@@ -219,7 +292,12 @@ export function createApp(deps: AppDeps): Hono {
     const active = await deps.taskRepository.list({ trashed: "false" });
     const todayTasks = sortToday(filterToday(active));
     const nextTaskId = pickNextTaskId(todayTasks);
-    return c.json({ tasks: todayTasks, nextTaskId }, 200);
+    // BL-006 / FR-012: FocusSelection.currentTaskId をミラーしてクライアントに返す.
+    const focus = await deps.focusRepository.get();
+    return c.json(
+      { tasks: todayTasks, nextTaskId, currentTaskId: focus.currentTaskId },
+      200,
+    );
   });
 
   // ---------- GET /api/v1/tasks ----------
@@ -335,6 +413,10 @@ export function createApp(deps: AppDeps): Hono {
     }
 
     await deps.taskRepository.update(updateResult.task);
+    // BL-006 / FR-013: 期限を tomorrow に変更したタスクが currentTaskId と一致するなら null に解除.
+    if (patch.dueDate === "tomorrow") {
+      await clearFocusIfMatches(deps, id);
+    }
     return saveAndReturn(c, deps, 200, { task: updateResult.task });
   });
 
@@ -378,6 +460,8 @@ export function createApp(deps: AppDeps): Hono {
 
     const completed = completeTask(current, deps.clock);
     await deps.taskRepository.update(completed);
+    // BL-006 / FR-013: 現在のタスクを完了したら focus を解除.
+    await clearFocusIfMatches(deps, id);
     return saveAndReturn(c, deps, 200, { task: completed });
   });
 
@@ -419,10 +503,31 @@ export function createApp(deps: AppDeps): Hono {
 
     const trashed = trashTask(current, deps.clock);
     await deps.taskRepository.update(trashed);
+    // BL-006 / FR-013: 削除対象が現在のタスクなら focus を解除.
+    await clearFocusIfMatches(deps, id);
     return saveAndReturn(c, deps, 204, null);
   });
 
   return app;
+}
+
+/**
+ * BL-006 / FR-013: focus.currentTaskId が targetId と一致するなら null に解除する.
+ *
+ * 完了 / 削除 / 期限変更 (today → tomorrow) の各経路で呼び出す.
+ * version は +1, updatedAt は clock.now() で更新.
+ * 一致しない / null の場合は no-op (副作用なし).
+ */
+async function clearFocusIfMatches(deps: AppDeps, targetId: string): Promise<void> {
+  const focus = await deps.focusRepository.get();
+  if (focus.currentTaskId !== targetId) return;
+  const updated = {
+    ...focus,
+    currentTaskId: null,
+    version: focus.version + 1,
+    updatedAt: deps.clock.now(),
+  };
+  await deps.focusRepository.update(updated);
 }
 
 /**
