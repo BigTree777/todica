@@ -1,0 +1,8 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./domain" },
+    { "path": "./server" },
+    { "path": "./web" }
+  ]
+}

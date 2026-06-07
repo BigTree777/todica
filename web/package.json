@@ -1,0 +1,14 @@
+{
+  "name": "@todica/web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Todica Web クライアント (React + Vite + TanStack Query).",
+  "type": "module",
+  "main": "./src/main.tsx",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@todica/domain": "*"
+  }
+}

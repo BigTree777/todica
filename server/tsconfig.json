@@ -1,0 +1,16 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": ".",
+    "outDir": "./dist",
+    "noEmit": false,
+    "declaration": true,
+    "paths": {
+      "@todica/domain": ["../domain/src/index.ts"],
+      "@todica/domain/*": ["../domain/src/*"]
+    }
+  },
+  "references": [{ "path": "../domain" }],
+  "include": ["src/**/*.ts", "__tests__/**/*.ts"]
+}
