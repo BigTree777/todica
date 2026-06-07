@@ -233,9 +233,11 @@ export const focusSelection = sqliteTable("focus_selection", {
 - **D-003: 自動繰上げ時は「解除のみ」とし, 「次の現在のタスク」を書き込まない (spec.md U-003 保守側案)**.
   - 理由: 明示選択（ユーザーが選んだ）と暗黙フォールバック（並びの先頭）の区別を保つ. 「明示選択 → 完了で自動的に明示選択が次の id に切り替わる」を許すと, ユーザーが意図せず明示状態が続き「もう自分が選んだのではないのに選択中扱い」になり混乱する.
   - クライアント側式 `currentTaskId ?? nextTaskId` により「解除後の "次"」は表現できる. UC-001 の文言「自動で次が現在のタスクになる」は体感として満たされる.
-- **D-004: `/today` レスポンスに `currentTaskId` を含めない (spec.md U-004 保守側案)**.
-  - 理由: BL-005 で確定した `/today` の責務「今日ビューの一覧 + 並び先頭」を肥大化させない. `FocusSelection` は別概念であり別エンドポイントから取得するのが API 設計として素直.
-  - クライアントは 2 リクエスト (`today()` / `focus()`) を並列発行する. TanStack Query の並列フェッチで実用上問題なく, 既存テスト（BL-005）の変更も不要.
+- **D-004 (実装で変更): `/today` レスポンスに `currentTaskId` を含める**.
+  - **当初**: 「含めない」を保守側案として採用 (BL-005 の責務を肥大化させない).
+  - **実装段階で変更**: focus.test.ts の "GET /today currentTaskId 拡張" シナリオに合わせ, `{ tasks, nextTaskId, currentTaskId }` を返す形に確定. クライアントは 1 リクエストで全部取れる利点 + 整合性 (focus 自動解除後すぐ UI 反映) が勝った.
+  - 含める実装は `server/src/app.ts` の `/today` ハンドラに `focusRepository.get().currentTaskId` を埋め込むだけ. BL-005 既存テストは `currentTaskId` を参照していないため壊れない.
+  - OpenAPI `TodayView` schema にも `currentTaskId` を `required` で追記済.
 - **D-005: 完了 / 削除 / 期限変更時のフォーカス連動は同一トランザクションで実行する**.
   - 理由: タスク更新だけ成功してフォーカス解除が失敗する状態を避ける（DB が一貫しないとクライアントが混乱する）.
   - 実装上は task-repository と focus-selection-repository を呼ぶ既存ハンドラに transaction wrapper を導入するか, アプリケーションサービス層を 1 つ挟む. better-sqlite3 の `db.transaction(() => { ... })` を使う前提.

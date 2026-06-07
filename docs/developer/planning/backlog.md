@@ -19,7 +19,7 @@
 | BL-003 | タスク完了アクション（ゴミ箱経由 + カウント +1） | P0 | Done | FR-006, FR-060 / v0.1.0 / `features/task-complete/` (カウント +1 は BL-008 待ち) |
 | BL-004 | 2 階層固定（サブタスク・ネストを持たない構造保証） | P0 | Done | FR-008, OOS-003 / v0.1.0 / BL-001 (`features/task-crud/`) 内で完了. Task に parentTaskId フィールドを持たず, API でも受理しない (server/__tests__/integration/tasks.test.ts) |
 | BL-005 | 今日ビュー（入口・優先度順表示・"次の 1 つ" の一意化） | P0 | Done | FR-010, FR-011, NFR-013 / v0.1.0 / `features/today-view/` 完了. /api/v1/today 新設, 並び順 priority → createdAt → id |
-| BL-006 | 現在のタスク（フォーカス）と完了時の自動繰上げ | P0 | Todo | FR-012, FR-013, NFR-011 / v0.1.0 / `features/focus-task/` 想定 |
+| BL-006 | 現在のタスク（フォーカス）と完了時の自動繰上げ | P0 | Done | FR-012, FR-013, NFR-011 / v0.1.0 / `features/focus-task/` 完了. GET/PUT /focus + /today に currentTaskId 同梱 + complete/delete/期限 tomorrow で自動解除 |
 | BL-007 | 今日 → 明日 への期限切替（今日ビュー導線） | P0 | Todo | FR-005, FR-014 / v0.1.0 / `features/today-view/` または `features/task-crud/` 内 |
 | BL-008 | 今日の完了タスク数カウントの表示 | P0 | Todo | FR-040 / v0.1.0 / `features/completion-counter/` 想定 |
 | BL-009 | 境界時刻の設定（ユーザー設定値） | P0 | Todo | FR-041, FR-042, NFR-012 / v0.1.0 / `features/settings-day-boundary/` 想定 |
