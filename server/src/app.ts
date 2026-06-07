@@ -294,6 +294,19 @@ export function createApp(deps: AppDeps): Hono {
     return saveAndReturn(c, deps, 200, { task: updateResult.task });
   });
 
+  // ---------- POST /api/v1/tasks/:id/complete (BL-003 / FR-006 / FR-060) ----------
+  // test-designer が追加したスタブ. 本実装は implementer が green 化する.
+  // 501 を返すことで red を確実にする (どの分岐シナリオも green にならない).
+  app.post("/api/v1/tasks/:id/complete", async (c) => {
+    return c.json(
+      {
+        code: "NOT_IMPLEMENTED",
+        message: "POST /api/v1/tasks/:id/complete is a BL-003 stub",
+      },
+      501 as 200 | 201 | 400 | 401 | 404 | 412 | 500,
+    );
+  });
+
   // ---------- DELETE /api/v1/tasks/:id ----------
   app.delete("/api/v1/tasks/:id", async (c) => {
     const id = c.req.param("id");

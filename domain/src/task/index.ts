@@ -221,3 +221,18 @@ export function trashTask(current: Task, clock: Clock): Task {
 export function isTrashed(task: Task): boolean {
   return task.trashedAt !== null;
 }
+
+/**
+ * タスクを完了状態に遷移させる (BL-003 / FR-006 / FR-060).
+ *
+ * 通常状態 (trashedAt === null) のタスクのみ trashedAt をセットし
+ * trashedReason = "completed" に書き換える. version +1, updatedAt 更新.
+ * 既にゴミ箱状態 (trashedReason === "completed" / "deleted" のいずれでも) なら
+ * no-op 冪等扱いで入力を変更せず返す (plan.md D-003).
+ *
+ * 本関数は test-designer が追加したシグネチャのみのスタブ. 本実装は implementer が
+ * green 化する.
+ */
+export function completeTask(_current: Task, _clock: Clock): Task {
+  throw new Error("completeTask: not implemented (BL-003 stub)");
+}

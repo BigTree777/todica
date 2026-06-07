@@ -45,11 +45,28 @@ export interface DeleteTaskCommand {
   ifMatch: number;
 }
 
+/**
+ * BL-003 / FR-006: タスクを完了させるコマンド.
+ * 本フィールドの型は test-designer が追加した「型のみのスタブ」.
+ * HttpTaskRepository.complete / UI からの呼び出しは implementer が green 化する.
+ */
+export interface CompleteTaskCommand {
+  id: string;
+  ifMatch: number;
+}
+
 export interface TaskRepository {
   list(): Promise<Task[]>;
   create(cmd: CreateTaskCommand): Promise<Task>;
   update(cmd: UpdateTaskCommand): Promise<Task>;
   delete(cmd: DeleteTaskCommand): Promise<void>;
+  /**
+   * BL-003 / FR-006: タスクを完了状態 (trashedReason = "completed") に遷移させる.
+   * 成功時は更新後 Task を返す. 412 衝突時は OptimisticLockError を投げる.
+   * 本メソッドは test-designer が追加したインターフェース上のスタブ.
+   * HttpTaskRepository の本実装は implementer が green 化する.
+   */
+  complete(cmd: CompleteTaskCommand): Promise<Task>;
 }
 
 /**
@@ -215,5 +232,15 @@ export class HttpTaskRepository implements TaskRepository {
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: failed to delete task`);
     }
+  }
+
+  /**
+   * BL-003 / FR-006: タスク完了アクション.
+   *
+   * 本メソッドは test-designer が追加したスタブ. 呼び出されると必ず throw する.
+   * 本実装は implementer が green 化する.
+   */
+  async complete(_cmd: CompleteTaskCommand): Promise<Task> {
+    throw new Error("HttpTaskRepository.complete: not implemented (BL-003 stub)");
   }
 }

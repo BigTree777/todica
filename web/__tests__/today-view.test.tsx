@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { Task } from "@todica/domain/task";
 import { TodayView } from "../src/ui/today-view/today-view.js";
 import type {
+  CompleteTaskCommand,
   CreateTaskCommand,
   DeleteTaskCommand,
   TaskRepository,
@@ -41,6 +42,7 @@ function makeMockRepository(initial: Task[] = []): TaskRepository & {
   createMock: ReturnType<typeof vi.fn>;
   updateMock: ReturnType<typeof vi.fn>;
   deleteMock: ReturnType<typeof vi.fn>;
+  completeMock: ReturnType<typeof vi.fn>;
   listMock: ReturnType<typeof vi.fn>;
 } {
   const state = [...initial];
@@ -72,15 +74,31 @@ function makeMockRepository(initial: Task[] = []): TaskRepository & {
     const idx = state.findIndex((t) => t.id === _cmd.id);
     if (idx >= 0) state.splice(idx, 1);
   });
+  const completeMock = vi.fn(async (cmd: CompleteTaskCommand) => {
+    // BL-003: 完了は trashedAt をセットして trashedReason = "completed" にし version+1.
+    // ストアからは取り除かない (filter 表示は UI 側 / 一覧 API の責務).
+    const idx = state.findIndex((t) => t.id === cmd.id);
+    if (idx < 0) throw new Error("not found");
+    const next: Task = {
+      ...state[idx]!,
+      trashedAt: "2026-06-07T09:00:01.000Z",
+      trashedReason: "completed",
+      version: (state[idx]!.version ?? 0) + 1,
+    };
+    state[idx] = next;
+    return next;
+  });
   return {
     list: listMock,
     create: createMock,
     update: updateMock,
     delete: deleteMock,
+    complete: completeMock,
     listMock,
     createMock,
     updateMock,
     deleteMock,
+    completeMock,
   };
 }
 
@@ -365,5 +383,88 @@ describe("TodayView (BL-002 優先度 UI)", () => {
     const itemsAfter = await screen.findAllByRole("listitem");
     expect(itemsAfter[0]?.textContent ?? "").toContain("BBB");
     expect(itemsAfter[1]?.textContent ?? "").toContain("AAA");
+  });
+});
+
+// ============================================================
+// BL-003 / FR-006: タスク完了アクション (Web UI)
+//
+// spec.md (task-complete) §「Web クライアント UI」と 1:1 対応する.
+// - タスク行に「完了」ボタンが 1 つ存在する (削除とは別).
+// - 完了ボタンクリックで Repository.complete({ id, ifMatch }) が呼ばれる.
+// - 完了後に該当タスクが一覧から消える (楽観 UI).
+// - 完了ボタンクリックで Repository.delete は呼ばれない.
+//
+// today-view.tsx 側に完了ボタン / handleComplete はまだ存在しない (test-designer のスタブ段階).
+// 以下のテストはすべて red になる. implementer が green 化する.
+// ============================================================
+
+describe("TodayView (BL-003 完了ボタン)", () => {
+  it("シナリオ: 各タスク行に「完了」ボタンが 1 つ存在する (削除ボタンとは別)", async () => {
+    const repo = makeMockRepository([
+      makeTask({ id: "t1", name: "牛乳", version: 1 }),
+    ]);
+    render(<TodayView repository={repo} />);
+
+    // 起票フォームの「タスク名」入力が現れるまで待ち, 一覧の描画も待つ.
+    await screen.findByText("牛乳");
+
+    // 「完了」相当のボタンが存在する.
+    const completeButton = await screen.findByRole("button", { name: /完了/ });
+    expect(completeButton).not.toBeNull();
+
+    // 「削除」ボタンと別に存在する (= 同じ要素ではない).
+    const deleteButton = await screen.findByRole("button", { name: /削除/ });
+    expect(completeButton).not.toBe(deleteButton);
+  });
+
+  it("シナリオ: 完了ボタンをクリックすると Repository.complete が { id, ifMatch: task.version } で呼ばれる", async () => {
+    const repo = makeMockRepository([
+      makeTask({ id: "t1", name: "x", version: 1 }),
+    ]);
+    const user = userEvent.setup();
+    render(<TodayView repository={repo} />);
+
+    await screen.findByText("x");
+
+    const completeButton = await screen.findByRole("button", { name: /完了/ });
+    await user.click(completeButton);
+
+    expect(repo.completeMock).toHaveBeenCalledTimes(1);
+    const arg = repo.completeMock.mock.calls[0]?.[0] as CompleteTaskCommand;
+    expect(arg.id).toBe("t1");
+    expect(arg.ifMatch).toBe(1);
+  });
+
+  it("シナリオ: 完了に成功するとタスクが今日ビューの一覧から消える (楽観 UI)", async () => {
+    const repo = makeMockRepository([
+      makeTask({ id: "t1", name: "牛乳", version: 1 }),
+    ]);
+    const user = userEvent.setup();
+    render(<TodayView repository={repo} />);
+
+    expect(await screen.findByText("牛乳")).toBeInTheDocument();
+
+    const completeButton = await screen.findByRole("button", { name: /完了/ });
+    await user.click(completeButton);
+
+    // 一覧から消える (楽観 UI).
+    expect(screen.queryByText("牛乳")).toBeNull();
+  });
+
+  it("シナリオ: 完了ボタンクリックで Repository.delete は呼ばれない (完了と削除は別操作)", async () => {
+    const repo = makeMockRepository([
+      makeTask({ id: "t1", name: "x", version: 1 }),
+    ]);
+    const user = userEvent.setup();
+    render(<TodayView repository={repo} />);
+
+    await screen.findByText("x");
+
+    const completeButton = await screen.findByRole("button", { name: /完了/ });
+    await user.click(completeButton);
+
+    expect(repo.completeMock).toHaveBeenCalledTimes(1);
+    expect(repo.deleteMock).not.toHaveBeenCalled();
   });
 });
