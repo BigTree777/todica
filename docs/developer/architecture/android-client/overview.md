@@ -7,15 +7,15 @@
 
 - 抽象アーキテクチャ概要: [`../overview.md`](../overview.md) §2「構成方針」, §5.2「Web / Android サーバモード」, §5.3「Android ローカルモード」.
 - モジュール境界: [`../module-boundaries.md`](../module-boundaries.md) §3「クライアント側の層と責務」, §4.4「Android クライアントのモジュール一覧」.
-- 永続化機構（ローカルモード端末内）: [`../database/implementation.md`](../database/implementation.md).
-- API 通信契約（サーバモード時）: [`../api/implementation.md`](../api/implementation.md).
+- 永続化機構（ローカルモード端末内）: [`../database/overview.md`](../database/overview.md).
+- API 通信契約（サーバモード時）: [`../api/overview.md`](../api/overview.md).
 
 ## 2. 採用技術
 
 | レイヤ | 採用 | 代替案 |
 | --- | --- | --- |
 | 実装方式 | Capacitor で Web 実装（TypeScript + React）を Android にラップ | ネイティブ Kotlin + Jetpack Compose / Flutter |
-| ローカルモード端末内永続化 | Capacitor SQLite プラグイン（`@capacitor-community/sqlite` 等） — 詳細は [`../database/implementation.md`](../database/implementation.md) | Room / sqflite / drift |
+| ローカルモード端末内永続化 | Capacitor SQLite プラグイン（`@capacitor-community/sqlite` 等） — 詳細は [`../database/overview.md`](../database/overview.md) | Room / sqflite / drift |
 | サーバモード API クライアント | Web と同じ TypeScript 実装の API クライアントを再利用 | プラットフォーム固有のクライアント |
 | モード切替方式 | 設定画面でいつでも切替可能. **切替 = 初期化**（旧モードの端末内データを全消去, 同期は行わない） | 初回起動時のみ選択 |
 | モード保存先 | Capacitor Preferences | （他案は採らない） |
@@ -48,6 +48,6 @@
 
 - 抽象アーキテクチャ: [`../overview.md`](../overview.md), [`../module-boundaries.md`](../module-boundaries.md)
 - Web クライアント実装（共有元）: [`../web-client/overview.md`](../web-client/overview.md)
-- 永続化実装: [`../database/implementation.md`](../database/implementation.md)
-- API 実装: [`../api/implementation.md`](../api/implementation.md)
+- 永続化実装: [`../database/overview.md`](../database/overview.md)
+- API 実装: [`../api/overview.md`](../api/overview.md)
 - ADR: [`../../adr/0006-distribution-topology.md`](../../adr/0006-distribution-topology.md), [`../../adr/0009-android-client-tech-stack.md`](../../adr/0009-android-client-tech-stack.md), [`../../adr/0010-api-design.md`](../../adr/0010-api-design.md), [`../../adr/0011-day-boundary-time-source.md`](../../adr/0011-day-boundary-time-source.md)

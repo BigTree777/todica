@@ -1,7 +1,7 @@
 # スキーマ定義（論理）
 
 > Todica のエンティティ定義. **論理レベル** （どんなフィールドを持つか・型カテゴリ・制約・関連）を記述する.
-> 物理レベル（具体的な型・インデックス・DDL）は [`implementation.md`](implementation.md) に書く.
+> 物理レベル（具体的な型・インデックス・DDL）は [`overview.md`](overview.md) に書く.
 > 概要は [`overview.md`](overview.md) を先に読むこと.
 
 ## 共通方針
@@ -11,7 +11,7 @@
 - 日時: ISO 8601 文字列で保持する（タイムゾーン情報を含めること）.
 - 「ゴミ箱状態」は別エンティティではなく, **対象エンティティの `trashedAt`（ゴミ箱に入った日時）が `null` でないこと** で表す. これにより, FR-060（ゴミ箱経由）と FR-061（復元）を「`trashedAt` を立てる / 解除する」という同一機構で扱える.
 - **マルチユーザー前提のフィールドを持たない**（CORE-2 と整合）. すなわち `userId` / `tenantId` / `ownerId` 等のカラムは作らない.
-- 本書は型カテゴリ（string / number / 列挙 / null 可否）のみを示す. 永続化機構ごとの具体的な型・インデックス・DDL は [`implementation.md`](implementation.md) を参照.
+- 本書は型カテゴリ（string / number / 列挙 / null 可否）のみを示す. 永続化機構ごとの具体的な型・インデックス・DDL は [`overview.md`](overview.md) を参照.
 
 ### 同期メタデータ（全エンティティ共通. サーバ側 / Android ローカル側ともに保持）
 
@@ -52,7 +52,7 @@ PWA + オフライン書込キュー + 楽観ロック（[ADR-0008](../../adr/00
   - 削除アクション（FR-007）: `trashedAt = now`, `trashedReason = "deleted"`. カウントには加算しない.
   - 復元（FR-061）: `trashedAt = null`, `trashedReason = null`. 完了済み Task（`trashedReason = "completed"`）の復元も可能だが, **完了カウントは戻さない**（既に集計済みのため. NFR-020 整合）.
   - リセット時の自動完全削除（FR-062）: ストアから物理削除.
-- 検索の論理要件: 「期限と優先度の組合せで今日ビューに並べる」「プロジェクトで絞り込む」「ゴミ箱状態で絞り込む」が成り立つこと. 具体的なインデックス定義は [`implementation.md`](implementation.md).
+- 検索の論理要件: 「期限と優先度の組合せで今日ビューに並べる」「プロジェクトで絞り込む」「ゴミ箱状態で絞り込む」が成り立つこと. 具体的なインデックス定義は [`overview.md`](overview.md).
 
 ---
 
@@ -157,7 +157,7 @@ PWA + オフライン書込キュー + 楽観ロック（[ADR-0008](../../adr/00
 
 ## 物理スキーマ
 
-物理スキーマ（具体的な型・インデックス・DDL）は [`implementation.md`](implementation.md) を参照する.
+物理スキーマ（具体的な型・インデックス・DDL）は [`overview.md`](overview.md) を参照する.
 
 ## 確定事項（旧未決事項）
 

@@ -16,7 +16,7 @@
 | --- | --- |
 | プロダクト計画 | [`planning/roadmap.md`](planning/roadmap.md), [`planning/backlog.md`](planning/backlog.md) |
 | アーキテクチャ（抽象） | [`architecture/overview.md`](architecture/overview.md), [`architecture/module-boundaries.md`](architecture/module-boundaries.md), [`architecture/domain-model.md`](architecture/domain-model.md) |
-| アーキテクチャ（実装） | [`architecture/server/overview.md`](architecture/server/overview.md), [`architecture/web-client/overview.md`](architecture/web-client/overview.md), [`architecture/android-client/overview.md`](architecture/android-client/overview.md), [`architecture/api/implementation.md`](architecture/api/implementation.md), [`architecture/database/implementation.md`](architecture/database/implementation.md) |
+| アーキテクチャ（実装） | [`architecture/server/overview.md`](architecture/server/overview.md), [`architecture/web-client/overview.md`](architecture/web-client/overview.md), [`architecture/android-client/overview.md`](architecture/android-client/overview.md), [`architecture/api/overview.md`](architecture/api/overview.md), [`architecture/database/overview.md`](architecture/database/overview.md) |
 | データベース | [`architecture/database/overview.md`](architecture/database/overview.md), [`architecture/database/schema.md`](architecture/database/schema.md), [`architecture/database/migration-policy.md`](architecture/database/migration-policy.md) |
 | API | [`architecture/api/overview.md`](architecture/api/overview.md), [`architecture/api/openapi.yaml`](architecture/api/openapi.yaml) |
 | Git ワークフロー | [`git-workflow.md`](git-workflow.md) |

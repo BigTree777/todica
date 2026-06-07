@@ -7,7 +7,7 @@
 
 - 抽象アーキテクチャ概要: [`../overview.md`](../overview.md) §2「構成方針」, §5.2「Web クライアント / Android サーバモード の層構成」, §7.5「オフライン耐性」.
 - モジュール境界: [`../module-boundaries.md`](../module-boundaries.md) §3「クライアント側の層と責務」, §4.3「Web クライアントのモジュール一覧」.
-- API 通信契約: [`../api/implementation.md`](../api/implementation.md).
+- API 通信契約: [`../api/overview.md`](../api/overview.md).
 
 ## 2. 採用技術（[ADR-0008](../../adr/0008-web-client-tech-stack.md) で全て確定）
 
@@ -35,7 +35,7 @@
 - 永続キャッシュの位置づけ: [ADR-0008](../../adr/0008-web-client-tech-stack.md) §「サーバ通信・オフライン耐性の方針」.
   - 第一段はメモリキャッシュ（サーバ状態管理ライブラリ）.
   - 第二段は永続キャッシュで, 「ブラウザを開き直しても直前の今日ビューを即座に表示できる」程度に留める. **書き込みの正本にはしない**（[`../module-boundaries.md`](../module-boundaries.md) §5.3 と整合）.
-- API プロトコル / 認証 / バージョニング: [ADR-0010](../../adr/0010-api-design.md). 詳細は [`../api/implementation.md`](../api/implementation.md).
+- API プロトコル / 認証 / バージョニング: [ADR-0010](../../adr/0010-api-design.md). 詳細は [`../api/overview.md`](../api/overview.md).
 - 配布構成（Web は常にサーバ接続必須）: [ADR-0006](../../adr/0006-distribution-topology.md).
 
 ## 4. 実装上の注意点
@@ -52,6 +52,6 @@
 ## 5. 関連ドキュメント
 
 - 抽象アーキテクチャ: [`../overview.md`](../overview.md), [`../module-boundaries.md`](../module-boundaries.md)
-- API 実装: [`../api/implementation.md`](../api/implementation.md)
+- API 実装: [`../api/overview.md`](../api/overview.md)
 - Android クライアント実装: [`../android-client/overview.md`](../android-client/overview.md)
 - ADR: [`../../adr/0006-distribution-topology.md`](../../adr/0006-distribution-topology.md), [`../../adr/0008-web-client-tech-stack.md`](../../adr/0008-web-client-tech-stack.md), [`../../adr/0010-api-design.md`](../../adr/0010-api-design.md)

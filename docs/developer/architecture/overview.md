@@ -133,11 +133,11 @@ graph TB
 | サーバ | クライアントからの要求を受け, 永続化された正本データを操作・返却する | [`server/overview.md`](server/overview.md) |
 | Web クライアント | サーバへ接続して操作・表示を行う | [`web-client/overview.md`](web-client/overview.md) |
 | Android クライアント | サーバモード / ローカルモードを切替可能なモバイル UI | [`android-client/overview.md`](android-client/overview.md) |
-| API | サーバとクライアントの間の通信契約 | [`api/implementation.md`](api/implementation.md) |
-| 永続化機構 | サーバ側・Android ローカルモード側双方のデータ正本を保持する | [`database/implementation.md`](database/implementation.md) |
+| API | サーバとクライアントの間の通信契約 | [`api/overview.md`](api/overview.md) |
+| 永続化機構 | サーバ側・Android ローカルモード側双方のデータ正本を保持する | [`database/overview.md`](database/overview.md) |
 
 具体的なライブラリ・ツールは各コンポーネント別実装ドキュメントで確定済み:
-- サーバ: Hono + better-sqlite3 + drizzle-orm + Vitest + Biome（[`server/overview.md`](server/overview.md), [`database/implementation.md`](database/implementation.md)）
+- サーバ: Hono + better-sqlite3 + drizzle-orm + Vitest + Biome（[`server/overview.md`](server/overview.md), [`database/overview.md`](database/overview.md)）
 - Web クライアント: React + Vite + PWA + TanStack Query + React Router + Vitest + Biome（[`web-client/overview.md`](web-client/overview.md)）
 - Android クライアント: Capacitor + @capacitor-community/sqlite + 上記 Web 実装を共有（[`android-client/overview.md`](android-client/overview.md)）
 
@@ -260,7 +260,7 @@ graph TB
 Todica は **本人運用サーバとそのクライアントの間の内部 API** を持つ（[ADR-0010](../adr/0010-api-design.md)）.
 
 - 共有 SaaS としての外部公開 API は持たない（project.md §8 Out of Scope "共有 SaaS としてのホスティング提供"）.
-- API の方針・主要リソース概観は [`api/overview.md`](api/overview.md). 具体的なプロトコル・スキーマ表現は [`api/implementation.md`](api/implementation.md) を参照.
+- API の方針・主要リソース概観・具体的なプロトコル表現は [`api/overview.md`](api/overview.md). スキーマ定義は [`api/openapi.yaml`](api/openapi.yaml).
 
 ## 10. 主要な設計判断（ADR 一覧）
 
@@ -282,7 +282,7 @@ Todica は **本人運用サーバとそのクライアントの間の内部 API
 
 - モジュール境界（抽象）: [`module-boundaries.md`](module-boundaries.md)
 - ドメインモデル図（クラス図 / 状態遷移図）: [`domain-model.md`](domain-model.md)
-- コンポーネント別実装ドキュメント: [`server/overview.md`](server/overview.md), [`web-client/overview.md`](web-client/overview.md), [`android-client/overview.md`](android-client/overview.md), [`database/implementation.md`](database/implementation.md), [`api/implementation.md`](api/implementation.md)
+- コンポーネント別実装ドキュメント: [`server/overview.md`](server/overview.md), [`web-client/overview.md`](web-client/overview.md), [`android-client/overview.md`](android-client/overview.md), [`database/overview.md`](database/overview.md), [`api/overview.md`](api/overview.md)
 - データベース: [`database/overview.md`](database/overview.md), [`database/schema.md`](database/schema.md), [`database/migration-policy.md`](database/migration-policy.md)
-- API: [`api/overview.md`](api/overview.md), [`api/implementation.md`](api/implementation.md)
+- API: [`api/overview.md`](api/overview.md), [`api/openapi.yaml`](api/openapi.yaml)
 - ADR: [`../adr/`](../adr/)

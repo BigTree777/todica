@@ -2,7 +2,7 @@
 
 > Todica のスキーマ変更を安全に行うためのルール. クライアント・サーバ型構成（[ADR-0006](../../adr/0006-distribution-topology.md)）で, サーバ側と Android ローカルモード側の双方にマイグレーションが必要になる. 単一ユーザー前提なので, 一般的なマルチテナント SaaS のマイグレーションよりは軽量に運用する.
 >
-> 本書は技術非依存（tech-agnostic）の運用ポリシーを記述する. 具体的なマイグレーションツール・実行コマンドは [`implementation.md`](implementation.md) を参照.
+> 本書は技術非依存（tech-agnostic）の運用ポリシーを記述する. 具体的なマイグレーションツール・実行コマンドは [`overview.md`](overview.md) を参照.
 >
 > サーバ側永続化は [ADR-0007](../../adr/0007-server-tech-stack.md), Android ローカルモード永続化は [ADR-0009](../../adr/0009-android-client-tech-stack.md). スキーマ詳細は [`schema.md`](schema.md).
 
@@ -17,7 +17,7 @@
 
 ## 2. ツール
 
-- マイグレーションツールはサーバ側 / Android ローカル側で **共通の `drizzle-kit`** を採用する（[`implementation.md`](implementation.md) §2）. TypeScript で定義したスキーマから SQL マイグレーションを生成し, 両側で同じ SQL を走らせる.
+- マイグレーションツールはサーバ側 / Android ローカル側で **共通の `drizzle-kit`** を採用する（[`overview.md`](overview.md) §2）. TypeScript で定義したスキーマから SQL マイグレーションを生成し, 両側で同じ SQL を走らせる.
 - 実行タイミング:
   - サーバ側: サーバ起動時に自動実行, または明示コマンドで実行.
   - Android ローカル側: アプリ起動時に自動実行.
@@ -39,7 +39,7 @@
 - **後方互換**:
   - サーバ側: 古いクライアントが新しいサーバに繋ぐ可能性があるため, API バージョニング（[ADR-0010](../../adr/0010-api-design.md)）と連動して破壊的変更を扱う.
   - Android ローカル側: 古いバージョンのアプリで作られたデータを, 新しいバージョンのアプリで開けるようにする（順方向の移行のみ. 逆方向はサポートしない）.
-- **`schema.md` を更新する**: 論理スキーマに変更があれば同 PR で更新する. 物理面の変更があれば [`implementation.md`](implementation.md) も同 PR で更新する.
+- **`schema.md` を更新する**: 論理スキーマに変更があれば同 PR で更新する. 物理面の変更があれば [`overview.md`](overview.md) も同 PR で更新する.
 
 ## 5. サーバ・クライアント連動の注意
 
@@ -52,7 +52,7 @@
 - [ ] 旧データから新スキーマへ移行するコードを書いた（破壊的変更がある場合）
 - [ ] 旧バージョンのデータをローカルに作っておき, 新バージョンで開いて移行が成功することを確認した
 - [ ] [`schema.md`](schema.md) を更新した
-- [ ] 物理面の変更があれば [`implementation.md`](implementation.md) を更新した
+- [ ] 物理面の変更があれば [`overview.md`](overview.md) を更新した
 - [ ] API スキーマに破壊的変更を伴う場合, [`../api/openapi.yaml`](../api/openapi.yaml) と feature spec を更新した
 - [ ] サーバ側マイグレーションが失敗してもデータが壊れない（例外時にトランザクションが abort して旧状態に戻る）ことを確認した
 
