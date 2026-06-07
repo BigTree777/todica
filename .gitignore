@@ -1,2 +1,33 @@
 # Claude Code: 個人用ローカル設定（個人の許可リスト等）
 .claude/settings.local.json
+
+# Node / TypeScript / ビルド成果物
+node_modules/
+dist/
+build/
+coverage/
+.tsbuildinfo
+*.tsbuildinfo
+
+# 永続化機構（SQLite）/ ローカル DB
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# ログ / 一時ファイル
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+
+# エディタ
+.vscode/
+.idea/
+
+# 環境変数
+.env
+.env.local

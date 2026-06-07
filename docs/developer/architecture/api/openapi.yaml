@@ -44,18 +44,56 @@ paths:
     summary: タスク一覧 / 起票
     get:
       tags: [tasks]
-      summary: タスク一覧取得
-      description: 詳細フィルタ・ソート仕様は feature spec で追記.
+      summary: タスク一覧取得（BL-001 / FR-001）
+      description: |
+        ゴミ箱状態の絞り込みはクエリパラメータ `trashed` で指定する.
+        並び順はサーバ側で「dueDate (today→tomorrow) → priority (highest→normal→later) → createdAt 昇順」.
+      parameters:
+        - name: trashed
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ["true", "false", "all"]
+            default: "false"
+          description: |
+            `true` = ゴミ箱状態のみ. `false` = ゴミ箱外のみ (既定). `all` = すべて.
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tasks]
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Task"
         "401": { $ref: "#/components/responses/Unauthorized" }
     post:
       tags: [tasks]
-      summary: タスク起票
+      summary: タスク起票（FR-001 / FR-002 / NFR-020）
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskInput"
       responses:
-        "201": { description: Created }
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [task]
+                properties:
+                  task:
+                    $ref: "#/components/schemas/Task"
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
@@ -64,12 +102,27 @@ paths:
       - $ref: "#/components/parameters/EntityId"
     patch:
       tags: [tasks]
-      summary: タスク編集（名称・期限・優先度）
+      summary: タスク編集（名称・期限・プロジェクト. FR-005 / FR-009）
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskPatch"
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [task]
+                properties:
+                  task:
+                    $ref: "#/components/schemas/Task"
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
@@ -401,11 +454,14 @@ components:
       description: |
         楽観ロックの version 不一致. レスポンスボディにサーバ側の現行エンティティを含めるため,
         クライアントは「サーバ値で上書き」or「クライアント値を強制再送」をユーザーに確認する.
+        BL-001 では `task` フィールドに現行 Task を返す. 他リソースは feature spec で確定する.
       content:
         application/json:
           schema:
             type: object
-            description: 現行エンティティ全体（タスク / プロジェクト等の型はパスごと）
+            properties:
+              task:
+                $ref: "#/components/schemas/Task"
     InternalServerError:
       description: サーバ内部エラー
       content:
@@ -414,13 +470,109 @@ components:
             $ref: "#/components/schemas/Error"
 
   schemas:
-    # 詳細スキーマは feature spec で追記する. 本骨格では placeholder のみ.
+    # ---------- Task 関連 (BL-001 で確定) ----------
     Task:
       type: object
-      description: タスク（schema.md と整合. feature spec で詳細化）
+      description: |
+        タスク. docs/developer/architecture/database/schema.md §Task と一致.
+        サブタスク参照は持たない (FR-008: 2 階層固定).
+      required:
+        - id
+        - name
+        - projectId
+        - dueDate
+        - priority
+        - origin
+        - routineId
+        - createdAt
+        - updatedAt
+        - trashedAt
+        - trashedReason
+        - version
+      properties:
+        id:
+          type: string
+          description: タスク ID (UUID v4. クライアント先行採番)
+        name:
+          type: string
+          description: タスク名 (1〜200 文字, 制御文字を含まない)
+        projectId:
+          type: string
+          nullable: true
+          description: 所属プロジェクト ID. null はプロジェクト外タスク
+        dueDate:
+          type: string
+          enum: [today, tomorrow]
+        priority:
+          type: string
+          enum: [highest, normal, later]
+        origin:
+          type: string
+          enum: [manual, routine]
+        routineId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        trashedAt:
+          type: string
+          format: date-time
+          nullable: true
+        trashedReason:
+          type: string
+          enum: [completed, deleted]
+          nullable: true
+        version:
+          type: integer
+          minimum: 1
+
+    TaskInput:
+      type: object
+      description: タスク起票時の入力. id はクライアント採番 (Idempotency-Key と一致).
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          description: タスク ID (UUID v4)
+        name:
+          type: string
+          description: タスク名 (1〜200 文字, 制御文字を含まない)
+        projectId:
+          type: string
+          nullable: true
+          description: 所属プロジェクト ID (任意)
+        dueDate:
+          type: string
+          enum: [today, tomorrow]
+          default: today
+        priority:
+          type: string
+          enum: [highest, normal, later]
+          default: normal
+
+    TaskPatch:
+      type: object
+      description: タスク編集時の部分入力. 省略フィールドは変更しない.
+      properties:
+        name:
+          type: string
+        dueDate:
+          type: string
+          enum: [today, tomorrow]
+        projectId:
+          type: string
+          nullable: true
+
+    # ---------- 他エンティティ (feature spec で詳細化) ----------
     Project:
       type: object
-      description: プロジェクト（同上）
+      description: プロジェクト（schema.md と整合. feature spec で詳細化）
     Routine:
       type: object
       description: ルーティン（同上）
@@ -433,13 +585,32 @@ components:
     FocusSelection:
       type: object
       description: 現在のタスク参照（同上）
+
+    # ---------- 共通エラー ----------
+    ErrorCode:
+      type: string
+      description: |
+        共通エラーコード. BL-001 では以下を使う.
+        他 feature が追加する場合は本 enum に追記する.
+      enum:
+        - INVALID_REQUEST_BODY
+        - INVALID_TASK_NAME
+        - INVALID_DUE_DATE
+        - INVALID_PRIORITY
+        - PROJECT_NOT_FOUND
+        - TASK_NOT_FOUND
+        - MISSING_IF_MATCH
+        - MISSING_IDEMPOTENCY_KEY
+        - UNAUTHORIZED
     Error:
       type: object
       description: |
-        共通エラーレスポンス. `code` は feature spec で具体値を定義する
-        （例: `INVALID_DUE_DATE`, `TASK_NOT_FOUND`, `RESET_ALREADY_EXECUTED` 等）.
+        共通エラーレスポンス. `code` は ErrorCode の値域に従う.
+      required:
+        - code
+        - message
       properties:
         code:
-          type: string
+          $ref: "#/components/schemas/ErrorCode"
         message:
           type: string

@@ -1,0 +1,16 @@
+{
+  "name": "@todica/domain",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Todica のドメイン共有層. サーバ・クライアントが共通参照する純粋ロジック.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./task": "./src/task/index.ts",
+    "./clock": "./src/clock/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run"
+  }
+}

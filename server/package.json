@@ -1,0 +1,14 @@
+{
+  "name": "@todica/server",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Todica サーバ (Hono + better-sqlite3 + drizzle-orm).",
+  "type": "module",
+  "main": "./src/app.ts",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@todica/domain": "*"
+  }
+}
