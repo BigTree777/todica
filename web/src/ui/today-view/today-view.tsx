@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { DueDate, Priority, Task } from "@todica/domain/task";
 import type {
+  CompleteTaskCommand,
   CreateTaskCommand,
   DeleteTaskCommand,
   TaskRepository,
@@ -150,6 +151,16 @@ export function TodayView(props: TodayViewProps): JSX.Element {
     [repository],
   );
 
+  const handleComplete = useCallback(
+    async (task: Task) => {
+      const cmd: CompleteTaskCommand = { id: task.id, ifMatch: task.version };
+      await repository.complete(cmd);
+      // 楽観 UI: 完了したタスクは今日ビューから除外する (BL-003 / plan.md §処理フロー §2).
+      setTasks((prev) => prev.filter((t) => t.id !== task.id));
+    },
+    [repository],
+  );
+
   const handleCyclePriority = useCallback(
     async (task: Task) => {
       const next = NEXT_PRIORITY[task.priority];
@@ -256,6 +267,9 @@ export function TodayView(props: TodayViewProps): JSX.Element {
             </button>
             <button type="button" onClick={() => handleToggleDueDate(task)}>
               {task.dueDate === "today" ? "明日へ" : "今日へ"}
+            </button>
+            <button type="button" onClick={() => handleComplete(task)}>
+              完了
             </button>
             <button type="button" onClick={() => handleDelete(task)}>
               削除

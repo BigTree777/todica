@@ -16,7 +16,7 @@
 | --- | --- | --- | --- | --- |
 | BL-001 | タスク CRUD（起票・名称編集・期限切替・削除） | P0 | Todo | FR-001, FR-002, FR-005, FR-007, FR-009 / v0.1.0 / `features/task-crud/` 想定 |
 | BL-002 | タスク優先度（3 段階の付与・変更） | P0 | Todo | FR-003, FR-004 / v0.1.0 / `features/task-priority/` 想定 |
-| BL-003 | タスク完了アクション（ゴミ箱経由 + カウント +1） | P0 | Todo | FR-006, FR-060 / v0.1.0 / `features/task-complete/` 想定 |
+| BL-003 | タスク完了アクション（ゴミ箱経由 + カウント +1） | P0 | Done | FR-006, FR-060 / v0.1.0 / `features/task-complete/` (カウント +1 は BL-008 待ち) |
 | BL-004 | 2 階層固定（サブタスク・ネストを持たない構造保証） | P0 | Todo | FR-008, OOS-003 / v0.1.0 / `features/task-crud/` 内で扱う想定 |
 | BL-005 | 今日ビュー（入口・優先度順表示・"次の 1 つ" の一意化） | P0 | Todo | FR-010, FR-011, NFR-013 / v0.1.0 / `features/today-view/` 想定 |
 | BL-006 | 現在のタスク（フォーカス）と完了時の自動繰上げ | P0 | Todo | FR-012, FR-013, NFR-011 / v0.1.0 / `features/focus-task/` 想定 |

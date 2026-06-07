@@ -962,6 +962,441 @@ describe("2 階層固定 (FR-008)", () => {
 });
 
 // ============================================================
+// 完了アクション (BL-003 / FR-006 / FR-060)
+//
+// spec.md (task-complete) §「API: 完了アクションの正常系」「API: 完了と削除の区別」
+// 「API: 楽観ロック / 冪等性 / 認証」「API: ゴミ箱状態のタスクへの再完了 / クロス遷移」と 1:1 対応する.
+// 共通経路 (Idempotency-Key middleware, 認証 middleware) は BL-001 で担保済のため,
+// 本 feature では完了固有の分岐 (trashedReason の差 / 既ゴミ箱状態への no-op) を重点的に検証する.
+//
+// test-designer のスタブ (server/src/app.ts: POST /tasks/:id/complete → 501) のため,
+// 以下のテストはすべて red になる. implementer が green 化する.
+// ============================================================
+
+describe("POST /api/v1/tasks/{id}/complete (BL-003 完了アクション)", () => {
+  it("シナリオ: 通常状態のタスクを完了するとゴミ箱状態 (completed) になる", async () => {
+    taskRepo.seed({
+      id: TASK_ID_1,
+      name: "牛乳を買う",
+      projectId: null,
+      dueDate: "today",
+      priority: "normal",
+      origin: "manual",
+      routineId: null,
+      createdAt: TEST_INITIAL_TIME,
+      updatedAt: TEST_INITIAL_TIME,
+      trashedAt: null,
+      trashedReason: null,
+      version: 1,
+    });
+
+    const res = await app.request(`/api/v1/tasks/${TASK_ID_1}/complete`, {
+      method: "POST",
+      headers: authHeaders({
+        "If-Match": "1",
+        "Idempotency-Key": "complete-1",
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      task: {
+        id: string;
+        trashedAt: string | null;
+        trashedReason: string | null;
+        version: number;
+        createdAt: string;
+      };
+    };
+    expect(body.task.id).toBe(TASK_ID_1);
+    expect(body.task.trashedAt).not.toBeNull();
+    expect(body.task.trashedReason).toBe("completed");
+    expect(body.task.version).toBe(2);
+    // createdAt は不変
+    expect(body.task.createdAt).toBe(TEST_INITIAL_TIME);
+
+    // ストア側にも反映
+    const after = await taskRepo.findById(TASK_ID_1);
+    expect(after?.trashedAt).not.toBeNull();
+    expect(after?.trashedReason).toBe("completed");
+    expect(after?.version).toBe(2);
+  });
+
+  it("シナリオ: 完了済タスクは既定の一覧 (?trashed=false) から外れる", async () => {
+    taskRepo.seed({
+      id: TASK_ID_1,
+      name: "x",
+      projectId: null,
+      dueDate: "today",
+      priority: "normal",
+      origin: "manual",
+      routineId: null,
+      createdAt: TEST_INITIAL_TIME,
+      updatedAt: TEST_INITIAL_TIME,
+      trashedAt: null,
+      trashedReason: null,
+      version: 1,
+    });
+
+    // 完了
+    const completeRes = await app.request(`/api/v1/tasks/${TASK_ID_1}/complete`, {
+      method: "POST",
+      headers: authHeaders({
+        "If-Match": "1",
+        "Idempotency-Key": "complete-list-default",
+      }),
+    });
+    expect(completeRes.status).toBe(200);
+
+    // 既定 (?trashed=false) では完了済が出ない
+    const listRes = await app.request("/api/v1/tasks", {
+      method: "GET",
+      headers: authHeaders(),
+    });
+    expect(listRes.status).toBe(200);
+    const list = (await listRes.json()) as { tasks: Array<{ id: string }> };
+    expect(list.tasks.find((t) => t.id === TASK_ID_1)).toBeUndefined();
+  });
+
+  it("シナリオ: 完了済タスクは trashed=true の一覧で参照できる (trashedReason = 'completed')", async () => {
+    taskRepo.seed({
+      id: TASK_ID_1,
+      name: "x",
+      projectId: null,
+      dueDate: "today",
+      priority: "normal",
+      origin: "manual",
+      routineId: null,
+      createdAt: TEST_INITIAL_TIME,
+      updatedAt: TEST_INITIAL_TIME,
+      trashedAt: null,
+      trashedReason: null,
+      version: 1,
+    });
+
+    const completeRes = await app.request(`/api/v1/tasks/${TASK_ID_1}/complete`, {
+      method: "POST",
+      headers: authHeaders({
+        "If-Match": "1",
+        "Idempotency-Key": "complete-list-trashed",
+      }),
+    });
+    expect(completeRes.status).toBe(200);
+
+    const listRes = await app.request("/api/v1/tasks?trashed=true", {
+      method: "GET",
+      headers: authHeaders(),
+    });
+    expect(listRes.status).toBe(200);
+    const list = (await listRes.json()) as {
+      tasks: Array<{ id: string; trashedReason: string | null }>;
+    };
+    const found = list.tasks.find((t) => t.id === TASK_ID_1);
+    expect(found).toBeDefined();
+    expect(found?.trashedReason).toBe("completed");
+  });
+
+  it("シナリオ: 完了は削除と異なる trashedReason を記録する ('completed' であって 'deleted' ではない)", async () => {
+    taskRepo.seed({
+      id: TASK_ID_1,
+      name: "x",
+      projectId: null,
+      dueDate: "today",
+      priority: "normal",
+      origin: "manual",
+      routineId: null,
+      createdAt: TEST_INITIAL_TIME,
+      updatedAt: TEST_INITIAL_TIME,
+      trashedAt: null,
+      trashedReason: null,
+      version: 1,
+    });
+
+    const res = await app.request(`/api/v1/tasks/${TASK_ID_1}/complete`, {
+      method: "POST",
+      headers: authHeaders({
+        "If-Match": "1",
+        "Idempotency-Key": "complete-vs-delete",
+      }),
+    });
+    expect(res.status).toBe(200);
+    const after = await taskRepo.findById(TASK_ID_1);
+    expect(after?.trashedReason).toBe("completed");
+    expect(after?.trashedReason).not.toBe("deleted");
+  });
+
+  it("シナリオ: 古い If-Match で完了しようとすると 412 + 現行 task が返り, ストアは不変", async () => {
+    taskRepo.seed({
+      id: TASK_ID_1,
+      name: "current",
+      projectId: null,
+      dueDate: "today",
+      priority: "normal",
+      origin: "manual",
+      routineId: null,
+      createdAt: TEST_INITIAL_TIME,
+      updatedAt: TEST_INITIAL_TIME,
+      trashedAt: null,
+      trashedReason: null,
+      version: 2,
+    });
+
+    const res = await app.request(`/api/v1/tasks/${TASK_ID_1}/complete`, {
+      method: "POST",
+      headers: authHeaders({
+        "If-Match": "1",
+        "Idempotency-Key": "complete-stale",
+      }),
+    });
+
+    expect(res.status).toBe(412);
+    const body = (await res.json()) as { task: { name: string; version: number; trashedAt: string | null } };
+    expect(body.task.name).toBe("current");
+    expect(body.task.version).toBe(2);
+
+    const after = await taskRepo.findById(TASK_ID_1);
+    expect(after?.trashedAt).toBeNull();
+    expect(after?.version).toBe(2);
+  });
+
+  it("シナリオ: If-Match ヘッダ欠落の完了リクエストは 400 MISSING_IF_MATCH", async () => {
+    taskRepo.seed({
+      id: TASK_ID_1,
+      name: "x",
+      projectId: null,
+      dueDate: "today",
+      priority: "normal",
+      origin: "manual",
+      routineId: null,
+      createdAt: TEST_INITIAL_TIME,
+      updatedAt: TEST_INITIAL_TIME,
+      trashedAt: null,
+      trashedReason: null,
+      version: 1,
+    });
+
+    const res = await app.request(`/api/v1/tasks/${TASK_ID_1}/complete`, {
+      method: "POST",
+      headers: authHeaders({ "Idempotency-Key": "complete-no-if-match" }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { code: string };
+    expect(body.code).toBe("MISSING_IF_MATCH");
+
+    // ストア不変
+    const after = await taskRepo.findById(TASK_ID_1);
+    expect(after?.trashedAt).toBeNull();
+    expect(after?.version).toBe(1);
+  });
+
+  it("シナリオ: Idempotency-Key 欠落の完了リクエストは 400 MISSING_IDEMPOTENCY_KEY", async () => {
+    taskRepo.seed({
+      id: TASK_ID_1,
+      name: "x",
+      projectId: null,
+      dueDate: "today",
+      priority: "normal",
+      origin: "manual",
+      routineId: null,
+      createdAt: TEST_INITIAL_TIME,
+      updatedAt: TEST_INITIAL_TIME,
+      trashedAt: null,
+      trashedReason: null,
+      version: 1,
+    });
+
+    const res = await app.request(`/api/v1/tasks/${TASK_ID_1}/complete`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${TEST_AUTH_TOKEN}`,
+        "Content-Type": "application/json",
+        "If-Match": "1",
+      },
+    });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { code: string };
+    expect(body.code).toBe("MISSING_IDEMPOTENCY_KEY");
+  });
+
+  it("シナリオ: 同じ Idempotency-Key で 2 回送信しても遷移は 1 回のみ (version は 2 のまま)", async () => {
+    taskRepo.seed({
+      id: TASK_ID_1,
+      name: "x",
+      projectId: null,
+      dueDate: "today",
+      priority: "normal",
+      origin: "manual",
+      routineId: null,
+      createdAt: TEST_INITIAL_TIME,
+      updatedAt: TEST_INITIAL_TIME,
+      trashedAt: null,
+      trashedReason: null,
+      version: 1,
+    });
+
+    const headers = authHeaders({
+      "If-Match": "1",
+      "Idempotency-Key": "complete-idem-1",
+    });
+
+    const res1 = await app.request(`/api/v1/tasks/${TASK_ID_1}/complete`, {
+      method: "POST",
+      headers,
+    });
+    expect(res1.status).toBe(200);
+    const body1 = await res1.json();
+
+    const res2 = await app.request(`/api/v1/tasks/${TASK_ID_1}/complete`, {
+      method: "POST",
+      headers,
+    });
+    expect(res2.status).toBe(200);
+    const body2 = await res2.json();
+
+    // 2 回目は 1 回目と完全同一の応答
+    expect(body2).toEqual(body1);
+
+    // ストアは version 2 のまま (3 に進んでいない)
+    const after = await taskRepo.findById(TASK_ID_1);
+    expect(after?.version).toBe(2);
+    expect(after?.trashedReason).toBe("completed");
+
+    // IdempotencyStore に保管されている
+    expect(await idempotencyStore.get("complete-idem-1")).not.toBeNull();
+  });
+
+  it("シナリオ: 認証なしの完了リクエストは 401 を返し, ストアは不変", async () => {
+    taskRepo.seed({
+      id: TASK_ID_1,
+      name: "x",
+      projectId: null,
+      dueDate: "today",
+      priority: "normal",
+      origin: "manual",
+      routineId: null,
+      createdAt: TEST_INITIAL_TIME,
+      updatedAt: TEST_INITIAL_TIME,
+      trashedAt: null,
+      trashedReason: null,
+      version: 1,
+    });
+
+    const res = await app.request(`/api/v1/tasks/${TASK_ID_1}/complete`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "If-Match": "1",
+        "Idempotency-Key": "complete-unauth",
+      },
+    });
+
+    expect(res.status).toBe(401);
+
+    const after = await taskRepo.findById(TASK_ID_1);
+    expect(after?.trashedAt).toBeNull();
+    expect(after?.version).toBe(1);
+  });
+
+  it("シナリオ: 存在しないタスクへの完了は 404 TASK_NOT_FOUND", async () => {
+    const res = await app.request(`/api/v1/tasks/${TASK_ID_3}/complete`, {
+      method: "POST",
+      headers: authHeaders({
+        "If-Match": "1",
+        "Idempotency-Key": "complete-404",
+      }),
+    });
+
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { code: string };
+    expect(body.code).toBe("TASK_NOT_FOUND");
+  });
+
+  it("シナリオ: 既 'completed' のタスクへの再 complete は 200 no-op (version / trashedAt / trashedReason 不変)", async () => {
+    // plan.md D-003: 既完了は no-op で 200 OK + 現行 task. If-Match 検証もスキップ.
+    const existingTrashedAt = "2026-06-06T12:00:00.000Z";
+    taskRepo.seed({
+      id: TASK_ID_1,
+      name: "x",
+      projectId: null,
+      dueDate: "today",
+      priority: "normal",
+      origin: "manual",
+      routineId: null,
+      createdAt: TEST_INITIAL_TIME,
+      updatedAt: existingTrashedAt,
+      trashedAt: existingTrashedAt,
+      trashedReason: "completed",
+      version: 5,
+    });
+
+    const res = await app.request(`/api/v1/tasks/${TASK_ID_1}/complete`, {
+      method: "POST",
+      headers: authHeaders({
+        // If-Match を意図的に古い値で送っても no-op として扱われる (D-003: 既完了は If-Match 検証スキップ).
+        "If-Match": "1",
+        "Idempotency-Key": "complete-noop-already-completed",
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      task: { trashedAt: string | null; trashedReason: string | null; version: number };
+    };
+    expect(body.task.trashedAt).toBe(existingTrashedAt);
+    expect(body.task.trashedReason).toBe("completed");
+    expect(body.task.version).toBe(5);
+
+    // ストア不変
+    const after = await taskRepo.findById(TASK_ID_1);
+    expect(after?.trashedAt).toBe(existingTrashedAt);
+    expect(after?.trashedReason).toBe("completed");
+    expect(after?.version).toBe(5);
+  });
+
+  it("シナリオ: 既 'deleted' のタスクへの complete は 200 no-op (trashedReason は 'deleted' のまま)", async () => {
+    // plan.md D-003 / R-002: 削除済を完了で上書きしない. BL-008 集計 / BL-011 復元の意味を壊さないため.
+    const existingTrashedAt = "2026-06-06T12:00:00.000Z";
+    taskRepo.seed({
+      id: TASK_ID_1,
+      name: "x",
+      projectId: null,
+      dueDate: "today",
+      priority: "normal",
+      origin: "manual",
+      routineId: null,
+      createdAt: TEST_INITIAL_TIME,
+      updatedAt: existingTrashedAt,
+      trashedAt: existingTrashedAt,
+      trashedReason: "deleted",
+      version: 5,
+    });
+
+    const res = await app.request(`/api/v1/tasks/${TASK_ID_1}/complete`, {
+      method: "POST",
+      headers: authHeaders({
+        "If-Match": "5",
+        "Idempotency-Key": "complete-noop-already-deleted",
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      task: { trashedAt: string | null; trashedReason: string | null; version: number };
+    };
+    // trashedReason は "deleted" のまま (上書きしない)
+    expect(body.task.trashedReason).toBe("deleted");
+    expect(body.task.version).toBe(5);
+
+    // ストア不変 (特に trashedReason が "completed" に書き換わっていない)
+    const after = await taskRepo.findById(TASK_ID_1);
+    expect(after?.trashedReason).toBe("deleted");
+    expect(after?.version).toBe(5);
+  });
+});
+
+// ============================================================
 // (補助) 認証ありの正常系で TEST_AUTH_TOKEN が一致することの確認
 // ============================================================
 

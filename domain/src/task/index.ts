@@ -221,3 +221,25 @@ export function trashTask(current: Task, clock: Clock): Task {
 export function isTrashed(task: Task): boolean {
   return task.trashedAt !== null;
 }
+
+/**
+ * タスクを完了状態に遷移させる (BL-003 / FR-006 / FR-060).
+ *
+ * 通常状態 (trashedAt === null) のタスクのみ trashedAt をセットし
+ * trashedReason = "completed" に書き換える. version +1, updatedAt 更新.
+ * 既にゴミ箱状態 (trashedReason === "completed" / "deleted" のいずれでも) なら
+ * no-op 冪等扱いで入力を変更せず返す (plan.md D-003).
+ */
+export function completeTask(current: Task, clock: Clock): Task {
+  if (current.trashedAt !== null) {
+    return { ...current };
+  }
+  const now = clock.now();
+  return {
+    ...current,
+    trashedAt: now,
+    trashedReason: "completed",
+    updatedAt: now,
+    version: current.version + 1,
+  };
+}

@@ -45,11 +45,28 @@ export interface DeleteTaskCommand {
   ifMatch: number;
 }
 
+/**
+ * BL-003 / FR-006: タスクを完了させるコマンド.
+ * 本フィールドの型は test-designer が追加した「型のみのスタブ」.
+ * HttpTaskRepository.complete / UI からの呼び出しは implementer が green 化する.
+ */
+export interface CompleteTaskCommand {
+  id: string;
+  ifMatch: number;
+}
+
 export interface TaskRepository {
   list(): Promise<Task[]>;
   create(cmd: CreateTaskCommand): Promise<Task>;
   update(cmd: UpdateTaskCommand): Promise<Task>;
   delete(cmd: DeleteTaskCommand): Promise<void>;
+  /**
+   * BL-003 / FR-006: タスクを完了状態 (trashedReason = "completed") に遷移させる.
+   * 成功時は更新後 Task を返す. 412 衝突時は OptimisticLockError を投げる.
+   * 本メソッドは test-designer が追加したインターフェース上のスタブ.
+   * HttpTaskRepository の本実装は implementer が green 化する.
+   */
+  complete(cmd: CompleteTaskCommand): Promise<Task>;
 }
 
 /**
@@ -215,5 +232,36 @@ export class HttpTaskRepository implements TaskRepository {
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: failed to delete task`);
     }
+  }
+
+  /**
+   * BL-003 / FR-006: タスク完了アクション.
+   *
+   * POST /api/v1/tasks/{id}/complete に対応. 成功時は 200 OK で `{ task }` が返るため
+   * 更新後 Task を返す. 412 衝突時は OptimisticLockError を throw する.
+   */
+  async complete(cmd: CompleteTaskCommand): Promise<Task> {
+    const idemKey = uuidV4();
+
+    const res = await fetch(`${this.baseUrl}/api/v1/tasks/${cmd.id}/complete`, {
+      method: "POST",
+      headers: this.authHeaders({
+        "Idempotency-Key": idemKey,
+        "If-Match": String(cmd.ifMatch),
+      }),
+    });
+
+    if (res.status === 412) {
+      const errBody = (await res.json()) as { task?: Task };
+      throw new OptimisticLockError(
+        "optimistic lock conflict on complete",
+        errBody.task,
+      );
+    }
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: failed to complete task`);
+    }
+    const ok = (await res.json()) as { task: Task };
+    return ok.task;
   }
 }
