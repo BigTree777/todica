@@ -51,6 +51,8 @@ function makeMockRepository(initial: Task[] = []): TaskRepository & {
       name: cmd.name,
       projectId: cmd.projectId ?? null,
       dueDate: cmd.dueDate ?? "today",
+      // BL-002: priority が明示されていれば反映 (省略時は makeTask 既定 "normal").
+      ...(cmd.priority !== undefined ? { priority: cmd.priority } : {}),
     });
     state.push(t);
     return t;
@@ -192,5 +194,176 @@ describe("TodayView (Web クライアント UI)", () => {
 
     // 一覧から消える
     expect(screen.queryByText("x")).toBeNull();
+  });
+});
+
+// ============================================================
+// BL-002 / FR-003 / FR-004: 優先度の指定・変更
+//
+// spec.md (task-priority) §「Web クライアント UI」と 1:1 対応する.
+// - 起票フォームに任意項目「優先度」の select が存在し, 値域は 3 段階のみ.
+// - 起票時に未操作なら "normal" (または省略) で create される.
+// - 起票時に「最優先」を指定すると create.priority === "highest".
+// - 一覧の各行から優先度を変更すると update.patch.priority と If-Match が正しく渡る.
+// - 優先度変更後は一覧の並びが priority 順に再計算される.
+//
+// 本ファイル冒頭の makeMockRepository は patch.priority を ...cmd.patch でコピーするため,
+// updateMock 経由で state[idx].priority が反映される. UI 側 (today-view.tsx) の本実装は
+// implementer が green 化する.
+// ============================================================
+
+describe("TodayView (BL-002 優先度 UI)", () => {
+  it("シナリオ: 起票フォームに「優先度」の任意項目があり, 値域は 3 段階のみ", async () => {
+    const repo = makeMockRepository();
+    render(<TodayView repository={repo} />);
+
+    // 「優先度」というラベル / aria-label を持つ入力 UI が存在する.
+    // 採用案 (plan D-002) は select だが, テストは具体 UI に依存しないようラベル名のみで検索.
+    const priorityControl = await screen.findByLabelText(/優先度/);
+    expect(priorityControl).not.toBeNull();
+    // 任意項目なので required ではない.
+    expect(priorityControl).not.toBeRequired();
+
+    // 値域は 3 段階 (最優先 / 普通 / 後回し) のみ.
+    // select 想定: option 数で確認.
+    if (priorityControl.tagName === "SELECT") {
+      const options = (priorityControl as HTMLSelectElement).options;
+      expect(options).toHaveLength(3);
+      const texts = Array.from(options).map((o) => o.textContent ?? "");
+      // 「最優先 / 普通 / 後回し」の文言で表示される (plan D-004).
+      expect(texts.some((t) => /最優先/.test(t))).toBe(true);
+      expect(texts.some((t) => /普通/.test(t))).toBe(true);
+      expect(texts.some((t) => /後回し/.test(t))).toBe(true);
+    }
+  });
+
+  it("シナリオ: 起票フォームで優先度を未操作のまま送信すると normal (または省略) で create される", async () => {
+    const repo = makeMockRepository();
+    const user = userEvent.setup();
+    render(<TodayView repository={repo} />);
+
+    const nameInput = await screen.findByLabelText(/タスク名/);
+    await user.type(nameInput, "x");
+    const submit = screen.getByRole("button", { name: /追加|起票|登録|送信/ });
+    await user.click(submit);
+
+    expect(repo.createMock).toHaveBeenCalledTimes(1);
+    const arg = repo.createMock.mock.calls[0]?.[0] as CreateTaskCommand;
+    // 未操作 → "normal" を明示送信するか, priority プロパティを省略する (どちらも仕様適合).
+    if (arg.priority !== undefined) {
+      expect(arg.priority).toBe("normal");
+    }
+  });
+
+  it("シナリオ: 起票フォームで優先度を「最優先」に指定して送信すると create.priority === \"highest\"", async () => {
+    const repo = makeMockRepository();
+    const user = userEvent.setup();
+    render(<TodayView repository={repo} />);
+
+    const nameInput = await screen.findByLabelText(/タスク名/);
+    await user.type(nameInput, "x");
+
+    // 優先度 select を「最優先」(value="highest") に変更する.
+    const priorityControl = await screen.findByLabelText(/優先度/);
+    // userEvent.selectOptions は <select> を対象とする.
+    await user.selectOptions(priorityControl, "highest");
+
+    const submit = screen.getByRole("button", { name: /追加|起票|登録|送信/ });
+    await user.click(submit);
+
+    expect(repo.createMock).toHaveBeenCalledTimes(1);
+    const arg = repo.createMock.mock.calls[0]?.[0] as CreateTaskCommand;
+    expect(arg.name).toBe("x");
+    expect(arg.priority).toBe("highest");
+  });
+
+  it("シナリオ: 一覧の各タスク行から優先度を変更すると update.patch.priority と ifMatch が正しく渡る", async () => {
+    const repo = makeMockRepository([
+      makeTask({ id: "t1", name: "x", priority: "normal", version: 1 }),
+    ]);
+    const user = userEvent.setup();
+    render(<TodayView repository={repo} />);
+
+    // 一覧行の優先度変更 UI を取得 (plan D-001 採用案 = cycle ボタン).
+    // ボタン名は「優先度」または現在値ラベル (「普通」「最優先」「後回し」) を含む想定.
+    // 具体表記に依存しすぎないよう, 「優先度」を含むボタンを最優先で探す.
+    const priorityButton = await screen.findByRole("button", { name: /優先度|普通|最優先|後回し/ });
+    await user.click(priorityButton);
+
+    expect(repo.updateMock).toHaveBeenCalledTimes(1);
+    const arg = repo.updateMock.mock.calls[0]?.[0] as UpdateTaskCommand;
+    expect(arg.id).toBe("t1");
+    expect(arg.ifMatch).toBe(1);
+    // cycle: normal → highest (plan D-001 採用案).
+    // 採用 UI が select / segmented control 等別案に変わった場合に備え,
+    // 「priority が送られていて値が 3 段階のいずれか, かつ現状値とは異なる」ことだけを必須とする.
+    expect(arg.patch.priority).toBeDefined();
+    expect(["highest", "normal", "later"]).toContain(arg.patch.priority);
+    expect(arg.patch.priority).not.toBe("normal");
+    // 優先度以外のフィールドは送らない (NFR-013 / 部分上書き原則).
+    expect(arg.patch.name).toBeUndefined();
+    expect(arg.patch.dueDate).toBeUndefined();
+    expect(arg.patch.projectId).toBeUndefined();
+  });
+
+  it("シナリオ: 優先度変更後の一覧は priority 順に再描画される (NFR-013)", async () => {
+    // 初期: A = normal, B = later. 並び (priority 順) は A → B.
+    const repo = makeMockRepository([
+      makeTask({
+        id: "task-A",
+        name: "AAA",
+        priority: "normal",
+        version: 1,
+        createdAt: "2026-06-07T08:00:00.000Z",
+      }),
+      makeTask({
+        id: "task-B",
+        name: "BBB",
+        priority: "later",
+        version: 1,
+        createdAt: "2026-06-07T08:00:01.000Z",
+      }),
+    ]);
+    const user = userEvent.setup();
+    render(<TodayView repository={repo} />);
+
+    // 描画後, 初期並びを確認 (A, B).
+    const itemsBefore = await screen.findAllByRole("listitem");
+    expect(itemsBefore[0]?.textContent ?? "").toContain("AAA");
+    expect(itemsBefore[1]?.textContent ?? "").toContain("BBB");
+
+    // タスク B 行の優先度ボタンを探して highest に変更する.
+    // テストは具体 UI に依存しないよう, 「BBB を含む行内のボタン」を辿る.
+    const bRow = itemsBefore[1]!;
+    // 該当行内の優先度変更操作を探す (ボタンの name に「優先度 / 後回し / 普通 / 最優先」を含むもの).
+    const buttonsInB = bRow.querySelectorAll("button");
+    let priorityBtn: HTMLButtonElement | null = null;
+    for (const btn of Array.from(buttonsInB)) {
+      const label = btn.textContent ?? "";
+      if (/優先度|普通|最優先|後回し/.test(label)) {
+        priorityBtn = btn as HTMLButtonElement;
+        break;
+      }
+    }
+    expect(priorityBtn).not.toBeNull();
+    // 「後回し → highest」へ移すために, cycle の場合は複数回押下が必要なケースがある.
+    // 実装パターン (cycle / select / 直接 highest 化) に依らず, B を highest に変える
+    // ことを目標として最大 3 回まで押す.
+    for (let i = 0; i < 3; i++) {
+      const calls = repo.updateMock.mock.calls.length;
+      await user.click(priorityBtn!);
+      // updateMock が呼ばれ, かつ最後の呼び出しの patch.priority が "highest" なら break.
+      const last = repo.updateMock.mock.calls[repo.updateMock.mock.calls.length - 1]?.[0] as
+        | UpdateTaskCommand
+        | undefined;
+      if (last?.patch.priority === "highest") break;
+      // 何らかの理由で update が呼ばれていなければ抜ける (red になる).
+      if (repo.updateMock.mock.calls.length === calls) break;
+    }
+
+    // 再描画後の並び: B (highest) → A (normal).
+    const itemsAfter = await screen.findAllByRole("listitem");
+    expect(itemsAfter[0]?.textContent ?? "").toContain("BBB");
+    expect(itemsAfter[1]?.textContent ?? "").toContain("AAA");
   });
 });

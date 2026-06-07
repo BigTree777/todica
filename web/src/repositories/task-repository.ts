@@ -8,13 +8,19 @@
  *   - docs/developer/features/task-crud/plan.md §処理フロー (Web → HTTP)
  *   - ADR-0010 (Idempotency-Key, If-Match の必須化)
  */
-import type { Task, DueDate } from "@todica/domain/task";
+import type { Task, DueDate, Priority } from "@todica/domain/task";
 
 export interface CreateTaskCommand {
   id: string;
   name: string;
   projectId?: string | null;
   dueDate?: DueDate;
+  /**
+   * BL-002 / FR-003: 起票時の優先度. 省略時はサーバ側で "normal" が補完される.
+   * 本フィールドの型は test-designer が追加した「型のみのスタブ」.
+   * 実際に HttpTaskRepository / UI が priority を送る実装は implementer が green 化する.
+   */
+  priority?: Priority;
 }
 
 export interface UpdateTaskCommand {
@@ -25,6 +31,12 @@ export interface UpdateTaskCommand {
     name?: string;
     dueDate?: DueDate;
     projectId?: string | null;
+    /**
+     * BL-002 / FR-004: 編集時の優先度. PATCH /api/v1/tasks/{id} で受理される.
+     * 本フィールドの型は test-designer が追加した「型のみのスタブ」.
+     * server PATCH の priority 受理 / UI からの送信は implementer が green 化する.
+     */
+    priority?: Priority;
   };
 }
 
