@@ -11,12 +11,18 @@
  *   - 各行: ルーティン名 + daysOfWeek の表示 + 編集ボタン（インライン編集）+ 削除ボタン.
  *   - 名称変更: 行の「名称変更」ボタンで編集モード, 保存で repository.update() → 一覧再取得.
  *   - 削除: 削除ボタンで repository.delete() → 一覧再取得.
+ *
+ * BL-018: TanStack Query (useQuery / useMutation) でデータ取得・書込みを管理.
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type {
   WebRoutine,
   WebRoutineRepository,
 } from "../../repositories/routine-repository.js";
+import { enqueue, dequeue, getAll, ConflictError } from "../../offline-queue.js";
+import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
+import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
 
 /** UUID v4 風の文字列を生成する. crypto.randomUUID が無い jsdom 環境向けのフォールバック. */
 function generateId(): string {
@@ -34,32 +40,147 @@ export interface RoutinesViewProps {
   repository: WebRoutineRepository;
 }
 
+/** repository の baseUrl/authToken を安全に取り出す型 */
+interface HasBaseUrlAndToken {
+  baseUrl?: string;
+  authToken?: string;
+}
+
 export function RoutinesView(props: RoutinesViewProps): JSX.Element {
   const { repository } = props;
-  const [routines, setRoutines] = useState<WebRoutine[]>([]);
+  const queryClient = useQueryClient();
+  const conflictDialog = useConflictDialog();
+  const repo = repository as unknown as HasBaseUrlAndToken;
+  const baseUrl = repo.baseUrl ?? "";
+  const authToken = repo.authToken ?? "";
+
+  const { data: routinesData } = useQuery({
+    queryKey: ["routines"],
+    queryFn: () => repository.list(),
+    networkMode: "offlineFirst",
+  });
+  const routines: WebRoutine[] = routinesData ?? [];
+
   const [newName, setNewName] = useState("");
   const [newDaysOfWeek, setNewDaysOfWeek] = useState<number[]>([1]); // デフォルト: 月曜
   const [newDefaultPriority, setNewDefaultPriority] = useState<string>("normal");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
 
-  const fetchList = useCallback(async (): Promise<void> => {
-    const result = await repository.list();
-    setRoutines(result);
-  }, [repository]);
+  const invalidateRoutines = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ["routines"] });
+  }, [queryClient]);
 
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const result = await repository.list();
-      if (!cancelled) {
-        setRoutines(result);
+  /** enqueue を安全に呼び出す。IDB が利用できない環境ではエラーを無視する。 */
+  const safeEnqueue = async (entry: Parameters<typeof enqueue>[0]) => {
+    try {
+      await enqueue(entry);
+    } catch {
+      // IDB が利用できない環境ではキューへの保存をスキップ
+    }
+  };
+
+  /** dequeue を安全に呼び出す。IDB が利用できない環境ではエラーを無視する。 */
+  const safeDequeueByKey = async (idempotencyKey: string) => {
+    try {
+      const all = await getAll();
+      const match = all.find((e) => e.idempotencyKey === idempotencyKey);
+      if (match?.id !== undefined) await dequeue(match.id);
+    } catch {
+      // IDB が利用できない環境ではスキップ
+    }
+  };
+
+  const createMutation = useMutation({
+    mutationFn: async (cmd: {
+      id: string;
+      name: string;
+      daysOfWeek: number[];
+      defaultPriority: string;
+    }) => {
+      const idempotencyKey = generateId();
+      void safeEnqueue({
+        url: `${baseUrl}/api/v1/routines`,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+          "Idempotency-Key": idempotencyKey,
+        },
+        body: JSON.stringify({ ...cmd }),
+        idempotencyKey,
+      });
+      if (!navigator.onLine) return undefined;
+      const result = await repository.create(cmd);
+      void safeDequeueByKey(idempotencyKey);
+      return result;
+    },
+    onSuccess: invalidateRoutines,
+    onError: (error) => {
+      if (error instanceof ConflictError) {
+        conflictDialog.openDialog(error.entry, error.serverValue);
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [repository]);
+    },
+    networkMode: "offlineFirst",
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (cmd: { id: string; ifMatch: number; name: string }) => {
+      const idempotencyKey = generateId();
+      void safeEnqueue({
+        url: `${baseUrl}/api/v1/routines/${cmd.id}`,
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+          "Idempotency-Key": idempotencyKey,
+          "If-Match": String(cmd.ifMatch),
+        },
+        body: JSON.stringify({ name: cmd.name }),
+        idempotencyKey,
+      });
+      if (!navigator.onLine) return undefined;
+      const result = await repository.update(cmd);
+      void safeDequeueByKey(idempotencyKey);
+      return result;
+    },
+    onSuccess: invalidateRoutines,
+    onError: (error) => {
+      if (error instanceof ConflictError) {
+        conflictDialog.openDialog(error.entry, error.serverValue);
+      }
+    },
+    networkMode: "offlineFirst",
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (cmd: { id: string; ifMatch: number }) => {
+      const idempotencyKey = generateId();
+      void safeEnqueue({
+        url: `${baseUrl}/api/v1/routines/${cmd.id}`,
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+          "Idempotency-Key": idempotencyKey,
+          "If-Match": String(cmd.ifMatch),
+        },
+        body: null,
+        idempotencyKey,
+      });
+      if (!navigator.onLine) return undefined;
+      const result = await repository.delete(cmd);
+      void safeDequeueByKey(idempotencyKey);
+      return result;
+    },
+    onSuccess: invalidateRoutines,
+    onError: (error) => {
+      if (error instanceof ConflictError) {
+        conflictDialog.openDialog(error.entry, error.serverValue);
+      }
+    },
+    networkMode: "offlineFirst",
+  });
 
   const handleCreate = useCallback(
     async (e: React.FormEvent) => {
@@ -67,7 +188,7 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
       if (!newName) return;
       if (newDaysOfWeek.length === 0) return;
       const id = generateId();
-      await repository.create({
+      await createMutation.mutateAsync({
         id,
         name: newName,
         daysOfWeek: newDaysOfWeek,
@@ -76,9 +197,8 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
       setNewName("");
       setNewDaysOfWeek([1]);
       setNewDefaultPriority("normal");
-      await fetchList();
     },
-    [newName, newDaysOfWeek, newDefaultPriority, repository, fetchList],
+    [newName, newDaysOfWeek, newDefaultPriority, createMutation],
   );
 
   const toggleDay = useCallback((day: number) => {
@@ -106,19 +226,21 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
       if (!editingId) return;
       const routine = routines.find((r) => r.id === editingId);
       if (!routine) return;
-      await repository.update({ id: editingId, ifMatch: routine.version, name: editingName });
+      await updateMutation.mutateAsync({
+        id: editingId,
+        ifMatch: routine.version,
+        name: editingName,
+      });
       cancelEdit();
-      await fetchList();
     },
-    [editingId, editingName, routines, repository, cancelEdit, fetchList],
+    [editingId, editingName, routines, updateMutation, cancelEdit],
   );
 
   const handleDelete = useCallback(
     async (routine: WebRoutine) => {
-      await repository.delete({ id: routine.id, ifMatch: routine.version });
-      await fetchList();
+      await deleteMutation.mutateAsync({ id: routine.id, ifMatch: routine.version });
     },
-    [repository, fetchList],
+    [deleteMutation],
   );
 
   return (
@@ -196,6 +318,14 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
           </li>
         ))}
       </ul>
+
+      <ConflictDialog
+        open={conflictDialog.dialogState.open}
+        localValue={conflictDialog.dialogState.localValue}
+        serverValue={conflictDialog.dialogState.serverValue}
+        onAcceptServer={conflictDialog.onAcceptServer}
+        onRetryWithServer={conflictDialog.onRetryWithServer}
+      />
     </main>
   );
 }

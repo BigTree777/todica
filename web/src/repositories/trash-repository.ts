@@ -66,8 +66,8 @@ function uuidV4(): string {
  */
 export class HttpTrashRepository implements TrashRepository {
   constructor(
-    private readonly baseUrl: string,
-    private readonly authToken: string,
+    readonly baseUrl: string,
+    readonly authToken: string,
   ) {}
 
   private authHeaders(extra: Record<string, string> = {}): Record<string, string> {

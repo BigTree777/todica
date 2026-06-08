@@ -26,6 +26,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Navigate, Route, Routes } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TodayView } from "./ui/today-view/today-view.js";
 import { SettingsView } from "./ui/settings-view/settings-view.js";
 import { TrashView } from "./ui/trash-view/trash-view.js";
@@ -134,16 +135,25 @@ function TestRouter({ initialPath }: TestRouterProps) {
   const projectRepository = makeMockProjectRepository();
   const routineRepository = makeMockRoutineRepository();
 
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, networkMode: "offlineFirst" },
+      mutations: { retry: false, networkMode: "offlineFirst" },
+    },
+  });
+
   return (
-    <MemoryRouter initialEntries={[initialPath]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <Routes>
-        <Route path="/" element={<Navigate to="/today" replace />} />
-        <Route path="/today" element={<TodayView repository={taskRepository} projectRepository={projectRepository} />} />
-        <Route path="/settings" element={<SettingsView repository={settingsRepository} />} />
-        <Route path="/trash" element={<TrashView repository={trashRepository} />} />
-        <Route path="/routines" element={<RoutinesView repository={routineRepository} />} />
-      </Routes>
-    </MemoryRouter>
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[initialPath]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <Routes>
+          <Route path="/" element={<Navigate to="/today" replace />} />
+          <Route path="/today" element={<TodayView repository={taskRepository} projectRepository={projectRepository} />} />
+          <Route path="/settings" element={<SettingsView repository={settingsRepository} />} />
+          <Route path="/trash" element={<TrashView repository={trashRepository} />} />
+          <Route path="/routines" element={<RoutinesView repository={routineRepository} />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 

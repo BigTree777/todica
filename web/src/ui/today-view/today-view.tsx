@@ -18,8 +18,11 @@
  *   - 強調セクションのタスクは通常リストに含めない (D-008 重複表示禁止).
  *   - 「現在に設定」「現在解除」操作で `setFocus({ taskId, ifMatch })` を送る.
  *   - 各 mutation 成功時に `getFocus()` も再フェッチする.
+ *
+ * BL-018: TanStack Query (useQuery / useMutation) でデータ取得・書込みを管理.
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { DueDate, Priority, Task } from "@todica/domain/task";
 import type {
   CompleteTaskCommand,
@@ -34,6 +37,9 @@ import type {
   Project,
   ProjectRepository,
 } from "../../repositories/project-repository.js";
+import { enqueue, dequeue, getAll, ConflictError } from "../../offline-queue.js";
+import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
+import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
 
 /** 優先度の日本語表記 (plan.md D-004 「最優先 / 普通 / 後回し」). */
 const PRIORITY_LABEL: Record<Priority, string> = {
@@ -64,16 +70,42 @@ function generateId(): string {
   return `${hex(8)}-${hex(4)}-4${hex(3)}-8${hex(3)}-${hex(12)}`;
 }
 
+/** repository の baseUrl/authToken を安全に取り出す型 */
+interface HasBaseUrlAndToken {
+  baseUrl?: string;
+  authToken?: string;
+}
+
 export function TodayView(props: TodayViewProps): JSX.Element {
   const { repository, projectRepository } = props;
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [nextTaskId, setNextTaskId] = useState<string | null>(null);
-  const [focus, setFocus] = useState<FocusSelection | null>(null);
-  // BL-008 / FR-040 / NFR-013: 「今日の完了タスク数」のサーバ正本値.
-  // today() のレスポンス completionCount で更新される (plan.md D-008: 楽観 UI を持たない).
-  const [completionCount, setCompletionCount] = useState<number>(0);
-  // BL-016: プロジェクト一覧.
-  const [projects, setProjects] = useState<Project[]>([]);
+  const queryClient = useQueryClient();
+  const conflictDialog = useConflictDialog();
+
+  // BL-005: today() でタスク一覧・nextTaskId・completionCount を取得
+  const { data: todayData } = useQuery({
+    queryKey: ["today"],
+    queryFn: () => repository.today(),
+    networkMode: "offlineFirst",
+  });
+  const tasks = todayData?.tasks ?? [];
+  const nextTaskId = todayData?.nextTaskId ?? null;
+  const completionCount = todayData?.completionCount ?? 0;
+
+  // BL-006: getFocus() で現在のフォーカスを取得
+  const { data: focus } = useQuery({
+    queryKey: ["focus"],
+    queryFn: () => repository.getFocus(),
+    networkMode: "offlineFirst",
+  });
+
+  // BL-016: プロジェクト一覧を取得
+  const { data: projectsData } = useQuery({
+    queryKey: ["projects"],
+    queryFn: () => projectRepository.list(),
+    networkMode: "offlineFirst",
+  });
+  const projects: Project[] = projectsData ?? [];
+
   const [name, setName] = useState("");
   const [projectId, setProjectId] = useState("");
   const [dueDate, setDueDate] = useState<DueDate>("today");
@@ -81,45 +113,188 @@ export function TodayView(props: TodayViewProps): JSX.Element {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingName, setEditingName] = useState("");
 
-  /**
-   * 今日ビューと現在のタスクを再取得する (plan.md D-007: 書き込み mutation 成功時に再フェッチ).
-   * BL-006: focus も同時に再取得する.
-   */
-  const refetchToday = useCallback(async (): Promise<void> => {
-    const [res, focusRes] = await Promise.all([
-      repository.today(),
-      repository.getFocus(),
-    ]);
-    setTasks(res.tasks);
-    setNextTaskId(res.nextTaskId);
-    setFocus(focusRes);
-    // BL-008 / FR-040: サーバ正本値の completionCount で更新 (未同梱なら 0 とみなす).
-    setCompletionCount(res.completionCount ?? 0);
-  }, [repository]);
+  /** mutation 成功時に today / focus を再フェッチする */
+  const invalidateAll = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ["today"] });
+    void queryClient.invalidateQueries({ queryKey: ["focus"] });
+  }, [queryClient]);
 
-  // 初回マウント時の取得 (BL-005 D-004: today() を使う. list() は使わない).
-  // BL-006: 並列で getFocus() も呼ぶ.
-  // BL-016: 並列で projectRepository.list() も呼ぶ.
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const [res, focusRes, projectList] = await Promise.all([
-        repository.today(),
-        repository.getFocus(),
-        projectRepository.list(),
-      ]);
-      if (!cancelled) {
-        setTasks(res.tasks);
-        setNextTaskId(res.nextTaskId);
-        setFocus(focusRes);
-        setCompletionCount(res.completionCount ?? 0);
-        setProjects(projectList);
+  const repo = repository as unknown as HasBaseUrlAndToken;
+  const baseUrl = repo.baseUrl ?? "";
+  const authToken = repo.authToken ?? "";
+
+  /** enqueue を安全に呼び出す。IDB が利用できない環境ではエラーを無視する。 */
+  const safeEnqueue = async (entry: Parameters<typeof enqueue>[0]) => {
+    try {
+      await enqueue(entry);
+    } catch {
+      // IDB が利用できない環境（テスト環境等）ではキューへの保存をスキップ
+    }
+  };
+
+  /** dequeue を安全に呼び出す。IDB が利用できない環境ではエラーを無視する。 */
+  const safeDequeueByKey = async (idempotencyKey: string) => {
+    try {
+      const all = await getAll();
+      const match = all.find((e) => e.idempotencyKey === idempotencyKey);
+      if (match?.id !== undefined) await dequeue(match.id);
+    } catch {
+      // IDB が利用できない環境ではスキップ
+    }
+  };
+
+  const createMutation = useMutation({
+    mutationFn: async (cmd: CreateTaskCommand) => {
+      const idempotencyKey = generateId();
+      // キューへの書込は非同期で行う（書込完了を待たない）
+      void safeEnqueue({
+        url: `${baseUrl}/api/v1/tasks`,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+          "Idempotency-Key": idempotencyKey,
+        },
+        body: JSON.stringify({ ...cmd }),
+        idempotencyKey,
+      });
+      if (!navigator.onLine) {
+        // オフライン時: キューに保存のみ（楽観的に成功を返す）
+        return undefined;
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [repository, projectRepository]);
+      const result = await repository.create(cmd);
+      // 成功したら対応キューエントリを削除（非同期・結果は待たない）
+      void safeDequeueByKey(idempotencyKey);
+      return result;
+    },
+    onSuccess: invalidateAll,
+    onError: (error) => {
+      if (error instanceof ConflictError) {
+        conflictDialog.openDialog(error.entry, error.serverValue);
+      }
+    },
+    networkMode: "offlineFirst",
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (cmd: UpdateTaskCommand) => {
+      const idempotencyKey = generateId();
+      void safeEnqueue({
+        url: `${baseUrl}/api/v1/tasks/${cmd.id}`,
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+          "Idempotency-Key": idempotencyKey,
+        },
+        body: JSON.stringify({ ...cmd.patch, ifMatch: cmd.ifMatch }),
+        idempotencyKey,
+      });
+      if (!navigator.onLine) {
+        return undefined;
+      }
+      const result = await repository.update(cmd);
+      void safeDequeueByKey(idempotencyKey);
+      return result;
+    },
+    onSuccess: invalidateAll,
+    onError: (error) => {
+      if (error instanceof ConflictError) {
+        conflictDialog.openDialog(error.entry, error.serverValue);
+      }
+    },
+    networkMode: "offlineFirst",
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (cmd: DeleteTaskCommand) => {
+      const idempotencyKey = generateId();
+      void safeEnqueue({
+        url: `${baseUrl}/api/v1/tasks/${cmd.id}`,
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+          "Idempotency-Key": idempotencyKey,
+        },
+        body: JSON.stringify({ ifMatch: cmd.ifMatch }),
+        idempotencyKey,
+      });
+      if (!navigator.onLine) {
+        return undefined;
+      }
+      const result = await repository.delete(cmd);
+      void safeDequeueByKey(idempotencyKey);
+      return result;
+    },
+    onSuccess: invalidateAll,
+    onError: (error) => {
+      if (error instanceof ConflictError) {
+        conflictDialog.openDialog(error.entry, error.serverValue);
+      }
+    },
+    networkMode: "offlineFirst",
+  });
+
+  const completeMutation = useMutation({
+    mutationFn: async (cmd: CompleteTaskCommand) => {
+      const idempotencyKey = generateId();
+      void safeEnqueue({
+        url: `${baseUrl}/api/v1/tasks/${cmd.id}/complete`,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+          "Idempotency-Key": idempotencyKey,
+        },
+        body: JSON.stringify({ ifMatch: cmd.ifMatch }),
+        idempotencyKey,
+      });
+      if (!navigator.onLine) {
+        return undefined;
+      }
+      const result = await repository.complete(cmd);
+      void safeDequeueByKey(idempotencyKey);
+      return result;
+    },
+    onSuccess: invalidateAll,
+    onError: (error) => {
+      if (error instanceof ConflictError) {
+        conflictDialog.openDialog(error.entry, error.serverValue);
+      }
+    },
+    networkMode: "offlineFirst",
+  });
+
+  const setFocusMutation = useMutation({
+    mutationFn: async (cmd: SetFocusCommand) => {
+      const idempotencyKey = generateId();
+      void safeEnqueue({
+        url: `${baseUrl}/api/v1/focus`,
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+          "Idempotency-Key": idempotencyKey,
+        },
+        body: JSON.stringify({ ...cmd }),
+        idempotencyKey,
+      });
+      if (!navigator.onLine) {
+        return undefined;
+      }
+      const result = await repository.setFocus(cmd);
+      void safeDequeueByKey(idempotencyKey);
+      return result;
+    },
+    onSuccess: invalidateAll,
+    onError: (error) => {
+      if (error instanceof ConflictError) {
+        conflictDialog.openDialog(error.entry, error.serverValue);
+      }
+    },
+    networkMode: "offlineFirst",
+  });
 
   const handleCreate = useCallback(
     async (e: React.FormEvent) => {
@@ -132,14 +307,13 @@ export function TodayView(props: TodayViewProps): JSX.Element {
         dueDate,
         priority,
       };
-      await repository.create(cmd);
+      await createMutation.mutateAsync(cmd);
       setName("");
       setProjectId("");
       setDueDate("today");
       setPriority("normal");
-      await refetchToday();
     },
-    [name, projectId, dueDate, priority, repository, refetchToday],
+    [name, projectId, dueDate, priority, createMutation],
   );
 
   const openEdit = useCallback((task: Task) => {
@@ -161,11 +335,10 @@ export function TodayView(props: TodayViewProps): JSX.Element {
         ifMatch: editingTask.version,
         patch: { name: editingName },
       };
-      await repository.update(cmd);
+      await updateMutation.mutateAsync(cmd);
       cancelEdit();
-      await refetchToday();
     },
-    [editingTask, editingName, repository, cancelEdit, refetchToday],
+    [editingTask, editingName, updateMutation, cancelEdit],
   );
 
   const handleToggleDueDate = useCallback(
@@ -176,36 +349,25 @@ export function TodayView(props: TodayViewProps): JSX.Element {
         ifMatch: task.version,
         patch: { dueDate: next },
       };
-      await repository.update(cmd);
-      // 楽観 UI: today → tomorrow の場合は即座に今日ビューから除外する (D-007).
-      if (next === "tomorrow") {
-        setTasks((prev) => prev.filter((t) => t.id !== task.id));
-      }
-      await refetchToday();
+      await updateMutation.mutateAsync(cmd);
     },
-    [repository, refetchToday],
+    [updateMutation],
   );
 
   const handleDelete = useCallback(
     async (task: Task) => {
       const cmd: DeleteTaskCommand = { id: task.id, ifMatch: task.version };
-      await repository.delete(cmd);
-      // 楽観 UI: 削除したタスクは即座に一覧から除外する (D-007).
-      setTasks((prev) => prev.filter((t) => t.id !== task.id));
-      await refetchToday();
+      await deleteMutation.mutateAsync(cmd);
     },
-    [repository, refetchToday],
+    [deleteMutation],
   );
 
   const handleComplete = useCallback(
     async (task: Task) => {
       const cmd: CompleteTaskCommand = { id: task.id, ifMatch: task.version };
-      await repository.complete(cmd);
-      // 楽観 UI: 完了したタスクは即座に今日ビューから除外する (BL-003 / D-007).
-      setTasks((prev) => prev.filter((t) => t.id !== task.id));
-      await refetchToday();
+      await completeMutation.mutateAsync(cmd);
     },
-    [repository, refetchToday],
+    [completeMutation],
   );
 
   const handleCyclePriority = useCallback(
@@ -216,10 +378,9 @@ export function TodayView(props: TodayViewProps): JSX.Element {
         ifMatch: task.version,
         patch: { priority: next },
       };
-      await repository.update(cmd);
-      await refetchToday();
+      await updateMutation.mutateAsync(cmd);
     },
-    [repository, refetchToday],
+    [updateMutation],
   );
 
   // BL-006 / FR-012: 「現在に設定」/「現在解除」操作 (plan.md D-009).
@@ -227,15 +388,15 @@ export function TodayView(props: TodayViewProps): JSX.Element {
     async (taskId: string | null) => {
       if (!focus) return;
       const cmd: SetFocusCommand = { taskId, ifMatch: focus.version };
-      await repository.setFocus(cmd);
-      await refetchToday();
+      await setFocusMutation.mutateAsync(cmd);
     },
-    [focus, repository, refetchToday],
+    [focus, setFocusMutation],
   );
 
   const isEditing = editingTask !== null;
   // BL-006: 強調対象 = currentTaskId ?? nextTaskId (plan.md D-001 暗黙フォールバック).
-  const focusedId: string | null = focus?.currentTaskId ?? nextTaskId;
+  const focusData = focus as FocusSelection | undefined;
+  const focusedId: string | null = focusData?.currentTaskId ?? nextTaskId;
   const focusedTask: Task | null = focusedId
     ? tasks.find((t) => t.id === focusedId) ?? null
     : null;
@@ -398,6 +559,14 @@ export function TodayView(props: TodayViewProps): JSX.Element {
           </li>
         ))}
       </ul>
+
+      <ConflictDialog
+        open={conflictDialog.dialogState.open}
+        localValue={conflictDialog.dialogState.localValue}
+        serverValue={conflictDialog.dialogState.serverValue}
+        onAcceptServer={conflictDialog.onAcceptServer}
+        onRetryWithServer={conflictDialog.onRetryWithServer}
+      />
     </main>
   );
 }

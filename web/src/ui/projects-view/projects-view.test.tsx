@@ -19,11 +19,29 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { ProjectsView } from "./projects-view.js";
 import type {
   Project,
   ProjectRepository,
 } from "../../repositories/project-repository.js";
+
+// ============================================================
+// QueryClientProvider ラッパー
+// ============================================================
+
+function renderWithQueryClient(ui: ReactNode): ReturnType<typeof render> {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, staleTime: Infinity, networkMode: "offlineFirst" },
+      mutations: { retry: false, networkMode: "offlineFirst" },
+    },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
+  );
+}
 
 // ============================================================
 // テストフィクスチャ
@@ -123,7 +141,7 @@ describe("ProjectsView (BL-016 プロジェクト管理 UI)", () => {
     const P2 = makeProject({ id: PROJECT_ID_2, name: "個人" });
     const repo = makeMockRepository([P1, P2]);
 
-    render(<ProjectsView repository={repo} />);
+    renderWithQueryClient(<ProjectsView repository={repo} />);
 
     // list() が 1 回呼ばれる
     expect(repo.listMock).toHaveBeenCalledTimes(1);
@@ -142,7 +160,7 @@ describe("ProjectsView (BL-016 プロジェクト管理 UI)", () => {
   it("シナリオ: プロジェクトが 0 件のとき空一覧が描画できる", async () => {
     const repo = makeMockRepository([]);
 
-    render(<ProjectsView repository={repo} />);
+    renderWithQueryClient(<ProjectsView repository={repo} />);
 
     expect(repo.listMock).toHaveBeenCalledTimes(1);
 
@@ -171,7 +189,7 @@ describe("ProjectsView (BL-016 プロジェクト管理 UI)", () => {
     const repo = makeMockRepository([]);
     const user = userEvent.setup();
 
-    render(<ProjectsView repository={repo} />);
+    renderWithQueryClient(<ProjectsView repository={repo} />);
 
     // 名称入力欄を探してテキストを入力
     const nameInput = await screen.findByLabelText(/名前|名称|プロジェクト名/);
@@ -207,7 +225,7 @@ describe("ProjectsView (BL-016 プロジェクト管理 UI)", () => {
     const repo = makeMockRepository([P1]);
     const user = userEvent.setup();
 
-    render(<ProjectsView repository={repo} />);
+    renderWithQueryClient(<ProjectsView repository={repo} />);
 
     // プロジェクト名が表示されるまで待つ
     await screen.findByText("仕事");
@@ -252,7 +270,7 @@ describe("ProjectsView (BL-016 プロジェクト管理 UI)", () => {
     const repo = makeMockRepository([P1]);
     const user = userEvent.setup();
 
-    render(<ProjectsView repository={repo} />);
+    renderWithQueryClient(<ProjectsView repository={repo} />);
 
     // プロジェクト名が表示されるまで待つ
     await screen.findByText("仕事");
