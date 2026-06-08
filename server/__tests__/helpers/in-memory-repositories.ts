@@ -52,6 +52,26 @@ export class InMemoryTaskRepository implements TaskRepository {
     this.store.set(task.id, { ...task });
   }
 
+  async hardDelete(id: string): Promise<void> {
+    this.store.delete(id);
+  }
+
+  async deleteAllTrashed(): Promise<void> {
+    for (const [id, task] of this.store.entries()) {
+      if (task.trashedAt !== null) {
+        this.store.delete(id);
+      }
+    }
+  }
+
+  async deleteTrashOlderThan(boundaryAt: string): Promise<void> {
+    for (const [id, task] of this.store.entries()) {
+      if (task.trashedAt !== null && task.trashedAt < boundaryAt) {
+        this.store.delete(id);
+      }
+    }
+  }
+
   /** テスト補助: 直接投入する. */
   seed(task: Task): void {
     this.store.set(task.id, { ...task });

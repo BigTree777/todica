@@ -1,15 +1,30 @@
 /**
- * ゴミ箱清算ユースケース（BL-011 で実装予定）.
+ * ゴミ箱清算ユースケース（BL-011 / FR-062）.
  *
- * 本 feature（BL-010）では no-op スタブとして提供する.
+ * 仕様: docs/developer/features/trash/spec.md §「日次清算（FR-062 purgeTrash）」
+ * 設計: docs/developer/features/trash/plan.md D-004
  */
 import type { Clock } from "@todica/domain/clock";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+import type { SettingsRepository } from "../data/settings-repository.js";
+import type { TaskRepository } from "../data/task-repository.js";
+import { calcTodayBoundaryAt } from "./daily-reset.js";
 
-/** BL-011 でゴミ箱清算ロジックが実装される。本 feature では no-op。 */
+/**
+ * 境界時刻より古いゴミ箱タスクを物理削除する.
+ *
+ * - settingsRepository / taskRepository が未指定の場合は no-op（後方互換・テスト環境用）.
+ * - db は後方互換のために引数に残すが、in-memory テスト環境では使用しない.
+ */
 export async function purgeTrash(
   _db: BetterSQLite3Database,
-  _clock: Clock,
+  clock: Clock,
+  settingsRepository?: SettingsRepository,
+  taskRepository?: TaskRepository,
 ): Promise<void> {
-  // BL-011 で実装予定
+  if (!settingsRepository || !taskRepository) return;
+
+  const settings = await settingsRepository.get();
+  const boundaryAt = calcTodayBoundaryAt(clock.now(), settings.dayBoundaryTime);
+  await taskRepository.deleteTrashOlderThan(boundaryAt);
 }

@@ -196,11 +196,14 @@ describe("POST /api/v1/reset (新規リセット実行)", () => {
     //   When  POST /api/v1/reset を送る
     //   Then  T3 の dueDate は "tomorrow" のまま変わっていない（ゴミ箱は対象外）
     counterRepo.seed({ completedCount: 0, lastResetExecutedAt: null });
+    // trashedAt を境界時刻以降（"2026-06-08T05:00:00.000Z"）にする。
+    // 境界より古い trashedAt は purgeTrash で物理削除されるため、
+    // 「dueDate が変わらない」ことを確認するにはタスクが残存している必要がある。
     taskRepo.seed(
       makeTask({
         id: TASK_ID_3,
         dueDate: "tomorrow",
-        trashedAt: "2026-06-07T12:00:00.000Z",
+        trashedAt: "2026-06-08T05:00:00.000Z",
         trashedReason: "deleted",
       }),
     );
@@ -212,7 +215,7 @@ describe("POST /api/v1/reset (新規リセット実行)", () => {
 
     expect(res.status).toBe(200);
     const task = await taskRepo.findById(TASK_ID_3);
-    // ゴミ箱タスクの dueDate は "tomorrow" のまま
+    // ゴミ箱タスクの dueDate は "tomorrow" のまま（繰り越し対象外）
     expect(task?.dueDate).toBe("tomorrow");
   });
 

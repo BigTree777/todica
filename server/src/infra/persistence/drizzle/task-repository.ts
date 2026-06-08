@@ -11,7 +11,7 @@
  *     で返してくれるため, このリポジトリは取得結果に対する追加変換を最小化できる.
  *   - ただし返却型は Task と完全一致させる (origin / routineId / trashedReason の null 等を含む).
  */
-import { eq, isNotNull, isNull } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, lt } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type { Task } from "@todica/domain/task";
 import type {
@@ -120,6 +120,21 @@ export class DrizzleTaskRepository implements TaskRepository {
       .update(tasks)
       .set(taskToValues(task))
       .where(eq(tasks.id, task.id))
+      .run();
+  }
+
+  async hardDelete(id: string): Promise<void> {
+    await this.db.delete(tasks).where(eq(tasks.id, id)).run();
+  }
+
+  async deleteAllTrashed(): Promise<void> {
+    await this.db.delete(tasks).where(isNotNull(tasks.trashedAt)).run();
+  }
+
+  async deleteTrashOlderThan(boundaryAt: string): Promise<void> {
+    await this.db
+      .delete(tasks)
+      .where(and(isNotNull(tasks.trashedAt), lt(tasks.trashedAt, boundaryAt)))
       .run();
   }
 }

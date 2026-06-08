@@ -223,6 +223,23 @@ export function isTrashed(task: Task): boolean {
 }
 
 /**
+ * ゴミ箱タスクを復元する (BL-011 / FR-061).
+ *
+ * trashedAt / trashedReason を null にリセットし、dueDate を "today" に戻す.
+ * version +1, updatedAt 更新. createdAt / id / name / projectId 等は不変.
+ */
+export function restoreTask(current: Task, clock: Clock): Task {
+  return {
+    ...current,
+    trashedAt: null,
+    trashedReason: null,
+    dueDate: "today" as DueDate,
+    updatedAt: clock.now(),
+    version: current.version + 1,
+  };
+}
+
+/**
  * タスクを完了状態に遷移させる (BL-003 / FR-006 / FR-060).
  *
  * 通常状態 (trashedAt === null) のタスクのみ trashedAt をセットし
