@@ -1266,6 +1266,107 @@ describe("TodayView (BL-008 今日の完了数表示)", () => {
 });
 
 // ============================================================
+// BL-017 / FR-033: ルーティン由来タスクには「明日へ」ボタンが表示されない
+//
+// spec.md (routine) §「手動期限切替の禁止（FR-033）」と 1:1 対応する.
+// - TodayView に origin="routine" のタスク T1 が表示されている場合
+//   T1 の行に「明日へ」ボタン（dueDate を "tomorrow" に変更するボタン）が表示されない.
+// - origin="manual" のタスクには「明日へ」ボタンが表示される（既存仕様との差異確認）.
+//
+// plan.md §D-008 TodayView 変更:
+//   task.origin === "routine" の場合に「明日へ」ボタンを非表示にする.
+//
+// today-view.tsx 側はまだ origin による表示切替を実装していないため,
+// 以下のテストはすべて red になる. implementer が green 化する.
+// ============================================================
+
+describe("TodayView (BL-017 ルーティン由来タスクの「明日へ」ボタン非表示)", () => {
+  it("シナリオ: TodayView でルーティン由来タスクには「明日へ」ボタンが表示されない", async () => {
+    // spec.md §「手動期限切替の禁止（FR-033）」:
+    //   Given TodayView に origin="routine" のタスク T1 が表示されている
+    //   When  TodayView を確認する
+    //   Then  T1 の行に「明日へ」ボタン（dueDate を "tomorrow" に変更するボタン）が表示されていない
+    const repo = makeMockRepository([
+      makeTask({
+        id: "t-routine",
+        name: "朝の運動",
+        origin: "routine",
+        routineId: "routine-1",
+        dueDate: "today",
+        version: 1,
+      }),
+    ]);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
+
+    // タスクが表示されるまで待つ
+    expect(await screen.findByText("朝の運動")).toBeInTheDocument();
+
+    // ルーティン由来タスクの行には「明日へ」ボタンが存在しない
+    // 「明日へ」ボタンの名前パターンは既存テストと合わせる (/明日へ|期限|今日へ/)
+    const deferButtons = screen.queryAllByRole("button", { name: /明日へ/ });
+    expect(deferButtons).toHaveLength(0);
+  });
+
+  it("シナリオ: origin='manual' のタスクには「明日へ」ボタンが表示される（ルーティンとの差異確認）", async () => {
+    // spec.md §「手動期限切替の禁止（FR-033）」の逆ケース:
+    //   manual タスクには「明日へ」ボタンが表示される（仕様上問題なし）
+    const repo = makeMockRepository([
+      makeTask({
+        id: "t-manual",
+        name: "牛乳を買う",
+        origin: "manual",
+        routineId: null,
+        dueDate: "today",
+        version: 1,
+      }),
+    ]);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
+
+    // タスクが表示されるまで待つ
+    expect(await screen.findByText("牛乳を買う")).toBeInTheDocument();
+
+    // manual タスクには「明日へ」ボタンが存在する
+    const deferButton = await screen.findByRole("button", { name: /明日へ|期限|今日へ/ });
+    expect(deferButton).toBeInTheDocument();
+  });
+
+  it("シナリオ: ルーティン由来タスクとマニュアルタスクが混在するとき、マニュアルタスクのみ「明日へ」ボタンが表示される", async () => {
+    // Given TodayView に origin="routine" の T1 と origin="manual" の T2 が表示されている
+    // Then  T1 の行には「明日へ」ボタンがなく、T2 の行には「明日へ」ボタンがある
+    const repo = makeMockRepository([
+      makeTask({
+        id: "t-routine",
+        name: "朝の運動",
+        origin: "routine",
+        routineId: "routine-1",
+        dueDate: "today",
+        priority: "highest",
+        createdAt: "2026-06-08T08:00:00.000Z",
+        version: 1,
+      }),
+      makeTask({
+        id: "t-manual",
+        name: "牛乳を買う",
+        origin: "manual",
+        routineId: null,
+        dueDate: "today",
+        priority: "normal",
+        createdAt: "2026-06-08T08:00:01.000Z",
+        version: 1,
+      }),
+    ]);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
+
+    // 両タスクが表示されるまで待つ
+    await screen.findByText("牛乳を買う");
+
+    // 「明日へ」ボタンの数は 1 つだけ（manual タスクのみ）
+    const deferButtons = screen.queryAllByRole("button", { name: /明日へ/ });
+    expect(deferButtons).toHaveLength(1);
+  });
+});
+
+// ============================================================
 // BL-016 / FR-020: プロジェクト選択 - 起票フォームのドロップダウン
 //
 // spec.md (project-crud) §「Web クライアント - プロジェクト選択」と 1:1 対応する.

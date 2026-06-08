@@ -18,10 +18,12 @@ import { HttpTaskRepository } from "./repositories/task-repository.js";
 import { HttpSettingsRepository } from "./repositories/settings-repository.js";
 import { HttpTrashRepository } from "./repositories/trash-repository.js";
 import { HttpProjectRepository } from "./repositories/project-repository.js";
+import { HttpRoutineRepository } from "./repositories/routine-repository.js";
 import { TodayView } from "./ui/today-view/today-view.js";
 import { SettingsView } from "./ui/settings-view/settings-view.js";
 import { TrashView } from "./ui/trash-view/trash-view.js";
 import { ProjectsView } from "./ui/projects-view/projects-view.js";
+import { RoutinesView } from "./ui/routines-view/routines-view.js";
 
 interface ViteEnv {
   VITE_API_BASE_URL?: string;
@@ -37,6 +39,7 @@ const taskRepository = new HttpTaskRepository(BASE_URL, AUTH_TOKEN);
 const settingsRepository = new HttpSettingsRepository(BASE_URL, AUTH_TOKEN);
 const trashRepository = new HttpTrashRepository(BASE_URL, AUTH_TOKEN);
 const projectRepository = new HttpProjectRepository(BASE_URL, AUTH_TOKEN);
+const routineRepository = new HttpRoutineRepository(BASE_URL, AUTH_TOKEN);
 
 const root = document.getElementById("root");
 if (!root) {
@@ -52,6 +55,7 @@ createRoot(root).render(
         <Route path="/settings" element={<SettingsView repository={settingsRepository} />} />
         <Route path="/trash" element={<TrashView repository={trashRepository} />} />
         <Route path="/projects" element={<ProjectsView repository={projectRepository} />} />
+        <Route path="/routines" element={<RoutinesView repository={routineRepository} />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,

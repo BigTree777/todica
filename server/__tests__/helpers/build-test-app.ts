@@ -12,6 +12,7 @@ import {
   InMemoryFocusRepository,
   InMemoryIdempotencyStore,
   InMemoryProjectRepository,
+  InMemoryRoutineRepository,
   InMemorySettingsRepository,
   InMemoryTaskRepository,
 } from "./in-memory-repositories.js";
@@ -28,6 +29,8 @@ export function buildTestApp(options: {
   const focusRepository = new InMemoryFocusRepository();
   const counterRepository = new InMemoryCounterRepository();
   const settingsRepository = new InMemorySettingsRepository();
+  // BL-017: RoutineRepository を追加
+  const routineRepository = new InMemoryRoutineRepository();
   const clock = new FakeClock(options.initialTime ?? TEST_INITIAL_TIME);
 
   const app = createApp({
@@ -37,6 +40,7 @@ export function buildTestApp(options: {
     focusRepository,
     counterRepository,
     settingsRepository,
+    routineRepository,
     clock,
     authToken: TEST_AUTH_TOKEN,
   });
@@ -49,6 +53,7 @@ export function buildTestApp(options: {
     focusRepository,
     counterRepository,
     settingsRepository,
+    routineRepository,
     clock,
   };
 }

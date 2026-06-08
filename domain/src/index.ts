@@ -7,3 +7,4 @@
 export * from "./clock/index.js";
 export * from "./task/index.js";
 export * from "./project/index.js";
+export * from "./routine/index.js";
