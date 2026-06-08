@@ -410,8 +410,21 @@ paths:
     summary: 今日の完了数（FR-040）
     get:
       tags: [counter]
+      summary: 今日の完了タスク数を取得
+      description: |
+        Counter (singleton) を返す. 未存在ならデフォルト
+        `{ completedCount: 0, lastResetExecutedAt: null, version: 1, ... }` を生成して返す.
+        日次リセットでカウントがクリアされる (BL-010 担当).
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [counter]
+                properties:
+                  counter: { $ref: "#/components/schemas/Counter" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
   # ========== Settings ==========
@@ -630,6 +643,7 @@ components:
         - tasks
         - nextTaskId
         - currentTaskId
+        - completionCount
       properties:
         tasks:
           type: array
@@ -641,6 +655,9 @@ components:
         currentTaskId:
           type: string
           nullable: true
+        completionCount:
+          type: integer
+          description: BL-008 / FR-040. 今日の完了数 (Counter.completedCount を同梱).
 
     TaskPatch:
       type: object
@@ -668,7 +685,32 @@ components:
       description: ルーティン（同上）
     Counter:
       type: object
-      description: 今日の完了数（同上）
+      description: |
+        BL-008 / FR-040: 今日の完了タスク数 (singleton).
+        - completedCount: 通常状態 → 完了 に遷移した回数の累計. 日次リセットで 0 にクリア (BL-010).
+        - lastResetExecutedAt: 最後にリセットを実行した時刻. BL-010 で使う.
+        - version / updatedAt: 楽観ロック + 同期メタデータ.
+      required:
+        - id
+        - completedCount
+        - lastResetExecutedAt
+        - version
+        - updatedAt
+      properties:
+        id:
+          type: string
+          example: singleton
+        completedCount:
+          type: integer
+        lastResetExecutedAt:
+          type: string
+          format: date-time
+          nullable: true
+        version:
+          type: integer
+        updatedAt:
+          type: string
+          format: date-time
     Settings:
       type: object
       description: 設定（同上）

@@ -8,6 +8,7 @@
 import { FakeClock } from "@todica/domain/clock";
 import { createApp } from "../../src/app.js";
 import {
+  InMemoryCounterRepository,
   InMemoryFocusRepository,
   InMemoryIdempotencyStore,
   InMemoryProjectRepository,
@@ -24,6 +25,7 @@ export function buildTestApp(options: {
   const projectRepository = new InMemoryProjectRepository();
   const idempotencyStore = new InMemoryIdempotencyStore();
   const focusRepository = new InMemoryFocusRepository();
+  const counterRepository = new InMemoryCounterRepository();
   const clock = new FakeClock(options.initialTime ?? TEST_INITIAL_TIME);
 
   const app = createApp({
@@ -31,6 +33,7 @@ export function buildTestApp(options: {
     projectRepository,
     idempotencyStore,
     focusRepository,
+    counterRepository,
     clock,
     authToken: TEST_AUTH_TOKEN,
   });
@@ -41,6 +44,7 @@ export function buildTestApp(options: {
     projectRepository,
     idempotencyStore,
     focusRepository,
+    counterRepository,
     clock,
   };
 }

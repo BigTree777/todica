@@ -20,6 +20,7 @@ import type { TaskRepository } from "./data/task-repository.js";
 import type { ProjectRepository } from "./data/project-repository.js";
 import type { IdempotencyStore } from "./data/idempotency-store.js";
 import type { FocusRepository } from "./data/focus-repository.js";
+import type { CounterRepository } from "./data/counter-repository.js";
 import { filterToday, pickNextTaskId, sortToday } from "./today.js";
 
 /**
@@ -35,6 +36,13 @@ export interface AppDeps {
    * complete / delete / patch のフォーカス連動) は implementer が green 化する.
    */
   focusRepository: FocusRepository;
+  /**
+   * BL-008 / completion-counter: Counter (今日の完了タスク数) の永続化.
+   * 本フィールドは test-designer 段階の依存. 本ハンドラ実装 (GET /api/v1/counter,
+   * complete ハンドラでの +1 集計, /today レスポンスへの completionCount 同梱) は
+   * implementer が green 化する.
+   */
+  counterRepository: CounterRepository;
   clock: Clock;
   /** Bearer 認証に使う固定トークン. テストでは任意の値を渡す. */
   authToken: string;
@@ -280,6 +288,14 @@ export function createApp(deps: AppDeps): Hono {
     return saveAndReturn(c, deps, 200, { focus: updated });
   });
 
+  // ---------- GET /api/v1/counter (BL-008 / FR-040) ----------
+  // spec.md §「Counter の初期状態」: 認証必須 / 読取専用 (If-Match / Idempotency-Key 不要).
+  // counter-repository.get() の戻り値をそのまま 200 OK で返す.
+  app.get("/api/v1/counter", async (c) => {
+    const counter = await deps.counterRepository.get();
+    return c.json({ counter }, 200);
+  });
+
   // ---------- GET /api/v1/today (BL-005 / FR-010 / FR-011 / NFR-013) ----------
   // plan.md §処理フロー / D-001 / D-005:
   //   1. task-repository.list({ trashed: "false" }) で全 active タスクを取得.
@@ -294,8 +310,15 @@ export function createApp(deps: AppDeps): Hono {
     const nextTaskId = pickNextTaskId(todayTasks);
     // BL-006 / FR-012: FocusSelection.currentTaskId をミラーしてクライアントに返す.
     const focus = await deps.focusRepository.get();
+    // BL-008 / FR-040 (plan.md D-006): Counter.completedCount を /today に同梱する.
+    const counter = await deps.counterRepository.get();
     return c.json(
-      { tasks: todayTasks, nextTaskId, currentTaskId: focus.currentTaskId },
+      {
+        tasks: todayTasks,
+        nextTaskId,
+        currentTaskId: focus.currentTaskId,
+        completionCount: counter.completedCount,
+      },
       200,
     );
   });
@@ -460,6 +483,19 @@ export function createApp(deps: AppDeps): Hono {
 
     const completed = completeTask(current, deps.clock);
     await deps.taskRepository.update(completed);
+    // BL-008 / FR-006 / FR-040 (plan.md D-002 / D-007):
+    // 通常状態 → 完了の遷移が起きた直後だけ counter を +1 する.
+    // 既ゴミ箱状態への no-op 再 complete は上の `current.trashedAt !== null` 経路で
+    // 早期 return されるため, ここに到達した時点で「通常 → 完了」の遷移が確定している.
+    // version + 1, updatedAt は clock.now() で更新する.
+    const currentCounter = await deps.counterRepository.get();
+    const updatedCounter = {
+      ...currentCounter,
+      completedCount: currentCounter.completedCount + 1,
+      version: currentCounter.version + 1,
+      updatedAt: deps.clock.now(),
+    };
+    await deps.counterRepository.update(updatedCounter);
     // BL-006 / FR-013: 現在のタスクを完了したら focus を解除.
     await clearFocusIfMatches(deps, id);
     return saveAndReturn(c, deps, 200, { task: completed });

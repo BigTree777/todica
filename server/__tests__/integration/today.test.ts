@@ -20,7 +20,10 @@ import {
   TEST_AUTH_TOKEN,
   TEST_INITIAL_TIME,
 } from "../helpers/build-test-app.js";
-import type { InMemoryTaskRepository } from "../helpers/in-memory-repositories.js";
+import type {
+  InMemoryCounterRepository,
+  InMemoryTaskRepository,
+} from "../helpers/in-memory-repositories.js";
 import type { Task, Priority, DueDate, TrashedReason } from "@todica/domain/task";
 
 // 並び順検証のため id が lexicographic に区別できる固定値を用意する.
@@ -33,11 +36,13 @@ const ID_005 = "00000000-0000-4000-8000-000000000005";
 
 let app: Hono;
 let taskRepo: InMemoryTaskRepository;
+let counterRepo: InMemoryCounterRepository;
 
 beforeEach(() => {
   const built = buildTestApp();
   app = built.app;
   taskRepo = built.taskRepository;
+  counterRepo = built.counterRepository;
 });
 
 /** Task のテストフィクスチャ. デフォルトは today / normal / active. */
@@ -664,6 +669,88 @@ describe("GET /api/v1/tasks (BL-005 D-003: ソート規則統一)", () => {
     const body = (await res.json()) as { tasks: Array<{ id: string }> };
     // 同 priority 同 createdAt は id 昇順. その後 createdAt の遅い ID_003.
     expect(body.tasks.map((t) => t.id)).toEqual([ID_001, ID_002, ID_003]);
+  });
+});
+
+// ============================================================
+// BL-008 / FR-040: GET /api/v1/today レスポンスへの completionCount 同梱
+//
+// spec.md (completion-counter) §「GET /api/v1/today レスポンスへの同梱 (UI 連携)」.
+// plan.md D-006 採用案: 「今日ビューを 1 リクエストで完結」させるため,
+// {tasks, nextTaskId, currentTaskId} に completionCount を追加する.
+// implementer は /today ハンドラ内で counter-repository.get() を呼んで同梱する.
+// ============================================================
+
+describe("GET /api/v1/today (BL-008 completionCount 拡張)", () => {
+  it("シナリオ: GET /api/v1/today に completionCount が含まれる", async () => {
+    // spec.md §「GET /api/v1/today レスポンスへの同梱」第 1 ケース.
+    counterRepo.seed({ completedCount: 3 });
+    taskRepo.seed(makeTask({ id: ID_001 }));
+
+    const res = await app.request("/api/v1/today", {
+      method: "GET",
+      headers: authHeaders(),
+    });
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as {
+      tasks: Array<{ id: string }>;
+      nextTaskId: string | null;
+      currentTaskId: string | null;
+      completionCount: number;
+    };
+    // completionCount フィールドが含まれる.
+    expect("completionCount" in body).toBe(true);
+    // サーバ正本値 (= counterRepo.completedCount) と一致する.
+    expect(body.completionCount).toBe(3);
+  });
+
+  it("シナリオ: 初期状態 (Counter 未更新) の /today の completionCount は 0", async () => {
+    // counter を seed しない: 初期値 (completedCount = 0).
+    taskRepo.seed(makeTask({ id: ID_001 }));
+
+    const res = await app.request("/api/v1/today", {
+      method: "GET",
+      headers: authHeaders(),
+    });
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as { completionCount: number };
+    expect(body.completionCount).toBe(0);
+  });
+
+  it("シナリオ: 完了直後に GET /api/v1/today で読むと completionCount が +1 反映されている", async () => {
+    // spec.md §「GET /api/v1/today レスポンスへの同梱」第 2 ケース.
+    taskRepo.seed(makeTask({ id: ID_001 }));
+    taskRepo.seed(makeTask({ id: ID_002 }));
+
+    // 完了前 /today の completionCount は 0.
+    const before = await app.request("/api/v1/today", {
+      method: "GET",
+      headers: authHeaders(),
+    });
+    expect(before.status).toBe(200);
+    const beforeBody = (await before.json()) as { completionCount: number };
+    expect(beforeBody.completionCount).toBe(0);
+
+    // 完了アクションを 1 件発行.
+    const completeRes = await app.request(`/api/v1/tasks/${ID_001}/complete`, {
+      method: "POST",
+      headers: authHeaders({
+        "If-Match": "1",
+        "Idempotency-Key": "today-completion-count-1",
+      }),
+    });
+    expect(completeRes.status).toBe(200);
+
+    // 完了直後の /today で completionCount = 1.
+    const after = await app.request("/api/v1/today", {
+      method: "GET",
+      headers: authHeaders(),
+    });
+    expect(after.status).toBe(200);
+    const afterBody = (await after.json()) as { completionCount: number };
+    expect(afterBody.completionCount).toBe(1);
   });
 });
 

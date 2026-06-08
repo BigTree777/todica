@@ -23,6 +23,7 @@ import { DrizzleTaskRepository } from "./infra/persistence/drizzle/task-reposito
 import { DrizzleProjectRepository } from "./infra/persistence/drizzle/project-repository.js";
 import { DrizzleIdempotencyStore } from "./infra/persistence/drizzle/idempotency-store.js";
 import { DrizzleFocusRepository } from "./infra/persistence/drizzle/focus-repository.js";
+import { DrizzleCounterRepository } from "./infra/persistence/drizzle/counter-repository.js";
 
 const DATABASE_PATH = process.env.DATABASE_PATH ?? "./todica.db";
 const PORT = Number.parseInt(process.env.PORT ?? "3000", 10);
@@ -68,6 +69,8 @@ const app = createApp({
   projectRepository: new DrizzleProjectRepository({ db }),
   idempotencyStore: new DrizzleIdempotencyStore({ db }),
   focusRepository: new DrizzleFocusRepository({ db }),
+  // BL-008 / completion-counter: SQLite + drizzle-orm による物理永続化.
+  counterRepository: new DrizzleCounterRepository({ db }),
   clock: new SystemClock(),
   authToken: AUTH_TOKEN,
 });

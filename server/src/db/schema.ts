@@ -101,10 +101,29 @@ export const focusSelection = sqliteTable("focus_selection", {
   version: integer("version").notNull().default(1),
 });
 
+/**
+ * counter テーブル (BL-008 / completion-counter) — placeholder.
+ *
+ * docs/developer/features/completion-counter/plan.md §「データモデル」.
+ * - 単一レコード前提 (id = "singleton" 固定).
+ * - completedCount は通常状態のタスクが完了に遷移した回数を表す (FR-040).
+ * - lastResetExecutedAt は本 feature では値を書き込まない. BL-010 (日次リセット) で使う.
+ * - 本定義は test-designer 段階の placeholder. 物理マイグレーション / 起動時 INSERT は
+ *   implementer が green 化する.
+ */
+export const counter = sqliteTable("counter", {
+  id: text("id").primaryKey().notNull(),
+  completedCount: integer("completed_count").notNull().default(0),
+  lastResetExecutedAt: text("last_reset_executed_at"),
+  updatedAt: text("updated_at").notNull(),
+  version: integer("version").notNull().default(1),
+});
+
 /** schema 全体を Drizzle に渡すためのオブジェクト. */
 export const schema = {
   tasks,
   projects,
   idempotencyKeys,
   focusSelection,
+  counter,
 };
