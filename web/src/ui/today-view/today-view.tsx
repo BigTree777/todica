@@ -30,6 +30,10 @@ import type {
   TaskRepository,
   UpdateTaskCommand,
 } from "../../repositories/task-repository.js";
+import type {
+  Project,
+  ProjectRepository,
+} from "../../repositories/project-repository.js";
 
 /** 優先度の日本語表記 (plan.md D-004 「最優先 / 普通 / 後回し」). */
 const PRIORITY_LABEL: Record<Priority, string> = {
@@ -47,6 +51,7 @@ const NEXT_PRIORITY: Record<Priority, Priority> = {
 
 export interface TodayViewProps {
   repository: TaskRepository;
+  projectRepository: ProjectRepository;
 }
 
 /** UUID v4 風の文字列を生成する. crypto.randomUUID が無い jsdom 環境向けのフォールバック. */
@@ -60,13 +65,15 @@ function generateId(): string {
 }
 
 export function TodayView(props: TodayViewProps): JSX.Element {
-  const { repository } = props;
+  const { repository, projectRepository } = props;
   const [tasks, setTasks] = useState<Task[]>([]);
   const [nextTaskId, setNextTaskId] = useState<string | null>(null);
   const [focus, setFocus] = useState<FocusSelection | null>(null);
   // BL-008 / FR-040 / NFR-013: 「今日の完了タスク数」のサーバ正本値.
   // today() のレスポンス completionCount で更新される (plan.md D-008: 楽観 UI を持たない).
   const [completionCount, setCompletionCount] = useState<number>(0);
+  // BL-016: プロジェクト一覧.
+  const [projects, setProjects] = useState<Project[]>([]);
   const [name, setName] = useState("");
   const [projectId, setProjectId] = useState("");
   const [dueDate, setDueDate] = useState<DueDate>("today");
@@ -92,24 +99,27 @@ export function TodayView(props: TodayViewProps): JSX.Element {
 
   // 初回マウント時の取得 (BL-005 D-004: today() を使う. list() は使わない).
   // BL-006: 並列で getFocus() も呼ぶ.
+  // BL-016: 並列で projectRepository.list() も呼ぶ.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const [res, focusRes] = await Promise.all([
+      const [res, focusRes, projectList] = await Promise.all([
         repository.today(),
         repository.getFocus(),
+        projectRepository.list(),
       ]);
       if (!cancelled) {
         setTasks(res.tasks);
         setNextTaskId(res.nextTaskId);
         setFocus(focusRes);
         setCompletionCount(res.completionCount ?? 0);
+        setProjects(projectList);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [repository]);
+  }, [repository, projectRepository]);
 
   const handleCreate = useCallback(
     async (e: React.FormEvent) => {
@@ -260,12 +270,18 @@ export function TodayView(props: TodayViewProps): JSX.Element {
           </div>
           <div>
             <label htmlFor="task-project">プロジェクト (任意)</label>
-            <input
+            <select
               id="task-project"
-              type="text"
               value={projectId}
               onChange={(e) => setProjectId(e.target.value)}
-            />
+            >
+              <option value="">（未分類）</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label htmlFor="task-due-date">期限</label>

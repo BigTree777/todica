@@ -32,6 +32,7 @@ import { TrashView } from "./ui/trash-view/trash-view.js";
 import type { TaskRepository } from "./repositories/task-repository.js";
 import type { SettingsRepository } from "./repositories/settings-repository.js";
 import type { TrashRepository } from "./repositories/trash-repository.js";
+import type { ProjectRepository } from "./repositories/project-repository.js";
 
 // ============================================================
 // モック Repository ファクトリ
@@ -90,6 +91,16 @@ function makeMockTrashRepository(): TrashRepository {
   };
 }
 
+/** TodayView 用の最小限モック ProjectRepository (BL-016). */
+function makeMockProjectRepository(): ProjectRepository {
+  return {
+    list: vi.fn(async () => []),
+    create: vi.fn(async () => { throw new Error("not implemented"); }),
+    update: vi.fn(async () => { throw new Error("not implemented"); }),
+    delete: vi.fn(async () => undefined),
+  };
+}
+
 // ============================================================
 // ルーティング構成の再現
 //
@@ -108,12 +119,13 @@ function TestRouter({ initialPath }: TestRouterProps) {
   const taskRepository = makeMockTaskRepository();
   const settingsRepository = makeMockSettingsRepository();
   const trashRepository = makeMockTrashRepository();
+  const projectRepository = makeMockProjectRepository();
 
   return (
     <MemoryRouter initialEntries={[initialPath]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
         <Route path="/" element={<Navigate to="/today" replace />} />
-        <Route path="/today" element={<TodayView repository={taskRepository} />} />
+        <Route path="/today" element={<TodayView repository={taskRepository} projectRepository={projectRepository} />} />
         <Route path="/settings" element={<SettingsView repository={settingsRepository} />} />
         <Route path="/trash" element={<TrashView repository={trashRepository} />} />
       </Routes>

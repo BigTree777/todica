@@ -17,9 +17,11 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { HttpTaskRepository } from "./repositories/task-repository.js";
 import { HttpSettingsRepository } from "./repositories/settings-repository.js";
 import { HttpTrashRepository } from "./repositories/trash-repository.js";
+import { HttpProjectRepository } from "./repositories/project-repository.js";
 import { TodayView } from "./ui/today-view/today-view.js";
 import { SettingsView } from "./ui/settings-view/settings-view.js";
 import { TrashView } from "./ui/trash-view/trash-view.js";
+import { ProjectsView } from "./ui/projects-view/projects-view.js";
 
 interface ViteEnv {
   VITE_API_BASE_URL?: string;
@@ -34,6 +36,7 @@ const AUTH_TOKEN = env.VITE_AUTH_TOKEN ?? "";
 const taskRepository = new HttpTaskRepository(BASE_URL, AUTH_TOKEN);
 const settingsRepository = new HttpSettingsRepository(BASE_URL, AUTH_TOKEN);
 const trashRepository = new HttpTrashRepository(BASE_URL, AUTH_TOKEN);
+const projectRepository = new HttpProjectRepository(BASE_URL, AUTH_TOKEN);
 
 const root = document.getElementById("root");
 if (!root) {
@@ -45,9 +48,10 @@ createRoot(root).render(
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
         <Route path="/" element={<Navigate to="/today" replace />} />
-        <Route path="/today" element={<TodayView repository={taskRepository} />} />
+        <Route path="/today" element={<TodayView repository={taskRepository} projectRepository={projectRepository} />} />
         <Route path="/settings" element={<SettingsView repository={settingsRepository} />} />
         <Route path="/trash" element={<TrashView repository={trashRepository} />} />
+        <Route path="/projects" element={<ProjectsView repository={projectRepository} />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,
