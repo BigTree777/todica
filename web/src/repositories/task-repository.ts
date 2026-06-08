@@ -83,7 +83,7 @@ export interface TodayViewResponse {
    * 本フィールドは test-designer が追加した「型のみのスタブ」.
    * サーバ側の同梱 / UI 側の表示は implementer が green 化する.
    */
-  completionCount?: number;
+  completionCount: number;
 }
 
 /**

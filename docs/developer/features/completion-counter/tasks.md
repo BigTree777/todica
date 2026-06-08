@@ -130,3 +130,7 @@ spec.md §「未決事項 / 確認待ち」の U-001 〜 U-007 は plan.md §「
 - [x] 既存 BL-001 / BL-002 / BL-003 / BL-005 / BL-006 のテストが引き続き green (`/today` への `completionCount` 追加, complete ハンドラへの transaction 導入が既存契約を壊していないこと)
 - [x] auditor によるレビュー依頼 (FR-040 のカバレッジ, BL-003 との境界, BL-010 リセット責務との分離, 楽観 UI 不採用の妥当性)
 - [x] PR を作成し main へマージ (マージ条件: 全テスト green + auditor 承認)
+
+## 技術的負債メモ
+
+- **D-007 トランザクション未実装**: `POST /tasks/:id/complete` ハンドラで task 更新・counter +1・focus 解除の 3 操作は現状 sequential (非トランザクション). 単一ユーザー用途で許容範囲内だが, BL-010 (日次リセット処理) の実装時に `db.transaction()` を導入してまとめてアトミック化すること (R-001 リスク).

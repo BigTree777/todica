@@ -691,11 +691,15 @@ components:
         - lastResetExecutedAt: 最後にリセットを実行した時刻. BL-010 で使う.
         - version / updatedAt: 楽観ロック + 同期メタデータ.
       required:
+        - id
         - completedCount
         - lastResetExecutedAt
         - version
         - updatedAt
       properties:
+        id:
+          type: string
+          example: singleton
         completedCount:
           type: integer
         lastResetExecutedAt:
