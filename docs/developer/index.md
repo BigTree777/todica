@@ -6,7 +6,7 @@
 
 1. [`project.md`](project.md) — プロジェクトの目的・スコープ・用語
 2. [`requirements.md`](requirements.md) — 機能要件・非機能要件
-3. [`setup.md`](setup.md) — 開発環境の構築
+3. [`setup/server.md`](setup/server.md) — サーバの立ち上げ / [`setup/android.md`](setup/android.md) — Android アプリのビルド
 4. [`architecture/overview.md`](architecture/overview.md) — クライアント・サーバ型の全体構成
 5. 担当領域の詳細（下記）へ
 
