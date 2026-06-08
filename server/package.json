@@ -3,6 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "description": "Todica サーバ (Hono + better-sqlite3 + drizzle-orm).",
+  "author": "BigTree777",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BigTree777/todica.git",
+    "directory": "server"
+  },
   "type": "module",
   "main": "./src/app.ts",
   "scripts": {

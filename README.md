@@ -1,34 +1,50 @@
-# <プロジェクト名>
+# Todica
 
-<プロジェクトを 1〜2 行で説明する>
+タスク・プロジェクト・ルーティンを一元管理する PWA 対応のタスク管理アプリです。Android にも対応しています。
 
-## 特徴
+## 主要機能
 
-- TODO: <主要機能 1>
-- TODO: <主要機能 2>
+- タスク管理: 締め切り・優先度付きのタスクを作成・管理
+- プロジェクト: 複数タスクをプロジェクト単位でまとめて管理
+- ルーティン: 繰り返しタスクを定期スケジュールで管理
+- PWA 対応: ブラウザからインストール可能なプログレッシブウェブアプリ
+- Android 対応: Capacitor を利用したネイティブ Android アプリのビルド
 
-## クイックスタート
+## セットアップ
+
+Node.js 20 以上が必要です。
 
 ```bash
-# 取得
-TODO: <clone コマンド>
-
-# セットアップ
-TODO: <セットアップコマンド>
-
-# 起動
-TODO: <起動コマンド>
+git clone https://github.com/BigTree777/todica.git
+cd todica
+npm install
 ```
 
-詳しい環境構築は [`docs/developer/setup.md`](docs/developer/setup.md) を参照。
+## サーバの起動
+
+```bash
+export AUTH_TOKEN=your-secret-token
+npm start -w server
+```
+
+## Web クライアントのビルド
+
+```bash
+npm run build -w web
+```
+
+## Android ビルド
+
+```bash
+npm run android:bundle
+```
 
 ## ドキュメント
 
 | 対象 | 入口 |
 | --- | --- |
-| 利用者 | [`docs/user/index.md`](docs/user/index.md) |
-| 開発者 | [`docs/developer/index.md`](docs/developer/index.md) |
+| 開発者 | [`docs/developer/`](docs/developer/) |
 
 ## ライセンス
 
-TODO: <ライセンス>
+[MIT](./LICENSE)
