@@ -12,6 +12,7 @@ import {
   InMemoryFocusRepository,
   InMemoryIdempotencyStore,
   InMemoryProjectRepository,
+  InMemorySettingsRepository,
   InMemoryTaskRepository,
 } from "./in-memory-repositories.js";
 
@@ -26,6 +27,7 @@ export function buildTestApp(options: {
   const idempotencyStore = new InMemoryIdempotencyStore();
   const focusRepository = new InMemoryFocusRepository();
   const counterRepository = new InMemoryCounterRepository();
+  const settingsRepository = new InMemorySettingsRepository();
   const clock = new FakeClock(options.initialTime ?? TEST_INITIAL_TIME);
 
   const app = createApp({
@@ -34,6 +36,7 @@ export function buildTestApp(options: {
     idempotencyStore,
     focusRepository,
     counterRepository,
+    settingsRepository,
     clock,
     authToken: TEST_AUTH_TOKEN,
   });
@@ -45,6 +48,7 @@ export function buildTestApp(options: {
     idempotencyStore,
     focusRepository,
     counterRepository,
+    settingsRepository,
     clock,
   };
 }

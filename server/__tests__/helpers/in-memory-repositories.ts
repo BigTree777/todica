@@ -24,6 +24,10 @@ import type {
   Counter,
   CounterRepository,
 } from "../../src/data/counter-repository.js";
+import type {
+  Settings,
+  SettingsRepository,
+} from "../../src/data/settings-repository.js";
 
 export class InMemoryTaskRepository implements TaskRepository {
   private store = new Map<string, Task>();
@@ -151,6 +155,42 @@ export class InMemoryCounterRepository implements CounterRepository {
 
   /** テスト補助: 現在値を取り出す (await 不要). */
   current(): Counter {
+    return { ...this.state };
+  }
+}
+
+/**
+ * In-memory SettingsRepository (BL-009 / settings-day-boundary テスト用).
+ *
+ * - 単一レコード前提. 初期値は
+ *   `{ id: "singleton", dayBoundaryTime: "04:00", updatedAt: TEST_INITIAL_TIME, version: 1 }`.
+ * - get() は常に値を返す (singleton 保証. spec.md §「Settings の初期状態」).
+ * - update() は version 含めて全フィールド上書き.
+ * - seed() / current() はテストの直接観察 / 直接操作用ヘルパ.
+ */
+export class InMemorySettingsRepository implements SettingsRepository {
+  private state: Settings = {
+    id: "singleton",
+    dayBoundaryTime: "04:00",
+    updatedAt: "2026-06-07T09:00:00.000Z",
+    version: 1,
+  };
+
+  async get(): Promise<Settings> {
+    return { ...this.state };
+  }
+
+  async update(settings: Settings): Promise<void> {
+    this.state = { ...settings };
+  }
+
+  /** テスト補助: 直接書き換える. */
+  seed(settings: Partial<Settings>): void {
+    this.state = { ...this.state, ...settings };
+  }
+
+  /** テスト補助: 現在値を取り出す (await 不要). */
+  current(): Settings {
     return { ...this.state };
   }
 }
