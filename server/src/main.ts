@@ -14,6 +14,7 @@
  */
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import { serve } from "@hono/node-server";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { SystemClock } from "@todica/domain/clock";
@@ -78,9 +79,9 @@ const app = createApp({
   authToken: AUTH_TOKEN,
 });
 
-// @hono/node-server が無い前提で fetch ハンドラを直接 export する.
-// 実運用では `serve({ fetch: app.fetch, port: PORT })` を呼ぶか, Bun/Deno で動かす.
-// eslint-disable-next-line no-console
-console.log(`Todica server ready (PORT=${PORT})`);
+serve({ fetch: app.fetch, port: PORT }, (info) => {
+  // eslint-disable-next-line no-console
+  console.log(`Todica server listening on http://localhost:${info.port}`);
+});
 
-export default app;
+export default app; // テスト用に残す
