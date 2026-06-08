@@ -38,3 +38,15 @@ yarn-error.log*
 # 環境変数
 .env
 .env.local
+
+# Android 署名
+android/key.properties
+*.keystore
+*.jks
+
+# Android ローカル設定
+android/local.properties
+
+# Capacitor ビルドキャッシュ
+android/.gradle/
+android/app/build/

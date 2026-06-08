@@ -6,7 +6,9 @@
   "type": "module",
   "main": "./src/main.tsx",
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "build": "vite build",
+    "dev": "vite"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.0",

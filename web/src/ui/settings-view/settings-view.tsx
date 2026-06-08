@@ -27,10 +27,13 @@ const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export interface SettingsViewProps {
   repository: SettingsRepository;
+  serverUrl?: string;
+  authToken?: string;
+  onSaveServer?: (serverUrl: string, authToken: string) => void;
 }
 
 export function SettingsView(props: SettingsViewProps): JSX.Element {
-  const { repository } = props;
+  const { repository, serverUrl: initialServerUrl, authToken: initialAuthToken, onSaveServer } = props;
   const queryClient = useQueryClient();
 
   const { data: fetchedSettings } = useQuery({
@@ -45,6 +48,10 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
 
   const [inputValue, setInputValue] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  // サーバ接続設定 (BL-019)
+  const [serverUrlValue, setServerUrlValue] = useState(initialServerUrl ?? "");
+  const [authTokenValue, setAuthTokenValue] = useState(initialAuthToken ?? "");
 
   // 初期化済みフラグ（fetchedSettings が取得されたら一度だけ inputValue を初期化）
   const initializedRef = useRef(false);
@@ -131,6 +138,39 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
         </div>
         <button type="submit">保存</button>
       </form>
+
+      {onSaveServer !== undefined && (
+        <section aria-label="サーバ接続設定">
+          <h2>サーバ接続設定</h2>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              onSaveServer(serverUrlValue, authTokenValue);
+            }}
+            aria-label="サーバ接続設定フォーム"
+          >
+            <div>
+              <label htmlFor="settings-server-url">サーバ URL</label>
+              <input
+                id="settings-server-url"
+                type="text"
+                value={serverUrlValue}
+                onChange={(e) => setServerUrlValue(e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="settings-auth-token">認証トークン</label>
+              <input
+                id="settings-auth-token"
+                type="password"
+                value={authTokenValue}
+                onChange={(e) => setAuthTokenValue(e.target.value)}
+              />
+            </div>
+            <button type="submit">変更を保存</button>
+          </form>
+        </section>
+      )}
     </main>
   );
 }
