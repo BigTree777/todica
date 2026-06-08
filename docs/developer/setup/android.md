@@ -1,6 +1,6 @@
-# Android ビルド手順
+# Android アプリのビルド
 
-Capacitor を使って Web クライアントを Android アプリとしてビルドし、Google Play Internal Testing に提出する手順。
+Capacitor を使って Web クライアントを Android アプリとしてビルドし、Google Play Internal Testing に提出するまでの手順。
 
 ## 前提条件
 
@@ -92,6 +92,7 @@ npm run android:sync
 ```
 
 このコマンドは以下を順に実行する:
+
 1. `npm run build -w web` — Vite で `web/dist/` を生成
 2. `npx cap sync android` — `web/dist/` を `android/app/src/main/assets/public/` に同期
 

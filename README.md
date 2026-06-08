@@ -43,7 +43,10 @@ npm run android:bundle
 
 | 対象 | 入口 |
 | --- | --- |
-| 開発者 | [`docs/developer/`](docs/developer/) |
+| ユーザー | [`docs/user/`](docs/user/index.md) |
+| 開発者 | [`docs/developer/`](docs/developer/index.md) |
+| 運用者 | [`docs/operations/deploy-guide.md`](docs/operations/deploy-guide.md) |
+| プライバシーポリシー | [`docs/privacy-policy.md`](docs/privacy-policy.md) |
 
 ## ライセンス
 

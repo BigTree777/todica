@@ -31,6 +31,6 @@
 
 ## テスト方針
 
-> 全体方針は [`../../quality/test-strategy.md`](../../quality/test-strategy.md)。
+> 全体方針は [`../../quality/test-catalog.md`](../../quality/test-catalog.md)。
 
 - TODO: <この機能で重点的に確認すること>

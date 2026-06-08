@@ -143,7 +143,7 @@ BL-001 の処理フロー（[`../task-crud/plan.md`](../task-crud/plan.md) §処
 
 ## テスト方針
 
-> 全体方針は [`../../quality/test-strategy.md`](../../quality/test-strategy.md). BL-001 で確立した「結合テスト = `server/__tests__/integration/tasks.test.ts`, UI 単体 = `web/__tests__/today-view.test.tsx`」の枠組みに乗せる.
+> 全体方針は [`../../quality/test-catalog.md`](../../quality/test-catalog.md). BL-001 で確立した「結合テスト = `server/__tests__/integration/tasks.test.ts`, UI 単体 = `web/__tests__/today-view.test.tsx`」の枠組みに乗せる.
 
 ### 単体テスト（ドメイン）
 

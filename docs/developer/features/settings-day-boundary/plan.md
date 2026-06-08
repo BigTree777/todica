@@ -228,7 +228,7 @@ export interface SettingsRepository {
 
 ## テスト方針
 
-> 全体方針は [`../../quality/test-strategy.md`](../../quality/test-strategy.md).
+> 全体方針は [`../../quality/test-catalog.md`](../../quality/test-catalog.md).
 
 ### 結合テスト (サーバ API)
 
