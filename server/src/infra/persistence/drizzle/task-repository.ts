@@ -137,4 +137,12 @@ export class DrizzleTaskRepository implements TaskRepository {
       .where(and(isNotNull(tasks.trashedAt), lt(tasks.trashedAt, boundaryAt)))
       .run();
   }
+
+  async nullifyProjectId(projectId: string): Promise<void> {
+    this.db
+      .update(tasks)
+      .set({ projectId: null })
+      .where(eq(tasks.projectId, projectId))
+      .run();
+  }
 }

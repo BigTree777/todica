@@ -20,6 +20,10 @@ import type {
   TaskRepository,
   UpdateTaskCommand,
 } from "../src/repositories/task-repository.js";
+// BL-016: ProjectRepository のモックを注入するために追加する.
+// project-repository.ts は BL-016 実装前は存在しないため,
+// 以下のインポートは「失敗する (red)」状態の一部である.
+import type { Project, ProjectRepository } from "../src/repositories/project-repository.js";
 
 const NOW = "2026-06-07T09:00:00.000Z";
 
@@ -38,6 +42,51 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     trashedReason: null,
     version: 1,
     ...overrides,
+  };
+}
+
+const PROJECT_ID_P1 = "p1p1p1p1-p1p1-4p1p-8p1p-p1p1p1p1p1p1";
+
+/** BL-016: テスト用モック ProjectRepository ファクトリ. */
+function makeMockProjectRepository(initial: Project[] = []): ProjectRepository & {
+  listMock: ReturnType<typeof vi.fn>;
+  createMock: ReturnType<typeof vi.fn>;
+  updateMock: ReturnType<typeof vi.fn>;
+  deleteMock: ReturnType<typeof vi.fn>;
+} {
+  const state = [...initial];
+  const listMock = vi.fn(async (): Promise<Project[]> => [...state]);
+  const createMock = vi.fn(async (cmd: { id: string; name: string }): Promise<Project> => {
+    const p: Project = {
+      id: cmd.id,
+      name: cmd.name,
+      version: 1,
+      createdAt: NOW,
+      updatedAt: NOW,
+    };
+    state.push(p);
+    return p;
+  });
+  const updateMock = vi.fn(async (cmd: { id: string; ifMatch: number; name: string }): Promise<Project> => {
+    const idx = state.findIndex((p) => p.id === cmd.id);
+    if (idx < 0) throw new Error("not found");
+    const next = { ...state[idx]!, name: cmd.name, version: state[idx]!.version + 1 };
+    state[idx] = next;
+    return next;
+  });
+  const deleteMock = vi.fn(async (_cmd: { id: string; ifMatch: number }): Promise<void> => {
+    const idx = state.findIndex((p) => p.id === _cmd.id);
+    if (idx >= 0) state.splice(idx, 1);
+  });
+  return {
+    list: listMock,
+    create: createMock,
+    update: updateMock,
+    delete: deleteMock,
+    listMock,
+    createMock,
+    updateMock,
+    deleteMock,
   };
 }
 
@@ -207,7 +256,7 @@ function makeMockRepository(
 describe("TodayView (Web クライアント UI)", () => {
   it("シナリオ: 今日ビューの起票フォームはタスク名のみ必須である", async () => {
     const repo = makeMockRepository();
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     // タスク名入力欄
     const nameInput = await screen.findByLabelText(/タスク名/);
@@ -231,7 +280,7 @@ describe("TodayView (Web クライアント UI)", () => {
   it("シナリオ: 起票フォームでタスク名を入力して送信するとタスクが追加される", async () => {
     const repo = makeMockRepository();
     const user = userEvent.setup();
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     const nameInput = await screen.findByLabelText(/タスク名/);
     await user.type(nameInput, "牛乳を買う");
@@ -253,7 +302,7 @@ describe("TodayView (Web クライアント UI)", () => {
   it("シナリオ: 既存タスクの名称を編集して保存できる", async () => {
     const repo = makeMockRepository([makeTask({ id: "t1", name: "牛乳", version: 1 })]);
     const user = userEvent.setup();
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     // 一覧から編集ボタンを開く
     const editButton = await screen.findByRole("button", { name: /編集/ });
@@ -281,7 +330,7 @@ describe("TodayView (Web クライアント UI)", () => {
       makeTask({ id: "t1", name: "x", dueDate: "today", version: 1 }),
     ]);
     const user = userEvent.setup();
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     // 期限切替トグル
     const toggle = await screen.findByRole("button", { name: /期限|明日|今日/ });
@@ -300,7 +349,7 @@ describe("TodayView (Web クライアント UI)", () => {
   it("シナリオ: 削除アクションを実行するとタスクが今日ビューから消える", async () => {
     const repo = makeMockRepository([makeTask({ id: "t1", name: "x", version: 1 })]);
     const user = userEvent.setup();
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     expect(await screen.findByText("x")).toBeInTheDocument();
 
@@ -335,7 +384,7 @@ describe("TodayView (Web クライアント UI)", () => {
 describe("TodayView (BL-002 優先度 UI)", () => {
   it("シナリオ: 起票フォームに「優先度」の任意項目があり, 値域は 3 段階のみ", async () => {
     const repo = makeMockRepository();
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     // 「優先度」というラベル / aria-label を持つ入力 UI が存在する.
     // 採用案 (plan D-002) は select だが, テストは具体 UI に依存しないようラベル名のみで検索.
@@ -360,7 +409,7 @@ describe("TodayView (BL-002 優先度 UI)", () => {
   it("シナリオ: 起票フォームで優先度を未操作のまま送信すると normal (または省略) で create される", async () => {
     const repo = makeMockRepository();
     const user = userEvent.setup();
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     const nameInput = await screen.findByLabelText(/タスク名/);
     await user.type(nameInput, "x");
@@ -378,7 +427,7 @@ describe("TodayView (BL-002 優先度 UI)", () => {
   it("シナリオ: 起票フォームで優先度を「最優先」に指定して送信すると create.priority === \"highest\"", async () => {
     const repo = makeMockRepository();
     const user = userEvent.setup();
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     const nameInput = await screen.findByLabelText(/タスク名/);
     await user.type(nameInput, "x");
@@ -402,7 +451,7 @@ describe("TodayView (BL-002 優先度 UI)", () => {
       makeTask({ id: "t1", name: "x", priority: "normal", version: 1 }),
     ]);
     const user = userEvent.setup();
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     // 一覧行の優先度変更 UI を取得 (plan D-001 採用案 = cycle ボタン).
     // ボタン名は「優先度」または現在値ラベル (「普通」「最優先」「後回し」) を含む想定.
@@ -471,7 +520,7 @@ describe("TodayView (BL-002 優先度 UI)", () => {
       },
     );
     const user = userEvent.setup();
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     // 描画後, 初期並びを確認 (A, B). sentinel は強調セクションに居て listitem には居ない.
     const itemsBefore = await screen.findAllByRole("listitem");
@@ -533,7 +582,7 @@ describe("TodayView (BL-003 完了ボタン)", () => {
     const repo = makeMockRepository([
       makeTask({ id: "t1", name: "牛乳", version: 1 }),
     ]);
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     // 起票フォームの「タスク名」入力が現れるまで待ち, 一覧の描画も待つ.
     await screen.findByText("牛乳");
@@ -552,7 +601,7 @@ describe("TodayView (BL-003 完了ボタン)", () => {
       makeTask({ id: "t1", name: "x", version: 1 }),
     ]);
     const user = userEvent.setup();
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     await screen.findByText("x");
 
@@ -570,7 +619,7 @@ describe("TodayView (BL-003 完了ボタン)", () => {
       makeTask({ id: "t1", name: "牛乳", version: 1 }),
     ]);
     const user = userEvent.setup();
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     expect(await screen.findByText("牛乳")).toBeInTheDocument();
 
@@ -586,7 +635,7 @@ describe("TodayView (BL-003 完了ボタン)", () => {
       makeTask({ id: "t1", name: "x", version: 1 }),
     ]);
     const user = userEvent.setup();
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     await screen.findByText("x");
 
@@ -619,7 +668,7 @@ describe("TodayView (BL-005 今日ビュー本実装)", () => {
     const repo = makeMockRepository([
       makeTask({ id: "t1", name: "牛乳", dueDate: "today", version: 1 }),
     ]);
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     // 描画完了を待つために 1 件は描画されることを待つ.
     await screen.findByText("牛乳");
@@ -642,7 +691,7 @@ describe("TodayView (BL-005 今日ビュー本実装)", () => {
         version: 1,
       }),
     ]);
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     // today は描画される.
     expect(await screen.findByText("TODAY-TASK")).toBeInTheDocument();
@@ -705,7 +754,7 @@ describe("TodayView (BL-005 今日ビュー本実装)", () => {
         },
       },
     );
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     // 描画を待つ.
     await screen.findByText("AAA");
@@ -728,7 +777,7 @@ describe("TodayView (BL-005 今日ビュー本実装)", () => {
       makeTask({ id: "t1", name: "MOVE-ME", dueDate: "today", version: 1 }),
     ]);
     const user = userEvent.setup();
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     expect(await screen.findByText("MOVE-ME")).toBeInTheDocument();
 
@@ -751,7 +800,7 @@ describe("TodayView (BL-005 今日ビュー本実装)", () => {
     // spec.md §「\"次の 1 つ\" の一意化」第 2 ケース:
     // today タスクが 0 件 (mock は空配列を返す) でも UI が崩れず, listitem が描かれない.
     const repo = makeMockRepository([]);
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     // 見出し「今日」(FR-010) が描画される. select の option と区別するため heading で指定.
     expect(
@@ -787,7 +836,7 @@ describe("TodayView (BL-006 現在のタスク強調表示と操作)", () => {
     const repo = makeMockRepository([
       makeTask({ id: "t1", name: "MILK", version: 1 }),
     ]);
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     // 描画完了を待つ.
     await screen.findByText("MILK");
@@ -821,7 +870,7 @@ describe("TodayView (BL-006 現在のタスク強調表示と操作)", () => {
         version: 1,
       }),
     ]);
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     // 「現在のタスク」セクションが存在する (見出し or region).
     // 厳格な UI 形に依存しないよう, アクセシブルな region / heading どちらかで取得.
@@ -868,7 +917,7 @@ describe("TodayView (BL-006 現在のタスク強調表示と操作)", () => {
         },
       },
     );
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     const focusSection = await screen.findByRole("region", { name: /現在のタスク/ });
     expect(within(focusSection).getByText("BBB")).toBeInTheDocument();
@@ -908,7 +957,7 @@ describe("TodayView (BL-006 現在のタスク強調表示と操作)", () => {
       },
     );
     const user = userEvent.setup();
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     // 「現在のタスク」セクションには AAA, 通常リストには BBB がいる.
     const focusSection = await screen.findByRole("region", { name: /現在のタスク/ });
@@ -960,7 +1009,7 @@ describe("TodayView (BL-006 現在のタスク強調表示と操作)", () => {
       },
     );
     const user = userEvent.setup();
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     const focusSection = await screen.findByRole("region", { name: /現在のタスク/ });
     const clearButton = within(focusSection).getByRole("button", {
@@ -977,7 +1026,7 @@ describe("TodayView (BL-006 現在のタスク強調表示と操作)", () => {
   it("シナリオ: 今日のタスクが 0 件のとき, 「現在のタスク」セクションは描画されない", async () => {
     // spec.md §「UI: 視覚的強調」第 3 ケース.
     const repo = makeMockRepository([]);
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     // 「今日」見出しは出る.
     expect(
@@ -1002,7 +1051,7 @@ describe("TodayView (BL-006 現在のタスク強調表示と操作)", () => {
       },
     );
     const user = userEvent.setup();
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     // 初回マウントで 1 回 getFocus() が呼ばれている.
     await screen.findByRole("region", { name: /現在のタスク/ });
@@ -1048,7 +1097,7 @@ describe("TodayView (BL-008 今日の完了数表示)", () => {
         },
       },
     );
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     // 描画完了を待つために 1 件は描画されることを待つ.
     await screen.findByText("MILK");
@@ -1080,7 +1129,7 @@ describe("TodayView (BL-008 今日の完了数表示)", () => {
       },
     );
     const user = userEvent.setup();
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     // 初期状態: 「完了: 0」相当が描画される.
     await screen.findByText("MILK");
@@ -1119,7 +1168,7 @@ describe("TodayView (BL-008 今日の完了数表示)", () => {
       },
     );
     const user = userEvent.setup();
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     await screen.findByText("MILK");
 
@@ -1161,7 +1210,7 @@ describe("TodayView (BL-008 今日の完了数表示)", () => {
       },
     );
     const user = userEvent.setup();
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     await screen.findByText("MILK");
 
@@ -1199,7 +1248,7 @@ describe("TodayView (BL-008 今日の完了数表示)", () => {
         updatedAt: NOW,
       },
     });
-    render(<TodayView repository={repo} />);
+    render(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     // 「今日」見出しが出る (タスク 0 件でも描画される既存仕様).
     expect(
@@ -1213,5 +1262,135 @@ describe("TodayView (BL-008 今日の完了数表示)", () => {
       return /完了/.test(text) && /\b5\b/.test(text);
     });
     expect(completionLabel).toBeInTheDocument();
+  });
+});
+
+// ============================================================
+// BL-016 / FR-020: プロジェクト選択 - 起票フォームのドロップダウン
+//
+// spec.md (project-crud) §「Web クライアント - プロジェクト選択」と 1:1 対応する.
+// - 起票フォームにプロジェクト選択ドロップダウンが表示される.
+// - プロジェクトを選択してタスクを起票すると projectId が渡る.
+// - 「（未分類）」を選択してタスクを起票すると projectId が null になる.
+//
+// TodayView は BL-016 実装前は projectRepository props を持たないため,
+// 以下のテストはすべて red になる. implementer が green 化する.
+// ============================================================
+
+describe("TodayView (BL-016 プロジェクト選択 UI)", () => {
+  it("シナリオ: 起票フォームにプロジェクト選択ドロップダウンが表示される", async () => {
+    // spec.md §「起票フォームにプロジェクト選択ドロップダウンが表示される」
+    //   Given プロジェクト「仕事」と「個人」が存在する
+    //   When  TodayView の起票フォームが表示される
+    //   Then  「プロジェクト」ドロップダウンに「仕事」と「個人」の選択肢が表示される
+    //   And   「（未分類）」という選択肢も含まれる
+    const projectRepo = makeMockProjectRepository([
+      {
+        id: PROJECT_ID_P1,
+        name: "仕事",
+        version: 1,
+        createdAt: NOW,
+        updatedAt: NOW,
+      },
+      {
+        id: "p2p2p2p2-p2p2-4p2p-8p2p-p2p2p2p2p2p2",
+        name: "個人",
+        version: 1,
+        createdAt: NOW,
+        updatedAt: NOW,
+      },
+    ]);
+    const taskRepo = makeMockRepository();
+
+    render(
+      <TodayView repository={taskRepo} projectRepository={projectRepo} />,
+    );
+
+    // 「プロジェクト」ラベルを持つドロップダウン（select）が存在する.
+    // 既存テスト（今日ビューの起票フォームはタスク名のみ必須である）で
+    // queryByLabelText(/プロジェクト/) が存在することを確認済みの要件を継承する.
+    const projectSelect = await screen.findByLabelText(/プロジェクト/);
+    expect(projectSelect).toBeInTheDocument();
+
+    // 「仕事」と「個人」の選択肢が存在する
+    expect(await screen.findByText("仕事")).toBeInTheDocument();
+    expect(await screen.findByText("個人")).toBeInTheDocument();
+
+    // 「（未分類）」の選択肢が存在する
+    expect(await screen.findByText(/未分類/)).toBeInTheDocument();
+
+    // projectRepository.list() が呼ばれている
+    expect(projectRepo.listMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("シナリオ: プロジェクトを選択してタスクを起票すると POST に projectId が含まれる", async () => {
+    // spec.md §「プロジェクトを選択してタスクを起票できる」
+    //   Given プロジェクト「仕事」（id: "p-1"）が存在する
+    //   When  起票フォームでプロジェクト「仕事」を選択してタスクを追加する
+    //   Then  repository.create に { projectId: "p-1" } が含まれる
+    const projectRepo = makeMockProjectRepository([
+      {
+        id: PROJECT_ID_P1,
+        name: "仕事",
+        version: 1,
+        createdAt: NOW,
+        updatedAt: NOW,
+      },
+    ]);
+    const taskRepo = makeMockRepository();
+    const user = userEvent.setup();
+
+    render(
+      <TodayView repository={taskRepo} projectRepository={projectRepo} />,
+    );
+
+    // タスク名入力
+    const nameInput = await screen.findByLabelText(/タスク名/);
+    await user.type(nameInput, "資料を作る");
+
+    // プロジェクト選択ドロップダウンで「仕事」を選択
+    const projectSelect = await screen.findByLabelText(/プロジェクト/);
+    await user.selectOptions(projectSelect, PROJECT_ID_P1);
+
+    // 追加ボタンをクリック
+    const submit = screen.getByRole("button", { name: /追加|起票|登録|送信/ });
+    await user.click(submit);
+
+    // create() が呼ばれて projectId が渡っている
+    expect(taskRepo.createMock).toHaveBeenCalledTimes(1);
+    const arg = taskRepo.createMock.mock.calls[0]?.[0] as CreateTaskCommand;
+    expect(arg.name).toBe("資料を作る");
+    expect(arg.projectId).toBe(PROJECT_ID_P1);
+  });
+
+  it("シナリオ: プロジェクト未選択（「（未分類）」）で起票すると POST に projectId: null が含まれる", async () => {
+    // spec.md §「プロジェクト未選択（未分類）でタスクを起票できる」
+    //   Given プロジェクトが 1 件も存在しない、または「（未分類）」を選択している
+    //   When  起票フォームでプロジェクトを選択せずタスクを追加する
+    //   Then  repository.create に { projectId: null } が含まれる
+    const projectRepo = makeMockProjectRepository([]);
+    const taskRepo = makeMockRepository();
+    const user = userEvent.setup();
+
+    render(
+      <TodayView repository={taskRepo} projectRepository={projectRepo} />,
+    );
+
+    // タスク名入力
+    const nameInput = await screen.findByLabelText(/タスク名/);
+    await user.type(nameInput, "牛乳を買う");
+
+    // プロジェクトは未選択のまま（または「（未分類）」を明示選択）
+    // デフォルト選択肢が「（未分類）」であることを前提とする.
+
+    // 追加ボタンをクリック
+    const submit = screen.getByRole("button", { name: /追加|起票|登録|送信/ });
+    await user.click(submit);
+
+    // create() が呼ばれて projectId が null になっている
+    expect(taskRepo.createMock).toHaveBeenCalledTimes(1);
+    const arg = taskRepo.createMock.mock.calls[0]?.[0] as CreateTaskCommand;
+    expect(arg.name).toBe("牛乳を買う");
+    expect(arg.projectId).toBeNull();
   });
 });

@@ -8,7 +8,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./task": "./src/task/index.ts",
-    "./clock": "./src/clock/index.ts"
+    "./clock": "./src/clock/index.ts",
+    "./project": "./src/project/index.ts"
   },
   "scripts": {
     "test": "vitest run"

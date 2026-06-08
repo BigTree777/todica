@@ -72,6 +72,14 @@ export class InMemoryTaskRepository implements TaskRepository {
     }
   }
 
+  async nullifyProjectId(projectId: string): Promise<void> {
+    for (const [id, task] of this.store.entries()) {
+      if (task.projectId === projectId) {
+        this.store.set(id, { ...task, projectId: null });
+      }
+    }
+  }
+
   /** テスト補助: 直接投入する. */
   seed(task: Task): void {
     this.store.set(task.id, { ...task });
@@ -83,15 +91,70 @@ export class InMemoryTaskRepository implements TaskRepository {
   }
 }
 
+// BL-016 で使用する Project 型（ProjectRepository 拡張前の暫定定義）
+export interface ProjectRecord {
+  id: string;
+  name: string;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export class InMemoryProjectRepository implements ProjectRepository {
   private ids = new Set<string>();
+  // BL-016: フル CRUD 対応のストア
+  private store = new Map<string, ProjectRecord>();
 
   async exists(id: string): Promise<boolean> {
+    // BL-016 実装後は store を参照する. それまでは ids を参照する.
+    if (this.store.has(id)) return true;
     return this.ids.has(id);
   }
 
+  // BL-016: insert
+  async insert(project: ProjectRecord): Promise<void> {
+    this.store.set(project.id, { ...project });
+    this.ids.add(project.id);
+  }
+
+  // BL-016: findById
+  async findById(id: string): Promise<ProjectRecord | null> {
+    const p = this.store.get(id);
+    return p ? { ...p } : null;
+  }
+
+  // BL-016: list (name 昇順, Unicode コードポイント順 = BINARY コレーション相当)
+  async list(): Promise<ProjectRecord[]> {
+    return Array.from(this.store.values())
+      .map((p) => ({ ...p }))
+      .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  }
+
+  // BL-016: update
+  async update(project: ProjectRecord): Promise<void> {
+    this.store.set(project.id, { ...project });
+  }
+
+  // BL-016: delete (物理削除)
+  async delete(id: string): Promise<void> {
+    this.store.delete(id);
+    this.ids.delete(id);
+  }
+
+  /** テスト補助: ID のみで seed（既存 BL-001 tests 互換）. */
   seed(id: string): void {
     this.ids.add(id);
+  }
+
+  /** テスト補助: フル ProjectRecord で seed（BL-016 tests 用）. */
+  seedProject(project: ProjectRecord): void {
+    this.store.set(project.id, { ...project });
+    this.ids.add(project.id);
+  }
+
+  /** テスト補助: 全件を取り出す. */
+  all(): ProjectRecord[] {
+    return Array.from(this.store.values()).map((p) => ({ ...p }));
   }
 }
 

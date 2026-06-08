@@ -9,6 +9,8 @@ import { Hono } from "hono";
 import type { Context, MiddlewareHandler } from "hono";
 import type { Clock } from "@todica/domain/clock";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+import { eq } from "drizzle-orm";
+import { tasks as tasksTable, projects as projectsTable } from "./db/schema.js";
 import {
   completeTask,
   createTask,
@@ -18,6 +20,11 @@ import {
   type Task,
   type UpdateTaskInput,
 } from "@todica/domain/task";
+import {
+  createProject,
+  updateProject,
+  validateProjectName,
+} from "@todica/domain/project";
 import type { TaskRepository } from "./data/task-repository.js";
 import type { ProjectRepository } from "./data/project-repository.js";
 import type { IdempotencyStore } from "./data/idempotency-store.js";
@@ -682,6 +689,145 @@ export function createApp(deps: AppDeps): Hono {
   // 認証必須 / Idempotency-Key 必須.
   app.delete("/api/v1/trash", async (c) => {
     await deps.taskRepository.deleteAllTrashed();
+    return saveAndReturn(c, deps, 204, null);
+  });
+
+  // ---------- POST /api/v1/projects (BL-016 / FR-020) ----------
+  app.post("/api/v1/projects", async (c) => {
+    let body: Record<string, unknown>;
+    try {
+      body = (await c.req.json()) as Record<string, unknown>;
+    } catch {
+      return saveAndReturn(c, deps, 400, {
+        code: "INVALID_REQUEST_BODY",
+        message: "request body must be valid JSON",
+      });
+    }
+
+    const id = typeof body.id === "string" ? body.id : undefined;
+    if (!id) {
+      return saveAndReturn(c, deps, 400, {
+        code: "INVALID_REQUEST_BODY",
+        message: "id is required",
+      });
+    }
+    const name = body.name;
+    const nameError = validateProjectName(name);
+    if (nameError) {
+      return saveAndReturn(c, deps, 400, {
+        code: "INVALID_PROJECT_NAME",
+        message: "project name is invalid",
+      });
+    }
+
+    const project = createProject(id, name as string, deps.clock);
+    await deps.projectRepository.insert(project);
+    return saveAndReturn(c, deps, 201, { project });
+  });
+
+  // ---------- GET /api/v1/projects (BL-016) ----------
+  app.get("/api/v1/projects", async (c) => {
+    const projects = await deps.projectRepository.list();
+    return c.json({ projects }, 200);
+  });
+
+  // ---------- PATCH /api/v1/projects/:id (BL-016 / FR-021) ----------
+  app.patch("/api/v1/projects/:id", async (c) => {
+    const id = c.req.param("id");
+
+    const ifMatchHeader = c.req.header("If-Match") ?? c.req.header("if-match");
+    if (!ifMatchHeader) {
+      return saveAndReturn(c, deps, 400, {
+        code: "MISSING_IF_MATCH",
+        message: "If-Match header is required",
+      });
+    }
+    const ifMatch = Number.parseInt(ifMatchHeader, 10);
+    if (!Number.isFinite(ifMatch)) {
+      return saveAndReturn(c, deps, 400, {
+        code: "MISSING_IF_MATCH",
+        message: "If-Match header must be a numeric version",
+      });
+    }
+
+    let body: Record<string, unknown>;
+    try {
+      body = (await c.req.json()) as Record<string, unknown>;
+    } catch {
+      return saveAndReturn(c, deps, 400, {
+        code: "INVALID_REQUEST_BODY",
+        message: "request body must be valid JSON",
+      });
+    }
+
+    const current = await deps.projectRepository.findById(id);
+    if (!current) {
+      return saveAndReturn(c, deps, 404, {
+        code: "PROJECT_NOT_FOUND",
+        message: "project not found",
+      });
+    }
+
+    if (current.version !== ifMatch) {
+      return saveAndReturn(c, deps, 412, { project: current });
+    }
+
+    const name = body.name;
+    const nameError = validateProjectName(name);
+    if (nameError) {
+      return saveAndReturn(c, deps, 400, {
+        code: "INVALID_PROJECT_NAME",
+        message: "project name is invalid",
+      });
+    }
+
+    const updated = updateProject(current, name as string, deps.clock);
+    await deps.projectRepository.update(updated);
+    return saveAndReturn(c, deps, 200, { project: updated });
+  });
+
+  // ---------- DELETE /api/v1/projects/:id (BL-016 / FR-022) ----------
+  app.delete("/api/v1/projects/:id", async (c) => {
+    const id = c.req.param("id");
+
+    const ifMatchHeader = c.req.header("If-Match") ?? c.req.header("if-match");
+    if (!ifMatchHeader) {
+      return saveAndReturn(c, deps, 400, {
+        code: "MISSING_IF_MATCH",
+        message: "If-Match header is required",
+      });
+    }
+    const ifMatch = Number.parseInt(ifMatchHeader, 10);
+    if (!Number.isFinite(ifMatch)) {
+      return saveAndReturn(c, deps, 400, {
+        code: "MISSING_IF_MATCH",
+        message: "If-Match header must be a numeric version",
+      });
+    }
+
+    const current = await deps.projectRepository.findById(id);
+    if (!current) {
+      return saveAndReturn(c, deps, 404, {
+        code: "PROJECT_NOT_FOUND",
+        message: "project not found",
+      });
+    }
+
+    if (current.version !== ifMatch) {
+      return saveAndReturn(c, deps, 412, { project: current });
+    }
+
+    // カスケード NULL: 紐付くタスクの projectId を null に更新してから削除する.
+    // deps.db が存在する場合はトランザクション内で実行してアトミック性を保証する.
+    if (deps.db) {
+      deps.db.transaction((tx) => {
+        tx.update(tasksTable).set({ projectId: null }).where(eq(tasksTable.projectId, id)).run();
+        tx.delete(projectsTable).where(eq(projectsTable.id, id)).run();
+      });
+    } else {
+      await deps.taskRepository.nullifyProjectId(id);
+      await deps.projectRepository.delete(id);
+    }
     return saveAndReturn(c, deps, 204, null);
   });
 

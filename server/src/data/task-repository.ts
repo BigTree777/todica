@@ -22,4 +22,9 @@ export interface TaskRepository {
   deleteAllTrashed(): Promise<void>;
   /** trashedAt が boundaryAt より古いゴミ箱タスクを物理削除する（日次清算用）。 */
   deleteTrashOlderThan(boundaryAt: string): Promise<void>;
+  /**
+   * 指定プロジェクトに紐付くタスクの projectId を null に更新する (BL-016 / FR-022 カスケード NULL).
+   * version / updatedAt は変更しない.
+   */
+  nullifyProjectId(projectId: string): Promise<void>;
 }
