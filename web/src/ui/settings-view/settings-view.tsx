@@ -30,10 +30,21 @@ export interface SettingsViewProps {
   serverUrl?: string;
   authToken?: string;
   onSaveServer?: (serverUrl: string, authToken: string) => void;
+  /** BL-020: 現在のモード（渡されている場合は「モード切替」セクションを表示する） */
+  currentMode?: "local" | "server";
+  /** BL-020: モード切替ボタンクリック時のコールバック */
+  onSwitchMode?: () => void | Promise<void>;
 }
 
 export function SettingsView(props: SettingsViewProps): JSX.Element {
-  const { repository, serverUrl: initialServerUrl, authToken: initialAuthToken, onSaveServer } = props;
+  const {
+    repository,
+    serverUrl: initialServerUrl,
+    authToken: initialAuthToken,
+    onSaveServer,
+    currentMode,
+    onSwitchMode,
+  } = props;
   const queryClient = useQueryClient();
 
   const { data: fetchedSettings } = useQuery({
@@ -169,6 +180,27 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
             </div>
             <button type="submit">変更を保存</button>
           </form>
+        </section>
+      )}
+
+      {currentMode !== undefined && (
+        <section aria-label="モード切替">
+          <h2>モード切替</h2>
+          <p>
+            {currentMode === "local" ? "現在: ローカルモード" : "現在: サーバモード"}
+          </p>
+          {onSwitchMode !== undefined && (
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm("現在のモードのデータが初期化されます。よろしいですか？")) {
+                  void onSwitchMode();
+                }
+              }}
+            >
+              {currentMode === "local" ? "サーバモードへ切り替える" : "ローカルモードへ切り替える"}
+            </button>
+          )}
         </section>
       )}
     </main>

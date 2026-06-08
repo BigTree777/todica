@@ -209,3 +209,62 @@ describe("SetupView (BL-019 AC-AND-003: SetupView 初回起動)", () => {
     expect(onSave).not.toHaveBeenCalled();
   });
 });
+
+// ============================================================
+// BL-020 / AC-LOC-002: SetupView でのローカルモード選択（onSelectLocal プロップ）
+// ============================================================
+
+/**
+ * AC-LOC-002 のテストで使う SetupView の拡張 Props.
+ *
+ * BL-020 で SetupView は以下の Props を追加で受け取るようになる:
+ *   - onSelectLocal?: () => void
+ *       ローカルモード選択時のコールバック.
+ *       渡されている場合は「ローカルモードで使う」ボタンを表示する.
+ *       渡されていない場合はボタンを表示しない.
+ *
+ * 注意: 本テストブロックは TDD の "red" を作るためのテスト.
+ *       BL-020 の実装が完了するまで失敗する想定.
+ */
+
+describe("SetupView (BL-020 AC-LOC-002: ローカルモード選択 onSelectLocal プロップ)", () => {
+  // ----------------------------------------------------------
+  // シナリオ: onSelectLocal が渡されている場合、「ローカルモードで使う」ボタンが表示される
+  // spec.md §AC-LOC-002:
+  //   Given SetupView が表示されている
+  //   When  「ローカルモードで使う」を選択できる状態
+  //   Then  「ローカルモードで使う」ボタンが表示される
+  // plan.md §D-004: onSelectLocal が渡されている場合は「ローカルモードで使う」ボタンを表示する
+  // ----------------------------------------------------------
+  it("AC-LOC-002: onSelectLocal が渡されている場合、「ローカルモードで使う」ボタンが表示される", () => {
+    const onSave = vi.fn();
+    const onSelectLocal = vi.fn();
+    renderWithQueryClient(<SetupView onSave={onSave} onSelectLocal={onSelectLocal} />);
+
+    // 「ローカルモードで使う」ボタンが存在する
+    expect(
+      screen.getByRole("button", { name: /ローカルモード/ }),
+    ).toBeInTheDocument();
+  });
+
+  // ----------------------------------------------------------
+  // シナリオ: 「ローカルモードで使う」ボタンをクリックすると onSelectLocal が呼ばれる
+  // spec.md §AC-LOC-002:
+  //   Given SetupView が表示されている
+  //   When  「ローカルモードで使う」を選択する
+  //   Then  Preferences に mode = 'local' が保存される
+  //   And   TodayView（/today）に遷移する
+  //   （Vitest でテスト可能な範囲: onSelectLocal コールバックが呼ばれること）
+  // ----------------------------------------------------------
+  it("AC-LOC-002: 「ローカルモードで使う」ボタンをクリックすると onSelectLocal が呼ばれる", async () => {
+    const onSave = vi.fn();
+    const onSelectLocal = vi.fn();
+    const user = userEvent.setup();
+    renderWithQueryClient(<SetupView onSave={onSave} onSelectLocal={onSelectLocal} />);
+
+    const localButton = screen.getByRole("button", { name: /ローカルモード/ });
+    await user.click(localButton);
+
+    expect(onSelectLocal).toHaveBeenCalledTimes(1);
+  });
+});

@@ -354,3 +354,117 @@ describe("SettingsView サーバ接続設定セクション (BL-019 AC-AND-005)"
     expect(await screen.findByText(/04:00/)).toBeInTheDocument();
   });
 });
+
+// ============================================================
+// SettingsView モード切替セクション (BL-020 / AC-LOC-003 / AC-LOC-005)
+// ============================================================
+
+/**
+ * AC-LOC-005 のテストで使う SettingsView の拡張 Props.
+ *
+ * BL-020 で SettingsView は以下の Props を追加で受け取るようになる:
+ *   - currentMode?: 'local' | 'server'
+ *       現在のモード. 渡されている場合は「モード切替」セクションを表示する.
+ *   - onSwitchMode?: () => Promise<void>
+ *       「切り替える」ボタンクリック後に呼ばれるコールバック.
+ *
+ * spec.md §FR-LOC-003: SettingsView に「モード切替」セクションを追加する.
+ * plan.md §D-005: Capacitor.isNativePlatform() かつ currentMode が渡されている場合のみ表示する.
+ *
+ * 注意: 本テストブロックは TDD の "red" を作るためのテスト.
+ *       BL-020 の実装が完了するまで失敗する想定.
+ */
+
+describe("SettingsView モード切替セクション (BL-020 AC-LOC-005)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // ----------------------------------------------------------
+  // シナリオ: currentMode = 'local' が渡されている場合、「ローカルモード」と表示される
+  // spec.md §FR-LOC-003:
+  //   現在のモード（ローカル / サーバ）を表示する
+  // plan.md §D-005:
+  //   mode = 'local' の場合は「ローカルモード」を表示する
+  // ----------------------------------------------------------
+  it("AC-LOC-005: currentMode='local' が渡されている場合、「ローカルモード」と表示される", async () => {
+    const repo = makeMockRepository({ dayBoundaryTime: "04:00" });
+    const onSwitchMode = vi.fn();
+
+    renderWithQueryClient(
+      <SettingsView
+        repository={repo}
+        currentMode="local"
+        onSwitchMode={onSwitchMode}
+      />,
+    );
+
+    // 「ローカルモード」というテキストが表示される
+    expect(await screen.findByText(/ローカルモード/)).toBeInTheDocument();
+  });
+
+  // ----------------------------------------------------------
+  // シナリオ: currentMode = 'server' が渡されている場合、「サーバモードへ切り替える」ボタンが表示される
+  // spec.md §FR-LOC-003:
+  //   切替ボタンを提供する
+  // plan.md §D-005:
+  //   mode = 'local' の場合は「サーバモードへ切り替える」ボタンを表示する
+  // (currentMode='local' のときサーバへの切替ボタン、'server' のときローカルへの切替ボタン)
+  // ----------------------------------------------------------
+  it("AC-LOC-005: currentMode='server' が渡されている場合、「サーバモードへ切り替える」ボタンが表示される", async () => {
+    const repo = makeMockRepository({ dayBoundaryTime: "04:00" });
+    const onSwitchMode = vi.fn();
+
+    renderWithQueryClient(
+      <SettingsView
+        repository={repo}
+        currentMode="server"
+        onSwitchMode={onSwitchMode}
+      />,
+    );
+
+    // 「サーバモードへ切り替える」ボタンは currentMode='local' のとき
+    // 「ローカルモードへ切り替える」ボタンは currentMode='server' のとき表示される
+    // spec では切替先ボタンを表示するため、currentMode='server' → ローカル切替ボタン
+    const switchButton = await screen.findByRole("button", {
+      name: /ローカルモード|切り替える/,
+    });
+    expect(switchButton).toBeInTheDocument();
+  });
+
+  // ----------------------------------------------------------
+  // シナリオ: 「サーバモードへ切り替える」ボタンをクリックすると onSwitchMode が呼ばれる
+  // spec.md §AC-LOC-005:
+  //   When  「サーバモードへ切り替える」ボタンをタップする
+  //   Then  「現在のモードのデータが初期化されます。よろしいですか？」という確認ダイアログが表示される
+  // （Vitest でテスト可能な範囲: onSwitchMode コールバックが呼ばれること）
+  // plan.md §D-005: 確認後に onSwitchMode() を呼び出す
+  // ----------------------------------------------------------
+  it("AC-LOC-005: 「サーバモードへ切り替える」ボタンをクリックすると onSwitchMode が呼ばれる", async () => {
+    const repo = makeMockRepository({ dayBoundaryTime: "04:00" });
+    const onSwitchMode = vi.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+
+    // window.confirm を自動承認にモック
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    renderWithQueryClient(
+      <SettingsView
+        repository={repo}
+        currentMode="local"
+        onSwitchMode={onSwitchMode}
+      />,
+    );
+
+    // 切替ボタンをクリック
+    const switchButton = await screen.findByRole("button", {
+      name: /サーバモード|切り替える/,
+    });
+    await user.click(switchButton);
+
+    // onSwitchMode が呼ばれること
+    expect(onSwitchMode).toHaveBeenCalledTimes(1);
+
+    vi.restoreAllMocks();
+  });
+});

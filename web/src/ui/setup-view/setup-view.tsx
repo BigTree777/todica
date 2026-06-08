@@ -13,10 +13,12 @@ export interface SetupViewProps {
   onSave: (serverUrl: string, authToken: string) => void;
   initialServerUrl?: string;
   initialAuthToken?: string;
+  /** BL-020: ローカルモード選択時のコールバック. 渡されている場合は「ローカルモードで使う」ボタンを表示する. */
+  onSelectLocal?: () => void;
 }
 
 export function SetupView(props: SetupViewProps): JSX.Element {
-  const { onSave, initialServerUrl = "", initialAuthToken = "" } = props;
+  const { onSave, initialServerUrl = "", initialAuthToken = "", onSelectLocal } = props;
 
   const [serverUrl, setServerUrl] = useState(initialServerUrl);
   const [authToken, setAuthToken] = useState(initialAuthToken);
@@ -75,6 +77,14 @@ export function SetupView(props: SetupViewProps): JSX.Element {
         </div>
         <button type="submit">接続する</button>
       </form>
+
+      {onSelectLocal !== undefined && (
+        <div>
+          <button type="button" onClick={onSelectLocal}>
+            ローカルモードで使う
+          </button>
+        </div>
+      )}
     </main>
   );
 }
