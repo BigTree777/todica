@@ -26,6 +26,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { SettingsView } from "../src/ui/settings-view/settings-view.js";
 import { PatchConflictError } from "../src/repositories/settings-repository.js";
 
@@ -48,6 +50,22 @@ interface PatchSettingsCommand {
 interface SettingsRepository {
   getSettings(): Promise<Settings>;
   patchSettings(cmd: PatchSettingsCommand): Promise<Settings>;
+}
+
+// ============================================================
+// QueryClientProvider ラッパー
+// ============================================================
+
+function renderWithQueryClient(ui: ReactNode): ReturnType<typeof render> {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, staleTime: Infinity, networkMode: "offlineFirst" },
+      mutations: { retry: false, networkMode: "offlineFirst" },
+    },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
+  );
 }
 
 // ============================================================
@@ -97,7 +115,7 @@ describe("SettingsView (BL-009 境界時刻の設定)", () => {
     // When  ユーザーが SettingsView を開く
     // Then  "04:00" が設定値として画面に表示される
     const repo = makeMockRepository({ dayBoundaryTime: "04:00" });
-    render(<SettingsView repository={repo} />);
+    renderWithQueryClient(<SettingsView repository={repo} />);
 
     // getSettings() が呼ばれる.
     expect(await screen.findByText(/04:00/)).toBeInTheDocument();
@@ -111,7 +129,7 @@ describe("SettingsView (BL-009 境界時刻の設定)", () => {
     // Then  保存が成功し, 表示が "06:00" に更新される
     const repo = makeMockRepository({ dayBoundaryTime: "04:00", version: 1 });
     const user = userEvent.setup();
-    render(<SettingsView repository={repo} />);
+    renderWithQueryClient(<SettingsView repository={repo} />);
 
     // 初期表示を待つ.
     await screen.findByText(/04:00/);
@@ -145,7 +163,7 @@ describe("SettingsView (BL-009 境界時刻の設定)", () => {
     // Then  保存が失敗し, エラーが表示される (設定値は変わらない)
     const repo = makeMockRepository({ dayBoundaryTime: "04:00", version: 1 });
     const user = userEvent.setup();
-    render(<SettingsView repository={repo} />);
+    renderWithQueryClient(<SettingsView repository={repo} />);
 
     // 初期表示を待つ.
     await screen.findByText(/04:00/);
@@ -184,7 +202,7 @@ describe("SettingsView (BL-009 境界時刻の設定)", () => {
       new PatchConflictError(serverCurrentSettings),
     );
 
-    render(<SettingsView repository={repo} />);
+    renderWithQueryClient(<SettingsView repository={repo} />);
 
     // 初期表示を待つ.
     await screen.findByText(/04:00/);

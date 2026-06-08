@@ -32,13 +32,13 @@ export class PatchConflictError extends Error {
 
 export class HttpSettingsRepository implements SettingsRepository {
   constructor(
-    private baseUrl: string,
-    private token: string,
+    readonly baseUrl: string,
+    readonly authToken: string,
   ) {}
 
   async getSettings(): Promise<Settings> {
     const res = await fetch(`${this.baseUrl}/api/v1/settings`, {
-      headers: { Authorization: `Bearer ${this.token}` },
+      headers: { Authorization: `Bearer ${this.authToken}` },
     });
     const json = (await res.json()) as { settings: Settings };
     return json.settings;
@@ -48,7 +48,7 @@ export class HttpSettingsRepository implements SettingsRepository {
     const res = await fetch(`${this.baseUrl}/api/v1/settings`, {
       method: "PATCH",
       headers: {
-        Authorization: `Bearer ${this.token}`,
+        Authorization: `Bearer ${this.authToken}`,
         "Content-Type": "application/json",
         "Idempotency-Key": crypto.randomUUID(),
         "If-Match": String(cmd.ifMatch),

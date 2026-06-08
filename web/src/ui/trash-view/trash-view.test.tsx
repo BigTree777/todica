@@ -16,8 +16,26 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { TrashView } from "./trash-view.js";
 import type { TrashRepository, TrashedTask, RestoreTaskCommand } from "../../repositories/trash-repository.js";
+
+// ============================================================
+// QueryClientProvider ラッパー
+// ============================================================
+
+function renderWithQueryClient(ui: ReactNode): ReturnType<typeof render> {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, staleTime: Infinity, networkMode: "offlineFirst" },
+      mutations: { retry: false, networkMode: "offlineFirst" },
+    },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
+  );
+}
 
 // ============================================================
 // テストフィクスチャ
@@ -92,7 +110,7 @@ describe("TrashView (BL-014 Web クライアント基盤)", () => {
     const T2 = makeTrashedTask({ id: "t2", name: "完了タスクB", trashedReason: "completed", version: 2 });
     const repo = makeMockRepository([T1, T2]);
 
-    render(<TrashView repository={repo} />);
+    renderWithQueryClient(<TrashView repository={repo} />);
 
     // list() が 1 回呼ばれる
     expect(repo.listMock).toHaveBeenCalledTimes(1);
@@ -113,7 +131,7 @@ describe("TrashView (BL-014 Web クライアント基盤)", () => {
   it("シナリオ: ゴミ箱が空のとき「ゴミ箱は空です」と表示される", async () => {
     const repo = makeMockRepository([]);
 
-    render(<TrashView repository={repo} />);
+    renderWithQueryClient(<TrashView repository={repo} />);
 
     // list() が呼ばれる
     expect(repo.listMock).toHaveBeenCalledTimes(1);
@@ -140,7 +158,7 @@ describe("TrashView (BL-014 Web クライアント基盤)", () => {
     const repo = makeMockRepository([T1]);
     const user = userEvent.setup();
 
-    render(<TrashView repository={repo} />);
+    renderWithQueryClient(<TrashView repository={repo} />);
 
     // タスク名が表示されるまで待つ
     await screen.findByText("復元するタスク");
@@ -181,7 +199,7 @@ describe("TrashView (BL-014 Web クライアント基盤)", () => {
     const repo = makeMockRepository([T1, T2]);
     const user = userEvent.setup();
 
-    render(<TrashView repository={repo} />);
+    renderWithQueryClient(<TrashView repository={repo} />);
 
     // タスクが表示されるまで待つ
     await screen.findByText("タスクA");
@@ -213,7 +231,7 @@ describe("TrashView (BL-014 Web クライアント基盤)", () => {
   it("TrashView は見出し「ゴミ箱」を持つ", async () => {
     const repo = makeMockRepository([]);
 
-    render(<TrashView repository={repo} />);
+    renderWithQueryClient(<TrashView repository={repo} />);
 
     expect(
       await screen.findByRole("heading", { name: "ゴミ箱" }),

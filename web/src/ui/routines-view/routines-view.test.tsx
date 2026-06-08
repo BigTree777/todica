@@ -18,11 +18,29 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { RoutinesView } from "./routines-view.js";
 import type {
   WebRoutine,
   WebRoutineRepository,
 } from "../../repositories/routine-repository.js";
+
+// ============================================================
+// QueryClientProvider ラッパー
+// ============================================================
+
+function renderWithQueryClient(ui: ReactNode): ReturnType<typeof render> {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, staleTime: Infinity, networkMode: "offlineFirst" },
+      mutations: { retry: false, networkMode: "offlineFirst" },
+    },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
+  );
+}
 
 // ============================================================
 // テストフィクスチャ
@@ -143,7 +161,7 @@ describe("RoutinesView (BL-017 ルーティン管理 UI)", () => {
     const R2 = makeRoutine({ id: ROUTINE_ID_2, name: "夜の読書", daysOfWeek: [6] });
     const repo = makeMockRepository([R1, R2]);
 
-    render(<RoutinesView repository={repo} />);
+    renderWithQueryClient(<RoutinesView repository={repo} />);
 
     // list() が 1 回呼ばれる
     expect(repo.listMock).toHaveBeenCalledTimes(1);
@@ -162,7 +180,7 @@ describe("RoutinesView (BL-017 ルーティン管理 UI)", () => {
   it("シナリオ: ルーティンが 0 件のとき空一覧が描画できる", async () => {
     const repo = makeMockRepository([]);
 
-    render(<RoutinesView repository={repo} />);
+    renderWithQueryClient(<RoutinesView repository={repo} />);
 
     expect(repo.listMock).toHaveBeenCalledTimes(1);
 
@@ -192,7 +210,7 @@ describe("RoutinesView (BL-017 ルーティン管理 UI)", () => {
     const repo = makeMockRepository([]);
     const user = userEvent.setup();
 
-    render(<RoutinesView repository={repo} />);
+    renderWithQueryClient(<RoutinesView repository={repo} />);
 
     // 名称入力欄を探してテキストを入力
     const nameInput = await screen.findByLabelText(/名前|名称|ルーティン名/);
@@ -236,7 +254,7 @@ describe("RoutinesView (BL-017 ルーティン管理 UI)", () => {
     const repo = makeMockRepository([R1]);
     const user = userEvent.setup();
 
-    render(<RoutinesView repository={repo} />);
+    renderWithQueryClient(<RoutinesView repository={repo} />);
 
     // ルーティン名が表示されるまで待つ
     await screen.findByText("朝の運動");
@@ -286,7 +304,7 @@ describe("RoutinesView (BL-017 ルーティン管理 UI)", () => {
     const repo = makeMockRepository([R1]);
     const user = userEvent.setup();
 
-    render(<RoutinesView repository={repo} />);
+    renderWithQueryClient(<RoutinesView repository={repo} />);
 
     // ルーティン名が表示されるまで待つ
     await screen.findByText("朝の運動");
