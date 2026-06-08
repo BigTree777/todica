@@ -9,7 +9,8 @@
     ".": "./src/index.ts",
     "./task": "./src/task/index.ts",
     "./clock": "./src/clock/index.ts",
-    "./project": "./src/project/index.ts"
+    "./project": "./src/project/index.ts",
+    "./routine": "./src/routine/index.ts"
   },
   "scripts": {
     "test": "vitest run"

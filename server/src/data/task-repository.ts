@@ -6,6 +6,8 @@
  */
 import type { Task } from "@todica/domain/task";
 
+export type Priority = "highest" | "normal" | "later";
+
 export interface ListTasksFilter {
   /** "true" = ゴミ箱のみ, "false" = ゴミ箱以外 (既定), "all" = すべて. plan.md D-006. */
   trashed: "true" | "false" | "all";
@@ -27,4 +29,36 @@ export interface TaskRepository {
    * version / updatedAt は変更しない.
    */
   nullifyProjectId(projectId: string): Promise<void>;
+
+  // BL-017: ルーティンタスク関連メソッド
+
+  /**
+   * origin="routine" かつ dueDate="today" かつ trashedAt=null のタスクを物理削除する.
+   * 翌日リセット時の前日ルーティンタスク削除に使用する（FR-033）.
+   */
+  deleteRoutineTasksForToday(): Promise<void>;
+
+  /**
+   * 指定 routineId かつ dueDate="today" かつ trashedAt=null のタスクを 1 件取得する.
+   * 当日分の重複生成チェックに使用する（plan.md D-004 重複生成防止）.
+   */
+  findTodayRoutineTask(routineId: string): Promise<Task | null>;
+
+  /**
+   * ルーティンタスクを起票する（origin="routine" 固定）.
+   * 日次リセット時のルーティンタスク生成に使用する（FR-031）.
+   */
+  createRoutineTask(input: {
+    id: string;
+    name: string;
+    routineId: string;
+    priority: Priority;
+    now: string;
+  }): Promise<void>;
+
+  /**
+   * 指定 routineId に紐付く未ゴミ箱タスクを物理削除する.
+   * ルーティン削除時のカスケード削除に使用する（plan.md D-003）.
+   */
+  deleteByRoutineId(routineId: string): Promise<void>;
 }

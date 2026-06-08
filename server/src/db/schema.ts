@@ -17,6 +17,7 @@ import {
   text,
 } from "drizzle-orm/sqlite-core";
 
+
 /**
  * tasks テーブル.
  *
@@ -133,6 +134,22 @@ export const settings = sqliteTable("settings", {
   version: integer("version").notNull().default(1),
 });
 
+/**
+ * routines テーブル (BL-017 / routine).
+ *
+ * - daysOfWeek は JSON 配列文字列として保存する（例: "[1,2,3]"）.
+ * - defaultPriority は "highest" | "normal" | "later" の文字列.
+ */
+export const routines = sqliteTable("routines", {
+  id: text("id").primaryKey().notNull(),
+  name: text("name").notNull(),
+  daysOfWeek: text("days_of_week").notNull(),
+  defaultPriority: text("default_priority").notNull(),
+  version: integer("version").notNull().default(1),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
 /** schema 全体を Drizzle に渡すためのオブジェクト. */
 export const schema = {
   tasks,
@@ -141,4 +158,5 @@ export const schema = {
   focusSelection,
   counter,
   settings,
+  routines,
 };

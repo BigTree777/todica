@@ -9,6 +9,7 @@ import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type { TaskRepository } from "../data/task-repository.js";
 import type { CounterRepository } from "../data/counter-repository.js";
 import type { SettingsRepository } from "../data/settings-repository.js";
+import type { RoutineRepository } from "../data/routine-repository.js";
 import { purgeTrash } from "./purge-trash.js";
 
 /**
@@ -55,6 +56,22 @@ export interface DailyResetDeps {
    * 未指定の場合は Repository の非同期メソッドを順次呼ぶフォールバック（テスト用）.
    */
   db?: BetterSQLite3Database;
+  /**
+   * BL-017: RoutineRepository（オプショナル）.
+   * 注入された場合、日次リセット時にルーティンタスクの削除と生成を行う.
+   * 未注入の場合は既存の動作のみ実行する（後方互換）.
+   */
+  routineRepository?: RoutineRepository;
+}
+
+/**
+ * 現在時刻の ISO 文字列から曜日（UTC）を取得する純関数.
+ *
+ * plan.md D-004: UTC 日付の曜日を返す（0=日, 1=月, ..., 6=土）.
+ */
+export function calcDayOfWeek(nowIso: string): number {
+  const dateStr = nowIso.slice(0, 10);
+  return new Date(`${dateStr}T00:00:00.000Z`).getUTCDay();
 }
 
 /**
@@ -78,6 +95,12 @@ export async function maybeRunDailyReset(deps: DailyResetDeps): Promise<DailyRes
     return { executed: false, appliedBoundaryAt: todayBoundaryAt };
   }
 
+  // [新規 BL-017] FR-033: 前日ルーティンタスク削除
+  // origin="routine" かつ dueDate="today" かつ trashedAt=null のタスクを物理削除する.
+  if (deps.routineRepository) {
+    await deps.taskRepository.deleteRoutineTasksForToday();
+  }
+
   // dueDate === "tomorrow" かつ trashedAt === null のタスクを "today" に更新する（FR-043）.
   const allTasks = await deps.taskRepository.list({ trashed: "all" });
   for (const task of allTasks) {
@@ -88,6 +111,25 @@ export async function maybeRunDailyReset(deps: DailyResetDeps): Promise<DailyRes
         updatedAt: now,
         version: task.version + 1,
       });
+    }
+  }
+
+  // [新規 BL-017] FR-031: 当日分ルーティンタスク生成
+  if (deps.routineRepository) {
+    const dayOfWeek = calcDayOfWeek(now);
+    const routines = await deps.routineRepository.findByDayOfWeek(dayOfWeek);
+    for (const routine of routines) {
+      const existing = await deps.taskRepository.findTodayRoutineTask(routine.id);
+      if (!existing) {
+        const id = crypto.randomUUID();
+        await deps.taskRepository.createRoutineTask({
+          id,
+          routineId: routine.id,
+          name: routine.name,
+          priority: routine.defaultPriority,
+          now,
+        });
+      }
     }
   }
 
@@ -102,7 +144,7 @@ export async function maybeRunDailyReset(deps: DailyResetDeps): Promise<DailyRes
   await deps.counterRepository.update(updatedCounter);
 
   // purgeTrash を呼び出す（plan.md D-002 d / D-005）.
-  // db がある場合（本番）は db を渡す。テスト環境では db なしで in-memory repository を使う。
+  // 境界時刻より古いゴミ箱タスクを物理削除する（通常タスク・完了済みルーティンタスクを含む）.
   await purgeTrash(deps.db as BetterSQLite3Database, deps.clock, deps.settingsRepository, deps.taskRepository);
 
   return { executed: true, appliedBoundaryAt: todayBoundaryAt };

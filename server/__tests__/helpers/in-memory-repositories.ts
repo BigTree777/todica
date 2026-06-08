@@ -28,6 +28,8 @@ import type {
   Settings,
   SettingsRepository,
 } from "../../src/data/settings-repository.js";
+// BL-017: RoutineRepository インターフェース（未実装のため型のみ参照）
+import type { RoutineRepository, Routine } from "../../src/data/routine-repository.js";
 
 export class InMemoryTaskRepository implements TaskRepository {
   private store = new Map<string, Task>();
@@ -80,6 +82,77 @@ export class InMemoryTaskRepository implements TaskRepository {
     }
   }
 
+  // BL-017: ルーティンタスク関連メソッド（TaskRepository 拡張 / plan.md D-006）
+
+  /**
+   * origin="routine" かつ dueDate="today" かつ trashedAt=null のタスクを物理削除する.
+   * 翌日リセット時の前日ルーティンタスク削除に使用する（FR-033）.
+   */
+  async deleteRoutineTasksForToday(): Promise<void> {
+    for (const [id, task] of this.store.entries()) {
+      if (task.origin === "routine" && task.dueDate === "today" && task.trashedAt === null) {
+        this.store.delete(id);
+      }
+    }
+  }
+
+  /**
+   * 指定 routineId かつ dueDate="today" かつ trashedAt=null のタスクを 1 件取得する.
+   * 当日分の重複生成チェックに使用する（plan.md D-004 重複生成防止）.
+   */
+  async findTodayRoutineTask(routineId: string): Promise<Task | null> {
+    for (const task of this.store.values()) {
+      if (
+        task.routineId === routineId &&
+        task.dueDate === "today" &&
+        task.trashedAt === null
+      ) {
+        return { ...task };
+      }
+    }
+    return null;
+  }
+
+  /**
+   * ルーティンタスクを起票する（origin="routine" 固定）.
+   * 日次リセット時のルーティンタスク生成に使用する（FR-031）.
+   */
+  async createRoutineTask(input: {
+    id: string;
+    name: string;
+    routineId: string;
+    priority: "highest" | "normal" | "later";
+    now: string;
+  }): Promise<void> {
+    const task: Task = {
+      id: input.id,
+      name: input.name,
+      projectId: null,
+      dueDate: "today",
+      priority: input.priority,
+      origin: "routine",
+      routineId: input.routineId,
+      createdAt: input.now,
+      updatedAt: input.now,
+      trashedAt: null,
+      trashedReason: null,
+      version: 1,
+    };
+    this.store.set(task.id, { ...task });
+  }
+
+  /**
+   * 指定 routineId に紐付く未ゴミ箱タスクを物理削除する.
+   * ルーティン削除時のカスケード削除に使用する（plan.md D-003）.
+   */
+  async deleteByRoutineId(routineId: string): Promise<void> {
+    for (const [id, task] of this.store.entries()) {
+      if (task.routineId === routineId && task.trashedAt === null) {
+        this.store.delete(id);
+      }
+    }
+  }
+
   /** テスト補助: 直接投入する. */
   seed(task: Task): void {
     this.store.set(task.id, { ...task });
@@ -88,6 +161,58 @@ export class InMemoryTaskRepository implements TaskRepository {
   /** テスト補助: 全件を取り出す. */
   all(): Task[] {
     return Array.from(this.store.values()).map((t) => ({ ...t }));
+  }
+}
+
+// ============================================================
+// BL-017: InMemoryRoutineRepository
+//
+// plan.md D-005 RoutineRepository インターフェースの in-memory 実装.
+// テスト段階では実際の RoutineRepository インターフェースが未定義のため,
+// 型は後で合わせる（実装が入ってから import 解決される）.
+// ============================================================
+
+export class InMemoryRoutineRepository implements RoutineRepository {
+  private store = new Map<string, Routine>();
+
+  async create(routine: Routine): Promise<void> {
+    this.store.set(routine.id, { ...routine });
+  }
+
+  async list(): Promise<Routine[]> {
+    // name 昇順（BINARY コレーション相当）
+    return Array.from(this.store.values())
+      .map((r) => ({ ...r }))
+      .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  }
+
+  async findById(id: string): Promise<Routine | null> {
+    const r = this.store.get(id);
+    return r ? { ...r } : null;
+  }
+
+  async update(routine: Routine): Promise<void> {
+    this.store.set(routine.id, { ...routine });
+  }
+
+  async delete(id: string): Promise<void> {
+    this.store.delete(id);
+  }
+
+  async findByDayOfWeek(day: number): Promise<Routine[]> {
+    return Array.from(this.store.values())
+      .filter((r) => r.daysOfWeek.includes(day))
+      .map((r) => ({ ...r }));
+  }
+
+  /** テスト補助: 直接投入する. */
+  seed(routine: Routine): void {
+    this.store.set(routine.id, { ...routine });
+  }
+
+  /** テスト補助: 全件を取り出す. */
+  all(): Routine[] {
+    return Array.from(this.store.values()).map((r) => ({ ...r }));
   }
 }
 

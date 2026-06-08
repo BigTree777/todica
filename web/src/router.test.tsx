@@ -29,10 +29,12 @@ import { MemoryRouter, Navigate, Route, Routes } from "react-router-dom";
 import { TodayView } from "./ui/today-view/today-view.js";
 import { SettingsView } from "./ui/settings-view/settings-view.js";
 import { TrashView } from "./ui/trash-view/trash-view.js";
+import { RoutinesView } from "./ui/routines-view/routines-view.js";
 import type { TaskRepository } from "./repositories/task-repository.js";
 import type { SettingsRepository } from "./repositories/settings-repository.js";
 import type { TrashRepository } from "./repositories/trash-repository.js";
 import type { ProjectRepository } from "./repositories/project-repository.js";
+import type { WebRoutineRepository } from "./repositories/routine-repository.js";
 
 // ============================================================
 // モック Repository ファクトリ
@@ -101,6 +103,16 @@ function makeMockProjectRepository(): ProjectRepository {
   };
 }
 
+/** RoutinesView 用の最小限モック WebRoutineRepository (BL-017). */
+function makeMockRoutineRepository(): WebRoutineRepository {
+  return {
+    list: vi.fn(async () => []),
+    create: vi.fn(async () => { throw new Error("not implemented"); }),
+    update: vi.fn(async () => { throw new Error("not implemented"); }),
+    delete: vi.fn(async () => undefined),
+  };
+}
+
 // ============================================================
 // ルーティング構成の再現
 //
@@ -120,6 +132,7 @@ function TestRouter({ initialPath }: TestRouterProps) {
   const settingsRepository = makeMockSettingsRepository();
   const trashRepository = makeMockTrashRepository();
   const projectRepository = makeMockProjectRepository();
+  const routineRepository = makeMockRoutineRepository();
 
   return (
     <MemoryRouter initialEntries={[initialPath]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
@@ -128,6 +141,7 @@ function TestRouter({ initialPath }: TestRouterProps) {
         <Route path="/today" element={<TodayView repository={taskRepository} projectRepository={projectRepository} />} />
         <Route path="/settings" element={<SettingsView repository={settingsRepository} />} />
         <Route path="/trash" element={<TrashView repository={trashRepository} />} />
+        <Route path="/routines" element={<RoutinesView repository={routineRepository} />} />
       </Routes>
     </MemoryRouter>
   );
@@ -197,6 +211,20 @@ describe("ルーティング (BL-014 Web クライアント基盤)", () => {
 
     expect(
       await screen.findByRole("heading", { name: "ゴミ箱" }),
+    ).toBeInTheDocument();
+  });
+
+  /**
+   * シナリオ: "/routines" にアクセスすると RoutinesView が表示される
+   *   Given ブラウザが "/routines" を開く
+   *   When  ルーティングが解決される
+   *   Then  RoutinesView がレンダリングされる（<h1>ルーティン</h1> が存在する）
+   */
+  it("シナリオ: \"/routines\" にアクセスすると RoutinesView がレンダリングされる", async () => {
+    render(<TestRouter initialPath="/routines" />);
+
+    expect(
+      await screen.findByRole("heading", { name: "ルーティン" }),
     ).toBeInTheDocument();
   });
 });

@@ -346,9 +346,12 @@ export function TodayView(props: TodayViewProps): JSX.Element {
             <button type="button" onClick={() => openEdit(focusedTask)}>
               編集
             </button>
-            <button type="button" onClick={() => handleToggleDueDate(focusedTask)}>
-              {focusedTask.dueDate === "today" ? "明日へ" : "今日へ"}
-            </button>
+            {/* BL-017 / FR-033: origin が "routine" でない場合のみ「明日へ」ボタンを表示 */}
+            {focusedTask.origin !== "routine" && (
+              <button type="button" onClick={() => handleToggleDueDate(focusedTask)}>
+                {focusedTask.dueDate === "today" ? "明日へ" : "今日へ"}
+              </button>
+            )}
             <button type="button" onClick={() => handleComplete(focusedTask)}>
               完了
             </button>
@@ -377,9 +380,12 @@ export function TodayView(props: TodayViewProps): JSX.Element {
             <button type="button" onClick={() => openEdit(task)}>
               編集
             </button>
-            <button type="button" onClick={() => handleToggleDueDate(task)}>
-              {task.dueDate === "today" ? "明日へ" : "今日へ"}
-            </button>
+            {/* BL-017 / FR-033: origin が "routine" でない場合のみ「明日へ」ボタンを表示 */}
+            {task.origin !== "routine" && (
+              <button type="button" onClick={() => handleToggleDueDate(task)}>
+                {task.dueDate === "today" ? "明日へ" : "今日へ"}
+              </button>
+            )}
             <button type="button" onClick={() => handleComplete(task)}>
               完了
             </button>

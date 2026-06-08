@@ -16,6 +16,7 @@ import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type { Task } from "@todica/domain/task";
 import type {
   ListTasksFilter,
+  Priority,
   TaskRepository,
 } from "../../../data/task-repository.js";
 import { schema, tasks } from "../../../db/schema.js";
@@ -143,6 +144,74 @@ export class DrizzleTaskRepository implements TaskRepository {
       .update(tasks)
       .set({ projectId: null })
       .where(eq(tasks.projectId, projectId))
+      .run();
+  }
+
+  async deleteRoutineTasksForToday(): Promise<void> {
+    await this.db
+      .delete(tasks)
+      .where(
+        and(
+          eq(tasks.origin, "routine"),
+          eq(tasks.dueDate, "today"),
+          isNull(tasks.trashedAt),
+        ),
+      )
+      .run();
+  }
+
+  async findTodayRoutineTask(routineId: string): Promise<Task | null> {
+    const rows = this.db
+      .select()
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.routineId, routineId),
+          eq(tasks.dueDate, "today"),
+          isNull(tasks.trashedAt),
+        ),
+      )
+      .all();
+    const row = rows[0];
+    if (!row) return null;
+    return rowToTask(row);
+  }
+
+  async createRoutineTask(input: {
+    id: string;
+    name: string;
+    routineId: string;
+    priority: Priority;
+    now: string;
+  }): Promise<void> {
+    this.db
+      .insert(tasks)
+      .values({
+        id: input.id,
+        name: input.name,
+        projectId: null,
+        dueDate: "today",
+        priority: input.priority,
+        origin: "routine",
+        routineId: input.routineId,
+        createdAt: input.now,
+        updatedAt: input.now,
+        trashedAt: null,
+        trashedReason: null,
+        version: 1,
+      })
+      .run();
+  }
+
+  async deleteByRoutineId(routineId: string): Promise<void> {
+    await this.db
+      .delete(tasks)
+      .where(
+        and(
+          eq(tasks.routineId, routineId),
+          isNull(tasks.trashedAt),
+        ),
+      )
       .run();
   }
 }

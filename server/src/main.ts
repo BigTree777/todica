@@ -26,6 +26,7 @@ import { DrizzleIdempotencyStore } from "./infra/persistence/drizzle/idempotency
 import { DrizzleFocusRepository } from "./infra/persistence/drizzle/focus-repository.js";
 import { DrizzleCounterRepository } from "./infra/persistence/drizzle/counter-repository.js";
 import { DrizzleSettingsRepository } from "./infra/persistence/drizzle/settings-repository.js";
+import { DrizzleRoutineRepository } from "./infra/persistence/drizzle/routine-repository.js";
 
 const DATABASE_PATH = process.env.DATABASE_PATH ?? "./todica.db";
 const PORT = Number.parseInt(process.env.PORT ?? "3000", 10);
@@ -75,8 +76,11 @@ const app = createApp({
   counterRepository: new DrizzleCounterRepository({ db }),
   // BL-009 / settings-day-boundary: SQLite + drizzle-orm による物理永続化.
   settingsRepository: new DrizzleSettingsRepository({ db }),
+  // BL-017 / routine: SQLite + drizzle-orm による物理永続化.
+  routineRepository: new DrizzleRoutineRepository({ db }),
   clock: new SystemClock(),
   authToken: AUTH_TOKEN,
+  db,
 });
 
 serve({ fetch: app.fetch, port: PORT }, (info) => {
