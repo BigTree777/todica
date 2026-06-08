@@ -174,4 +174,58 @@ describe("DrizzleTaskRepository", () => {
     expect(ids).not.toContain(TASK_ID);
     expect(ids).toContain(TASK_ID_2);
   });
+
+  it("hardDelete(id) で指定 ID のタスクが削除される。他タスクは残る", async () => {
+    const task1 = makeTask({ id: TASK_ID });
+    const task2 = makeTask({ id: TASK_ID_2, name: "残すタスク" });
+    await repo.insert(task1);
+    await repo.insert(task2);
+
+    await repo.hardDelete(TASK_ID);
+
+    expect(await repo.findById(TASK_ID)).toBeNull();
+    expect(await repo.findById(TASK_ID_2)).not.toBeNull();
+  });
+
+  it("deleteAllTrashed() で trashedAt != null のタスクが全削除される。trashedAt = null のタスクは残る", async () => {
+    const TASK_ID_3 = "33333333-3333-4333-8333-333333333333";
+    const active = makeTask({ id: TASK_ID, trashedAt: null });
+    const trashed1 = makeTask({ id: TASK_ID_2, trashedAt: LATER, trashedReason: "deleted" });
+    const trashed2 = makeTask({ id: TASK_ID_3, trashedAt: CREATED, trashedReason: "completed" });
+    await repo.insert(active);
+    await repo.insert(trashed1);
+    await repo.insert(trashed2);
+
+    await repo.deleteAllTrashed();
+
+    expect(await repo.findById(TASK_ID)).not.toBeNull();
+    expect(await repo.findById(TASK_ID_2)).toBeNull();
+    expect(await repo.findById(TASK_ID_3)).toBeNull();
+  });
+
+  it("deleteTrashOlderThan(boundaryAt) で trashedAt < boundaryAt のタスクが削除される", async () => {
+    const TASK_ID_3 = "33333333-3333-4333-8333-333333333333";
+    const TASK_ID_4 = "44444444-4444-4444-8444-444444444444";
+    const BOUNDARY = "2026-06-07T09:30:00.000Z";
+    // CREATED = "2026-06-07T09:00:00.000Z" < BOUNDARY → 削除対象
+    const oldTrashed = makeTask({ id: TASK_ID, trashedAt: CREATED, trashedReason: "deleted" });
+    // LATER = "2026-06-07T10:00:00.000Z" >= BOUNDARY → 残る
+    const newTrashed = makeTask({ id: TASK_ID_2, trashedAt: LATER, trashedReason: "completed" });
+    // 境界値: ちょうど BOUNDARY と等しい → 削除されない
+    const boundaryTrashed = makeTask({ id: TASK_ID_3, trashedAt: BOUNDARY, trashedReason: "deleted" });
+    // trashedAt = null → 削除されない
+    const active = makeTask({ id: TASK_ID_4, trashedAt: null });
+
+    await repo.insert(oldTrashed);
+    await repo.insert(newTrashed);
+    await repo.insert(boundaryTrashed);
+    await repo.insert(active);
+
+    await repo.deleteTrashOlderThan(BOUNDARY);
+
+    expect(await repo.findById(TASK_ID)).toBeNull();
+    expect(await repo.findById(TASK_ID_2)).not.toBeNull();
+    expect(await repo.findById(TASK_ID_3)).not.toBeNull();
+    expect(await repo.findById(TASK_ID_4)).not.toBeNull();
+  });
 });

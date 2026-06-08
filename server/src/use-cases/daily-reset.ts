@@ -101,10 +101,9 @@ export async function maybeRunDailyReset(deps: DailyResetDeps): Promise<DailyRes
   };
   await deps.counterRepository.update(updatedCounter);
 
-  // purgeTrash（no-op スタブ）を呼び出す（plan.md D-002 d / D-005）.
-  if (deps.db) {
-    await purgeTrash(deps.db, deps.clock);
-  }
+  // purgeTrash を呼び出す（plan.md D-002 d / D-005）.
+  // db がある場合（本番）は db を渡す。テスト環境では db なしで in-memory repository を使う。
+  await purgeTrash(deps.db as BetterSQLite3Database, deps.clock, deps.settingsRepository, deps.taskRepository);
 
   return { executed: true, appliedBoundaryAt: todayBoundaryAt };
 }

@@ -16,4 +16,10 @@ export interface TaskRepository {
   findById(id: string): Promise<Task | null>;
   list(filter: ListTasksFilter): Promise<Task[]>;
   update(task: Task): Promise<void>;
+  /** 指定 ID のタスクを物理削除する（ゴミ箱に入っているかどうかに関わらず削除）。 */
+  hardDelete(id: string): Promise<void>;
+  /** ゴミ箱タスク（trashedAt != null）を全件物理削除する。 */
+  deleteAllTrashed(): Promise<void>;
+  /** trashedAt が boundaryAt より古いゴミ箱タスクを物理削除する（日次清算用）。 */
+  deleteTrashOlderThan(boundaryAt: string): Promise<void>;
 }
