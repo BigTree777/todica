@@ -73,6 +73,9 @@ function errorJson(c: Context, status: number, code: string, message: string) {
 export function createApp(deps: AppDeps): Hono {
   const app = new Hono();
 
+  // ---------- ヘルスチェック（認証不要）----------
+  app.get("/healthz", (c) => c.json({ status: "ok" }));
+
   // ---------- 認証ミドルウェア ----------
   const authMiddleware: MiddlewareHandler = async (c, next) => {
     if (!c.req.path.startsWith("/api/")) {

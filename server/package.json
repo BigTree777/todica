@@ -6,9 +6,14 @@
   "type": "module",
   "main": "./src/app.ts",
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "build": "tsc",
+    "start": "node dist/src/main.js",
+    "dev": "node --experimental-strip-types src/main.ts"
   },
   "dependencies": {
-    "@todica/domain": "*"
+    "@todica/domain": "*",
+    "hono": "*",
+    "@hono/node-server": "*"
   }
 }
