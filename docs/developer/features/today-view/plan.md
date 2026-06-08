@@ -165,7 +165,7 @@ properties:
 
 ## テスト方針
 
-> 全体方針は [`../../quality/test-strategy.md`](../../quality/test-strategy.md). 本機能では以下のレベル分けで整理する.
+> 全体方針は [`../../quality/test-catalog.md`](../../quality/test-catalog.md). 本機能では以下のレベル分けで整理する.
 
 ### 単体テスト（サーバ / 共有ドメイン）
 

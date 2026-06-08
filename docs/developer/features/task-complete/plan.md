@@ -170,7 +170,7 @@
 
 ## テスト方針
 
-> 全体方針は [`../../quality/test-strategy.md`](../../quality/test-strategy.md). BL-001 / BL-002 で確立した枠組み（結合テスト = `server/__tests__/integration/tasks.test.ts`, UI 単体 = `web/__tests__/today-view.test.tsx`, ドメイン単体 = `domain/__tests__/task.test.ts` 相当）に乗せる.
+> 全体方針は [`../../quality/test-catalog.md`](../../quality/test-catalog.md). BL-001 / BL-002 で確立した枠組み（結合テスト = `server/__tests__/integration/tasks.test.ts`, UI 単体 = `web/__tests__/today-view.test.tsx`, ドメイン単体 = `domain/__tests__/task.test.ts` 相当）に乗せる.
 
 ### 単体テスト（ドメイン）
 

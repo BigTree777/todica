@@ -183,7 +183,7 @@ runIfNeeded(now: Date):
 
 ## テスト方針
 
-> 全体方針は `docs/developer/quality/test-strategy.md`。
+> 全体方針は `docs/developer/quality/test-catalog.md`。
 
 - `LocalTaskRepository`・`LocalProjectRepository`・`LocalRoutineRepository`・`LocalTrashRepository`・`LocalSettingsRepository` の各テスト: `@capacitor-community/sqlite` を `vi.mock` でモックし、CRUD の動作・楽観ロック検証・today() のレスポンス構造を単体テストする。
 - `LocalResetUsecase` のテスト: 冪等性・ルーティン由来タスクのゴミ箱化・手動タスクの繰越・Counter リセット・ゴミ箱清算の各シナリオをモック DB で検証する。
