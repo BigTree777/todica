@@ -34,7 +34,7 @@
 | BL-018 | PWA 化 + オフライン書込キュー（Service Worker + IndexedDB + Background Sync） | P2 | Todo | NFR-031 前提, architecture §7.5 / v0.3.0 / ADR-0008 / `features/pwa-offline-queue/` 想定 |
 | BL-019 | Android ラップ（Capacitor サーバモード + Play Internal Testing 提出） | P2 | Todo | NFR-030, NFR-031, RISK-002 対策 / v0.4.0 / ADR-0009 / `features/android-server-mode/` 想定 |
 | BL-020 | Android ローカルモード（@capacitor-community/sqlite + 端末内リセット処理） | P3 | Todo | NFR-021, FR-043, FR-051, FR-062 / v0.5.0 / ADR-0009, ADR-0011 / `features/android-local-mode/` 想定 |
-| BL-021 | PM ツール非連携の明示（FR-070 への適合確認） | P1 | Todo | FR-070, OOS-010 / v0.2.0 で監査チェック / 専用 feature は不要（既存 UI / ドキュメントで担保） |
+| BL-021 | PM ツール非連携の明示（FR-070 への適合確認） | P1 | Done | FR-070, OOS-010 / v0.2.0 / auditor 確認済み: API・UI・ドキュメント全観点で適合、追加実装不要 |
 | BL-022 | OSS 公開準備（LICENSE・依存関係棚卸し・秘密情報取扱い・公開 README） | P3 | Todo | NFR-050 / v1.0.0 / `features/oss-release-prep/` 想定 |
 | BL-023 | Google Play Store 公開対応（プライバシーポリシー・データセーフティ・審査対応） | P3 | Todo | NFR-030, CONSTRAINT-003 / v1.0.0 / `features/play-store-release/` 想定 |
 | BL-024 | v1.0.0 安定化（1 か月以上のドッグフーディング + 要件カバレッジ最終監査） | P3 | Todo | SC-001, FR-001〜FR-070 / NFR-001〜NFR-050 全件 / v1.0.0 / auditor 主導 |
