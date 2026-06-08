@@ -431,20 +431,67 @@ paths:
   /settings:
     summary: 設定（FR-042）
     get:
+      summary: Settings を取得する
       tags: [settings]
+      security:
+        - BearerAuth: []
       responses:
-        "200": { description: OK }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-    put:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [settings]
+                properties:
+                  settings:
+                    $ref: "#/components/schemas/Settings"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    patch:
+      summary: Settings を更新する (dayBoundaryTime)
       tags: [settings]
-      summary: 設定更新
+      security:
+        - BearerAuth: []
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [dayBoundaryTime]
+              properties:
+                dayBoundaryTime:
+                  type: string
+                  example: "06:00"
       responses:
-        "200": { description: OK }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "412": { $ref: "#/components/responses/PreconditionFailed" }
+        "200":
+          description: 更新後の Settings
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [settings]
+                properties:
+                  settings:
+                    $ref: "#/components/schemas/Settings"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "412":
+          description: Precondition Failed (version 不一致)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [settings]
+                properties:
+                  settings:
+                    $ref: "#/components/schemas/Settings"
 
   # ========== Reset ==========
   /reset:
@@ -713,7 +760,27 @@ components:
           format: date-time
     Settings:
       type: object
-      description: 設定（同上）
+      description: |
+        BL-009 / FR-041: 境界時刻設定 (singleton).
+        - dayBoundaryTime: HH:MM 形式 (例: "04:00"). FR-041 / FR-042.
+        - version / updatedAt: 楽観ロック + 同期メタデータ.
+      required:
+        - id
+        - dayBoundaryTime
+        - version
+        - updatedAt
+      properties:
+        id:
+          type: string
+          example: singleton
+        dayBoundaryTime:
+          type: string
+          example: "04:00"
+        version:
+          type: integer
+        updatedAt:
+          type: string
+          format: date-time
     FocusSelection:
       type: object
       description: |
@@ -751,6 +818,7 @@ components:
         - MISSING_IF_MATCH
         - MISSING_IDEMPOTENCY_KEY
         - UNAUTHORIZED
+        - INVALID_DAY_BOUNDARY_TIME
     Error:
       type: object
       description: |

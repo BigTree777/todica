@@ -119,6 +119,20 @@ export const counter = sqliteTable("counter", {
   version: integer("version").notNull().default(1),
 });
 
+/**
+ * settings テーブル (BL-009 / settings-day-boundary).
+ *
+ * docs/developer/features/settings-day-boundary/plan.md §「データモデル」.
+ * - 単一レコード前提 (id = "singleton" 固定).
+ * - dayBoundaryTime は "HH:MM" 形式. デフォルト "04:00" (FR-042).
+ */
+export const settings = sqliteTable("settings", {
+  id: text("id").primaryKey().notNull(),
+  dayBoundaryTime: text("day_boundary_time").notNull().default("04:00"),
+  updatedAt: text("updated_at").notNull(),
+  version: integer("version").notNull().default(1),
+});
+
 /** schema 全体を Drizzle に渡すためのオブジェクト. */
 export const schema = {
   tasks,
@@ -126,4 +140,5 @@ export const schema = {
   idempotencyKeys,
   focusSelection,
   counter,
+  settings,
 };
