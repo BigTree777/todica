@@ -20,6 +20,7 @@
 | データベース | [`architecture/database/overview.md`](architecture/database/overview.md), [`architecture/database/schema.md`](architecture/database/schema.md), [`architecture/database/migration-policy.md`](architecture/database/migration-policy.md) |
 | API | [`architecture/api/overview.md`](architecture/api/overview.md), [`architecture/api/openapi.yaml`](architecture/api/openapi.yaml) |
 | Git ワークフロー | [`git-workflow.md`](git-workflow.md) |
-| 品質 | [`quality/test-strategy.md`](quality/test-strategy.md), [`quality/acceptance-criteria.md`](quality/acceptance-criteria.md) |
+| 品質 | [`quality/test-catalog.md`](quality/test-catalog.md), [`quality/acceptance-criteria.md`](quality/acceptance-criteria.md) |
+| OSS 公開 | [`oss/dependency-licenses.md`](oss/dependency-licenses.md), [`oss/secret-scan-report.md`](oss/secret-scan-report.md) |
 | 意思決定記録 | [`adr/`](adr/_template.md) |
 | 機能ごと | [`features/`](features/_template/spec.md) |
