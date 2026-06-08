@@ -29,7 +29,7 @@
 | BL-013 | サーバ基盤（Hono + better-sqlite3 + drizzle-orm + 単一認証トークン + HTTPS） | P0 | Done | NFR-002, NFR-020, NFR-021, NFR-032 / v0.1.0 / ADR-0007, ADR-0010 / `features/server-foundation/` 完了 |
 | BL-014 | Web クライアント基盤（React + Vite + React Router） | P0 | Done | NFR-010, NFR-013 / v0.1.0 / ADR-0008 / `features/web-client-foundation/` 完了. react-router-dom v6 導入, TrashView + ルーティング設定 |
 | BL-015 | API 基盤（REST + Idempotency-Key + If-Match 楽観ロック + OpenAPI） | P0 | Done | NFR-020 / v0.1.0 / ADR-0010. BL-001〜BL-011 で REST + Idempotency-Key + If-Match + OpenAPI 全実装済み |
-| BL-016 | プロジェクト管理（作成・名称変更・削除. アーカイブなし） | P1 | Todo | FR-020, FR-021, FR-022 / v0.2.0 / `features/project-crud/` 想定 |
+| BL-016 | プロジェクト管理（作成・名称変更・削除. アーカイブなし） | P1 | Done | FR-020, FR-021, FR-022 / v0.2.0 / `features/project-crud/` 完了. POST/GET/PATCH/DELETE /projects + ProjectsView + TodayView プロジェクト選択 |
 | BL-017 | ルーティン機能（定義・編集・指定曜日の自動生成・翌日非持越・履歴なし） | P1 | Todo | FR-030, FR-031, FR-033, FR-034, FR-035 / v0.2.0 / `features/routine/` 想定 |
 | BL-018 | PWA 化 + オフライン書込キュー（Service Worker + IndexedDB + Background Sync） | P2 | Todo | NFR-031 前提, architecture §7.5 / v0.3.0 / ADR-0008 / `features/pwa-offline-queue/` 想定 |
 | BL-019 | Android ラップ（Capacitor サーバモード + Play Internal Testing 提出） | P2 | Todo | NFR-030, NFR-031, RISK-002 対策 / v0.4.0 / ADR-0009 / `features/android-server-mode/` 想定 |
