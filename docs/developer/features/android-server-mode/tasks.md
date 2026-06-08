@@ -13,7 +13,7 @@
 
 ### T-02: capacitor.config.ts の作成
 
-- [ ] モノレポルート（`/home/hiroki/project/todica/`）に `capacitor.config.ts` を新規作成する
+- [ ] モノレポルートに `capacitor.config.ts` を新規作成する
   - `appId`: `"com.todica.app"`
   - `appName`: `"Todica"`
   - `webDir`: `"web/dist"`
