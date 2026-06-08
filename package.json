@@ -3,6 +3,12 @@
   "version": "0.0.0",
   "private": true,
   "description": "Todica モノレポルート. npm workspaces で domain / server / web を束ねる.",
+  "author": "BigTree777",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BigTree777/todica.git"
+  },
   "type": "module",
   "workspaces": [
     "domain",
@@ -14,7 +20,9 @@
     "test:watch": "vitest",
     "typecheck": "tsc -b --noEmit",
     "lint": "biome check .",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "android:sync": "npm run build -w web && npx cap sync android",
+    "android:bundle": "npm run android:sync && cd android && ./gradlew bundleRelease"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
@@ -35,9 +43,15 @@
     "msw": "^2.7.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8",
-    "react-router-dom": "^6.28.0",
     "zod": "^3.24.1"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.4.0",
+    "@capacitor/cli": "^8.4.0",
+    "@capacitor/core": "^8.4.0",
+    "@capacitor/preferences": "^8.0.1"
   }
 }

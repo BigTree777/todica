@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Todica</string>
+    <string name="title_activity_main">Todica</string>
+    <string name="package_name">com.todica.app</string>
+    <string name="custom_url_scheme">com.todica.app</string>
+</resources>
