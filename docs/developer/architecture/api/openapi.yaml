@@ -509,6 +509,19 @@ paths:
           description: |
             OK. レスポンスボディに `executed` (boolean) と `appliedBoundaryAt` (ISO 8601) を含む.
             既実行時は `executed = false`, 新規実行時は `executed = true`.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - executed
+                  - appliedBoundaryAt
+                properties:
+                  executed:
+                    type: boolean
+                  appliedBoundaryAt:
+                    type: string
+                    format: date-time
         "401": { $ref: "#/components/responses/Unauthorized" }
 
 components:

@@ -135,7 +135,11 @@ export class InMemoryCounterRepository implements CounterRepository {
   private state: Counter = {
     id: "singleton",
     completedCount: 0,
-    lastResetExecutedAt: null,
+    // 初期値をリセット済み扱いにする。
+    // "2026-06-07T09:00:00.000Z" は dayBoundaryTime="04:00" の境界 "2026-06-07T04:00:00.000Z" より後なので
+    // 「当日はリセット済み」とみなされ、自動リセットが誤って起動しない。
+    // テストが明示的に null を seed した場合は「初回 / 前日以前リセット」として自動リセットが発動する。
+    lastResetExecutedAt: "2026-06-07T09:00:00.000Z",
     updatedAt: "2026-06-07T09:00:00.000Z",
     version: 1,
   };

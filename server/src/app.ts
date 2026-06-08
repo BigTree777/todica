@@ -8,6 +8,7 @@
 import { Hono } from "hono";
 import type { Context, MiddlewareHandler } from "hono";
 import type { Clock } from "@todica/domain/clock";
+import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import {
   completeTask,
   createTask,
@@ -23,6 +24,7 @@ import type { FocusRepository } from "./data/focus-repository.js";
 import type { CounterRepository } from "./data/counter-repository.js";
 import type { SettingsRepository } from "./data/settings-repository.js";
 import { filterToday, pickNextTaskId, sortToday } from "./today.js";
+import { maybeRunDailyReset } from "./use-cases/daily-reset.js";
 
 /**
  * テストおよびアプリ起動の双方で使う依存性の束.
@@ -51,6 +53,11 @@ export interface AppDeps {
   clock: Clock;
   /** Bearer 認証に使う固定トークン. テストでは任意の値を渡す. */
   authToken: string;
+  /**
+   * BL-010 / daily-reset: plan.md D-004 トランザクション実行のための Drizzle DB インスタンス（オプショナル）.
+   * 本番では渡す. テストでは省略し、Repository の非同期メソッドを使うフォールバックで動作する.
+   */
+  db?: BetterSQLite3Database;
 }
 
 const WRITE_METHODS = new Set(["POST", "PATCH", "PUT", "DELETE"]);
@@ -301,15 +308,41 @@ export function createApp(deps: AppDeps): Hono {
     return c.json({ counter }, 200);
   });
 
+  // ---------- POST /api/v1/reset (BL-010 / FR-043 / FR-051 / NFR-020) ----------
+  // spec.md §「POST /api/v1/reset」:
+  //   - 認証必須 (middleware 済み)
+  //   - Idempotency-Key 必須 (middleware 済み)
+  //   - maybeRunDailyReset を呼んでリセット要否を判定・実行する
+  //   - 200 OK { executed, appliedBoundaryAt }
+  app.post("/api/v1/reset", async (c) => {
+    const result = await maybeRunDailyReset({
+      taskRepository: deps.taskRepository,
+      counterRepository: deps.counterRepository,
+      settingsRepository: deps.settingsRepository,
+      clock: deps.clock,
+      db: deps.db,
+    });
+    return saveAndReturn(c, deps, 200, result);
+  });
+
   // ---------- GET /api/v1/today (BL-005 / FR-010 / FR-011 / NFR-013) ----------
   // plan.md §処理フロー / D-001 / D-005:
-  //   1. task-repository.list({ trashed: "false" }) で全 active タスクを取得.
-  //   2. filterToday: dueDate === "today" のみに絞る.
-  //   3. sortToday:   priority → createdAt → id の 3 段で安定ソート.
-  //   4. nextTaskId = tasks[0]?.id ?? null.
-  //   5. 200 OK { tasks, nextTaskId }.
+  //   1. BL-010 自動リセット: maybeRunDailyReset を先頭で呼び出す (plan.md D-003 / U-003).
+  //   2. task-repository.list({ trashed: "false" }) で全 active タスクを取得.
+  //   3. filterToday: dueDate === "today" のみに絞る.
+  //   4. sortToday:   priority → createdAt → id の 3 段で安定ソート.
+  //   5. nextTaskId = tasks[0]?.id ?? null.
+  //   6. 200 OK { tasks, nextTaskId }.
   // クエリパラメータは存在しない (NFR-001 / spec.md §「並び順を変えるカスタマイズが存在しないこと」).
   app.get("/api/v1/today", async (c) => {
+    // BL-010 / FR-043 / FR-051: 自動リセット（境界時刻を超えていればリセット実行）.
+    await maybeRunDailyReset({
+      taskRepository: deps.taskRepository,
+      counterRepository: deps.counterRepository,
+      settingsRepository: deps.settingsRepository,
+      clock: deps.clock,
+      db: deps.db,
+    });
     const active = await deps.taskRepository.list({ trashed: "false" });
     const todayTasks = sortToday(filterToday(active));
     const nextTaskId = pickNextTaskId(todayTasks);

@@ -763,3 +763,113 @@ describe("補助確認", () => {
     expect(TEST_AUTH_TOKEN).toBeTruthy();
   });
 });
+
+// ============================================================
+// BL-010 / FR-043 / FR-051: GET /api/v1/today の自動リセット統合
+//
+// spec.md (daily-reset) §「GET /api/v1/today への自動リセット統合」と 1:1 対応する.
+// GET /api/v1/today のハンドラ先頭で maybeRunDailyReset を呼び出し、
+// リセット条件を満たす場合は自動でリセットが実行される (plan.md D-003 / U-003).
+//
+// 注意: 本 describe は TDD の "red" を作るためのテスト.
+//       GET /api/v1/today ハンドラへの maybeRunDailyReset 統合が未実装のため,
+//       下記テストは失敗する想定.
+//       implementer が今日ビューハンドラにリセット呼び出しを追加することで green 化する.
+// ============================================================
+
+describe("GET /api/v1/today (BL-010 自動リセット統合)", () => {
+  it(
+    "シナリオ: 境界時刻を超えた状態で GET /today を叩くと自動リセットが実行される " +
+      "(spec.md §「GET /api/v1/today のアクセス時にリセット条件を満たす場合は自動でリセットが実行される」)",
+    async () => {
+      // Given counter.completedCount = 3（リセット前）
+      // And   "tomorrow" のタスクが 1 件ある
+      // And   現在時刻が境界時刻を超えている（lastResetExecutedAt は null）
+      // When  GET /api/v1/today を叩く
+      // Then  200 OK が返る
+      // And   レスポンスの completionCount = 0 になっている（completedCount がリセットされた）
+
+      // 境界時刻（"04:00"）を超えた状態で初期化する。
+      // InMemorySettingsRepository の初期 dayBoundaryTime は "04:00"。
+      // 初期 clock = "2026-06-07T09:00:00.000Z" は境界時刻（04:00）を超えている（09:00 > 04:00）ので
+      // デフォルトの buildTestApp() を使って lastResetExecutedAt = null にすればリセット条件を満たす。
+
+      counterRepo.seed({ completedCount: 3, lastResetExecutedAt: null });
+      taskRepo.seed(makeTask({ id: ID_001, dueDate: "tomorrow" }));
+
+      const res = await app.request("/api/v1/today", {
+        method: "GET",
+        headers: authHeaders(),
+      });
+
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        tasks: Array<{ id: string; dueDate: string }>;
+        completionCount: number;
+      };
+
+      // 自動リセット後: completionCount = 0 になっている
+      expect(body.completionCount).toBe(0);
+    },
+  );
+
+  it(
+    "シナリオ: \"tomorrow\" タスクがリセット後に今日ビューで表示される（dueDate = \"today\"）",
+    async () => {
+      // 監査指摘 [中] 3-b:
+      //   Given "tomorrow" のタスクが 1 件ある
+      //   And   境界時刻を超えており lastResetExecutedAt = null
+      //   When  GET /api/v1/today
+      //   Then  200 OK
+      //   And   "tomorrow" タスクがリセット後に今日ビューで表示される（dueDate = "today"）
+
+      counterRepo.seed({ completedCount: 0, lastResetExecutedAt: null });
+      taskRepo.seed(makeTask({ id: ID_001, dueDate: "tomorrow" }));
+
+      const res = await app.request("/api/v1/today", {
+        method: "GET",
+        headers: authHeaders(),
+      });
+
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        tasks: Array<{ id: string; dueDate: string }>;
+        completionCount: number;
+      };
+
+      // 自動リセット後: "tomorrow" タスクが "today" に変わり、今日ビューに表示される
+      const ids = body.tasks.map((t) => t.id);
+      expect(ids).toContain(ID_001);
+      const task = body.tasks.find((t) => t.id === ID_001);
+      expect(task?.dueDate).toBe("today");
+    },
+  );
+
+  it(
+    "シナリオ: 境界時刻を超えていない状態では GET /today は自動リセットしない（completionCount が変わらない）",
+    async () => {
+      // 監査指摘 [中] 3-c:
+      //   Given 現在時刻が境界時刻を超えていない（例: "2026-06-07T02:00:00.000Z"）
+      //   And   completedCount = 3
+      //   When  GET /api/v1/today
+      //   Then  completionCount = 3 のまま（リセットされない）
+
+      // 境界時刻（"04:00"）を超えていない時刻で再初期化する
+      const built = buildTestApp({ initialTime: "2026-06-07T02:00:00.000Z" });
+      const appBefore = built.app;
+      built.counterRepository.seed({ completedCount: 3, lastResetExecutedAt: null });
+      built.taskRepository.seed(makeTask({ id: ID_001 }));
+
+      const res = await appBefore.request("/api/v1/today", {
+        method: "GET",
+        headers: authHeaders(),
+      });
+
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { completionCount: number };
+
+      // 境界時刻を超えていないためリセットされず completionCount = 3 のまま
+      expect(body.completionCount).toBe(3);
+    },
+  );
+});
