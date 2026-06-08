@@ -24,7 +24,7 @@
 | BL-008 | 今日の完了タスク数カウントの表示 | P0 | Done | FR-040 / v0.1.0 / `features/completion-counter/` 完了. counter テーブル + GET /counter + complete で +1 + /today に completionCount 同梱 + UI 「今日の完了: N」表示 |
 | BL-009 | 境界時刻の設定（ユーザー設定値） | P0 | Done | FR-041, FR-042, NFR-012 / v0.1.0 / `features/settings-day-boundary/` 完了. GET/PATCH /settings + dayBoundaryTime (HH:MM) + SettingsView |
 | BL-010 | 日次リセット処理（カウント 0 クリア + 未完了繰越 + ゴミ箱清算）の冪等実行 | P0 | Done | FR-043, FR-051, FR-062, NFR-020 / v0.1.0 / `features/daily-reset/` 完了. POST /reset + GET /today 自動実行. purgeTrash スタブは BL-011 で充填 |
-| BL-011 | ゴミ箱（閲覧・復元・手動「空にする」） | P0 | Todo | FR-060, FR-061, FR-062 / v0.1.0 / `features/trash/` 想定 |
+| BL-011 | ゴミ箱（閲覧・復元・手動「空にする」） | P0 | Done | FR-060, FR-061, FR-062 / v0.1.0 / `features/trash/` 完了. GET /trash + POST /trash/:id/restore + DELETE /trash + purgeTrash 本実装 |
 | BL-012 | タスク削除アクション（ゴミ箱経由・カウント非加算） | P0 | Todo | FR-007, FR-060 / v0.1.0 / `features/task-crud/` 内 |
 | BL-013 | サーバ基盤（Hono + better-sqlite3 + drizzle-orm + 単一認証トークン + HTTPS） | P0 | Todo | NFR-002, NFR-020, NFR-021, NFR-032 / v0.1.0 / ADR-0007, ADR-0010 / `features/server-foundation/` 想定 |
 | BL-014 | Web クライアント基盤（React + Vite + TanStack Query + React Router） | P0 | Todo | NFR-010, NFR-013 / v0.1.0 / ADR-0008 / `features/web-client-foundation/` 想定 |
