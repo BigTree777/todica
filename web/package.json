@@ -2,13 +2,14 @@
   "name": "@todica/web",
   "version": "0.0.0",
   "private": true,
-  "description": "Todica Web クライアント (React + Vite + TanStack Query).",
+  "description": "Todica Web クライアント (React + Vite + React Router).",
   "type": "module",
   "main": "./src/main.tsx",
   "scripts": {
     "test": "vitest run"
   },
   "dependencies": {
-    "@todica/domain": "*"
+    "@todica/domain": "*",
+    "react-router-dom": "^6.28.0"
   }
 }

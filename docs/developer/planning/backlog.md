@@ -14,8 +14,8 @@
 
 | ID | タイトル | 優先度 | 状態 | メモ |
 | --- | --- | --- | --- | --- |
-| BL-001 | タスク CRUD（起票・名称編集・期限切替・削除） | P0 | Todo | FR-001, FR-002, FR-005, FR-007, FR-009 / v0.1.0 / `features/task-crud/` 想定 |
-| BL-002 | タスク優先度（3 段階の付与・変更） | P0 | Todo | FR-003, FR-004 / v0.1.0 / `features/task-priority/` 想定 |
+| BL-001 | タスク CRUD（起票・名称編集・期限切替・削除） | P0 | Done | FR-001, FR-002, FR-005, FR-007, FR-009 / v0.1.0 / `features/task-crud/` 完了. サーバ API + ドメイン + Web UI（TodayView）すべて実装済み |
+| BL-002 | タスク優先度（3 段階の付与・変更） | P0 | Done | FR-003, FR-004 / v0.1.0 / `features/task-priority/` 完了. サーバ PATCH priority + TodayView の優先度サイクルボタン実装済み |
 | BL-003 | タスク完了アクション（ゴミ箱経由 + カウント +1） | P0 | Done | FR-006, FR-060 / v0.1.0 / `features/task-complete/` (カウント +1 は BL-008 待ち) |
 | BL-004 | 2 階層固定（サブタスク・ネストを持たない構造保証） | P0 | Done | FR-008, OOS-003 / v0.1.0 / BL-001 (`features/task-crud/`) 内で完了. Task に parentTaskId フィールドを持たず, API でも受理しない (server/__tests__/integration/tasks.test.ts) |
 | BL-005 | 今日ビュー（入口・優先度順表示・"次の 1 つ" の一意化） | P0 | Done | FR-010, FR-011, NFR-013 / v0.1.0 / `features/today-view/` 完了. /api/v1/today 新設, 並び順 priority → createdAt → id |
@@ -26,8 +26,8 @@
 | BL-010 | 日次リセット処理（カウント 0 クリア + 未完了繰越 + ゴミ箱清算）の冪等実行 | P0 | Done | FR-043, FR-051, FR-062, NFR-020 / v0.1.0 / `features/daily-reset/` 完了. POST /reset + GET /today 自動実行. purgeTrash スタブは BL-011 で充填 |
 | BL-011 | ゴミ箱（閲覧・復元・手動「空にする」） | P0 | Done | FR-060, FR-061, FR-062 / v0.1.0 / `features/trash/` 完了. GET /trash + POST /trash/:id/restore + DELETE /trash + purgeTrash 本実装 |
 | BL-012 | タスク削除アクション（ゴミ箱経由・カウント非加算） | P0 | Done | FR-007, FR-060 / v0.1.0 / BL-001 の DELETE ハンドラ（trashedReason="deleted"）と BL-008 のカウント非加算テスト（counter.test.ts "DELETE では+1しない"）で完了 |
-| BL-013 | サーバ基盤（Hono + better-sqlite3 + drizzle-orm + 単一認証トークン + HTTPS） | P0 | Todo | NFR-002, NFR-020, NFR-021, NFR-032 / v0.1.0 / ADR-0007, ADR-0010 / `features/server-foundation/` 想定 |
-| BL-014 | Web クライアント基盤（React + Vite + TanStack Query + React Router） | P0 | Todo | NFR-010, NFR-013 / v0.1.0 / ADR-0008 / `features/web-client-foundation/` 想定 |
+| BL-013 | サーバ基盤（Hono + better-sqlite3 + drizzle-orm + 単一認証トークン + HTTPS） | P0 | Done | NFR-002, NFR-020, NFR-021, NFR-032 / v0.1.0 / ADR-0007, ADR-0010 / `features/server-foundation/` 完了 |
+| BL-014 | Web クライアント基盤（React + Vite + React Router） | P0 | Done | NFR-010, NFR-013 / v0.1.0 / ADR-0008 / `features/web-client-foundation/` 完了. react-router-dom v6 導入, TrashView + ルーティング設定 |
 | BL-015 | API 基盤（REST + Idempotency-Key + If-Match 楽観ロック + OpenAPI） | P0 | Done | NFR-020 / v0.1.0 / ADR-0010. BL-001〜BL-011 で REST + Idempotency-Key + If-Match + OpenAPI 全実装済み |
 | BL-016 | プロジェクト管理（作成・名称変更・削除. アーカイブなし） | P1 | Todo | FR-020, FR-021, FR-022 / v0.2.0 / `features/project-crud/` 想定 |
 | BL-017 | ルーティン機能（定義・編集・指定曜日の自動生成・翌日非持越・履歴なし） | P1 | Todo | FR-030, FR-031, FR-033, FR-034, FR-035 / v0.2.0 / `features/routine/` 想定 |
