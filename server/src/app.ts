@@ -6,6 +6,7 @@
  * - 詳細は docs/developer/features/task-crud/plan.md §処理フロー
  */
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import type { Context, MiddlewareHandler } from "hono";
 import type { Clock } from "@todica/domain/clock";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
@@ -91,6 +92,20 @@ function errorJson(c: Context, status: number, code: string, message: string) {
  */
 export function createApp(deps: AppDeps): Hono {
   const app = new Hono();
+
+  // ---------- CORS（認証より先に通す）----------
+  // ブラウザ (例: Vite dev server localhost:5173) や Android Capacitor (capacitor://localhost) からの
+  // cross-origin リクエストを許可する. 認証は Bearer トークンで担保するため origin は `*` で良い.
+  // OPTIONS preflight には Authorization が付かないので, この CORS を authMiddleware より先に置く必要がある.
+  app.use(
+    "*",
+    cors({
+      origin: "*",
+      allowHeaders: ["Content-Type", "Authorization", "Idempotency-Key", "If-Match"],
+      exposeHeaders: ["ETag"],
+      maxAge: 600,
+    }),
+  );
 
   // ---------- ヘルスチェック（認証不要）----------
   app.get("/healthz", (c) => c.json({ status: "ok" }));
