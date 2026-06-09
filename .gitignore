@@ -13,9 +13,10 @@ coverage/
 dev-dist/
 
 # Playwright (E2E テスト) の成果物・キャッシュ・テスト用 DB
-/playwright-report/
-/test-results/
-/blob-report/
+# 先頭 / なしで指定し, web/test-results/ など workspace 配下にも一致させる.
+playwright-report/
+test-results/
+blob-report/
 /playwright/.cache/
 /.e2e-data/
 
