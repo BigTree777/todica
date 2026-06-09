@@ -1397,6 +1397,202 @@ describe("POST /api/v1/tasks/{id}/complete (BL-003 完了アクション)", () =
 });
 
 // ============================================================
+// BL-038 / tomorrow-view: GET /api/v1/tasks?dueDate=today|tomorrow
+//
+// spec.md (tomorrow-view) §「サーバ実装の補強」 / §「受け入れ基準」§「サーバ API の補強」
+// と 1:1 対応する. plan.md §「サーバ補強の手順」 手順 4.
+//
+// 観点:
+//   1. ?dueDate=tomorrow で tomorrow タスクのみが返る.
+//   2. ?dueDate=today    で today タスクのみが返る.
+//   3. ?dueDate 未指定で両方の dueDate を返す (既存挙動の維持 / 後方互換).
+//   4. 不正値 ?dueDate=yesterday は寛容バリデーション (= 全件返す).
+//      既存 ?trashed の不正値挙動と整合 (D-002 / U-010).
+//   5. ?dueDate と ?trashed の AND 直交 (trashed=true で tomorrow のゴミ箱のみが返る).
+//
+// 本テストはサーバ側 (server/src/app.ts の dueDate query parse + repo 拡張)
+// が未実装のため red になる. implementer が手順 1〜3 で green 化する.
+// ============================================================
+
+describe("GET /api/v1/tasks (BL-038 ?dueDate フィルタ)", () => {
+  /**
+   * 共通 seed: タスク A (dueDate="today") とタスク B (dueDate="tomorrow") を
+   * 起票済みの状態で投入する.
+   *
+   * - 並び順検証もしやすいよう createdAt をずらす.
+   * - priority は両方 normal にしておき, dueDate フィルタの効果のみを観察する.
+   */
+  function seedTwoTasksOfDifferentDueDates(): void {
+    taskRepo.seed({
+      id: TASK_ID_1,
+      name: "today-task",
+      projectId: null,
+      dueDate: "today",
+      priority: "normal",
+      origin: "manual",
+      routineId: null,
+      createdAt: TEST_INITIAL_TIME,
+      updatedAt: TEST_INITIAL_TIME,
+      trashedAt: null,
+      trashedReason: null,
+      version: 1,
+    });
+    taskRepo.seed({
+      id: TASK_ID_2,
+      name: "tomorrow-task",
+      projectId: null,
+      dueDate: "tomorrow",
+      priority: "normal",
+      origin: "manual",
+      routineId: null,
+      createdAt: "2026-06-07T09:00:01.000Z",
+      updatedAt: "2026-06-07T09:00:01.000Z",
+      trashedAt: null,
+      trashedReason: null,
+      version: 1,
+    });
+  }
+
+  it("シナリオ A: ?dueDate=tomorrow は dueDate=tomorrow のタスクのみを返す", async () => {
+    seedTwoTasksOfDifferentDueDates();
+
+    const res = await app.request("/api/v1/tasks?dueDate=tomorrow", {
+      method: "GET",
+      headers: authHeaders(),
+    });
+
+    expect(res.status).toBe(200);
+    const list = (await res.json()) as {
+      tasks: Array<{ id: string; dueDate: string }>;
+    };
+    expect(list.tasks).toHaveLength(1);
+    expect(list.tasks[0]?.id).toBe(TASK_ID_2);
+    expect(list.tasks[0]?.dueDate).toBe("tomorrow");
+    // today タスクは含まれない.
+    expect(list.tasks.find((t) => t.id === TASK_ID_1)).toBeUndefined();
+  });
+
+  it("シナリオ B: ?dueDate=today は dueDate=today のタスクのみを返す", async () => {
+    seedTwoTasksOfDifferentDueDates();
+
+    const res = await app.request("/api/v1/tasks?dueDate=today", {
+      method: "GET",
+      headers: authHeaders(),
+    });
+
+    expect(res.status).toBe(200);
+    const list = (await res.json()) as {
+      tasks: Array<{ id: string; dueDate: string }>;
+    };
+    expect(list.tasks).toHaveLength(1);
+    expect(list.tasks[0]?.id).toBe(TASK_ID_1);
+    expect(list.tasks[0]?.dueDate).toBe("today");
+    // tomorrow タスクは含まれない.
+    expect(list.tasks.find((t) => t.id === TASK_ID_2)).toBeUndefined();
+  });
+
+  it("シナリオ C: ?dueDate 未指定は既存挙動 (両方の dueDate を返す) を維持する", async () => {
+    seedTwoTasksOfDifferentDueDates();
+
+    const res = await app.request("/api/v1/tasks", {
+      method: "GET",
+      headers: authHeaders(),
+    });
+
+    expect(res.status).toBe(200);
+    const list = (await res.json()) as {
+      tasks: Array<{ id: string; dueDate: string }>;
+    };
+    // 両方の dueDate が含まれる (= 既存挙動の不変).
+    expect(list.tasks).toHaveLength(2);
+    const ids = list.tasks.map((t) => t.id).sort();
+    expect(ids).toEqual([TASK_ID_1, TASK_ID_2].sort());
+  });
+
+  it("シナリオ D: ?dueDate に不正値 (yesterday) を渡しても 400 にせず無視する (= 全件返す)", async () => {
+    // spec U-010 / D-002: 既存 ?trashed パラメータの寛容バリデーションと整合.
+    seedTwoTasksOfDifferentDueDates();
+
+    const res = await app.request("/api/v1/tasks?dueDate=yesterday", {
+      method: "GET",
+      headers: authHeaders(),
+    });
+
+    // 400 にならず 200 が返る.
+    expect(res.status).toBe(200);
+    const list = (await res.json()) as {
+      tasks: Array<{ id: string }>;
+    };
+    // dueDate フィルタなしと同じ応答 (両方含まれる).
+    expect(list.tasks).toHaveLength(2);
+    const ids = list.tasks.map((t) => t.id).sort();
+    expect(ids).toEqual([TASK_ID_1, TASK_ID_2].sort());
+  });
+
+  it("シナリオ E (?dueDate と ?trashed の直交性): trashed=true&dueDate=tomorrow はゴミ箱内の tomorrow タスクのみを返す", async () => {
+    // tomorrow タスクをゴミ箱に, today タスクは通常状態のまま seed する.
+    taskRepo.seed({
+      id: TASK_ID_1,
+      name: "today-task",
+      projectId: null,
+      dueDate: "today",
+      priority: "normal",
+      origin: "manual",
+      routineId: null,
+      createdAt: TEST_INITIAL_TIME,
+      updatedAt: TEST_INITIAL_TIME,
+      trashedAt: null,
+      trashedReason: null,
+      version: 1,
+    });
+    taskRepo.seed({
+      id: TASK_ID_2,
+      name: "tomorrow-task-trashed",
+      projectId: null,
+      dueDate: "tomorrow",
+      priority: "normal",
+      origin: "manual",
+      routineId: null,
+      createdAt: "2026-06-07T09:00:01.000Z",
+      updatedAt: "2026-06-07T09:00:02.000Z",
+      trashedAt: "2026-06-07T09:00:02.000Z",
+      trashedReason: "deleted",
+      version: 2,
+    });
+
+    // trashed 未指定 + dueDate=tomorrow → ゴミ箱の tomorrow は出ない.
+    const resActive = await app.request("/api/v1/tasks?dueDate=tomorrow", {
+      method: "GET",
+      headers: authHeaders(),
+    });
+    expect(resActive.status).toBe(200);
+    const activeList = (await resActive.json()) as {
+      tasks: Array<{ id: string }>;
+    };
+    expect(activeList.tasks.find((t) => t.id === TASK_ID_2)).toBeUndefined();
+
+    // trashed=true + dueDate=tomorrow → ゴミ箱内の tomorrow タスクのみが返る.
+    const resTrashed = await app.request(
+      "/api/v1/tasks?dueDate=tomorrow&trashed=true",
+      {
+        method: "GET",
+        headers: authHeaders(),
+      },
+    );
+    expect(resTrashed.status).toBe(200);
+    const trashedList = (await resTrashed.json()) as {
+      tasks: Array<{ id: string; dueDate: string; trashedReason: string | null }>;
+    };
+    expect(trashedList.tasks).toHaveLength(1);
+    expect(trashedList.tasks[0]?.id).toBe(TASK_ID_2);
+    expect(trashedList.tasks[0]?.dueDate).toBe("tomorrow");
+    expect(trashedList.tasks[0]?.trashedReason).toBe("deleted");
+    // today タスク (通常状態) は trashed=true では返らない.
+    expect(trashedList.tasks.find((t) => t.id === TASK_ID_1)).toBeUndefined();
+  });
+});
+
+// ============================================================
 // (補助) 認証ありの正常系で TEST_AUTH_TOKEN が一致することの確認
 // ============================================================
 

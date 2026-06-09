@@ -43,7 +43,7 @@ import { RoutinesView } from "./ui/routines-view/routines-view.js";
 import { SetupView } from "./ui/setup-view/setup-view.js";
 import { AppShell } from "./ui/app-shell/app-shell.js";
 import { FocusView } from "./ui/focus-view/focus-view.js";
-import { TomorrowViewPlaceholder } from "./ui/tomorrow-view/tomorrow-view-placeholder.js";
+import { TomorrowView } from "./ui/tomorrow-view/tomorrow-view.js";
 import { OfflineBanner } from "./ui/offline-banner/offline-banner.js";
 import { ErrorNotification } from "./ui/error-notification/error-notification.js";
 import { PwaUpdateBanner } from "./ui/pwa-update-banner/pwa-update-banner.js";
@@ -222,7 +222,7 @@ function App({ config, repos: initialRepos }: AppProps) {
           <Route path="/" element={<Navigate to={defaultRoute} replace />} />
           <Route path="/focus" element={<FocusView repository={repos.task} projectRepository={repos.project} />} />
           <Route path="/today" element={<TodayView repository={repos.task} projectRepository={repos.project} />} />
-          <Route path="/tomorrow" element={<TomorrowViewPlaceholder />} />
+          <Route path="/tomorrow" element={<TomorrowView repository={repos.task} projectRepository={repos.project} />} />
           <Route
             path="/settings"
             element={

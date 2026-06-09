@@ -62,8 +62,8 @@
   /* 空状態の中央テキスト. */
   /* TODO(BL-046): --font-size-body */
   font-size: 18px;
-  /* TODO(BL-046): --color-fg-subtle */
-  color: #999;
+  /* TODO(BL-046): --color-fg-subtle. WCAG 2.1 AA 4.5:1 を満たす #595959 (7:1) を採用. */
+  color: #595959;
 }
 
 .focus-view__actions {

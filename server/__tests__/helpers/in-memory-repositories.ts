@@ -45,9 +45,17 @@ export class InMemoryTaskRepository implements TaskRepository {
 
   async list(filter: ListTasksFilter): Promise<Task[]> {
     const all = Array.from(this.store.values()).map((t) => ({ ...t }));
-    if (filter.trashed === "all") return all;
-    if (filter.trashed === "true") return all.filter((t) => t.trashedAt !== null);
-    return all.filter((t) => t.trashedAt === null);
+    const byTrashed =
+      filter.trashed === "all"
+        ? all
+        : filter.trashed === "true"
+          ? all.filter((t) => t.trashedAt !== null)
+          : all.filter((t) => t.trashedAt === null);
+    // BL-038 / tomorrow-view: dueDate フィルタ.
+    if (filter.dueDate) {
+      return byTrashed.filter((t) => t.dueDate === filter.dueDate);
+    }
+    return byTrashed;
   }
 
   async update(task: Task): Promise<void> {

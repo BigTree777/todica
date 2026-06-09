@@ -18,6 +18,7 @@ import type {
   CompleteTaskCommand,
   SetFocusCommand,
   Counter,
+  ListTasksFilter,
 } from "./task-repository.js";
 import { OptimisticLockError } from "./task-repository.js";
 
@@ -63,7 +64,15 @@ function priorityOrder(priority: string): number {
 export class LocalTaskRepository implements TaskRepository {
   constructor(private readonly db: DBConnection) {}
 
-  async list(): Promise<Task[]> {
+  async list(filter?: ListTasksFilter): Promise<Task[]> {
+    // BL-038: filter.dueDate が渡されたら SQL にも条件を反映する.
+    if (filter?.dueDate) {
+      const result = await this.db.query(
+        "SELECT * FROM tasks WHERE trashed_at IS NULL AND due_date = ?",
+        [filter.dueDate],
+      );
+      return (result.values ?? []).map(rowToTask);
+    }
     const result = await this.db.query("SELECT * FROM tasks WHERE trashed_at IS NULL");
     return (result.values ?? []).map(rowToTask);
   }

@@ -97,22 +97,30 @@ export class DrizzleTaskRepository implements TaskRepository {
   }
 
   async list(filter: ListTasksFilter): Promise<Task[]> {
-    let rows;
-    if (filter.trashed === "true") {
-      rows = this.db
-        .select()
-        .from(tasks)
-        .where(isNotNull(tasks.trashedAt))
-        .all();
-    } else if (filter.trashed === "false") {
-      rows = this.db
-        .select()
-        .from(tasks)
-        .where(isNull(tasks.trashedAt))
-        .all();
-    } else {
-      rows = this.db.select().from(tasks).all();
-    }
+    // BL-038 / tomorrow-view: trashed と dueDate の 2 条件を AND で組み合わせる.
+    // - trashed === "all"  → trashedCond は undefined (= 既存挙動: 全 trashed を含む).
+    // - filter.dueDate undefined → dueDateCond は undefined (= 既存挙動: dueDate 絞り込みなし).
+    const trashedCond =
+      filter.trashed === "true"
+        ? isNotNull(tasks.trashedAt)
+        : filter.trashed === "false"
+          ? isNull(tasks.trashedAt)
+          : undefined;
+    const dueDateCond = filter.dueDate
+      ? eq(tasks.dueDate, filter.dueDate)
+      : undefined;
+    const conds = [trashedCond, dueDateCond].filter(
+      (c): c is NonNullable<typeof c> => c !== undefined,
+    );
+    const where =
+      conds.length === 0
+        ? undefined
+        : conds.length === 1
+          ? conds[0]
+          : and(...conds);
+    const rows = where
+      ? this.db.select().from(tasks).where(where).all()
+      : this.db.select().from(tasks).all();
     return rows.map(rowToTask);
   }
 

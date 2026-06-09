@@ -25,6 +25,20 @@ test.describe("WCAG 2.1 AA 違反 0 件", () => {
     expect(result.violations).toEqual([]);
   });
 
+  test("現在のタスクビュー (/focus, BL-037)", async ({ page }) => {
+    await page.goto("/focus");
+    await page.getByRole("heading", { name: "現在のタスク" }).waitFor();
+    const result = await scanWcag(page);
+    expect(result.violations).toEqual([]);
+  });
+
+  test("明日のタスクビュー (/tomorrow, BL-038)", async ({ page }) => {
+    await page.goto("/tomorrow");
+    await page.getByRole("heading", { name: "明日のタスク" }).waitFor();
+    const result = await scanWcag(page);
+    expect(result.violations).toEqual([]);
+  });
+
   test("プロジェクトビュー (/projects)", async ({ page }) => {
     await page.goto("/projects");
     await page.getByRole("heading", { name: "プロジェクト" }).waitFor();

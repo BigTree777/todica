@@ -419,7 +419,18 @@ export function createApp(deps: AppDeps): Hono {
     if (trashedParam === "true" || trashedParam === "false" || trashedParam === "all") {
       trashed = trashedParam;
     }
-    const tasks = await deps.taskRepository.list({ trashed });
+    // BL-038 / tomorrow-view: ?dueDate=today|tomorrow を受理する.
+    // 不正値は寛容バリデーション (= undefined にフォールバック / 既存 trashed と整合).
+    // 詳細は docs/developer/features/tomorrow-view/plan.md §「サーバ補強の手順」.
+    const dueDateParam = c.req.query("dueDate");
+    const dueDate: "today" | "tomorrow" | undefined =
+      dueDateParam === "today" || dueDateParam === "tomorrow"
+        ? dueDateParam
+        : undefined;
+    const tasks = await deps.taskRepository.list({
+      trashed,
+      ...(dueDate ? { dueDate } : {}),
+    });
     const sorted = sortTasks(tasks);
     return c.json({ tasks: sorted }, 200);
   });
