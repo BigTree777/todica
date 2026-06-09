@@ -33,11 +33,18 @@ import type {
   TaskRepository,
   UpdateTaskCommand,
 } from "../../repositories/task-repository.js";
+import { OptimisticLockError } from "../../repositories/task-repository.js";
 import type {
   Project,
   ProjectRepository,
 } from "../../repositories/project-repository.js";
-import { enqueue, dequeue, getAll, ConflictError } from "../../offline-queue.js";
+import {
+  enqueue,
+  dequeue,
+  getAll,
+  findEntryByKey,
+  ConflictError,
+} from "../../offline-queue.js";
 import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
 
@@ -186,16 +193,27 @@ export function TodayView(props: TodayViewProps): JSX.Element {
           "Content-Type": "application/json",
           Authorization: `Bearer ${authToken}`,
           "Idempotency-Key": idempotencyKey,
+          "If-Match": String(cmd.ifMatch),
         },
-        body: JSON.stringify({ ...cmd.patch, ifMatch: cmd.ifMatch }),
+        body: JSON.stringify(cmd.patch),
         idempotencyKey,
       });
       if (!navigator.onLine) {
         return undefined;
       }
-      const result = await repository.update(cmd);
-      void safeDequeueByKey(idempotencyKey);
-      return result;
+      try {
+        const result = await repository.update(cmd);
+        void safeDequeueByKey(idempotencyKey);
+        return result;
+      } catch (error) {
+        // BL-031 (a): online 412 で repository が OptimisticLockError を throw する.
+        // ConflictDialog を開くために queue 内の entry を引いて ConflictError に変換する.
+        if (error instanceof OptimisticLockError) {
+          const entry = await findEntryByKey(idempotencyKey);
+          if (entry) throw new ConflictError(entry, error.currentTask ?? {});
+        }
+        throw error;
+      }
     },
     onSuccess: invalidateAll,
     onError: (error) => {
@@ -213,19 +231,27 @@ export function TodayView(props: TodayViewProps): JSX.Element {
         url: `${baseUrl}/api/v1/tasks/${cmd.id}`,
         method: "DELETE",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${authToken}`,
           "Idempotency-Key": idempotencyKey,
+          "If-Match": String(cmd.ifMatch),
         },
-        body: JSON.stringify({ ifMatch: cmd.ifMatch }),
+        body: null,
         idempotencyKey,
       });
       if (!navigator.onLine) {
         return undefined;
       }
-      const result = await repository.delete(cmd);
-      void safeDequeueByKey(idempotencyKey);
-      return result;
+      try {
+        const result = await repository.delete(cmd);
+        void safeDequeueByKey(idempotencyKey);
+        return result;
+      } catch (error) {
+        if (error instanceof OptimisticLockError) {
+          const entry = await findEntryByKey(idempotencyKey);
+          if (entry) throw new ConflictError(entry, error.currentTask ?? {});
+        }
+        throw error;
+      }
     },
     onSuccess: invalidateAll,
     onError: (error) => {
@@ -243,19 +269,27 @@ export function TodayView(props: TodayViewProps): JSX.Element {
         url: `${baseUrl}/api/v1/tasks/${cmd.id}/complete`,
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${authToken}`,
           "Idempotency-Key": idempotencyKey,
+          "If-Match": String(cmd.ifMatch),
         },
-        body: JSON.stringify({ ifMatch: cmd.ifMatch }),
+        body: null,
         idempotencyKey,
       });
       if (!navigator.onLine) {
         return undefined;
       }
-      const result = await repository.complete(cmd);
-      void safeDequeueByKey(idempotencyKey);
-      return result;
+      try {
+        const result = await repository.complete(cmd);
+        void safeDequeueByKey(idempotencyKey);
+        return result;
+      } catch (error) {
+        if (error instanceof OptimisticLockError) {
+          const entry = await findEntryByKey(idempotencyKey);
+          if (entry) throw new ConflictError(entry, error.currentTask ?? {});
+        }
+        throw error;
+      }
     },
     onSuccess: invalidateAll,
     onError: (error) => {
@@ -276,8 +310,9 @@ export function TodayView(props: TodayViewProps): JSX.Element {
           "Content-Type": "application/json",
           Authorization: `Bearer ${authToken}`,
           "Idempotency-Key": idempotencyKey,
+          "If-Match": String(cmd.ifMatch),
         },
-        body: JSON.stringify({ ...cmd }),
+        body: JSON.stringify({ taskId: cmd.taskId }),
         idempotencyKey,
       });
       if (!navigator.onLine) {

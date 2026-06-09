@@ -112,6 +112,21 @@ export async function getAll(): Promise<QueueEntry[]> {
 }
 
 /**
+ * idempotencyKey から QueueEntry を引く (BL-031).
+ *
+ * online で先に repository.fetch が走り 412 になった場合, ConflictDialog を出す
+ * ためには対応する QueueEntry (URL / body / 元 If-Match version) が必要になる.
+ * Mutation 側で safeEnqueue した直後の key で本関数を呼ぶことで, その entry を
+ * 取得して `new ConflictError(entry, serverValue)` に橋渡しできる.
+ */
+export async function findEntryByKey(
+  idempotencyKey: string,
+): Promise<QueueEntry | undefined> {
+  const entries = await getAll();
+  return entries.find((e) => e.idempotencyKey === idempotencyKey);
+}
+
+/**
  * キューを順番に再送する。
  *
  * - enqueuedAt から 7 日経過したエントリは削除してスキップ (NFR-SW-02)
