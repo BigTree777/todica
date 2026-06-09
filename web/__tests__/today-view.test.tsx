@@ -310,19 +310,65 @@ describe("TodayView (Web クライアント UI)", () => {
     const nameInput = await screen.findByLabelText(/タスク名/);
     expect(nameInput).toBeRequired();
 
-    // 「プロジェクト」と「期限」は任意項目として存在する (UI 上に存在するが required ではない)
+    // 「プロジェクト」は任意項目として存在する (UI 上に存在するが required ではない)
     const projectInput = screen.queryByLabelText(/プロジェクト/);
     expect(projectInput).not.toBeNull();
     expect(projectInput).not.toBeRequired();
 
+    // BL-039: 期限 UI は起票フォームから削除済み (foundation REQ-4 / inline-create-form REQ-1).
+    // ビュー文脈で dueDate が決まるため起票時に期限を選ばせない.
     const dueDateControl = screen.queryByLabelText(/期限/);
-    expect(dueDateControl).not.toBeNull();
+    expect(dueDateControl).toBeNull();
 
     // 不要な入力欄が存在しない (NFR-001 単一ワークフロー)
     expect(screen.queryByLabelText(/ステータス/)).toBeNull();
     expect(screen.queryByLabelText(/タグ/)).toBeNull();
     expect(screen.queryByLabelText(/開始日/)).toBeNull();
     expect(screen.queryByLabelText(/サブタスク/)).toBeNull();
+  });
+
+  it("シナリオ: BL-039 起票フォームに「期限」select が存在しない", async () => {
+    // inline-create-form spec.md REQ-1:
+    //   aria-label="タスク起票フォーム" の form 内に「期限」label / select は存在してはならない.
+    //   id="task-due-date" の要素も DOM 上に存在してはならない.
+    const repo = makeMockRepository();
+    renderWithQueryClient(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
+
+    // フォーム自体は表示される (タスク名 input が存在することで担保).
+    await screen.findByLabelText(/タスク名/);
+
+    // 起票フォーム scope 内で「期限」label が取得できないことを確認する.
+    const form = screen.getByRole("form", { name: "タスク起票フォーム" });
+    expect(within(form).queryByLabelText(/期限/)).toBeNull();
+
+    // id="task-due-date" の DOM 要素も存在しない.
+    expect(form.querySelector("#task-due-date")).toBeNull();
+
+    // 起票フォーム内の入力要素 (input / select) は 3 つのみ:
+    //   タスク名 (input) / プロジェクト (select) / 優先度 (select). 「追加」ボタンは別.
+    const formInputs = form.querySelectorAll("input, select");
+    expect(formInputs).toHaveLength(3);
+  });
+
+  it("シナリオ: BL-039 起票時に dueDate=\"today\" で create が呼ばれる", async () => {
+    // inline-create-form spec.md REQ-2:
+    //   handleCreate 内で repository.create に渡す CreateTaskCommand の dueDate
+    //   は常に "today" 固定. ユーザー操作で dueDate を変える経路は起票時点には存在しない.
+    const repo = makeMockRepository();
+    const user = userEvent.setup();
+    renderWithQueryClient(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
+
+    const nameInput = await screen.findByLabelText(/タスク名/);
+    await user.type(nameInput, "BL-039 起票テスト");
+
+    const submit = screen.getByRole("button", { name: /追加|起票|登録|送信/ });
+    await user.click(submit);
+
+    expect(repo.createMock).toHaveBeenCalledTimes(1);
+    const arg = repo.createMock.mock.calls[0]?.[0] as CreateTaskCommand;
+    expect(arg.name).toBe("BL-039 起票テスト");
+    // dueDate は明示送信 (D-002 互換) かつ常に "today" 固定であること.
+    expect(arg.dueDate).toBe("today");
   });
 
   it("シナリオ: 起票フォームでタスク名を入力して送信するとタスクが追加される", async () => {

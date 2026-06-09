@@ -1,7 +1,7 @@
 /**
  * 今日ビュー (BL-005 本実装 + BL-001 / BL-002 / BL-003 / BL-006 を統合).
  *
- * - 起票フォーム (タスク名のみ必須, 期限 = today/tomorrow の 2 値, 優先度 = 3 値)
+ * - 起票フォーム (タスク名のみ必須, dueDate は "today" 固定, 優先度 = 3 値)
  * - タスク一覧 (各行に 編集 / 期限切替 / 完了 / 削除 / 優先度切替 / 現在に設定 を表示)
  * - 現在のタスクの強調セクション (BL-006 / FR-012 / NFR-011)
  * - 編集ダイアログ (名称変更)
@@ -116,7 +116,6 @@ export function TodayView(props: TodayViewProps): JSX.Element {
 
   const [name, setName] = useState("");
   const [projectId, setProjectId] = useState("");
-  const [dueDate, setDueDate] = useState<DueDate>("today");
   const [priority, setPriority] = useState<Priority>("normal");
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingName, setEditingName] = useState("");
@@ -350,16 +349,15 @@ export function TodayView(props: TodayViewProps): JSX.Element {
         id: generateId(),
         name,
         projectId: projectId ? projectId : null,
-        dueDate,
+        dueDate: "today",
         priority,
       };
       await createMutation.mutateAsync(cmd);
       setName("");
       setProjectId("");
-      setDueDate("today");
       setPriority("normal");
     },
-    [name, projectId, dueDate, priority, createMutation],
+    [name, projectId, priority, createMutation],
   );
 
   const openEdit = useCallback((task: Task) => {
@@ -488,17 +486,6 @@ export function TodayView(props: TodayViewProps): JSX.Element {
                   {p.name}
                 </option>
               ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="task-due-date">期限</label>
-            <select
-              id="task-due-date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value as DueDate)}
-            >
-              <option value="today">今日</option>
-              <option value="tomorrow">明日</option>
             </select>
           </div>
           <div>
