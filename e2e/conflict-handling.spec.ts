@@ -75,6 +75,61 @@ test("2 タブ同時編集で後勝ち側に ConflictDialog が表示される (
   await ctxB.close();
 });
 
+test("2 タブ同時編集でプロジェクト名衝突時にも ConflictDialog が表示される (BL-033)", async ({
+  browser,
+  request,
+}) => {
+  const projectId = crypto.randomUUID();
+  const projectName = `P衝突 ${Date.now()}`;
+  await request.post(`${API_BASE}/api/v1/projects`, {
+    headers: { ...AUTH_HEADER, "Idempotency-Key": crypto.randomUUID() },
+    data: { id: projectId, name: projectName },
+  });
+
+  const ctxA = await browser.newContext();
+  const ctxB = await browser.newContext();
+  const pageA = await ctxA.newPage();
+  const pageB = await ctxB.newPage();
+
+  await Promise.all([pageA.goto("/projects"), pageB.goto("/projects")]);
+  await Promise.all([
+    expect(pageA.getByText(projectName, { exact: true })).toBeVisible(),
+    expect(pageB.getByText(projectName, { exact: true })).toBeVisible(),
+  ]);
+
+  // タブ A: 名称変更.
+  const rowA = pageA.getByText(projectName, { exact: true }).first().locator("..");
+  await rowA.getByRole("button", { name: "名称変更" }).click();
+  await pageA
+    .getByRole("form", { name: "プロジェクト名称変更フォーム" })
+    .locator("input")
+    .fill(`${projectName} (A 編集)`);
+  await pageA
+    .getByRole("form", { name: "プロジェクト名称変更フォーム" })
+    .getByRole("button", { name: "保存" })
+    .click();
+  await expect(pageA.getByText(`${projectName} (A 編集)`)).toBeVisible();
+
+  // タブ B: 古い version で名称変更 → 412 → ProjectConflictError → ConflictError → Dialog.
+  const rowB = pageB.getByText(projectName, { exact: true }).first().locator("..");
+  await rowB.getByRole("button", { name: "名称変更" }).click();
+  await pageB
+    .getByRole("form", { name: "プロジェクト名称変更フォーム" })
+    .locator("input")
+    .fill(`${projectName} (B 編集)`);
+  await pageB
+    .getByRole("form", { name: "プロジェクト名称変更フォーム" })
+    .getByRole("button", { name: "保存" })
+    .click();
+
+  await expect(
+    pageB.getByRole("dialog", { name: "変更が衝突しました" }),
+  ).toBeVisible();
+
+  await ctxA.close();
+  await ctxB.close();
+});
+
 test("オフラインで編集した PATCH がオンライン復帰で flush され server に反映される (BL-031 b)", async ({
   page,
   context,

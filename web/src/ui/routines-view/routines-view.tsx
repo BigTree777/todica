@@ -20,7 +20,8 @@ import type {
   WebRoutine,
   WebRoutineRepository,
 } from "../../repositories/routine-repository.js";
-import { enqueue, dequeue, getAll, ConflictError } from "../../offline-queue.js";
+import { enqueue, dequeue, getAll, mapConflict, ConflictError } from "../../offline-queue.js";
+import { RoutineConflictError } from "../../repositories/routine-repository.js";
 import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
 
@@ -140,7 +141,11 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
         idempotencyKey,
       });
       if (!navigator.onLine) return undefined;
-      const result = await repository.update(cmd);
+      const result = await mapConflict(
+        idempotencyKey,
+        () => repository.update(cmd),
+        (err) => (err instanceof RoutineConflictError ? err.currentRoutine : undefined),
+      );
       void safeDequeueByKey(idempotencyKey);
       return result;
     },
@@ -169,7 +174,11 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
         idempotencyKey,
       });
       if (!navigator.onLine) return undefined;
-      const result = await repository.delete(cmd);
+      const result = await mapConflict(
+        idempotencyKey,
+        () => repository.delete(cmd),
+        (err) => (err instanceof RoutineConflictError ? err.currentRoutine : undefined),
+      );
       void safeDequeueByKey(idempotencyKey);
       return result;
     },

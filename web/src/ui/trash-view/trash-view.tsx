@@ -16,7 +16,8 @@
 import { useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { TrashRepository, TrashedTask } from "../../repositories/trash-repository.js";
-import { enqueue, dequeue, getAll, ConflictError } from "../../offline-queue.js";
+import { RestoreConflictError } from "../../repositories/trash-repository.js";
+import { enqueue, dequeue, getAll, mapConflict, ConflictError } from "../../offline-queue.js";
 import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
 
@@ -93,7 +94,11 @@ export function TrashView(props: TrashViewProps): JSX.Element {
         idempotencyKey,
       });
       if (!navigator.onLine) return undefined;
-      const result = await repository.restore(cmd);
+      const result = await mapConflict(
+        idempotencyKey,
+        () => repository.restore(cmd),
+        (err) => (err instanceof RestoreConflictError ? err.currentTask : undefined),
+      );
       void safeDequeueByKey(idempotencyKey);
       return result;
     },

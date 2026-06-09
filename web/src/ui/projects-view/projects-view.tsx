@@ -19,7 +19,8 @@ import type {
   Project,
   ProjectRepository,
 } from "../../repositories/project-repository.js";
-import { enqueue, dequeue, getAll, ConflictError } from "../../offline-queue.js";
+import { enqueue, dequeue, getAll, mapConflict, ConflictError } from "../../offline-queue.js";
+import { ProjectConflictError } from "../../repositories/project-repository.js";
 import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
 
@@ -130,7 +131,11 @@ export function ProjectsView(props: ProjectsViewProps): JSX.Element {
         idempotencyKey,
       });
       if (!navigator.onLine) return undefined;
-      const result = await repository.update(cmd);
+      const result = await mapConflict(
+        idempotencyKey,
+        () => repository.update(cmd),
+        (err) => (err instanceof ProjectConflictError ? err.currentProject : undefined),
+      );
       void safeDequeueByKey(idempotencyKey);
       return result;
     },
@@ -159,7 +164,11 @@ export function ProjectsView(props: ProjectsViewProps): JSX.Element {
         idempotencyKey,
       });
       if (!navigator.onLine) return undefined;
-      const result = await repository.delete(cmd);
+      const result = await mapConflict(
+        idempotencyKey,
+        () => repository.delete(cmd),
+        (err) => (err instanceof ProjectConflictError ? err.currentProject : undefined),
+      );
       void safeDequeueByKey(idempotencyKey);
       return result;
     },

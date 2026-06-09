@@ -123,6 +123,10 @@ export class HttpProjectRepository implements ProjectRepository {
       }),
       body: JSON.stringify({ name: cmd.name }),
     });
+    if (res.status === 412) {
+      const errBody = (await res.json()) as { project?: Project };
+      throw new ProjectConflictError(errBody.project);
+    }
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: failed to update project`);
     }
@@ -141,8 +145,20 @@ export class HttpProjectRepository implements ProjectRepository {
       }),
     });
     if (res.status === 204) return;
+    if (res.status === 412) {
+      const errBody = (await res.json()) as { project?: Project };
+      throw new ProjectConflictError(errBody.project);
+    }
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: failed to delete project`);
     }
+  }
+}
+
+/** 412 (楽観ロック競合) 時にスローされるエラー. ボディから取得した最新 project を保持する (BL-033). */
+export class ProjectConflictError extends Error {
+  constructor(public readonly currentProject?: Project) {
+    super("Conflict: version mismatch on project");
+    this.name = "ProjectConflictError";
   }
 }

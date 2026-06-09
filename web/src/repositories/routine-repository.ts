@@ -139,6 +139,10 @@ export class HttpRoutineRepository implements WebRoutineRepository {
       }),
       body: JSON.stringify(patch),
     });
+    if (res.status === 412) {
+      const errBody = (await res.json()) as { routine?: WebRoutine };
+      throw new RoutineConflictError(errBody.routine);
+    }
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: failed to update routine`);
     }
@@ -157,8 +161,20 @@ export class HttpRoutineRepository implements WebRoutineRepository {
       }),
     });
     if (res.status === 204) return;
+    if (res.status === 412) {
+      const errBody = (await res.json()) as { routine?: WebRoutine };
+      throw new RoutineConflictError(errBody.routine);
+    }
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: failed to delete routine`);
     }
+  }
+}
+
+/** 412 (楽観ロック競合) 時にスローされるエラー. ボディから取得した最新 routine を保持する (BL-033). */
+export class RoutineConflictError extends Error {
+  constructor(public readonly currentRoutine?: WebRoutine) {
+    super("Conflict: version mismatch on routine");
+    this.name = "RoutineConflictError";
   }
 }

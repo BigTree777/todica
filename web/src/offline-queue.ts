@@ -127,6 +127,40 @@ export async function findEntryByKey(
 }
 
 /**
+ * Repository が 412 で投げる独自エラー型 (OptimisticLockError / RestoreConflictError
+ * 等) を ConflictError に変換するラッパー (BL-031 / BL-033).
+ *
+ * `extractServer` は repo 固有のエラー判定 + サーバ値抽出を行う callback.
+ * undefined を返した場合は元の error をそのまま再 throw する.
+ *
+ * 使い方:
+ *   const result = await mapConflict(
+ *     idempotencyKey,
+ *     () => repository.update(cmd),
+ *     (err) => err instanceof OptimisticLockError ? err.currentTask : undefined,
+ *   );
+ *
+ * `offline-queue.ts` から具体的な repository エラー型 (OptimisticLockError 等) への
+ * 依存を作らないため, extractor を呼び出し側に渡してもらう設計とする.
+ */
+export async function mapConflict<T>(
+  idempotencyKey: string,
+  fn: () => Promise<T>,
+  extractServer: (err: unknown) => unknown,
+): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    const serverValue = extractServer(err);
+    if (serverValue !== undefined) {
+      const entry = await findEntryByKey(idempotencyKey);
+      if (entry) throw new ConflictError(entry, serverValue);
+    }
+    throw err;
+  }
+}
+
+/**
  * キューを順番に再送する。
  *
  * - enqueuedAt から 7 日経過したエントリは削除してスキップ (NFR-SW-02)
