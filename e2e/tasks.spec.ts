@@ -64,18 +64,25 @@ test.describe("タスク基本操作", () => {
     await expect(priorityGroup).toHaveAttribute("aria-label", /後回し/);
   });
 
-  test("「明日へ」を押すと今日の一覧から消える", async ({ page }) => {
+  test("「明日にする」を押すと今日の一覧から消える", async ({ page }) => {
     await page.goto("/");
     const taskName = `期限切替テスト ${Date.now()}`;
     await createTask(page, taskName);
 
     await expect(taskRow(page, taskName)).toBeVisible();
-    await taskRow(page, taskName).getByRole("button", { name: "明日へ" }).click();
+    // BL-042: ラベルは「明日へ」→「明日にする」に統一.
+    await taskRow(page, taskName)
+      .getByRole("button", { name: "明日にする" })
+      .click();
 
     await expect(page.getByText(taskName, { exact: true })).toHaveCount(0);
   });
 
-  test("タスクを編集すると名前が一覧に反映される", async ({ page }) => {
+  // BL-042 (task-card-actions) でカード上の「編集」 button を撤去したため,
+  // 本 E2E は実行不能になる. 名称編集の代替 UI (カードタップ → ダイアログ起動など) は
+  // 別 BL (タスク編集ダイアログの再導入 / 仮称 BL-048) で再導入予定であり,
+  // その時点で skip を解除し新 UI のフローに追随させる.
+  test.skip("タスクを編集すると名前が一覧に反映される (BL-042 で UI 撤去 / 後続 BL で復活予定)", async ({ page }) => {
     await page.goto("/");
     const originalName = `編集元 ${Date.now()}`;
     const newName = `編集後 ${Date.now() + 1}`;

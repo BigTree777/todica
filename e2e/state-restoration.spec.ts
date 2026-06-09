@@ -46,7 +46,12 @@ test("リロード後も完了タスクのカウントが復元される", async
   await expect(countDisplay).toHaveText(expectedAfter);
 });
 
-test("リロード後も明示的に設定したフォーカス対象が復元される", async ({
+// BL-042 (task-card-actions) でカード上の「現在に設定」 button を撤去したため,
+// UI から currentTaskId を明示設定する経路が無くなり, 本 E2E は実行不能になる.
+// focus 設定の代替経路 (カード長押し / コンテキストメニュー等) は BL-043
+// (set-focus-gesture) で再導入予定であり, その時点で skip を解除し新 UI のフローに
+// 追随させる. (focus 永続化サーバ層は無改修のため統合テストでカバー済み.)
+test.skip("リロード後も明示的に設定したフォーカス対象が復元される (BL-042 で UI 撤去 / BL-043 で復活予定)", async ({
   page,
   request,
 }) => {

@@ -131,7 +131,11 @@ function makeMockProjectRepository(initial: Project[] = []): ProjectRepository &
  *
  * - `delete({ id })`: state から取り除く.
  *
- * - `complete()` は TomorrowView の責務外 (= 呼ばれない想定). 呼ばれたら throw する.
+ * - `complete()`:
+ *   BL-042 以前は TomorrowView の責務外 (= 呼ばれない想定) だったが,
+ *   BL-042 で `/tomorrow` のカードに「完了」 button が追加されるため,
+ *   today-view と同様に「trashedAt をセット + trashedReason = "completed" + counter +1」
+ *   を実行する mock 実装に変更する.
  */
 function makeMockRepository(
   initial: Task[] = [],
@@ -144,6 +148,8 @@ function makeMockRepository(
     updateError?: Error;
     /** delete を失敗させたい場合に渡す. */
     deleteError?: Error;
+    /** complete を失敗させたい場合に渡す (BL-042 REQ-2 / ConflictDialog). */
+    completeError?: Error;
     /**
      * list() の戻り値を「サーバから返ってきた順」に固定したい場合に渡す.
      * 指定された場合, mock の内部ソートを行わず, 渡された並びをそのまま使う
@@ -262,10 +268,32 @@ function makeMockRepository(
     const idx = state.findIndex((t) => t.id === cmd.id);
     if (idx >= 0) state.splice(idx, 1);
   });
-  const completeMock = vi.fn(async (_cmd: CompleteTaskCommand) => {
-    throw new Error(
-      "TomorrowView は complete を呼ばないはず (REQ-3 / アクションは「削除」「今日にする」の 2 つのみ)",
-    );
+  // BL-042: tomorrow カードに「完了」 button が追加されたため complete を呼ぶ.
+  // today-view のテスト mock と同形で実装し, trashedAt をセット + trashedReason="completed" +
+  // counter +1 を行う (= サーバ側 +1 集計を模倣). 既存タスクが状態遷移する前提の検証は
+  // 「完了後に /tomorrow から消える」「/today カウンタが +1 される」.
+  const completeMock = vi.fn(async (cmd: CompleteTaskCommand) => {
+    if (options.completeError) throw options.completeError;
+    const idx = state.findIndex((t) => t.id === cmd.id);
+    if (idx < 0) throw new Error("not found");
+    const prev = state[idx]!;
+    const wasActive = prev.trashedAt === null;
+    const next: Task = {
+      ...prev,
+      trashedAt: "2026-06-09T09:00:01.000Z",
+      trashedReason: "completed",
+      version: (prev.version ?? 0) + 1,
+    };
+    state[idx] = next;
+    if (wasActive) {
+      counterState = {
+        ...counterState,
+        completedCount: counterState.completedCount + 1,
+        version: counterState.version + 1,
+        updatedAt: NOW,
+      };
+    }
+    return next;
   });
   const getFocusMock = vi.fn(async () => ({ ...focusState }));
   const setFocusMock = vi.fn(async (cmd: SetFocusCommand) => {
@@ -657,12 +685,19 @@ describe("TomorrowView (BL-038 REQ-2 起票フォーム)", () => {
 });
 
 // ============================================================
-// REQ-3: タスクカードのアクションは「削除」「今日にする」の 2 つのみ
+// REQ-3 / BL-042: タスクカードのアクションは「削除」「今日にする」「完了」の 3 つ
+//
+// BL-038 当初は「削除」「今日にする」の 2 つだったが, BL-042 (task-card-actions) で
+// today / tomorrow を 3 ボタンに揃えるため「完了」を追加する (foundation REQ-2).
+// 並びは「削除 / 今日にする / 完了」(spec REQ-2).
 // ============================================================
 
-describe("TomorrowView (BL-038 REQ-3 アクション数の規約)", () => {
-  it("シナリオ A: 1 件目のカード内のボタンは「削除」「今日にする」の 2 つのみ (「完了」「明日にする」「明日へ」「優先度切替」「編集」「現在に設定」は存在しない)", async () => {
-    // 受け入れ基準 §「アクション数の規約 (REQ-3)」.
+describe("TomorrowView (BL-038 / BL-042 REQ-3 アクション数の規約)", () => {
+  it("シナリオ A: 1 件目のカード内のボタンは「削除」「今日にする」「完了」の 3 つのみ (BL-042)", async () => {
+    // BL-042 spec AC-3 / REQ-2:
+    //   /tomorrow の各タスクカードに置かれるアクションボタンは
+    //   「削除」「今日にする」「完了」の 3 つで, 「明日にする」「編集」「現在に設定」などの
+    //   いずれの button もカード内に存在しない.
     const repo = makeMockRepository([
       makeTask({
         id: "task-A",
@@ -683,29 +718,23 @@ describe("TomorrowView (BL-038 REQ-3 アクション数の規約)", () => {
     expect(items.length).toBeGreaterThanOrEqual(1);
     const card = items[0]!;
 
-    // 「削除」「今日にする」の 2 つが存在する.
+    // 「削除」「今日にする」「完了」 button が各 1 個ずつ (accessibleName 完全一致).
     expect(
-      within(card).getByRole("button", { name: /削除/ }),
-    ).toBeInTheDocument();
+      within(card).getAllByRole("button", { name: "削除" }),
+    ).toHaveLength(1);
     expect(
-      within(card).getByRole("button", { name: /今日にする/ }),
-    ).toBeInTheDocument();
+      within(card).getAllByRole("button", { name: "今日にする" }),
+    ).toHaveLength(1);
+    expect(
+      within(card).getAllByRole("button", { name: "完了" }),
+    ).toHaveLength(1);
 
-    // 禁則ボタンが居ない (REQ-3).
-    expect(within(card).queryByRole("button", { name: /完了/ })).toBeNull();
-    expect(
-      within(card).queryByRole("button", { name: /明日にする/ }),
-    ).toBeNull();
-    expect(within(card).queryByRole("button", { name: /明日へ/ })).toBeNull();
-    expect(within(card).queryByRole("button", { name: /優先度/ })).toBeNull();
-    expect(within(card).queryByRole("button", { name: /編集/ })).toBeNull();
-    expect(
-      within(card).queryByRole("button", { name: /現在に設定/ }),
-    ).toBeNull();
-
-    // カード内のボタン総数は「削除」「今日にする」の 2 個ちょうど.
-    const buttons = within(card).getAllByRole("button");
-    expect(buttons).toHaveLength(2);
+    // 禁則ボタンが居ない (BL-042 spec AC-3).
+    expect(within(card).queryByRole("button", { name: "明日にする" })).toBeNull();
+    expect(within(card).queryByRole("button", { name: "明日へ" })).toBeNull();
+    expect(within(card).queryByRole("button", { name: "編集" })).toBeNull();
+    expect(within(card).queryByRole("button", { name: "現在に設定" })).toBeNull();
+    expect(within(card).queryByRole("button", { name: "現在解除" })).toBeNull();
   });
 });
 
@@ -896,6 +925,229 @@ describe("TomorrowView (BL-038 REQ-5 削除操作)", () => {
     await waitFor(() => {
       expect(screen.queryByText("DEL-ME")).toBeNull();
     });
+  });
+});
+
+// ============================================================
+// BL-042 / REQ-2: tomorrow カードの「完了」 button (today と対称な 3 ボタン化)
+//
+// spec.md (task-card-actions) §「受け入れ基準」 AC-3 / AC-6 / AC-13 と 1:1 対応する.
+// - REQ-2 / AC-3: tomorrow カードのアクションは「削除」「今日にする」「完了」の 3 つ.
+// - REQ-2 / AC-6: 「完了」クリックで complete API が呼ばれ today のカウンタが +1 される.
+// - REQ-5 / AC-13: 「完了」操作で OptimisticLockError が起きると ConflictDialog が開く.
+//
+// tomorrow-view.tsx 側はまだ「完了」 button を持たないため, 以下のテストはすべて red になる.
+// implementer が green 化する.
+// ============================================================
+
+describe("TomorrowView (BL-042 REQ-2 「完了」 button)", () => {
+  it("シナリオ A: カード内に「完了」 button が存在する", async () => {
+    // BL-042 spec AC-3: tomorrow カードに「完了」が追加されて 3 ボタンになる.
+    const repo = makeMockRepository([
+      makeTask({
+        id: "task-A",
+        name: "AAA",
+        dueDate: "tomorrow",
+        version: 1,
+      }),
+    ]);
+
+    renderWithQueryClient(
+      <TomorrowView
+        repository={repo}
+        projectRepository={makeMockProjectRepository()}
+      />,
+    );
+
+    const items = await screen.findAllByRole("listitem");
+    const card = items[0]!;
+    // 「完了」 button が 1 個だけ存在する (accessibleName 完全一致).
+    expect(within(card).getAllByRole("button", { name: "完了" })).toHaveLength(1);
+  });
+
+  it("シナリオ B: 「完了」クリックで repository.complete({ id, ifMatch: task.version }) が 1 回呼ばれる", async () => {
+    // BL-042 spec AC-6 第 1 ハーフ.
+    const repo = makeMockRepository([
+      makeTask({
+        id: "task-A",
+        name: "AAA",
+        dueDate: "tomorrow",
+        version: 1,
+      }),
+    ]);
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <TomorrowView
+        repository={repo}
+        projectRepository={makeMockProjectRepository()}
+      />,
+    );
+
+    await screen.findByText("AAA");
+    const items = screen.getAllByRole("listitem");
+    const card = items[0]!;
+    const completeButton = within(card).getByRole("button", { name: "完了" });
+    await user.click(completeButton);
+
+    expect(repo.completeMock).toHaveBeenCalledTimes(1);
+    const arg = repo.completeMock.mock.calls[0]?.[0] as CompleteTaskCommand;
+    expect(arg.id).toBe("task-A");
+    expect(arg.ifMatch).toBe(1);
+
+    // 完了は削除や更新ではない (操作の独立性 / AC-6).
+    expect(repo.deleteMock).not.toHaveBeenCalled();
+    expect(repo.updateMock).not.toHaveBeenCalled();
+  });
+
+  it("シナリオ C: 「完了」成功後にタスクが /tomorrow の一覧から消える + today の completionCount が +1 される", async () => {
+    // BL-042 spec AC-6 第 2 ハーフ:
+    //   成功後に ["tomorrow"] / ["today"] / ["focus"] が invalidate され,
+    //   /today に切り替えると「今日の完了: N」の N が +1 されている.
+    // mock では `todayMock` が完了後に completionCount=1 を返すように
+    // counterState を +1 する. ["today"] の invalidate を観察するため
+    // todayMock の累積呼出回数が増えることを検証する.
+    const repo = makeMockRepository(
+      [
+        makeTask({
+          id: "task-A",
+          name: "COMPLETE-ME",
+          dueDate: "tomorrow",
+          version: 1,
+        }),
+      ],
+      {
+        initialCounter: {
+          id: "singleton",
+          completedCount: 0,
+          lastResetExecutedAt: null,
+          version: 1,
+          updatedAt: NOW,
+        },
+      },
+    );
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <TomorrowView
+        repository={repo}
+        projectRepository={makeMockProjectRepository()}
+      />,
+    );
+
+    expect(await screen.findByText("COMPLETE-ME")).toBeInTheDocument();
+    const listCallsBefore = repo.listMock.mock.calls.length;
+    const todayCallsBefore = repo.todayMock.mock.calls.length;
+
+    const items = screen.getAllByRole("listitem");
+    const completeButton = within(items[0]!).getByRole("button", {
+      name: "完了",
+    });
+    await user.click(completeButton);
+
+    // 一覧から COMPLETE-ME が消える (mock の completeMock が trashedAt をセットし,
+    // 次回 list({ dueDate: "tomorrow" }) は COMPLETE-ME を返さなくなる).
+    await waitFor(() => {
+      expect(screen.queryByText("COMPLETE-ME")).toBeNull();
+    });
+
+    // ["tomorrow"] invalidate: list の累積呼出回数が増えている.
+    expect(repo.listMock.mock.calls.length).toBeGreaterThan(listCallsBefore);
+    // ["today"] invalidate: today の累積呼出回数が増えている (= today カウンタ反映のため再フェッチ).
+    expect(repo.todayMock.mock.calls.length).toBeGreaterThan(todayCallsBefore);
+    // 完了 mock 側で completedCount が +1 されている (= todayMock 戻り値で completionCount=1).
+    const lastTodayCall = repo.todayMock.mock.results[repo.todayMock.mock.results.length - 1];
+    // 同期/非同期どちらでも参照できるよう, getCounter mock も併せて確認.
+    const counter = await repo.getCounter();
+    expect(counter.completedCount).toBe(1);
+    // 戻り値が Promise の場合のフォールバック.
+    void lastTodayCall;
+  });
+
+  it("シナリオ D: 「完了」操作で online 412 が返ったとき ConflictDialog が開く (AC-13)", async () => {
+    // BL-042 spec AC-13: ConflictDialog 経路の維持 (BL-031 と互換).
+    const repo = makeMockRepository(
+      [
+        makeTask({
+          id: "task-A",
+          name: "AAA",
+          dueDate: "tomorrow",
+          version: 1,
+        }),
+      ],
+      {
+        completeError: new OptimisticLockError(
+          "optimistic lock conflict on complete",
+          makeTask({
+            id: "task-A",
+            name: "AAA (サーバ最新)",
+            dueDate: "tomorrow",
+            version: 5,
+          }),
+        ),
+      },
+    );
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <TomorrowView
+        repository={repo}
+        projectRepository={makeMockProjectRepository()}
+      />,
+    );
+
+    await screen.findByText("AAA");
+    const items = screen.getAllByRole("listitem");
+    const completeButton = within(items[0]!).getByRole("button", {
+      name: "完了",
+    });
+    await user.click(completeButton);
+
+    // ConflictDialog が開く.
+    const dialog = await screen.findByRole("dialog", {
+      name: "変更が衝突しました",
+    });
+    expect(dialog).toBeInTheDocument();
+  });
+
+  it("シナリオ E: 「完了」操作で一般エラーが起きたとき notifyError(\"通信に失敗しました\") が呼ばれる", async () => {
+    // BL-042 spec REQ-5: ConflictError 以外は notifyError 経路に流す (BL-034 と互換).
+    const notifySpy = vi.spyOn(ErrorNotification, "notifyError");
+
+    const repo = makeMockRepository(
+      [
+        makeTask({
+          id: "task-A",
+          name: "AAA",
+          dueDate: "tomorrow",
+          version: 1,
+        }),
+      ],
+      {
+        completeError: new Error("network failure"),
+      },
+    );
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <TomorrowView
+        repository={repo}
+        projectRepository={makeMockProjectRepository()}
+      />,
+    );
+
+    await screen.findByText("AAA");
+    const items = screen.getAllByRole("listitem");
+    const completeButton = within(items[0]!).getByRole("button", {
+      name: "完了",
+    });
+    await user.click(completeButton);
+
+    await waitFor(() => {
+      expect(notifySpy).toHaveBeenCalledWith("通信に失敗しました");
+    });
+
+    notifySpy.mockRestore();
   });
 });
 
@@ -1149,12 +1401,15 @@ describe("TomorrowView (BL-038 REQ-7 / BL-034 通信エラー)", () => {
 });
 
 // ============================================================
-// D-014: routine 由来タスクも区別なく表示する
+// D-014: routine 由来タスクの扱い
+// BL-038 では「routine も区別なく表示」としていたが BL-042 REQ-2 / AC-8 で
+// 「routine は『今日にする』を非表示」に方針確定. routine は毎日自動生成されるため
+// 移送すると翌日に重複が出るのを防ぐ. 表示自体と「削除」「完了」は維持.
 // ============================================================
 
-describe("TomorrowView (BL-038 D-014 routine 由来タスクの扱い)", () => {
-  it("シナリオ A: origin=\"routine\" の tomorrow タスクも一覧に出る + 「今日にする」「削除」が押せる", async () => {
-    // spec U-007 / plan D-014: routine 由来タスクも origin に関わらず表示する.
+describe("TomorrowView (BL-042 routine 由来タスクの扱い)", () => {
+  it("シナリオ A: origin=\"routine\" の tomorrow タスクは一覧に出る + 「削除」が押せるが「今日にする」は非表示", async () => {
+    // BL-042 REQ-2 / AC-8: routine 由来は「今日にする」を非表示にする (毎日自動生成のため翌日重複防止).
     const repo = makeMockRepository([
       makeTask({
         id: "task-A",
@@ -1165,7 +1420,6 @@ describe("TomorrowView (BL-038 D-014 routine 由来タスクの扱い)", () => {
         version: 1,
       }),
     ]);
-    const user = userEvent.setup();
 
     renderWithQueryClient(
       <TomorrowView
@@ -1174,22 +1428,18 @@ describe("TomorrowView (BL-038 D-014 routine 由来タスクの扱い)", () => {
       />,
     );
 
-    // routine 由来でも描画される.
+    // routine 由来でも描画される (BL-038 維持).
     expect(await screen.findByText("ROUTINE-TOMORROW")).toBeInTheDocument();
 
-    // 「今日にする」「削除」も origin に関わらず存在 + 押下可能.
+    // 「削除」は origin に関わらず存在.
     const items = screen.getAllByRole("listitem");
     const card = items[0]!;
-    const moveButton = within(card).getByRole("button", { name: /今日にする/ });
     const deleteButton = within(card).getByRole("button", { name: /削除/ });
-    expect(moveButton).toBeInTheDocument();
     expect(deleteButton).toBeInTheDocument();
 
-    // 「今日にする」が押せる (= update が呼ばれる).
-    await user.click(moveButton);
-    expect(repo.updateMock).toHaveBeenCalledTimes(1);
-    const arg = repo.updateMock.mock.calls[0]?.[0] as UpdateTaskCommand;
-    expect(arg.id).toBe("task-A");
-    expect(arg.patch.dueDate).toBe("today");
+    // 「今日にする」は routine では非表示 (BL-042 REQ-2 / AC-8).
+    expect(
+      within(card).queryByRole("button", { name: /今日にする/ }),
+    ).toBeNull();
   });
 });
