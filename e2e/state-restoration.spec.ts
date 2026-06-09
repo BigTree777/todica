@@ -1,0 +1,97 @@
+/**
+ * ページリロード後の状態復元 E2E (BL-027).
+ *
+ * 検証する観点:
+ *   1. 完了タスクのカウント (BL-008) — `/today` の `completionCount` 経路で復元される
+ *   2. 明示的に設定したフォーカス対象タスク (BL-006) — `/focus` の `currentTaskId` 経路で復元される
+ *   3. 境界時刻設定 (BL-009) — `/settings` の永続化が復元される
+ *
+ * 単体・統合テストでは「ページリロード」というブラウザの全 React state リセット
+ * イベントを再現できず, サーバ側 state からの初期化経路が壊れていても検出できない.
+ */
+import { expect, test, type Page } from "@playwright/test";
+
+function taskRow(page: Page, taskName: string) {
+  return page.getByText(taskName, { exact: true }).first().locator("..");
+}
+
+test("リロード後も完了タスクのカウントが復元される", async ({ page }) => {
+  await page.goto("/");
+  const taskName = `カウント復元 ${Date.now()}`;
+  const countDisplay = page.getByLabel("今日の完了タスク数");
+
+  // 既存テスト由来の累積を考慮し, before 値を読み取って delta で検証する.
+  const beforeText = (await countDisplay.textContent()) ?? "";
+  const beforeCount = Number.parseInt(
+    beforeText.match(/今日の完了:\s*(\d+)/)?.[1] ?? "0",
+    10,
+  );
+  const expectedAfter = `今日の完了: ${beforeCount + 1}`;
+
+  await page.getByLabel("タスク名").fill(taskName);
+  await page.getByRole("button", { name: "追加" }).click();
+  await taskRow(page, taskName).getByRole("button", { name: "完了" }).click();
+  await expect(countDisplay).toHaveText(expectedAfter);
+
+  await page.reload();
+
+  await expect(countDisplay).toHaveText(expectedAfter);
+});
+
+test("リロード後も明示的に設定したフォーカス対象が復元される", async ({
+  page,
+  request,
+}) => {
+  // ダミー (normal) + テスト対象 (later) の 2 件を作る. ダミーが nextTaskId
+  // フォールバックを吸収し, テスト対象は「タスク一覧」側に来る.
+  // setup は API 直叩きで行う. 起票フォームを連続使用すると, 前の handleCreate の
+  // setName/setPriority リセットと次の fill/selectOption が交錯して priority が
+  // "normal" に戻った状態で submit されるレース条件が起きるため.
+  const focusName = `フォーカス復元 ${Date.now()}`;
+  const apiBase = "http://localhost:3000";
+  const authHeader = { Authorization: "Bearer dev-token" };
+
+  await request.post(`${apiBase}/api/v1/tasks`, {
+    headers: { ...authHeader, "Idempotency-Key": crypto.randomUUID() },
+    data: { id: crypto.randomUUID(), name: `ダミー ${Date.now()}` },
+  });
+  await request.post(`${apiBase}/api/v1/tasks`, {
+    headers: { ...authHeader, "Idempotency-Key": crypto.randomUUID() },
+    data: { id: crypto.randomUUID(), name: focusName, priority: "later" },
+  });
+
+  await page.goto("/");
+
+  // タスク一覧側に現れるまで待ち, 「現在に設定」をクリック.
+  const list = page.getByRole("list", { name: "タスク一覧" });
+  const listRow = list.getByRole("listitem").filter({ hasText: focusName });
+  await expect(listRow).toBeVisible();
+  await listRow.getByRole("button", { name: "現在に設定" }).click();
+
+  // 「現在のタスク」セクションに移動.
+  const focusedRegion = page.getByRole("region", { name: "現在のタスク" });
+  await expect(focusedRegion.getByText(focusName, { exact: true })).toBeVisible();
+
+  await page.reload();
+
+  // リロード後も「現在のタスク」に残る = currentTaskId が DB に永続化されており
+  // fallback ではなく明示 focus 経路で復元されている.
+  await expect(focusedRegion.getByText(focusName, { exact: true })).toBeVisible();
+});
+
+test("リロード後も保存した境界時刻設定が復元される", async ({ page }) => {
+  await page.goto("/settings");
+  const settingsValue = page.getByLabel("設定値");
+
+  // 既存値と異なる時刻を入れる.
+  const currentValue = (await settingsValue.textContent())?.trim();
+  const newValue = currentValue === "23:45" ? "22:15" : "23:45";
+
+  await page.getByLabel("境界時刻").fill(newValue);
+  await page.getByRole("button", { name: "保存" }).click();
+  await expect(settingsValue).toHaveText(newValue);
+
+  await page.reload();
+
+  await expect(settingsValue).toHaveText(newValue);
+});
