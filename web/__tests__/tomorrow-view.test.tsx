@@ -1,0 +1,1080 @@
+/**
+ * Web クライアント単体テスト: 「明日のタスク」独立ビュー (tomorrow-view) (BL-038).
+ *
+ * 仕様参照:
+ *   docs/developer/features/tomorrow-view/spec.md §「受け入れ基準」(REQ-1 〜 REQ-7).
+ *   docs/developer/features/tomorrow-view/plan.md §「テスト方針」.
+ *   docs/developer/features/tomorrow-view/tasks.md T-002.
+ *
+ * 本ファイルは TDD の "red" を作るためのテスト.
+ *   - `<TomorrowView />` 本体はまだ存在しない (placeholder のみ存在). よって最初に import
+ *     で落ちる (red). implementer が web/src/ui/tomorrow-view/tomorrow-view.tsx を新設して
+ *     green 化する.
+ *
+ * 既存 `today-view.test.tsx` / `focus-view.test.tsx` の `renderWithQueryClient` /
+ * `makeMockRepository` / `makeMockProjectRepository` のパターンを踏襲する.
+ */
+import { describe, expect, it, vi } from "vitest";
+import { render, screen, within, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
+import type { Task } from "@todica/domain/task";
+// TomorrowView はまだ実装されていない (placeholder のみ存在する).
+// 本 import は implementer が `web/src/ui/tomorrow-view/tomorrow-view.tsx` を作るまで red.
+import { TomorrowView } from "../src/ui/tomorrow-view/tomorrow-view.js";
+import type {
+  CompleteTaskCommand,
+  Counter,
+  CreateTaskCommand,
+  DeleteTaskCommand,
+  FocusSelection,
+  SetFocusCommand,
+  TaskRepository,
+  UpdateTaskCommand,
+} from "../src/repositories/task-repository.js";
+import { OptimisticLockError } from "../src/repositories/task-repository.js";
+import type {
+  Project,
+  ProjectRepository,
+} from "../src/repositories/project-repository.js";
+// BL-034 / REQ-7 関連: notifyError をスパイするために import.
+import * as ErrorNotification from "../src/error-notification.js";
+
+const NOW = "2026-06-09T09:00:00.000Z";
+
+/** TanStack Query テスト用クライアント. */
+function createTestQueryClient(): QueryClient {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: Infinity,
+        retry: false,
+        networkMode: "offlineFirst",
+      },
+      mutations: {
+        retry: false,
+        networkMode: "offlineFirst",
+      },
+    },
+  });
+}
+
+function renderWithQueryClient(ui: ReactNode): ReturnType<typeof render> {
+  const queryClient = createTestQueryClient();
+  return render(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
+  );
+}
+
+function makeTask(overrides: Partial<Task> = {}): Task {
+  return {
+    id: "task-1",
+    name: "牛乳",
+    projectId: null,
+    dueDate: "tomorrow",
+    priority: "normal",
+    origin: "manual",
+    routineId: null,
+    createdAt: NOW,
+    updatedAt: NOW,
+    trashedAt: null,
+    trashedReason: null,
+    version: 1,
+    ...overrides,
+  };
+}
+
+function makeMockProjectRepository(initial: Project[] = []): ProjectRepository & {
+  listMock: ReturnType<typeof vi.fn>;
+} {
+  const state = [...initial];
+  const listMock = vi.fn(async (): Promise<Project[]> => [...state]);
+  const createMock = vi.fn(async (cmd: { id: string; name: string }) => {
+    const p: Project = {
+      id: cmd.id,
+      name: cmd.name,
+      version: 1,
+      createdAt: NOW,
+      updatedAt: NOW,
+    };
+    state.push(p);
+    return p;
+  });
+  const updateMock = vi.fn(async () => {
+    throw new Error("not used");
+  });
+  const deleteMock = vi.fn(async () => {
+    /* not used */
+  });
+  return {
+    list: listMock,
+    create: createMock,
+    update: updateMock,
+    delete: deleteMock,
+    listMock,
+  };
+}
+
+/**
+ * モック TaskRepository.
+ *
+ * - `list({ dueDate })`: state から dueDate (= "tomorrow" 固定で渡される想定) でフィルタし
+ *   priority → createdAt → id にソートして返す.
+ *   モックは「サーバ側ソート規則」を模倣する.
+ *
+ * - `today()`: dueDate === "today" のみ返す (今日にした後の `["today"]` invalidate を観察可能にするため).
+ *
+ * - `create({ dueDate: "tomorrow", ... })`: state に push し dueDate=tomorrow で投入する.
+ *
+ * - `update({ patch: { dueDate: "today" } })`: state[idx] を patch で更新する.
+ *
+ * - `delete({ id })`: state から取り除く.
+ *
+ * - `complete()` は TomorrowView の責務外 (= 呼ばれない想定). 呼ばれたら throw する.
+ */
+function makeMockRepository(
+  initial: Task[] = [],
+  options: {
+    initialFocus?: FocusSelection;
+    initialCounter?: Counter;
+    /** create を失敗させたい場合に渡す. */
+    createError?: Error;
+    /** update を失敗させたい場合に渡す. */
+    updateError?: Error;
+    /** delete を失敗させたい場合に渡す. */
+    deleteError?: Error;
+    /**
+     * list() の戻り値を「サーバから返ってきた順」に固定したい場合に渡す.
+     * 指定された場合, mock の内部ソートを行わず, 渡された並びをそのまま使う
+     * (= UI が「再ソートしない」ことを観察するため).
+     */
+    fixedListOrderIds?: string[];
+  } = {},
+): TaskRepository & {
+  createMock: ReturnType<typeof vi.fn>;
+  updateMock: ReturnType<typeof vi.fn>;
+  deleteMock: ReturnType<typeof vi.fn>;
+  completeMock: ReturnType<typeof vi.fn>;
+  listMock: ReturnType<typeof vi.fn>;
+  todayMock: ReturnType<typeof vi.fn>;
+  getFocusMock: ReturnType<typeof vi.fn>;
+  setFocusMock: ReturnType<typeof vi.fn>;
+  getCounterMock: ReturnType<typeof vi.fn>;
+} {
+  const state = [...initial];
+  let focusState: FocusSelection = options.initialFocus ?? {
+    id: "singleton",
+    currentTaskId: null,
+    version: 1,
+    updatedAt: NOW,
+  };
+  let counterState: Counter = options.initialCounter ?? {
+    id: "singleton",
+    completedCount: 0,
+    lastResetExecutedAt: null,
+    version: 1,
+    updatedAt: NOW,
+  };
+  const PRIORITY_ORDER_LOCAL: Record<string, number> = {
+    highest: 0,
+    normal: 1,
+    later: 2,
+  };
+  // BL-038: list(filter?) は { dueDate?: "today" | "tomorrow" } を受け取れる前提
+  // (plan.md D-011 / T-009). 既存 signature (`list(): Promise<Task[]>`) との互換のため
+  // optional 引数として扱う.
+  const listMock = vi.fn(
+    async (filter?: { dueDate?: "today" | "tomorrow" }): Promise<Task[]> => {
+      const filtered = state.filter((t) => {
+        if (t.trashedAt !== null) return false;
+        if (filter?.dueDate && t.dueDate !== filter.dueDate) return false;
+        return true;
+      });
+      // fixedListOrderIds が渡されている場合は, mock の内部ソートを行わず
+      // 渡された並びをそのまま使う (= UI が「再ソートしない」ことを観察するため).
+      if (options.fixedListOrderIds) {
+        const byId = new Map(filtered.map((t) => [t.id, t]));
+        const ordered = options.fixedListOrderIds
+          .map((id) => byId.get(id))
+          .filter((t): t is Task => t !== undefined);
+        return ordered;
+      }
+      const sorted = [...filtered].sort((a, b) => {
+        const p =
+          (PRIORITY_ORDER_LOCAL[a.priority] ?? 99) -
+          (PRIORITY_ORDER_LOCAL[b.priority] ?? 99);
+        if (p !== 0) return p;
+        const c = a.createdAt.localeCompare(b.createdAt);
+        if (c !== 0) return c;
+        return a.id.localeCompare(b.id);
+      });
+      return sorted;
+    },
+  );
+  const todayMock = vi.fn(async () => {
+    const filtered = state.filter(
+      (t) => t.dueDate === "today" && t.trashedAt === null,
+    );
+    const sorted = [...filtered].sort((a, b) => {
+      const p =
+        (PRIORITY_ORDER_LOCAL[a.priority] ?? 99) -
+        (PRIORITY_ORDER_LOCAL[b.priority] ?? 99);
+      if (p !== 0) return p;
+      const c = a.createdAt.localeCompare(b.createdAt);
+      if (c !== 0) return c;
+      return a.id.localeCompare(b.id);
+    });
+    return {
+      tasks: sorted,
+      nextTaskId: sorted[0]?.id ?? null,
+      currentTaskId: focusState.currentTaskId,
+      completionCount: counterState.completedCount,
+    };
+  });
+  const createMock = vi.fn(async (cmd: CreateTaskCommand) => {
+    if (options.createError) throw options.createError;
+    const t = makeTask({
+      id: cmd.id,
+      name: cmd.name,
+      projectId: cmd.projectId ?? null,
+      // REQ-2: dueDate は "tomorrow" 固定で UI から送られる想定.
+      dueDate: cmd.dueDate ?? "tomorrow",
+      ...(cmd.priority !== undefined ? { priority: cmd.priority } : {}),
+    });
+    state.push(t);
+    return t;
+  });
+  const updateMock = vi.fn(async (cmd: UpdateTaskCommand) => {
+    if (options.updateError) throw options.updateError;
+    const idx = state.findIndex((t) => t.id === cmd.id);
+    if (idx < 0) throw new Error("not found");
+    const next: Task = {
+      ...state[idx]!,
+      ...cmd.patch,
+      version: (state[idx]!.version ?? 0) + 1,
+    };
+    state[idx] = next;
+    return next;
+  });
+  const deleteMock = vi.fn(async (cmd: DeleteTaskCommand) => {
+    if (options.deleteError) throw options.deleteError;
+    const idx = state.findIndex((t) => t.id === cmd.id);
+    if (idx >= 0) state.splice(idx, 1);
+  });
+  const completeMock = vi.fn(async (_cmd: CompleteTaskCommand) => {
+    throw new Error(
+      "TomorrowView は complete を呼ばないはず (REQ-3 / アクションは「削除」「今日にする」の 2 つのみ)",
+    );
+  });
+  const getFocusMock = vi.fn(async () => ({ ...focusState }));
+  const setFocusMock = vi.fn(async (cmd: SetFocusCommand) => {
+    focusState = {
+      ...focusState,
+      currentTaskId: cmd.taskId,
+      version: focusState.version + 1,
+      updatedAt: NOW,
+    };
+    return { ...focusState };
+  });
+  const getCounterMock = vi.fn(async () => ({ ...counterState }));
+  return {
+    list: listMock,
+    create: createMock,
+    update: updateMock,
+    delete: deleteMock,
+    complete: completeMock,
+    today: todayMock,
+    getFocus: getFocusMock,
+    setFocus: setFocusMock,
+    getCounter: getCounterMock,
+    createMock,
+    updateMock,
+    deleteMock,
+    completeMock,
+    listMock,
+    todayMock,
+    getFocusMock,
+    setFocusMock,
+    getCounterMock,
+  };
+}
+
+// ============================================================
+// REQ-1: 一覧表示 (dueDate=tomorrow を優先度順に列挙)
+// ============================================================
+
+describe("TomorrowView (BL-038 REQ-1 一覧表示)", () => {
+  it("シナリオ A: dueDate=tomorrow のタスクのみが priority (highest→normal→later) 順で一覧表示される", async () => {
+    // 受け入れ基準 §「一覧表示 (REQ-1)」 第 1 ケース.
+    // 投入: B (highest), A (normal), D (later) の tomorrow タスクと, C (today), E (tomorrow, trashed).
+    const repo = makeMockRepository([
+      makeTask({
+        id: "task-A",
+        name: "AAA",
+        priority: "normal",
+        dueDate: "tomorrow",
+        createdAt: "2026-06-09T08:00:01.000Z",
+        version: 1,
+      }),
+      makeTask({
+        id: "task-B",
+        name: "BBB",
+        priority: "highest",
+        dueDate: "tomorrow",
+        createdAt: "2026-06-09T08:00:02.000Z",
+        version: 1,
+      }),
+      makeTask({
+        id: "task-C",
+        name: "CCC",
+        priority: "highest",
+        dueDate: "today",
+        createdAt: "2026-06-09T08:00:00.000Z",
+        version: 1,
+      }),
+      makeTask({
+        id: "task-D",
+        name: "DDD",
+        priority: "later",
+        dueDate: "tomorrow",
+        createdAt: "2026-06-09T08:00:03.000Z",
+        version: 1,
+      }),
+      makeTask({
+        id: "task-E",
+        name: "EEE",
+        priority: "normal",
+        dueDate: "tomorrow",
+        createdAt: "2026-06-09T08:00:04.000Z",
+        version: 1,
+        trashedAt: "2026-06-09T08:00:05.000Z",
+        trashedReason: "deleted",
+      }),
+    ]);
+
+    renderWithQueryClient(
+      <TomorrowView
+        repository={repo}
+        projectRepository={makeMockProjectRepository()}
+      />,
+    );
+
+    // 並びは B (highest) → A (normal) → D (later).
+    const items = await screen.findAllByRole("listitem");
+    expect(items).toHaveLength(3);
+    expect(items[0]?.textContent ?? "").toContain("BBB");
+    expect(items[1]?.textContent ?? "").toContain("AAA");
+    expect(items[2]?.textContent ?? "").toContain("DDD");
+
+    // 今日のタスク (CCC) は出ない.
+    expect(screen.queryByText("CCC")).toBeNull();
+    // ゴミ箱の tomorrow タスク (EEE) も出ない.
+    expect(screen.queryByText("EEE")).toBeNull();
+  });
+
+  it("シナリオ B: TomorrowView は repository.list({ dueDate: \"tomorrow\" }) を呼ぶ", async () => {
+    // 受け入れ基準 §「一覧表示 (REQ-1)」 第 2 ケース.
+    // クライアントは ?dueDate=tomorrow のサーバ呼び出しに対応する list 呼び出しを使う.
+    const repo = makeMockRepository([
+      makeTask({ id: "t1", name: "x", dueDate: "tomorrow", version: 1 }),
+    ]);
+
+    renderWithQueryClient(
+      <TomorrowView
+        repository={repo}
+        projectRepository={makeMockProjectRepository()}
+      />,
+    );
+
+    // 描画完了を待つ.
+    await screen.findByText("x");
+
+    // list() が dueDate=tomorrow 引数付きで呼ばれている.
+    expect(repo.listMock).toHaveBeenCalled();
+    const firstCallArg = repo.listMock.mock.calls[0]?.[0];
+    expect(firstCallArg).toEqual({ dueDate: "tomorrow" });
+  });
+
+  it("シナリオ C: TomorrowView はサーバから返ってきた順序をそのまま表示する (クライアント再ソートなし)", async () => {
+    // 受け入れ基準 §「一覧表示 (REQ-1)」 + spec REQ-1: クライアント側で再ソートしない.
+    // mock に fixedListOrderIds を渡し, 「mock が返した順 = UI に表示された順」 を強制する.
+    const repo = makeMockRepository(
+      [
+        makeTask({
+          id: "task-A",
+          name: "AAA",
+          priority: "later",
+          dueDate: "tomorrow",
+          version: 1,
+        }),
+        makeTask({
+          id: "task-B",
+          name: "BBB",
+          priority: "highest",
+          dueDate: "tomorrow",
+          version: 1,
+        }),
+        makeTask({
+          id: "task-C",
+          name: "CCC",
+          priority: "normal",
+          dueDate: "tomorrow",
+          version: 1,
+        }),
+      ],
+      {
+        // priority 順ではなく「あえてアルファベット (A, B, C) 順」で返す.
+        // UI が再ソートするなら BBB が先頭に来てしまい assert が落ちる.
+        fixedListOrderIds: ["task-A", "task-B", "task-C"],
+      },
+    );
+
+    renderWithQueryClient(
+      <TomorrowView
+        repository={repo}
+        projectRepository={makeMockProjectRepository()}
+      />,
+    );
+
+    const items = await screen.findAllByRole("listitem");
+    expect(items).toHaveLength(3);
+    // mock が返した順 = A → B → C のまま表示される.
+    expect(items[0]?.textContent ?? "").toContain("AAA");
+    expect(items[1]?.textContent ?? "").toContain("BBB");
+    expect(items[2]?.textContent ?? "").toContain("CCC");
+  });
+});
+
+// ============================================================
+// REQ-2: 起票フォーム (期限 UI 無し)
+// ============================================================
+
+describe("TomorrowView (BL-038 REQ-2 起票フォーム)", () => {
+  it("シナリオ A: 起票フォームの入力要素は「タスク名」「プロジェクト」「優先度」「追加」の 4 要素のみ (期限 UI 無し)", async () => {
+    // 受け入れ基準 §「起票 (REQ-2)」 第 1 ケース.
+    const repo = makeMockRepository([]);
+
+    renderWithQueryClient(
+      <TomorrowView
+        repository={repo}
+        projectRepository={makeMockProjectRepository()}
+      />,
+    );
+
+    // 4 つの要素は存在する.
+    const nameInput = await screen.findByLabelText(/タスク名/);
+    expect(nameInput).toBeRequired();
+    expect(screen.queryByLabelText(/プロジェクト/)).not.toBeNull();
+    expect(screen.queryByLabelText(/優先度/)).not.toBeNull();
+    expect(screen.queryByRole("button", { name: /追加|起票|登録|送信/ })).not.toBeNull();
+
+    // 期限の UI は存在しない (label / combobox / textbox いずれも).
+    // 注意: section の aria-label="明日のタスク" / form の aria-label="明日のタスク起票フォーム"
+    // は spec REQ-7「アクセシビリティ」で明示されたランドマーク (E2E でも使用) のため,
+    // 「明日」「tomorrow」 を含むラベルの不在検証は form 内に限定する (form scope).
+    const form = screen.getByRole("form", { name: /起票フォーム/ });
+    expect(within(form).queryByLabelText(/期限/)).toBeNull();
+    expect(within(form).queryByLabelText(/明日/)).toBeNull();
+    expect(within(form).queryByLabelText(/today/i)).toBeNull();
+    expect(within(form).queryByLabelText(/tomorrow/i)).toBeNull();
+    expect(
+      within(form).queryByRole("combobox", { name: /期限|明日|today|tomorrow/i }),
+    ).toBeNull();
+  });
+
+  it("シナリオ B: タスク名「明日の買い物」を入力して「追加」を押すと create({ dueDate: \"tomorrow\", ... }) が 1 回呼ばれる", async () => {
+    // 受け入れ基準 §「起票 (REQ-2)」 第 2 ケース.
+    const repo = makeMockRepository([]);
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <TomorrowView
+        repository={repo}
+        projectRepository={makeMockProjectRepository()}
+      />,
+    );
+
+    const nameInput = await screen.findByLabelText(/タスク名/);
+    await user.type(nameInput, "明日の買い物");
+    const submit = screen.getByRole("button", { name: /追加|起票|登録|送信/ });
+    await user.click(submit);
+
+    expect(repo.createMock).toHaveBeenCalledTimes(1);
+    const arg = repo.createMock.mock.calls[0]?.[0] as CreateTaskCommand;
+    expect(arg.name).toBe("明日の買い物");
+    // dueDate は "tomorrow" が明示送信される (D-012 / spec U-008).
+    expect(arg.dueDate).toBe("tomorrow");
+    // projectId / priority は spec U-005 採用案の既定 (未分類 / normal) を尊重.
+    expect(arg.projectId === null || arg.projectId === undefined).toBe(true);
+    if (arg.priority !== undefined) {
+      expect(arg.priority).toBe("normal");
+    }
+    // id は生成される.
+    expect(typeof arg.id).toBe("string");
+    expect(arg.id.length).toBeGreaterThan(0);
+  });
+
+  it("シナリオ C: 起票成功後に一覧が再フェッチされ (= list 呼び出しが増え) 起票したタスクが描画される", async () => {
+    // 受け入れ基準 §「起票 (REQ-2)」 第 2 ケース後半 + REQ-2 invalidate.
+    const repo = makeMockRepository([]);
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <TomorrowView
+        repository={repo}
+        projectRepository={makeMockProjectRepository()}
+      />,
+    );
+
+    // 初回マウントで list が 1 回以上呼ばれる.
+    await screen.findByLabelText(/タスク名/);
+    const listCallsBefore = repo.listMock.mock.calls.length;
+
+    const nameInput = screen.getByLabelText(/タスク名/);
+    await user.type(nameInput, "明日の買い物");
+    const submit = screen.getByRole("button", { name: /追加|起票|登録|送信/ });
+    await user.click(submit);
+
+    // 再フェッチが行われ list の累積呼出回数が増えている (= ["tomorrow"] invalidate された).
+    await waitFor(() => {
+      expect(repo.listMock.mock.calls.length).toBeGreaterThan(listCallsBefore);
+    });
+
+    // 一覧に「明日の買い物」が現れる.
+    expect(await screen.findByText("明日の買い物")).toBeInTheDocument();
+  });
+});
+
+// ============================================================
+// REQ-3: タスクカードのアクションは「削除」「今日にする」の 2 つのみ
+// ============================================================
+
+describe("TomorrowView (BL-038 REQ-3 アクション数の規約)", () => {
+  it("シナリオ A: 1 件目のカード内のボタンは「削除」「今日にする」の 2 つのみ (「完了」「明日にする」「明日へ」「優先度切替」「編集」「現在に設定」は存在しない)", async () => {
+    // 受け入れ基準 §「アクション数の規約 (REQ-3)」.
+    const repo = makeMockRepository([
+      makeTask({
+        id: "task-A",
+        name: "AAA",
+        dueDate: "tomorrow",
+        version: 1,
+      }),
+    ]);
+
+    renderWithQueryClient(
+      <TomorrowView
+        repository={repo}
+        projectRepository={makeMockProjectRepository()}
+      />,
+    );
+
+    const items = await screen.findAllByRole("listitem");
+    expect(items.length).toBeGreaterThanOrEqual(1);
+    const card = items[0]!;
+
+    // 「削除」「今日にする」の 2 つが存在する.
+    expect(
+      within(card).getByRole("button", { name: /削除/ }),
+    ).toBeInTheDocument();
+    expect(
+      within(card).getByRole("button", { name: /今日にする/ }),
+    ).toBeInTheDocument();
+
+    // 禁則ボタンが居ない (REQ-3).
+    expect(within(card).queryByRole("button", { name: /完了/ })).toBeNull();
+    expect(
+      within(card).queryByRole("button", { name: /明日にする/ }),
+    ).toBeNull();
+    expect(within(card).queryByRole("button", { name: /明日へ/ })).toBeNull();
+    expect(within(card).queryByRole("button", { name: /優先度/ })).toBeNull();
+    expect(within(card).queryByRole("button", { name: /編集/ })).toBeNull();
+    expect(
+      within(card).queryByRole("button", { name: /現在に設定/ }),
+    ).toBeNull();
+
+    // カード内のボタン総数は「削除」「今日にする」の 2 個ちょうど.
+    const buttons = within(card).getAllByRole("button");
+    expect(buttons).toHaveLength(2);
+  });
+});
+
+// ============================================================
+// REQ-4: 「今日にする」操作 (FR-014 逆方向)
+// ============================================================
+
+describe("TomorrowView (BL-038 REQ-4 「今日にする」)", () => {
+  it("シナリオ A: 「今日にする」クリックで update({ id, ifMatch, patch: { dueDate: \"today\" } }) が 1 回呼ばれる", async () => {
+    // 受け入れ基準 §「「今日にする」 (REQ-4 / FR-014 逆方向)」.
+    const repo = makeMockRepository([
+      makeTask({
+        id: "task-A",
+        name: "AAA",
+        dueDate: "tomorrow",
+        version: 1,
+      }),
+    ]);
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <TomorrowView
+        repository={repo}
+        projectRepository={makeMockProjectRepository()}
+      />,
+    );
+
+    await screen.findByText("AAA");
+    const items = screen.getAllByRole("listitem");
+    const card = items[0]!;
+
+    const moveButton = within(card).getByRole("button", { name: /今日にする/ });
+    await user.click(moveButton);
+
+    expect(repo.updateMock).toHaveBeenCalledTimes(1);
+    const arg = repo.updateMock.mock.calls[0]?.[0] as UpdateTaskCommand;
+    expect(arg.id).toBe("task-A");
+    expect(arg.ifMatch).toBe(1);
+    expect(arg.patch.dueDate).toBe("today");
+    // 期限以外のフィールドは送らない (NFR-013 / 部分上書き原則).
+    expect(arg.patch.name).toBeUndefined();
+    expect(arg.patch.projectId).toBeUndefined();
+    expect(arg.patch.priority).toBeUndefined();
+  });
+
+  it("シナリオ B: 「今日にする」成功後にタスクが /tomorrow の一覧から消える", async () => {
+    // 受け入れ基準 §「「今日にする」」: 再フェッチ後の /tomorrow には A が表示されない.
+    const repo = makeMockRepository([
+      makeTask({
+        id: "task-A",
+        name: "MOVE-ME",
+        dueDate: "tomorrow",
+        version: 1,
+      }),
+    ]);
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <TomorrowView
+        repository={repo}
+        projectRepository={makeMockProjectRepository()}
+      />,
+    );
+
+    expect(await screen.findByText("MOVE-ME")).toBeInTheDocument();
+
+    const items = screen.getAllByRole("listitem");
+    const moveButton = within(items[0]!).getByRole("button", {
+      name: /今日にする/,
+    });
+    await user.click(moveButton);
+
+    // 一覧から消える (mock updateMock が dueDate を today にし, 次回 list({ dueDate: "tomorrow" })
+    // は MOVE-ME を返さなくなる).
+    await waitFor(() => {
+      expect(screen.queryByText("MOVE-ME")).toBeNull();
+    });
+  });
+
+  it("シナリオ C: 「今日にする」成功後に list と today の両方が再フェッチされる (D-004: [\"tomorrow\"] / [\"today\"] / [\"focus\"] invalidate)", async () => {
+    // plan.md D-004 / U-003 採用案: ["tomorrow"] / ["today"] / ["focus"] の 3 つを invalidate.
+    // mock では `list` (= ["tomorrow"] queryFn) と `today` (= ["today"] queryFn) と `getFocus` (= ["focus"]) の
+    // それぞれの呼出回数が増えることで invalidate を観察する.
+    const repo = makeMockRepository([
+      makeTask({
+        id: "task-A",
+        name: "AAA",
+        dueDate: "tomorrow",
+        version: 1,
+      }),
+    ]);
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <TomorrowView
+        repository={repo}
+        projectRepository={makeMockProjectRepository()}
+      />,
+    );
+
+    await screen.findByText("AAA");
+    const listCallsBefore = repo.listMock.mock.calls.length;
+
+    const items = screen.getAllByRole("listitem");
+    const moveButton = within(items[0]!).getByRole("button", {
+      name: /今日にする/,
+    });
+    await user.click(moveButton);
+
+    // ["tomorrow"] の再フェッチ.
+    await waitFor(() => {
+      expect(repo.listMock.mock.calls.length).toBeGreaterThan(listCallsBefore);
+    });
+    // ["today"] / ["focus"] の invalidate は, それぞれの queryFn が今後発火可能な状態に
+    // なれば十分だが, queryClient.invalidateQueries は active query しか即時 refetch しない.
+    // ここでは「mutation が成功した」「list は再フェッチされた」までで invalidate 観察を打ち止め,
+    // ["today"] / ["focus"] までの invalidate は plan で記述された方針として担保する.
+    // (実装側で invalidate を呼び忘れた場合は, 後述の E2E シナリオ Q で検出する.)
+  });
+});
+
+// ============================================================
+// REQ-5: 削除操作 (論理削除)
+// ============================================================
+
+describe("TomorrowView (BL-038 REQ-5 削除操作)", () => {
+  it("シナリオ A: 「削除」クリックで delete({ id, ifMatch }) が 1 回呼ばれる", async () => {
+    // 受け入れ基準 §「削除 (REQ-5)」.
+    const repo = makeMockRepository([
+      makeTask({
+        id: "task-A",
+        name: "AAA",
+        dueDate: "tomorrow",
+        version: 1,
+      }),
+    ]);
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <TomorrowView
+        repository={repo}
+        projectRepository={makeMockProjectRepository()}
+      />,
+    );
+
+    await screen.findByText("AAA");
+    const items = screen.getAllByRole("listitem");
+    const card = items[0]!;
+
+    const deleteButton = within(card).getByRole("button", { name: /削除/ });
+    await user.click(deleteButton);
+
+    expect(repo.deleteMock).toHaveBeenCalledTimes(1);
+    const arg = repo.deleteMock.mock.calls[0]?.[0] as DeleteTaskCommand;
+    expect(arg.id).toBe("task-A");
+    expect(arg.ifMatch).toBe(1);
+
+    // 完了は呼ばれない (REQ-3 / 操作の独立性).
+    expect(repo.completeMock).not.toHaveBeenCalled();
+  });
+
+  it("シナリオ B: 削除成功後にタスクが /tomorrow の一覧から消える", async () => {
+    const repo = makeMockRepository([
+      makeTask({
+        id: "task-A",
+        name: "DEL-ME",
+        dueDate: "tomorrow",
+        version: 1,
+      }),
+    ]);
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <TomorrowView
+        repository={repo}
+        projectRepository={makeMockProjectRepository()}
+      />,
+    );
+
+    expect(await screen.findByText("DEL-ME")).toBeInTheDocument();
+
+    const items = screen.getAllByRole("listitem");
+    const deleteButton = within(items[0]!).getByRole("button", {
+      name: /削除/,
+    });
+    await user.click(deleteButton);
+
+    await waitFor(() => {
+      expect(screen.queryByText("DEL-ME")).toBeNull();
+    });
+  });
+});
+
+// ============================================================
+// REQ-6: 空状態
+// ============================================================
+
+describe("TomorrowView (BL-038 REQ-6 空状態)", () => {
+  it("シナリオ A: 明日タスクが 0 件のとき「明日のタスクはありません」が表示され, 起票フォームは引き続き表示される", async () => {
+    // 受け入れ基準 §「空状態 (REQ-6)」.
+    const repo = makeMockRepository([]);
+
+    renderWithQueryClient(
+      <TomorrowView
+        repository={repo}
+        projectRepository={makeMockProjectRepository()}
+      />,
+    );
+
+    // 見出し「明日のタスク」 (placeholder と新実装で共通) が描画される.
+    expect(
+      await screen.findByRole("heading", { name: "明日のタスク" }),
+    ).toBeInTheDocument();
+
+    // 空状態テキスト.
+    expect(
+      await screen.findByText("明日のタスクはありません"),
+    ).toBeInTheDocument();
+
+    // 起票フォーム (タスク名 / プロジェクト / 優先度 / 追加ボタン) は表示されている.
+    expect(screen.queryByLabelText(/タスク名/)).not.toBeNull();
+    expect(screen.queryByLabelText(/プロジェクト/)).not.toBeNull();
+    expect(screen.queryByLabelText(/優先度/)).not.toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /追加|起票|登録|送信/ }),
+    ).not.toBeNull();
+  });
+});
+
+// ============================================================
+// REQ-7: ConflictDialog (412 → OptimisticLockError → ConflictDialog 表示)
+// ============================================================
+
+describe("TomorrowView (BL-038 REQ-7 ConflictDialog)", () => {
+  it("シナリオ A: 「今日にする」操作で online 412 が返ったとき ConflictDialog が開く", async () => {
+    // 受け入れ基準 §「ConflictDialog」 第 1 ケース.
+    const repo = makeMockRepository(
+      [
+        makeTask({
+          id: "task-A",
+          name: "AAA",
+          dueDate: "tomorrow",
+          version: 1,
+        }),
+      ],
+      {
+        updateError: new OptimisticLockError(
+          "optimistic lock conflict on update",
+          makeTask({
+            id: "task-A",
+            name: "AAA (サーバ最新)",
+            dueDate: "tomorrow",
+            version: 5,
+          }),
+        ),
+      },
+    );
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <TomorrowView
+        repository={repo}
+        projectRepository={makeMockProjectRepository()}
+      />,
+    );
+
+    await screen.findByText("AAA");
+    const items = screen.getAllByRole("listitem");
+    const moveButton = within(items[0]!).getByRole("button", {
+      name: /今日にする/,
+    });
+    await user.click(moveButton);
+
+    // ConflictDialog が表示される.
+    const dialog = await screen.findByRole("dialog", {
+      name: "変更が衝突しました",
+    });
+    expect(dialog).toBeInTheDocument();
+  });
+
+  it("シナリオ B: 「削除」操作で online 412 が返ったとき ConflictDialog が開く", async () => {
+    // 受け入れ基準 §「ConflictDialog」 第 2 ケース.
+    const repo = makeMockRepository(
+      [
+        makeTask({
+          id: "task-A",
+          name: "AAA",
+          dueDate: "tomorrow",
+          version: 1,
+        }),
+      ],
+      {
+        deleteError: new OptimisticLockError(
+          "optimistic lock conflict on delete",
+          makeTask({
+            id: "task-A",
+            name: "AAA (サーバ最新)",
+            dueDate: "tomorrow",
+            version: 5,
+          }),
+        ),
+      },
+    );
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <TomorrowView
+        repository={repo}
+        projectRepository={makeMockProjectRepository()}
+      />,
+    );
+
+    await screen.findByText("AAA");
+    const items = screen.getAllByRole("listitem");
+    const deleteButton = within(items[0]!).getByRole("button", {
+      name: /削除/,
+    });
+    await user.click(deleteButton);
+
+    expect(
+      await screen.findByRole("dialog", { name: "変更が衝突しました" }),
+    ).toBeInTheDocument();
+  });
+});
+
+// ============================================================
+// REQ-7 / BL-034: 通信エラー時 notifyError が呼ばれる
+// ============================================================
+
+describe("TomorrowView (BL-038 REQ-7 / BL-034 通信エラー)", () => {
+  it("シナリオ A: update が一般エラー (= ConflictError でない) を throw すると notifyError(\"通信に失敗しました\") が呼ばれる", async () => {
+    // 受け入れ基準 §「通信エラー (REQ-7 / BL-034)」.
+    const notifySpy = vi.spyOn(ErrorNotification, "notifyError");
+
+    const repo = makeMockRepository(
+      [
+        makeTask({
+          id: "task-A",
+          name: "AAA",
+          dueDate: "tomorrow",
+          version: 1,
+        }),
+      ],
+      {
+        updateError: new Error("network failure"),
+      },
+    );
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <TomorrowView
+        repository={repo}
+        projectRepository={makeMockProjectRepository()}
+      />,
+    );
+
+    await screen.findByText("AAA");
+    const items = screen.getAllByRole("listitem");
+    const moveButton = within(items[0]!).getByRole("button", {
+      name: /今日にする/,
+    });
+    await user.click(moveButton);
+
+    await waitFor(() => {
+      expect(notifySpy).toHaveBeenCalledWith("通信に失敗しました");
+    });
+
+    notifySpy.mockRestore();
+  });
+
+  it("シナリオ B: delete が一般エラーを throw すると notifyError が呼ばれる", async () => {
+    const notifySpy = vi.spyOn(ErrorNotification, "notifyError");
+
+    const repo = makeMockRepository(
+      [
+        makeTask({
+          id: "task-A",
+          name: "AAA",
+          dueDate: "tomorrow",
+          version: 1,
+        }),
+      ],
+      {
+        deleteError: new Error("network failure"),
+      },
+    );
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <TomorrowView
+        repository={repo}
+        projectRepository={makeMockProjectRepository()}
+      />,
+    );
+
+    await screen.findByText("AAA");
+    const items = screen.getAllByRole("listitem");
+    const deleteButton = within(items[0]!).getByRole("button", {
+      name: /削除/,
+    });
+    await user.click(deleteButton);
+
+    await waitFor(() => {
+      expect(notifySpy).toHaveBeenCalledWith("通信に失敗しました");
+    });
+
+    notifySpy.mockRestore();
+  });
+
+  it("シナリオ C: create が一般エラーを throw すると notifyError が呼ばれる", async () => {
+    const notifySpy = vi.spyOn(ErrorNotification, "notifyError");
+
+    const repo = makeMockRepository([], {
+      createError: new Error("network failure"),
+    });
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <TomorrowView
+        repository={repo}
+        projectRepository={makeMockProjectRepository()}
+      />,
+    );
+
+    const nameInput = await screen.findByLabelText(/タスク名/);
+    await user.type(nameInput, "x");
+    const submit = screen.getByRole("button", { name: /追加|起票|登録|送信/ });
+    await user.click(submit);
+
+    await waitFor(() => {
+      expect(notifySpy).toHaveBeenCalledWith("通信に失敗しました");
+    });
+
+    notifySpy.mockRestore();
+  });
+});
+
+// ============================================================
+// D-014: routine 由来タスクも区別なく表示する
+// ============================================================
+
+describe("TomorrowView (BL-038 D-014 routine 由来タスクの扱い)", () => {
+  it("シナリオ A: origin=\"routine\" の tomorrow タスクも一覧に出る + 「今日にする」「削除」が押せる", async () => {
+    // spec U-007 / plan D-014: routine 由来タスクも origin に関わらず表示する.
+    const repo = makeMockRepository([
+      makeTask({
+        id: "task-A",
+        name: "ROUTINE-TOMORROW",
+        dueDate: "tomorrow",
+        origin: "routine",
+        routineId: "routine-1",
+        version: 1,
+      }),
+    ]);
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <TomorrowView
+        repository={repo}
+        projectRepository={makeMockProjectRepository()}
+      />,
+    );
+
+    // routine 由来でも描画される.
+    expect(await screen.findByText("ROUTINE-TOMORROW")).toBeInTheDocument();
+
+    // 「今日にする」「削除」も origin に関わらず存在 + 押下可能.
+    const items = screen.getAllByRole("listitem");
+    const card = items[0]!;
+    const moveButton = within(card).getByRole("button", { name: /今日にする/ });
+    const deleteButton = within(card).getByRole("button", { name: /削除/ });
+    expect(moveButton).toBeInTheDocument();
+    expect(deleteButton).toBeInTheDocument();
+
+    // 「今日にする」が押せる (= update が呼ばれる).
+    await user.click(moveButton);
+    expect(repo.updateMock).toHaveBeenCalledTimes(1);
+    const arg = repo.updateMock.mock.calls[0]?.[0] as UpdateTaskCommand;
+    expect(arg.id).toBe("task-A");
+    expect(arg.patch.dueDate).toBe("today");
+  });
+});

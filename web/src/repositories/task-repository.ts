@@ -127,8 +127,20 @@ export interface SetFocusCommand {
   ifMatch: number;
 }
 
+/**
+ * BL-038 / tomorrow-view: `list()` に渡せる filter.
+ *
+ * - `dueDate` を渡すとサーバ側 (`GET /api/v1/tasks?dueDate=...`) で絞り込む.
+ * - 未指定なら既存挙動 (絞り込みなし) を維持する (D-011).
+ *
+ * 仕様参照: docs/developer/features/tomorrow-view/plan.md §「TaskRepository クライアント側の拡張」.
+ */
+export interface ListTasksFilter {
+  dueDate?: DueDate;
+}
+
 export interface TaskRepository {
-  list(): Promise<Task[]>;
+  list(filter?: ListTasksFilter): Promise<Task[]>;
   create(cmd: CreateTaskCommand): Promise<Task>;
   update(cmd: UpdateTaskCommand): Promise<Task>;
   delete(cmd: DeleteTaskCommand): Promise<void>;
@@ -235,8 +247,13 @@ export class HttpTaskRepository implements TaskRepository {
     };
   }
 
-  async list(): Promise<Task[]> {
-    const res = await fetch(`${this.baseUrl}/api/v1/tasks`, {
+  async list(filter?: ListTasksFilter): Promise<Task[]> {
+    // BL-038 / tomorrow-view: filter.dueDate が渡されたら URL に `?dueDate=...` を乗せる.
+    // 既存呼び出し (引数なし) との互換のため optional.
+    const qs = filter?.dueDate
+      ? `?dueDate=${encodeURIComponent(filter.dueDate)}`
+      : "";
+    const res = await fetch(`${this.baseUrl}/api/v1/tasks${qs}`, {
       method: "GET",
       headers: this.authHeaders(),
     });

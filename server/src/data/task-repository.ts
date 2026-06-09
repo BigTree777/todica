@@ -11,6 +11,12 @@ export type Priority = "highest" | "normal" | "later";
 export interface ListTasksFilter {
   /** "true" = ゴミ箱のみ, "false" = ゴミ箱以外 (既定), "all" = すべて. plan.md D-006. */
   trashed: "true" | "false" | "all";
+  /**
+   * BL-038 / tomorrow-view: dueDate での絞り込み.
+   * 未指定なら絞り込みなし (既存挙動). "today" / "tomorrow" のみ受理.
+   * 詳細は docs/developer/features/tomorrow-view/plan.md §「サーバ補強の手順」.
+   */
+  dueDate?: "today" | "tomorrow";
 }
 
 export interface TaskRepository {
