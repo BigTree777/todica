@@ -41,6 +41,9 @@ import { TrashView } from "./ui/trash-view/trash-view.js";
 import { ProjectsView } from "./ui/projects-view/projects-view.js";
 import { RoutinesView } from "./ui/routines-view/routines-view.js";
 import { SetupView } from "./ui/setup-view/setup-view.js";
+import { AppShell } from "./ui/app-shell/app-shell.js";
+import { FocusViewPlaceholder } from "./ui/focus-view/focus-view-placeholder.js";
+import { TomorrowViewPlaceholder } from "./ui/tomorrow-view/tomorrow-view-placeholder.js";
 import { OfflineBanner } from "./ui/offline-banner/offline-banner.js";
 import { ErrorNotification } from "./ui/error-notification/error-notification.js";
 import { PwaUpdateBanner } from "./ui/pwa-update-banner/pwa-update-banner.js";
@@ -192,7 +195,7 @@ function App({ config, repos: initialRepos }: AppProps) {
       {/* BL-034: 401 / ネットワークエラー時の通知バナー */}
       <ErrorNotification />
       <Routes>
-        <Route path="/" element={<Navigate to={defaultRoute} replace />} />
+        {/* BL-036 / D-002: /setup は AppShell の外 (サイドバー非表示) */}
         <Route
           path="/setup"
           element={
@@ -214,30 +217,36 @@ function App({ config, repos: initialRepos }: AppProps) {
             />
           }
         />
-        <Route path="/today" element={<TodayView repository={repos.task} projectRepository={repos.project} />} />
-        <Route
-          path="/settings"
-          element={
-            <SettingsView
-              repository={repos.settings}
-              serverUrl={config.isNative && currentMode === "server" ? baseUrl : undefined}
-              authToken={config.isNative && currentMode === "server" ? authToken : undefined}
-              onSaveServer={
-                config.isNative && currentMode === "server"
-                  ? (url, token) => {
-                      setBaseUrl(url);
-                      setAuthToken(token);
-                    }
-                  : undefined
-              }
-              currentMode={config.isNative ? currentMode : undefined}
-              onSwitchMode={handleSwitchMode}
-            />
-          }
-        />
-        <Route path="/trash" element={<TrashView repository={repos.trash} />} />
-        <Route path="/projects" element={<ProjectsView repository={repos.project} />} />
-        <Route path="/routines" element={<RoutinesView repository={repos.routine} />} />
+        {/* BL-036: 残りのルートは AppShell (左サイドバー + Outlet) 配下にまとめる */}
+        <Route element={<AppShell />}>
+          <Route path="/" element={<Navigate to={defaultRoute} replace />} />
+          <Route path="/focus" element={<FocusViewPlaceholder />} />
+          <Route path="/today" element={<TodayView repository={repos.task} projectRepository={repos.project} />} />
+          <Route path="/tomorrow" element={<TomorrowViewPlaceholder />} />
+          <Route
+            path="/settings"
+            element={
+              <SettingsView
+                repository={repos.settings}
+                serverUrl={config.isNative && currentMode === "server" ? baseUrl : undefined}
+                authToken={config.isNative && currentMode === "server" ? authToken : undefined}
+                onSaveServer={
+                  config.isNative && currentMode === "server"
+                    ? (url, token) => {
+                        setBaseUrl(url);
+                        setAuthToken(token);
+                      }
+                    : undefined
+                }
+                currentMode={config.isNative ? currentMode : undefined}
+                onSwitchMode={handleSwitchMode}
+              />
+            }
+          />
+          <Route path="/trash" element={<TrashView repository={repos.trash} />} />
+          <Route path="/projects" element={<ProjectsView repository={repos.project} />} />
+          <Route path="/routines" element={<RoutinesView repository={repos.routine} />} />
+        </Route>
       </Routes>
     </>
   );
