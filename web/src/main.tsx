@@ -42,7 +42,7 @@ import { ProjectsView } from "./ui/projects-view/projects-view.js";
 import { RoutinesView } from "./ui/routines-view/routines-view.js";
 import { SetupView } from "./ui/setup-view/setup-view.js";
 import { AppShell } from "./ui/app-shell/app-shell.js";
-import { FocusViewPlaceholder } from "./ui/focus-view/focus-view-placeholder.js";
+import { FocusView } from "./ui/focus-view/focus-view.js";
 import { TomorrowViewPlaceholder } from "./ui/tomorrow-view/tomorrow-view-placeholder.js";
 import { OfflineBanner } from "./ui/offline-banner/offline-banner.js";
 import { ErrorNotification } from "./ui/error-notification/error-notification.js";
@@ -220,7 +220,7 @@ function App({ config, repos: initialRepos }: AppProps) {
         {/* BL-036: 残りのルートは AppShell (左サイドバー + Outlet) 配下にまとめる */}
         <Route element={<AppShell />}>
           <Route path="/" element={<Navigate to={defaultRoute} replace />} />
-          <Route path="/focus" element={<FocusViewPlaceholder />} />
+          <Route path="/focus" element={<FocusView repository={repos.task} projectRepository={repos.project} />} />
           <Route path="/today" element={<TodayView repository={repos.task} projectRepository={repos.project} />} />
           <Route path="/tomorrow" element={<TomorrowViewPlaceholder />} />
           <Route
