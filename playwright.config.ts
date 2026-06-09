@@ -9,7 +9,9 @@
  *   (server / web どちらも root `.env` を読む).
  * - 当面は chromium のみ. クロスブラウザ対応はテスト本数が増えてから検討する.
  */
-import { mkdirSync, rmSync } from "node:fs";
+import { mkdirSync, readdirSync, rmSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
 const E2E_DATA_DIR = "./.e2e-data";
@@ -22,6 +24,25 @@ const E2E_DB_PATH = `${E2E_DATA_DIR}/e2e.db`;
 // `webServer` 起動より確実に先に走ることが保証される.
 rmSync(E2E_DATA_DIR, { recursive: true, force: true });
 mkdirSync(E2E_DATA_DIR, { recursive: true });
+
+// BL-032: PWA テストには full Chromium バイナリが必要 (Playwright のデフォルト
+// chromium-headless-shell では Service Worker が起動しない). Playwright が
+// `npx playwright install chromium` で同時に取ってくる full バイナリのパスを
+// `~/.cache/ms-playwright/chromium-*/chrome-linux64/chrome` から拾う.
+function resolveFullChromium(): string | undefined {
+  try {
+    const cacheDir = join(homedir(), ".cache", "ms-playwright");
+    const entries = readdirSync(cacheDir);
+    const chromiumDir = entries.find(
+      (name) => name.startsWith("chromium-") && !name.includes("headless_shell"),
+    );
+    if (!chromiumDir) return undefined;
+    return join(cacheDir, chromiumDir, "chrome-linux64", "chrome");
+  } catch {
+    return undefined;
+  }
+}
+const FULL_CHROMIUM_PATH = resolveFullChromium();
 
 export default defineConfig({
   testDir: "./e2e",
@@ -40,7 +61,24 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      // 通常テスト. デフォルト (chromium-headless-shell) で動く. dev server (5173) を見る.
+      testIgnore: /pwa-prod\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], baseURL: "http://localhost:5173" },
+    },
+    {
+      // BL-032: PWA 系テストは prod build (`vite build` + `vite preview`) を full Chromium で見る.
+      // (a) dev mode の vite-plugin-pwa は SW スクリプト評価が失敗するため Service Worker が
+      //     登録されない. prod build は injectManifest で単一の `/service-worker.js` を吐くので
+      //     正しく登録される. (b) full Chromium 必須 = headless-shell では SW が動かない.
+      name: "chromium-pwa",
+      testMatch: /pwa-prod\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: "http://localhost:4173",
+        launchOptions: FULL_CHROMIUM_PATH
+          ? { executablePath: FULL_CHROMIUM_PATH }
+          : undefined,
+      },
     },
   ],
 
@@ -63,6 +101,16 @@ export default defineConfig({
       command: "npm run dev -w web",
       port: 5173,
       timeout: 30_000,
+      reuseExistingServer: !process.env.CI,
+    },
+    {
+      // BL-032: PWA テスト用 prod build を vite preview で配信する (port 4173).
+      // ビルドが必要なので timeout を長めに取る. CI でビルドが冪等であれば
+      // reuseExistingServer で 2 回目以降は再ビルドをスキップしたいが,
+      // Playwright の webServer は command 全体を毎回実行する点に注意.
+      command: "npm run build -w web && npm run preview -w web",
+      port: 4173,
+      timeout: 120_000,
       reuseExistingServer: !process.env.CI,
     },
   ],
