@@ -130,6 +130,30 @@ test("2 タブ同時編集でプロジェクト名衝突時にも ConflictDialog
   await ctxB.close();
 });
 
+test("401 が返るとエラー通知バナーが表示される (BL-034)", async ({ page }) => {
+  await page.goto("/");
+
+  // POST /api/v1/tasks を route 介入で 401 にする.
+  await page.route("**/api/v1/tasks", (route) => {
+    if (route.request().method() === "POST") {
+      route.fulfill({
+        status: 401,
+        contentType: "application/json",
+        body: JSON.stringify({ code: "UNAUTHORIZED", message: "Bad token" }),
+      });
+    } else {
+      route.continue();
+    }
+  });
+
+  await page.getByLabel("タスク名").fill(`401テスト ${Date.now()}`);
+  await page.getByRole("button", { name: "追加" }).click();
+
+  // エラー通知バナーが表示される.
+  await expect(page.getByRole("alert", { name: "通信エラー通知" })).toBeVisible();
+  await expect(page.getByText("通信に失敗しました")).toBeVisible();
+});
+
 test("オフラインで編集した PATCH がオンライン復帰で flush され server に反映される (BL-031 b)", async ({
   page,
   context,

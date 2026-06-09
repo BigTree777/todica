@@ -21,6 +21,7 @@ import type {
 } from "../../repositories/project-repository.js";
 import { enqueue, dequeue, getAll, mapConflict, ConflictError } from "../../offline-queue.js";
 import { ProjectConflictError } from "../../repositories/project-repository.js";
+import { notifyError } from "../../error-notification.js";
 import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
 
@@ -110,7 +111,9 @@ export function ProjectsView(props: ProjectsViewProps): JSX.Element {
     onError: (error) => {
       if (error instanceof ConflictError) {
         conflictDialog.openDialog(error.entry, error.serverValue);
+        return;
       }
+      notifyError("通信に失敗しました");
     },
     networkMode: "offlineFirst",
   });
@@ -143,7 +146,9 @@ export function ProjectsView(props: ProjectsViewProps): JSX.Element {
     onError: (error) => {
       if (error instanceof ConflictError) {
         conflictDialog.openDialog(error.entry, error.serverValue);
+        return;
       }
+      notifyError("通信に失敗しました");
     },
     networkMode: "offlineFirst",
   });
@@ -176,7 +181,9 @@ export function ProjectsView(props: ProjectsViewProps): JSX.Element {
     onError: (error) => {
       if (error instanceof ConflictError) {
         conflictDialog.openDialog(error.entry, error.serverValue);
+        return;
       }
+      notifyError("通信に失敗しました");
     },
     networkMode: "offlineFirst",
   });

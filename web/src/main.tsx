@@ -42,6 +42,7 @@ import { ProjectsView } from "./ui/projects-view/projects-view.js";
 import { RoutinesView } from "./ui/routines-view/routines-view.js";
 import { SetupView } from "./ui/setup-view/setup-view.js";
 import { OfflineBanner } from "./ui/offline-banner/offline-banner.js";
+import { ErrorNotification } from "./ui/error-notification/error-notification.js";
 import { PwaUpdateBanner } from "./ui/pwa-update-banner/pwa-update-banner.js";
 import { useSyncQueue } from "./hooks/use-sync-queue.js";
 
@@ -188,6 +189,8 @@ function App({ config, repos: initialRepos }: AppProps) {
       <OfflineBanner />
       {/* SW-001: PWA アップデート通知バナー */}
       <PwaUpdateBanner />
+      {/* BL-034: 401 / ネットワークエラー時の通知バナー */}
+      <ErrorNotification />
       <Routes>
         <Route path="/" element={<Navigate to={defaultRoute} replace />} />
         <Route
