@@ -49,6 +49,7 @@ import { notifyError } from "../../error-notification.js";
 import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
 import { PriorityStars } from "../priority-stars/priority-stars.js";
+import { ProjectToggle } from "../project-toggle/project-toggle.js";
 
 export interface TodayViewProps {
   repository: TaskRepository;
@@ -464,19 +465,18 @@ export function TodayView(props: TodayViewProps): JSX.Element {
             />
           </div>
           <div>
-            <label htmlFor="task-project">プロジェクト (任意)</label>
-            <select
-              id="task-project"
-              value={projectId}
-              onChange={(e) => setProjectId(e.target.value)}
-            >
-              <option value="">（未分類）</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+            {/*
+              BL-041 / AC-1 / AC-2 / AC-3 / AC-4:
+              <select id="task-project"> を撤去し, <ProjectToggle /> に置き換える.
+              親 state (useState("")) との境界で "" ↔ null を変換する (plan D-004).
+            */}
+            <ProjectToggle
+              value={projectId === "" ? null : projectId}
+              onChange={(next) => setProjectId(next ?? "")}
+              projects={projects}
+              idPrefix="create"
+              groupLabel="プロジェクト"
+            />
           </div>
           {/* BL-040 / AC-1: <select id="task-priority"> を撤去し, 星 UI に置き換える. */}
           <div>

@@ -50,6 +50,7 @@ import { notifyError } from "../../error-notification.js";
 import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
 import { PriorityStars } from "../priority-stars/priority-stars.js";
+import { ProjectToggle } from "../project-toggle/project-toggle.js";
 import "./tomorrow-view.css";
 
 export interface TomorrowViewProps {
@@ -324,19 +325,18 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
           />
         </div>
         <div>
-          <label htmlFor="tomorrow-task-project">プロジェクト (任意)</label>
-          <select
-            id="tomorrow-task-project"
-            value={projectId}
-            onChange={(e) => setProjectId(e.target.value)}
-          >
-            <option value="">（未分類）</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+          {/*
+            BL-041 / AC-5:
+            <select id="tomorrow-task-project"> を撤去し, <ProjectToggle /> に置き換える.
+            親 state (useState("")) との境界で "" ↔ null を変換する (plan D-004).
+          */}
+          <ProjectToggle
+            value={projectId === "" ? null : projectId}
+            onChange={(next) => setProjectId(next ?? "")}
+            projects={projects}
+            idPrefix="tomorrow-create"
+            groupLabel="プロジェクト"
+          />
         </div>
         {/* BL-040 / AC-4: <select id="tomorrow-task-priority"> を撤去し, 星 UI に置き換える. */}
         <div>
