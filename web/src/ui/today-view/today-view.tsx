@@ -48,20 +48,7 @@ import {
 import { notifyError } from "../../error-notification.js";
 import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
-
-/** 優先度の日本語表記 (plan.md D-004 「最優先 / 普通 / 後回し」). */
-const PRIORITY_LABEL: Record<Priority, string> = {
-  highest: "最優先",
-  normal: "普通",
-  later: "後回し",
-};
-
-/** cycle ボタンの次段階 (plan.md D-001: normal → highest → later → normal). */
-const NEXT_PRIORITY: Record<Priority, Priority> = {
-  normal: "highest",
-  highest: "later",
-  later: "normal",
-};
+import { PriorityStars } from "../priority-stars/priority-stars.js";
 
 export interface TodayViewProps {
   repository: TaskRepository;
@@ -414,9 +401,12 @@ export function TodayView(props: TodayViewProps): JSX.Element {
     [completeMutation],
   );
 
-  const handleCyclePriority = useCallback(
-    async (task: Task) => {
-      const next = NEXT_PRIORITY[task.priority];
+  // BL-040 / AC-5 / AC-6 / AC-10: タップで直接 priority 値に飛ばす.
+  //   - cycle ロジックは不要 (`<PriorityStars />` が「クリックされた星」に対応する値を返す).
+  //   - 同値クリックは `<PriorityStars />` 側で no-op になるため, ここに来た時点で next !== task.priority.
+  const handleSetPriority = useCallback(
+    async (task: Task, next: Priority) => {
+      if (task.priority === next) return; // 二重ガード (AC-6).
       const cmd: UpdateTaskCommand = {
         id: task.id,
         ifMatch: task.version,
@@ -488,17 +478,15 @@ export function TodayView(props: TodayViewProps): JSX.Element {
               ))}
             </select>
           </div>
+          {/* BL-040 / AC-1: <select id="task-priority"> を撤去し, 星 UI に置き換える. */}
           <div>
-            <label htmlFor="task-priority">優先度</label>
-            <select
-              id="task-priority"
+            <span id="task-priority-label">優先度</span>
+            <PriorityStars
               value={priority}
-              onChange={(e) => setPriority(e.target.value as Priority)}
-            >
-              <option value="highest">最優先</option>
-              <option value="normal">普通</option>
-              <option value="later">後回し</option>
-            </select>
+              onChange={setPriority}
+              groupLabel="優先度"
+              idPrefix="create"
+            />
           </div>
           <button type="submit">追加</button>
         </form>
@@ -523,20 +511,20 @@ export function TodayView(props: TodayViewProps): JSX.Element {
         </form>
       )}
 
-      {/* BL-006: 現在のタスク強調セクション (NFR-011 "大きく単独で表示"). */}
+      {/* BL-006: 現在のタスク強調セクション (NFR-011 "大きく単独で表示").
+          BL-040 / AC-10: 旧 cycle ボタン + [優先度: ...] 文字表示を撤去し
+          <PriorityStars /> に置き換える. */}
       {focusedTask && (
         <section aria-label="現在のタスク">
           <h2>現在のタスク</h2>
           <div>
             <span>{focusedTask.name}</span>
-            <span>[優先度: {PRIORITY_LABEL[focusedTask.priority]}]</span>
-            <button
-              type="button"
-              onClick={() => handleCyclePriority(focusedTask)}
-              aria-label={`優先度を切替 (現在: ${PRIORITY_LABEL[focusedTask.priority]})`}
-            >
-              優先度: {PRIORITY_LABEL[focusedTask.priority]}
-            </button>
+            <PriorityStars
+              value={focusedTask.priority}
+              onChange={(next) => handleSetPriority(focusedTask, next)}
+              groupLabel={`${focusedTask.name} の優先度`}
+              idPrefix={`task-${focusedTask.id}`}
+            />
             <button type="button" onClick={() => openEdit(focusedTask)}>
               編集
             </button>
@@ -563,14 +551,14 @@ export function TodayView(props: TodayViewProps): JSX.Element {
         {otherTasks.map((task) => (
           <li key={task.id}>
             <span>{task.name}</span>
-            <span>[優先度: {PRIORITY_LABEL[task.priority]}]</span>
-            <button
-              type="button"
-              onClick={() => handleCyclePriority(task)}
-              aria-label={`優先度を切替 (現在: ${PRIORITY_LABEL[task.priority]})`}
-            >
-              優先度: {PRIORITY_LABEL[task.priority]}
-            </button>
+            {/* BL-040 / AC-5 / AC-7: 旧 cycle ボタン + [優先度: ...] 文字表示を撤去し
+                <PriorityStars /> に置き換える. */}
+            <PriorityStars
+              value={task.priority}
+              onChange={(next) => handleSetPriority(task, next)}
+              groupLabel={`${task.name} の優先度`}
+              idPrefix={`task-${task.id}`}
+            />
             <button type="button" onClick={() => openEdit(task)}>
               編集
             </button>

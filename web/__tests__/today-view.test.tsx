@@ -344,10 +344,16 @@ describe("TodayView (Web クライアント UI)", () => {
     // id="task-due-date" の DOM 要素も存在しない.
     expect(form.querySelector("#task-due-date")).toBeNull();
 
-    // 起票フォーム内の入力要素 (input / select) は 3 つのみ:
-    //   タスク名 (input) / プロジェクト (select) / 優先度 (select). 「追加」ボタンは別.
+    // 起票フォーム内の input / select は 2 つのみ:
+    //   タスク名 (input) / プロジェクト (select). 「優先度」は星 UI (button 3 つ) で
+    //   input/select には含まれない. 「追加」ボタンは別.
+    // BL-040 priority-star-ui REQ-1: <select id="task-priority"> は撤去され,
+    //   role="radiogroup" + 3 つの role="radio" (button 実装) に置き換わる.
     const formInputs = form.querySelectorAll("input, select");
-    expect(formInputs).toHaveLength(3);
+    expect(formInputs).toHaveLength(2);
+
+    // 旧 select id は DOM 上に存在しない (BL-040 / spec AC-1).
+    expect(form.querySelector("#task-priority")).toBeNull();
   });
 
   it("シナリオ: BL-039 起票時に dueDate=\"today\" で create が呼ばれる", async () => {
@@ -461,46 +467,57 @@ describe("TodayView (Web クライアント UI)", () => {
 });
 
 // ============================================================
-// BL-002 / FR-003 / FR-004: 優先度の指定・変更
+// BL-002 / FR-003 / FR-004 + BL-040 (priority-star-ui): 優先度の指定・変更
 //
-// spec.md (task-priority) §「Web クライアント UI」と 1:1 対応する.
-// - 起票フォームに任意項目「優先度」の select が存在し, 値域は 3 段階のみ.
-// - 起票時に未操作なら "normal" (または省略) で create される.
-// - 起票時に「最優先」を指定すると create.priority === "highest".
-// - 一覧の各行から優先度を変更すると update.patch.priority と If-Match が正しく渡る.
-// - 優先度変更後は一覧の並びが priority 順に再計算される.
+// spec.md (task-priority) §「Web クライアント UI」+
+// spec.md (priority-star-ui) AC-1 / AC-2 / AC-3 / AC-5 / AC-6 / AC-7 / AC-10 と
+// 1:1 対応する.
+//
+// BL-040 の変更点 (旧 BL-002 からの差分):
+//   - 起票フォームの <select id="task-priority"> は撤去, 横並び 3 つの星 (role="radio")
+//     を持つ <PriorityStars /> に置き換わる.
+//   - タスクカード上 (focusedTask / 一覧行) の <button aria-label="優先度を切替">
+//     (cycle ボタン) は撤去, 同じ <PriorityStars /> に置き換わる.
+//   - クリックは「タップで直接 priority 値に飛ぶ」(cycle ではない). 1 番目=later /
+//     2 番目=normal / 3 番目=highest. 現在値と同じ星クリックは no-op (PATCH 出ない).
 //
 // 本ファイル冒頭の makeMockRepository は patch.priority を ...cmd.patch でコピーするため,
 // updateMock 経由で state[idx].priority が反映される. UI 側 (today-view.tsx) の本実装は
 // implementer が green 化する.
 // ============================================================
 
-describe("TodayView (BL-002 優先度 UI)", () => {
-  it("シナリオ: 起票フォームに「優先度」の任意項目があり, 値域は 3 段階のみ", async () => {
+describe("TodayView (BL-002 / BL-040 優先度 UI 星 3 つ)", () => {
+  it("シナリオ AC-1: 起票フォームに 3 つの星 (role=radio) が並び, 初期で 2 つ点灯 = normal. 旧 <select id=\"task-priority\"> は存在しない", async () => {
+    // priority-star-ui AC-1.
     const repo = makeMockRepository();
     renderWithQueryClient(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
-    // 「優先度」というラベル / aria-label を持つ入力 UI が存在する.
-    // 採用案 (plan D-002) は select だが, テストは具体 UI に依存しないようラベル名のみで検索.
-    const priorityControl = await screen.findByLabelText(/優先度/);
-    expect(priorityControl).not.toBeNull();
-    // 任意項目なので required ではない.
-    expect(priorityControl).not.toBeRequired();
+    // 描画完了待ち.
+    await screen.findByLabelText(/タスク名/);
 
-    // 値域は 3 段階 (最優先 / 普通 / 後回し) のみ.
-    // select 想定: option 数で確認.
-    if (priorityControl.tagName === "SELECT") {
-      const options = (priorityControl as HTMLSelectElement).options;
-      expect(options).toHaveLength(3);
-      const texts = Array.from(options).map((o) => o.textContent ?? "");
-      // 「最優先 / 普通 / 後回し」の文言で表示される (plan D-004).
-      expect(texts.some((t) => /最優先/.test(t))).toBe(true);
-      expect(texts.some((t) => /普通/.test(t))).toBe(true);
-      expect(texts.some((t) => /後回し/.test(t))).toBe(true);
-    }
+    // 起票フォーム scope で検証する (タスクカード側の <PriorityStars /> と衝突しないように).
+    const form = screen.getByRole("form", { name: "タスク起票フォーム" });
+
+    // 旧 select は DOM 上に存在しない.
+    expect(form.querySelector("#task-priority")).toBeNull();
+
+    // role="radiogroup" の優先度 UI が存在する.
+    const group = within(form).getByRole("radiogroup");
+    expect(group).toBeInTheDocument();
+    // aria-label に「優先度」 + 既定値「普通」が含まれる.
+    const groupLabel = group.getAttribute("aria-label") ?? "";
+    expect(groupLabel).toMatch(/優先度/);
+    expect(groupLabel).toMatch(/普通/);
+
+    // 星 3 つが横並び.
+    const stars = within(group).getAllByRole("radio");
+    expect(stars).toHaveLength(3);
+    // 初期で 2 つ点灯 (= normal). 「点灯」は data-lit="true" で観察する (plan D-002).
+    const lit = group.querySelectorAll('[data-lit="true"]');
+    expect(lit).toHaveLength(2);
   });
 
-  it("シナリオ: 起票フォームで優先度を未操作のまま送信すると normal (または省略) で create される", async () => {
+  it("シナリオ: 起票フォームで星を一度も触らずに送信すると create.priority は normal (または省略)", async () => {
     const repo = makeMockRepository();
     const user = userEvent.setup();
     renderWithQueryClient(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
@@ -512,61 +529,175 @@ describe("TodayView (BL-002 優先度 UI)", () => {
 
     expect(repo.createMock).toHaveBeenCalledTimes(1);
     const arg = repo.createMock.mock.calls[0]?.[0] as CreateTaskCommand;
-    // 未操作 → "normal" を明示送信するか, priority プロパティを省略する (どちらも仕様適合).
+    // 未操作 → "normal" 明示送信 / プロパティ省略 のどちらでも仕様適合.
     if (arg.priority !== undefined) {
       expect(arg.priority).toBe("normal");
     }
   });
 
-  it("シナリオ: 起票フォームで優先度を「最優先」に指定して送信すると create.priority === \"highest\"", async () => {
+  it("シナリオ AC-2: 起票フォームで 3 番目の星をクリックして追加すると create.priority === \"highest\"", async () => {
+    // priority-star-ui AC-2.
     const repo = makeMockRepository();
     const user = userEvent.setup();
     renderWithQueryClient(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
     const nameInput = await screen.findByLabelText(/タスク名/);
-    await user.type(nameInput, "x");
+    await user.type(nameInput, "星 3 テスト");
 
-    // 優先度 select を「最優先」(value="highest") に変更する.
-    const priorityControl = await screen.findByLabelText(/優先度/);
-    // userEvent.selectOptions は <select> を対象とする.
-    await user.selectOptions(priorityControl, "highest");
+    // 起票フォーム内の星 3 つ目をクリック.
+    const form = screen.getByRole("form", { name: "タスク起票フォーム" });
+    const group = within(form).getByRole("radiogroup");
+    const stars = within(group).getAllByRole("radio");
+    expect(stars).toHaveLength(3);
+    await user.click(stars[2]!);
 
     const submit = screen.getByRole("button", { name: /追加|起票|登録|送信/ });
     await user.click(submit);
 
     expect(repo.createMock).toHaveBeenCalledTimes(1);
     const arg = repo.createMock.mock.calls[0]?.[0] as CreateTaskCommand;
-    expect(arg.name).toBe("x");
+    expect(arg.name).toBe("星 3 テスト");
     expect(arg.priority).toBe("highest");
   });
 
-  it("シナリオ: 一覧の各タスク行から優先度を変更すると update.patch.priority と ifMatch が正しく渡る", async () => {
+  it("シナリオ AC-3: 起票フォームで 1 番目の星をクリックして追加すると create.priority === \"later\"", async () => {
+    // priority-star-ui AC-3.
+    const repo = makeMockRepository();
+    const user = userEvent.setup();
+    renderWithQueryClient(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
+
+    const nameInput = await screen.findByLabelText(/タスク名/);
+    await user.type(nameInput, "星 1 テスト");
+
+    const form = screen.getByRole("form", { name: "タスク起票フォーム" });
+    const group = within(form).getByRole("radiogroup");
+    const stars = within(group).getAllByRole("radio");
+    await user.click(stars[0]!);
+
+    const submit = screen.getByRole("button", { name: /追加|起票|登録|送信/ });
+    await user.click(submit);
+
+    expect(repo.createMock).toHaveBeenCalledTimes(1);
+    const arg = repo.createMock.mock.calls[0]?.[0] as CreateTaskCommand;
+    expect(arg.name).toBe("星 1 テスト");
+    expect(arg.priority).toBe("later");
+  });
+
+  it("シナリオ AC-5: タスクカード上で 1 番目の星をクリックすると update.patch.priority === \"later\" で PATCH が送られる", async () => {
+    // priority-star-ui AC-5.
+    // task は唯一の today タスクなので, 通常リストではなく「現在のタスク」セクションに入る.
+    // <PriorityStars /> は focusedTask / 一覧行どちらでも同じ部品なので, どちらの位置に出ても
+    // role="radiogroup" 内で 1 番目の星をクリックすれば PATCH が出る.
     const repo = makeMockRepository([
       makeTask({ id: "t1", name: "x", priority: "normal", version: 1 }),
     ]);
     const user = userEvent.setup();
     renderWithQueryClient(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
 
-    // 一覧行の優先度変更 UI を取得 (plan D-001 採用案 = cycle ボタン).
-    // ボタン名は「優先度」または現在値ラベル (「普通」「最優先」「後回し」) を含む想定.
-    // 具体表記に依存しすぎないよう, 「優先度」を含むボタンを最優先で探す.
-    const priorityButton = await screen.findByRole("button", { name: /優先度|普通|最優先|後回し/ });
-    await user.click(priorityButton);
+    await screen.findByText("x");
+
+    // 起票フォーム以外の radiogroup (= タスクカード上の星) を取り出す.
+    const allGroups = await screen.findAllByRole("radiogroup");
+    const form = screen.getByRole("form", { name: "タスク起票フォーム" });
+    const cardGroups = allGroups.filter((g) => !form.contains(g));
+    expect(cardGroups.length).toBeGreaterThanOrEqual(1);
+
+    // タスクカード上の星 1 つ目をクリック.
+    const stars = within(cardGroups[0]!).getAllByRole("radio");
+    expect(stars).toHaveLength(3);
+    await user.click(stars[0]!);
 
     expect(repo.updateMock).toHaveBeenCalledTimes(1);
     const arg = repo.updateMock.mock.calls[0]?.[0] as UpdateTaskCommand;
     expect(arg.id).toBe("t1");
     expect(arg.ifMatch).toBe(1);
-    // cycle: normal → highest (plan D-001 採用案).
-    // 採用 UI が select / segmented control 等別案に変わった場合に備え,
-    // 「priority が送られていて値が 3 段階のいずれか, かつ現状値とは異なる」ことだけを必須とする.
-    expect(arg.patch.priority).toBeDefined();
-    expect(["highest", "normal", "later"]).toContain(arg.patch.priority);
-    expect(arg.patch.priority).not.toBe("normal");
+    // 1 番目の星 = later 直接指定 (cycle ではない).
+    expect(arg.patch.priority).toBe("later");
     // 優先度以外のフィールドは送らない (NFR-013 / 部分上書き原則).
     expect(arg.patch.name).toBeUndefined();
     expect(arg.patch.dueDate).toBeUndefined();
     expect(arg.patch.projectId).toBeUndefined();
+  });
+
+  it("シナリオ AC-6: タスクカード上で現在値と同じ星 (2 番目 = normal) をクリックしても update は呼ばれない", async () => {
+    // priority-star-ui AC-6 / D-003 no-op.
+    const repo = makeMockRepository([
+      makeTask({ id: "t1", name: "x", priority: "normal", version: 1 }),
+    ]);
+    const user = userEvent.setup();
+    renderWithQueryClient(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
+
+    await screen.findByText("x");
+
+    const allGroups = await screen.findAllByRole("radiogroup");
+    const form = screen.getByRole("form", { name: "タスク起票フォーム" });
+    const cardGroups = allGroups.filter((g) => !form.contains(g));
+    expect(cardGroups.length).toBeGreaterThanOrEqual(1);
+
+    // 現在値 = normal → 2 番目の星をクリック (同値).
+    const stars = within(cardGroups[0]!).getAllByRole("radio");
+    await user.click(stars[1]!);
+
+    // PATCH は出ない.
+    expect(repo.updateMock).not.toHaveBeenCalled();
+  });
+
+  it("シナリオ AC-7: タスクカードに旧「優先度を切替」cycle ボタンは存在しない", async () => {
+    // priority-star-ui AC-7.
+    const repo = makeMockRepository([
+      makeTask({ id: "t1", name: "x", priority: "normal", version: 1 }),
+    ]);
+    renderWithQueryClient(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
+
+    await screen.findByText("x");
+
+    // 旧 cycle ボタンの aria-label / テキスト「優先度を切替」は DOM に存在しない.
+    expect(screen.queryByRole("button", { name: /優先度を切替/ })).toBeNull();
+  });
+
+  it("シナリオ AC-10: 「現在のタスク」セクションでも 星 3 つ UI が使われている (cycle ボタンは無い)", async () => {
+    // priority-star-ui AC-10.
+    // task-A を currentTaskId に固定して「現在のタスク」セクションに置く.
+    const repo = makeMockRepository(
+      [
+        makeTask({
+          id: "task-A",
+          name: "FOCUS-A",
+          priority: "normal",
+          version: 1,
+        }),
+      ],
+      {
+        initialFocus: {
+          id: "singleton",
+          currentTaskId: "task-A",
+          version: 1,
+          updatedAt: NOW,
+        },
+      },
+    );
+    const user = userEvent.setup();
+    renderWithQueryClient(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
+
+    const focusSection = await screen.findByRole("region", { name: /現在のタスク/ });
+
+    // 強調セクション内に radiogroup が存在 (= 星 3 つ UI).
+    const group = within(focusSection).getByRole("radiogroup");
+    const stars = within(group).getAllByRole("radio");
+    expect(stars).toHaveLength(3);
+
+    // 旧 cycle ボタンは存在しない.
+    expect(
+      within(focusSection).queryByRole("button", { name: /優先度を切替/ }),
+    ).toBeNull();
+
+    // 星 3 つ目クリック → highest が PATCH される.
+    await user.click(stars[2]!);
+    expect(repo.updateMock).toHaveBeenCalledTimes(1);
+    const arg = repo.updateMock.mock.calls[0]?.[0] as UpdateTaskCommand;
+    expect(arg.id).toBe("task-A");
+    expect(arg.ifMatch).toBe(1);
+    expect(arg.patch.priority).toBe("highest");
   });
 
   it("シナリオ: 優先度変更後の一覧は priority 順に再描画される (NFR-013)", async () => {
@@ -622,34 +753,18 @@ describe("TodayView (BL-002 優先度 UI)", () => {
     expect(itemsBefore[0]?.textContent ?? "").toContain("AAA");
     expect(itemsBefore[1]?.textContent ?? "").toContain("BBB");
 
-    // タスク B 行の優先度ボタンを探して highest に変更する.
-    // テストは具体 UI に依存しないよう, 「BBB を含む行内のボタン」を辿る.
+    // タスク B 行の優先度 UI (星 3 つ) を取得し, 3 つ目の星 (= highest) を直接クリックする.
+    // BL-040: cycle ではなく「タップで直接 priority 値に飛ぶ」.
     const bRow = itemsBefore[1]!;
-    // 該当行内の優先度変更操作を探す (ボタンの name に「優先度 / 後回し / 普通 / 最優先」を含むもの).
-    const buttonsInB = bRow.querySelectorAll("button");
-    let priorityBtn: HTMLButtonElement | null = null;
-    for (const btn of Array.from(buttonsInB)) {
-      const label = btn.textContent ?? "";
-      if (/優先度|普通|最優先|後回し/.test(label)) {
-        priorityBtn = btn as HTMLButtonElement;
-        break;
-      }
-    }
-    expect(priorityBtn).not.toBeNull();
-    // 「後回し → highest」へ移すために, cycle の場合は複数回押下が必要なケースがある.
-    // 実装パターン (cycle / select / 直接 highest 化) に依らず, B を highest に変える
-    // ことを目標として最大 3 回まで押す.
-    for (let i = 0; i < 3; i++) {
-      const calls = repo.updateMock.mock.calls.length;
-      await user.click(priorityBtn!);
-      // updateMock が呼ばれ, かつ最後の呼び出しの patch.priority が "highest" なら break.
-      const last = repo.updateMock.mock.calls[repo.updateMock.mock.calls.length - 1]?.[0] as
-        | UpdateTaskCommand
-        | undefined;
-      if (last?.patch.priority === "highest") break;
-      // 何らかの理由で update が呼ばれていなければ抜ける (red になる).
-      if (repo.updateMock.mock.calls.length === calls) break;
-    }
+    const bGroup = within(bRow).getByRole("radiogroup");
+    const bStars = within(bGroup).getAllByRole("radio");
+    expect(bStars).toHaveLength(3);
+    // 3 番目の星 = highest を直接指定.
+    await user.click(bStars[2]!);
+    // update が 1 回呼ばれ patch.priority === "highest" であること.
+    expect(repo.updateMock).toHaveBeenCalledTimes(1);
+    const updatedArg = repo.updateMock.mock.calls[0]?.[0] as UpdateTaskCommand;
+    expect(updatedArg.patch.priority).toBe("highest");
 
     // 再描画後の並び: B (highest) → A (normal).
     const itemsAfter = await screen.findAllByRole("listitem");

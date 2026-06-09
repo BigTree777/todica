@@ -451,8 +451,10 @@ describe("TomorrowView (BL-038 REQ-1 一覧表示)", () => {
 // ============================================================
 
 describe("TomorrowView (BL-038 REQ-2 起票フォーム)", () => {
-  it("シナリオ A: 起票フォームの入力要素は「タスク名」「プロジェクト」「優先度」「追加」の 4 要素のみ (期限 UI 無し)", async () => {
-    // 受け入れ基準 §「起票 (REQ-2)」 第 1 ケース.
+  it("シナリオ A: 起票フォームの入力要素は「タスク名」「プロジェクト」「優先度 (星 3 つ)」「追加」の 4 要素のみ (期限 UI 無し)", async () => {
+    // 受け入れ基準 §「起票 (REQ-2)」 第 1 ケース +
+    // BL-040 priority-star-ui AC-4: <select id="tomorrow-task-priority"> は撤去され,
+    //   role="radiogroup" + 3 つの role="radio" (星 button) に置き換わる.
     const repo = makeMockRepository([]);
 
     renderWithQueryClient(
@@ -466,14 +468,26 @@ describe("TomorrowView (BL-038 REQ-2 起票フォーム)", () => {
     const nameInput = await screen.findByLabelText(/タスク名/);
     expect(nameInput).toBeRequired();
     expect(screen.queryByLabelText(/プロジェクト/)).not.toBeNull();
-    expect(screen.queryByLabelText(/優先度/)).not.toBeNull();
     expect(screen.queryByRole("button", { name: /追加|起票|登録|送信/ })).not.toBeNull();
 
-    // 期限の UI は存在しない (label / combobox / textbox いずれも).
-    // 注意: section の aria-label="明日のタスク" / form の aria-label="明日のタスク起票フォーム"
-    // は spec REQ-7「アクセシビリティ」で明示されたランドマーク (E2E でも使用) のため,
-    // 「明日」「tomorrow」 を含むラベルの不在検証は form 内に限定する (form scope).
+    // 起票フォーム scope で検証する.
     const form = screen.getByRole("form", { name: /起票フォーム/ });
+
+    // 旧 select id は DOM 上に存在しない (BL-040 AC-4).
+    expect(form.querySelector("#tomorrow-task-priority")).toBeNull();
+
+    // 優先度は星 UI (role=radiogroup + 3 つの role=radio) で表現される.
+    const priorityGroup = within(form).getByRole("radiogroup");
+    expect(priorityGroup).toBeInTheDocument();
+    const groupLabel = priorityGroup.getAttribute("aria-label") ?? "";
+    expect(groupLabel).toMatch(/優先度/);
+    const stars = within(priorityGroup).getAllByRole("radio");
+    expect(stars).toHaveLength(3);
+    // 初期で 2 つ点灯 (= normal).
+    const lit = priorityGroup.querySelectorAll('[data-lit="true"]');
+    expect(lit).toHaveLength(2);
+
+    // 期限の UI は存在しない (label / combobox / textbox いずれも).
     expect(within(form).queryByLabelText(/期限/)).toBeNull();
     expect(within(form).queryByLabelText(/明日/)).toBeNull();
     expect(within(form).queryByLabelText(/today/i)).toBeNull();
@@ -481,6 +495,38 @@ describe("TomorrowView (BL-038 REQ-2 起票フォーム)", () => {
     expect(
       within(form).queryByRole("combobox", { name: /期限|明日|today|tomorrow/i }),
     ).toBeNull();
+  });
+
+  it("シナリオ AC-4: 明日ビューの起票フォームで 3 番目の星をクリックして追加すると create.priority === \"highest\" かつ dueDate === \"tomorrow\"", async () => {
+    // priority-star-ui AC-4.
+    const repo = makeMockRepository([]);
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <TomorrowView
+        repository={repo}
+        projectRepository={makeMockProjectRepository()}
+      />,
+    );
+
+    const nameInput = await screen.findByLabelText(/タスク名/);
+    await user.type(nameInput, "明日の星 3 テスト");
+
+    const form = screen.getByRole("form", { name: /起票フォーム/ });
+    const group = within(form).getByRole("radiogroup");
+    const stars = within(group).getAllByRole("radio");
+    expect(stars).toHaveLength(3);
+    // 3 番目の星 = highest 直接指定.
+    await user.click(stars[2]!);
+
+    const submit = screen.getByRole("button", { name: /追加|起票|登録|送信/ });
+    await user.click(submit);
+
+    expect(repo.createMock).toHaveBeenCalledTimes(1);
+    const arg = repo.createMock.mock.calls[0]?.[0] as CreateTaskCommand;
+    expect(arg.name).toBe("明日の星 3 テスト");
+    expect(arg.priority).toBe("highest");
+    expect(arg.dueDate).toBe("tomorrow");
   });
 
   it("シナリオ B: タスク名「明日の買い物」を入力して「追加」を押すと create({ dueDate: \"tomorrow\", ... }) が 1 回呼ばれる", async () => {
@@ -815,10 +861,12 @@ describe("TomorrowView (BL-038 REQ-6 空状態)", () => {
       await screen.findByText("明日のタスクはありません"),
     ).toBeInTheDocument();
 
-    // 起票フォーム (タスク名 / プロジェクト / 優先度 / 追加ボタン) は表示されている.
+    // 起票フォーム (タスク名 / プロジェクト / 優先度 (星 UI) / 追加ボタン) は表示されている.
     expect(screen.queryByLabelText(/タスク名/)).not.toBeNull();
     expect(screen.queryByLabelText(/プロジェクト/)).not.toBeNull();
-    expect(screen.queryByLabelText(/優先度/)).not.toBeNull();
+    // BL-040: 優先度は <label htmlFor="..."> の select ではなく role=radiogroup の星 UI で表現.
+    const form = screen.getByRole("form", { name: /起票フォーム/ });
+    expect(within(form).queryByRole("radiogroup")).not.toBeNull();
     expect(
       screen.queryByRole("button", { name: /追加|起票|登録|送信/ }),
     ).not.toBeNull();

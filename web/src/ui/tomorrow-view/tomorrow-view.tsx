@@ -49,14 +49,8 @@ import {
 import { notifyError } from "../../error-notification.js";
 import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
+import { PriorityStars } from "../priority-stars/priority-stars.js";
 import "./tomorrow-view.css";
-
-/** 優先度の日本語表記 (today-view と揃える / D-013). */
-const PRIORITY_LABEL: Record<Priority, string> = {
-  highest: "最優先",
-  normal: "普通",
-  later: "後回し",
-};
 
 export interface TomorrowViewProps {
   repository: TaskRepository;
@@ -344,17 +338,15 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
             ))}
           </select>
         </div>
+        {/* BL-040 / AC-4: <select id="tomorrow-task-priority"> を撤去し, 星 UI に置き換える. */}
         <div>
-          <label htmlFor="tomorrow-task-priority">優先度</label>
-          <select
-            id="tomorrow-task-priority"
+          <span id="tomorrow-task-priority-label">優先度</span>
+          <PriorityStars
             value={priority}
-            onChange={(e) => setPriority(e.target.value as Priority)}
-          >
-            <option value="highest">最優先</option>
-            <option value="normal">普通</option>
-            <option value="later">後回し</option>
-          </select>
+            onChange={setPriority}
+            groupLabel="優先度"
+            idPrefix="tomorrow-create"
+          />
         </div>
         <button type="submit">追加</button>
       </form>
@@ -378,9 +370,9 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
                     <span className="tomorrow-view__project">{project.name}</span>
                   )}
                   <span className="tomorrow-view__name">{task.name}</span>
-                  <span className="tomorrow-view__priority">
-                    [優先度: {PRIORITY_LABEL[task.priority]}]
-                  </span>
+                  {/* BL-040 / plan D-004: [優先度: ...] 補助表示は撤去.
+                      tomorrow カードは「削除」「今日にする」のみ (BL-038 REQ-3) で,
+                      優先度 UI 自体を持たないため, ここでは何も描画しない. */}
                 </div>
                 <div className="tomorrow-view__actions">
                   <button type="button" onClick={() => handleDelete(task)}>
