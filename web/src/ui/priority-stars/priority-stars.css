@@ -1,0 +1,52 @@
+/**
+ * `<PriorityStars />` ローカル CSS (BL-040 / priority-star-ui).
+ *
+ * 仕様参照:
+ *   docs/developer/features/priority-star-ui/spec.md REQ-5 (WCAG 2.1 AA contrast の維持).
+ *   docs/developer/features/priority-star-ui/plan.md
+ *     D-005 (CSS の置き場所はコンポーネントローカル, BL-046 でトークン化合流予定).
+ *
+ * 色の選定:
+ *   - 点灯 (★): #B45309 (amber-700). 背景 #fff 上でコントラスト比 ~5.94:1 → WCAG AA pass.
+ *   - 非点灯 (☆): #595959 (gray-700 相当). 背景 #fff 上でコントラスト比 ~7.0:1 → AAA pass.
+ *
+ * 全ての値は BL-046 (ui-redesign-foundation) のトークン (`--color-accent` 等) に
+ * 差し替える前提で TODO(BL-046) マーカーを残す.
+ */
+
+/* TODO(BL-046): デザイントークン化したらここを var(--color-accent) などに差し替える. */
+.priority-stars {
+  display: inline-flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.priority-stars__star {
+  /* TODO(BL-046): trim 全体トークンへ移行. */
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 0.25rem 0.375rem;
+  cursor: pointer;
+  font-size: 1.25rem;
+  line-height: 1;
+  /* WCAG 2.5.5: タップターゲットを最小 44x44 px 確保する (リスク R-2). */
+  min-width: 44px;
+  min-height: 44px;
+  /* OS 既定の focus outline を消さない (REQ-4). */
+}
+
+/* TODO(BL-046): var(--color-accent) に差し替える. amber-700 = #B45309. */
+.priority-stars__star[data-lit="true"] {
+  color: #B45309;
+}
+
+/* TODO(BL-046): var(--color-muted) に差し替える. gray-700 相当 = #595959. */
+.priority-stars__star[data-lit="false"] {
+  color: #595959;
+}
+
+.priority-stars__star:focus-visible {
+  /* TODO(BL-046): outline 色をトークンに差し替える. */
+  outline: 2px solid #1d4ed8;
+  outline-offset: 2px;
+}

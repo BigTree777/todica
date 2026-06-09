@@ -29,22 +29,39 @@ async function createTask(page: Page, taskName: string): Promise<void> {
 }
 
 test.describe("タスク基本操作", () => {
-  test("優先度ボタンを押すと表示と aria-label が更新される", async ({ page }) => {
+  test("星 1 つ目をクリックすると radiogroup の aria-label が「後回し」を含むに変わる", async ({ page }) => {
+    // BL-040 priority-star-ui AC-5:
+    //   Given /today にタスク T (priority="normal") が表示されている
+    //   When  T のカード上の 1 番目の星をクリックする
+    //   Then  TaskRepository.update が { patch: { priority: "later" } } で呼ばれる
+    //    かつ aria 表現 (現在の優先度: ...) が "後回し" 相当に変化する
+    //    かつ 1 番目の星のみが点灯した見た目になる
+    //
+    // 旧テスト (cycle ボタン「優先度を切替」を押すと aria-label が更新される) を,
+    // 星 UI 直接クリックに書き換える.
     await page.goto("/");
-    const taskName = `優先度テスト ${Date.now()}`;
+    const taskName = `星優先度テスト ${Date.now()}`;
     await createTask(page, taskName);
 
-    const priorityButton = taskRow(page, taskName).getByRole("button", {
-      name: /優先度を切替/,
-    });
-    const initialLabel = await priorityButton.getAttribute("aria-label");
+    const row = taskRow(page, taskName);
 
-    await priorityButton.click();
+    // タスクカード内の優先度 radiogroup を取得.
+    // 起票フォーム側の <PriorityStars /> と区別するため, タスク行 (row) スコープに限定する.
+    const priorityGroup = row.getByRole("radiogroup");
+    await expect(priorityGroup).toBeVisible();
 
-    await expect(priorityButton).not.toHaveAttribute(
-      "aria-label",
-      initialLabel ?? "",
-    );
+    // 初期 aria-label には「普通」が含まれる (BL-040 既定値 = normal).
+    await expect(priorityGroup).toHaveAttribute("aria-label", /普通/);
+
+    // 星 (role=radio) 3 つを取得.
+    const stars = priorityGroup.getByRole("radio");
+    await expect(stars).toHaveCount(3);
+
+    // 1 番目の星 (= later) をクリック.
+    await stars.first().click();
+
+    // aria-label が「後回し」相当に変化する.
+    await expect(priorityGroup).toHaveAttribute("aria-label", /後回し/);
   });
 
   test("「明日へ」を押すと今日の一覧から消える", async ({ page }) => {
