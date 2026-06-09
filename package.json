@@ -27,6 +27,7 @@
     "android:bundle": "npm run android:sync && cd android && ./gradlew bundleRelease"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.3",
     "@biomejs/biome": "^1.9.4",
     "@hono/node-server": "^2.0.4",
     "@playwright/test": "^1.60.0",
