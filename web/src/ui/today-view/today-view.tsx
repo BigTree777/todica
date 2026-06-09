@@ -2,9 +2,8 @@
  * 今日ビュー (BL-005 本実装 + BL-001 / BL-002 / BL-003 / BL-006 を統合).
  *
  * - 起票フォーム (タスク名のみ必須, dueDate は "today" 固定, 優先度 = 3 値)
- * - タスク一覧 (各行に 編集 / 期限切替 / 完了 / 削除 / 優先度切替 / 現在に設定 を表示)
+ * - タスク一覧 (各行に 削除 / 明日にする / 完了 + 優先度星を表示 / BL-042)
  * - 現在のタスクの強調セクション (BL-006 / FR-012 / NFR-011)
- * - 編集ダイアログ (名称変更)
  *
  * BL-005 / FR-010 / FR-011 / NFR-013 / plan.md D-004:
  *   - 取得は `repository.today()` を使用 (`list()` は使わない).
@@ -16,8 +15,12 @@
  *   - 起動時に `repository.getFocus()` を並列フェッチ.
  *   - 強調対象 = `currentTaskId ?? nextTaskId` (暗黙フォールバック).
  *   - 強調セクションのタスクは通常リストに含めない (D-008 重複表示禁止).
- *   - 「現在に設定」「現在解除」操作で `setFocus({ taskId, ifMatch })` を送る.
  *   - 各 mutation 成功時に `getFocus()` も再フェッチする.
+ *
+ * BL-042 (task-card-actions):
+ *   - カード上のアクションは「削除 / 明日にする / 完了」の 3 ボタンに削減.
+ *   - 旧「編集」「現在に設定」「現在解除」 button および編集フォームを撤去.
+ *   - `setFocusMutation` も併せて撤去 (BL-043 で別経路から再導入予定).
  *
  * BL-018: TanStack Query (useQuery / useMutation) でデータ取得・書込みを管理.
  */
@@ -29,7 +32,6 @@ import type {
   CreateTaskCommand,
   DeleteTaskCommand,
   FocusSelection,
-  SetFocusCommand,
   TaskRepository,
   UpdateTaskCommand,
 } from "../../repositories/task-repository.js";
@@ -105,8 +107,6 @@ export function TodayView(props: TodayViewProps): JSX.Element {
   const [name, setName] = useState("");
   const [projectId, setProjectId] = useState("");
   const [priority, setPriority] = useState<Priority>("normal");
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [editingName, setEditingName] = useState("");
 
   /** mutation 成功時に today / focus を再フェッチする */
   const invalidateAll = useCallback(() => {
@@ -296,39 +296,6 @@ export function TodayView(props: TodayViewProps): JSX.Element {
     networkMode: "offlineFirst",
   });
 
-  const setFocusMutation = useMutation({
-    mutationFn: async (cmd: SetFocusCommand) => {
-      const idempotencyKey = generateId();
-      void safeEnqueue({
-        url: `${baseUrl}/api/v1/focus`,
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
-          "Idempotency-Key": idempotencyKey,
-          "If-Match": String(cmd.ifMatch),
-        },
-        body: JSON.stringify({ taskId: cmd.taskId }),
-        idempotencyKey,
-      });
-      if (!navigator.onLine) {
-        return undefined;
-      }
-      const result = await repository.setFocus(cmd);
-      void safeDequeueByKey(idempotencyKey);
-      return result;
-    },
-    onSuccess: invalidateAll,
-    onError: (error) => {
-      if (error instanceof ConflictError) {
-        conflictDialog.openDialog(error.entry, error.serverValue);
-        return;
-      }
-      notifyError("通信に失敗しました");
-    },
-    networkMode: "offlineFirst",
-  });
-
   const handleCreate = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
@@ -346,31 +313,6 @@ export function TodayView(props: TodayViewProps): JSX.Element {
       setPriority("normal");
     },
     [name, projectId, priority, createMutation],
-  );
-
-  const openEdit = useCallback((task: Task) => {
-    setEditingTask(task);
-    setEditingName(task.name);
-  }, []);
-
-  const cancelEdit = useCallback(() => {
-    setEditingTask(null);
-    setEditingName("");
-  }, []);
-
-  const handleSaveEdit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!editingTask) return;
-      const cmd: UpdateTaskCommand = {
-        id: editingTask.id,
-        ifMatch: editingTask.version,
-        patch: { name: editingName },
-      };
-      await updateMutation.mutateAsync(cmd);
-      cancelEdit();
-    },
-    [editingTask, editingName, updateMutation, cancelEdit],
   );
 
   const handleToggleDueDate = useCallback(
@@ -418,17 +360,6 @@ export function TodayView(props: TodayViewProps): JSX.Element {
     [updateMutation],
   );
 
-  // BL-006 / FR-012: 「現在に設定」/「現在解除」操作 (plan.md D-009).
-  const handleSetFocus = useCallback(
-    async (taskId: string | null) => {
-      if (!focus) return;
-      const cmd: SetFocusCommand = { taskId, ifMatch: focus.version };
-      await setFocusMutation.mutateAsync(cmd);
-    },
-    [focus, setFocusMutation],
-  );
-
-  const isEditing = editingTask !== null;
   // BL-006: 強調対象 = currentTaskId ?? nextTaskId (plan.md D-001 暗黙フォールバック).
   const focusData = focus as FocusSelection | undefined;
   const focusedId: string | null = focusData?.currentTaskId ?? nextTaskId;
@@ -451,69 +382,49 @@ export function TodayView(props: TodayViewProps): JSX.Element {
         <span>今日の完了: {completionCount}</span>
       </div>
 
-      {/* 編集中は起票フォームを隠す (ラベル衝突回避). */}
-      {!isEditing && (
-        <form onSubmit={handleCreate} aria-label="タスク起票フォーム">
-          <div>
-            <label htmlFor="task-name">タスク名</label>
-            <input
-              id="task-name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </div>
-          <div>
-            {/*
-              BL-041 / AC-1 / AC-2 / AC-3 / AC-4:
-              <select id="task-project"> を撤去し, <ProjectToggle /> に置き換える.
-              親 state (useState("")) との境界で "" ↔ null を変換する (plan D-004).
-            */}
-            <ProjectToggle
-              value={projectId === "" ? null : projectId}
-              onChange={(next) => setProjectId(next ?? "")}
-              projects={projects}
-              idPrefix="create"
-              groupLabel="プロジェクト"
-            />
-          </div>
-          {/* BL-040 / AC-1: <select id="task-priority"> を撤去し, 星 UI に置き換える. */}
-          <div>
-            <span id="task-priority-label">優先度</span>
-            <PriorityStars
-              value={priority}
-              onChange={setPriority}
-              groupLabel="優先度"
-              idPrefix="create"
-            />
-          </div>
-          <button type="submit">追加</button>
-        </form>
-      )}
-
-      {isEditing && (
-        <form onSubmit={handleSaveEdit} aria-label="タスク編集フォーム">
-          <div>
-            <label htmlFor="edit-name">名称</label>
-            <input
-              id="edit-name"
-              type="text"
-              value={editingName}
-              onChange={(e) => setEditingName(e.target.value)}
-              required
-            />
-          </div>
-          <button type="submit">保存</button>
-          <button type="button" onClick={cancelEdit}>
-            キャンセル
-          </button>
-        </form>
-      )}
+      <form onSubmit={handleCreate} aria-label="タスク起票フォーム">
+        <div>
+          <label htmlFor="task-name">タスク名</label>
+          <input
+            id="task-name"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+        </div>
+        <div>
+          {/*
+            BL-041 / AC-1 / AC-2 / AC-3 / AC-4:
+            <select id="task-project"> を撤去し, <ProjectToggle /> に置き換える.
+            親 state (useState("")) との境界で "" ↔ null を変換する (plan D-004).
+          */}
+          <ProjectToggle
+            value={projectId === "" ? null : projectId}
+            onChange={(next) => setProjectId(next ?? "")}
+            projects={projects}
+            idPrefix="create"
+            groupLabel="プロジェクト"
+          />
+        </div>
+        {/* BL-040 / AC-1: <select id="task-priority"> を撤去し, 星 UI に置き換える. */}
+        <div>
+          <span id="task-priority-label">優先度</span>
+          <PriorityStars
+            value={priority}
+            onChange={setPriority}
+            groupLabel="優先度"
+            idPrefix="create"
+          />
+        </div>
+        <button type="submit">追加</button>
+      </form>
 
       {/* BL-006: 現在のタスク強調セクション (NFR-011 "大きく単独で表示").
           BL-040 / AC-10: 旧 cycle ボタン + [優先度: ...] 文字表示を撤去し
-          <PriorityStars /> に置き換える. */}
+          <PriorityStars /> に置き換える.
+          BL-042: アクションは「削除」「明日にする」「完了」の 3 ボタンのみに削減
+          (編集 / 現在解除 を撤去, ラベルを「明日にする」に統一). */}
       {focusedTask && (
         <section aria-label="現在のタスク">
           <h2>現在のタスク</h2>
@@ -525,23 +436,18 @@ export function TodayView(props: TodayViewProps): JSX.Element {
               groupLabel={`${focusedTask.name} の優先度`}
               idPrefix={`task-${focusedTask.id}`}
             />
-            <button type="button" onClick={() => openEdit(focusedTask)}>
-              編集
+            <button type="button" onClick={() => handleDelete(focusedTask)}>
+              削除
             </button>
-            {/* BL-017 / FR-033: origin が "routine" でない場合のみ「明日へ」ボタンを表示 */}
+            {/* BL-017 / FR-033: origin が "routine" でない場合のみ期限切替ボタンを表示.
+                BL-042: ラベルは「明日にする / 今日にする」に統一. */}
             {focusedTask.origin !== "routine" && (
               <button type="button" onClick={() => handleToggleDueDate(focusedTask)}>
-                {focusedTask.dueDate === "today" ? "明日へ" : "今日へ"}
+                {focusedTask.dueDate === "today" ? "明日にする" : "今日にする"}
               </button>
             )}
             <button type="button" onClick={() => handleComplete(focusedTask)}>
               完了
-            </button>
-            <button type="button" onClick={() => handleDelete(focusedTask)}>
-              削除
-            </button>
-            <button type="button" onClick={() => handleSetFocus(null)}>
-              現在解除
             </button>
           </div>
         </section>
@@ -559,23 +465,20 @@ export function TodayView(props: TodayViewProps): JSX.Element {
               groupLabel={`${task.name} の優先度`}
               idPrefix={`task-${task.id}`}
             />
-            <button type="button" onClick={() => openEdit(task)}>
-              編集
+            {/* BL-042: 各カードのアクションは「削除」「明日にする」「完了」の 3 つだけに削減
+                (編集 / 現在に設定 を撤去, ラベルを「明日にする」に統一). */}
+            <button type="button" onClick={() => handleDelete(task)}>
+              削除
             </button>
-            {/* BL-017 / FR-033: origin が "routine" でない場合のみ「明日へ」ボタンを表示 */}
+            {/* BL-017 / FR-033: origin が "routine" でない場合のみ期限切替ボタンを表示.
+                BL-042: ラベルは「明日にする / 今日にする」に統一. */}
             {task.origin !== "routine" && (
               <button type="button" onClick={() => handleToggleDueDate(task)}>
-                {task.dueDate === "today" ? "明日へ" : "今日へ"}
+                {task.dueDate === "today" ? "明日にする" : "今日にする"}
               </button>
             )}
             <button type="button" onClick={() => handleComplete(task)}>
               完了
-            </button>
-            <button type="button" onClick={() => handleDelete(task)}>
-              削除
-            </button>
-            <button type="button" onClick={() => handleSetFocus(task.id)}>
-              現在に設定
             </button>
           </li>
         ))}

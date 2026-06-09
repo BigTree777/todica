@@ -8,7 +8,7 @@
  * 役割:
  *   - `/tomorrow` ルートで `dueDate=tomorrow` のタスクを優先度順で一覧表示する.
  *   - 起票フォーム: タスク名 / プロジェクト / 優先度 / 追加 の 4 要素 (期限 UI なし).
- *   - 各カードのアクションは「削除」「今日にする」の 2 ボタン (REQ-3).
+ *   - 各カードのアクションは「削除」「今日にする」「完了」の 3 ボタン (REQ-3 / BL-042 REQ-2).
  *   - 「今日にする」は `PATCH /api/v1/tasks/:id { dueDate: "today" }` を発行 (FR-014 逆方向).
  *   - 「削除」は `DELETE /api/v1/tasks/:id` で論理削除 (BL-001 / BL-012).
  *   - 空状態は「明日のタスクはありません」テキスト. 起票フォームは表示し続ける.
@@ -29,6 +29,7 @@ import { useCallback, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Priority, Task } from "@todica/domain/task";
 import type {
+  CompleteTaskCommand,
   CreateTaskCommand,
   DeleteTaskCommand,
   TaskRepository,
@@ -105,12 +106,23 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
     void queryClient.invalidateQueries({ queryKey: ["tomorrow"] });
   }, [queryClient]);
 
-  // 「今日にする」成功時: ["tomorrow"] / ["today"] / ["focus"] を invalidate (D-004).
+  // 「今日にする」/「完了」成功時: ["tomorrow"] / ["today"] / ["focus"] を invalidate (D-004 / BL-042).
+  // ["today"] / ["focus"] は TomorrowView 内に observer がいないため, invalidate だけでは
+  // 再フェッチが走らない. queryClient.fetchQuery で明示的にフェッチして, today カウンタの
+  // 更新 (BL-042 spec AC-6) と focus 状態の更新 (今日に移動した場合の繰上げ) を確実に伝搬する.
   const invalidateAfterMoveToToday = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ["tomorrow"] });
     void queryClient.invalidateQueries({ queryKey: ["today"] });
     void queryClient.invalidateQueries({ queryKey: ["focus"] });
-  }, [queryClient]);
+    void queryClient.fetchQuery({
+      queryKey: ["today"],
+      queryFn: () => repository.today(),
+    });
+    void queryClient.fetchQuery({
+      queryKey: ["focus"],
+      queryFn: () => repository.getFocus(),
+    });
+  }, [queryClient, repository]);
 
   const repo = repository as unknown as HasBaseUrlAndToken;
   const baseUrl = repo.baseUrl ?? "";
@@ -257,6 +269,50 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
     networkMode: "offlineFirst",
   });
 
+  // BL-042: tomorrow カードに「完了」 button を追加するため completeMutation を追加.
+  // today-view と同形 (BL-031 ConflictDialog 経路 + BL-034 notifyError 経路に接続).
+  // 成功時は ["tomorrow"] / ["today"] / ["focus"] の 3 つを invalidate する
+  // (今日の completionCount が +1 されるため ["today"] 再フェッチが必要 / D-1 / plan).
+  const completeMutation = useMutation({
+    mutationFn: async (cmd: CompleteTaskCommand) => {
+      const idempotencyKey = generateId();
+      void safeEnqueue({
+        url: `${baseUrl}/api/v1/tasks/${cmd.id}/complete`,
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          "Idempotency-Key": idempotencyKey,
+          "If-Match": String(cmd.ifMatch),
+        },
+        body: null,
+        idempotencyKey,
+      });
+      if (!navigator.onLine) {
+        return undefined;
+      }
+      try {
+        const result = await repository.complete(cmd);
+        void safeDequeueByKey(idempotencyKey);
+        return result;
+      } catch (error) {
+        if (error instanceof OptimisticLockError) {
+          const entry = await findEntryByKey(idempotencyKey);
+          if (entry) throw new ConflictError(entry, error.currentTask ?? {});
+        }
+        throw error;
+      }
+    },
+    onSuccess: invalidateAfterMoveToToday,
+    onError: (error) => {
+      if (error instanceof ConflictError) {
+        conflictDialog.openDialog(error.entry, error.serverValue);
+        return;
+      }
+      notifyError("通信に失敗しました");
+    },
+    networkMode: "offlineFirst",
+  });
+
   const handleCreate = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
@@ -303,6 +359,18 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
       deleteMutation.mutate(cmd);
     },
     [deleteMutation],
+  );
+
+  // BL-042: 「完了」クリックで complete API を呼ぶ.
+  const handleComplete = useCallback(
+    (task: Task) => {
+      const cmd: CompleteTaskCommand = {
+        id: task.id,
+        ifMatch: task.version,
+      };
+      completeMutation.mutate(cmd);
+    },
+    [completeMutation],
   );
 
   return (
@@ -378,8 +446,16 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
                   <button type="button" onClick={() => handleDelete(task)}>
                     削除
                   </button>
-                  <button type="button" onClick={() => handleMoveToToday(task)}>
-                    今日にする
+                  {/* BL-042 REQ-2 / AC-8: routine 由来タスクは「今日にする」を非表示にする.
+                      routine は毎日自動生成されるため移送すると翌日に重複が出る. */}
+                  {task.origin !== "routine" && (
+                    <button type="button" onClick={() => handleMoveToToday(task)}>
+                      今日にする
+                    </button>
+                  )}
+                  {/* BL-042: 「完了」 button を追加 (today と対称な 3 ボタン化). */}
+                  <button type="button" onClick={() => handleComplete(task)}>
+                    完了
                   </button>
                 </div>
               </li>

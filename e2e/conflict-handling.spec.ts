@@ -19,7 +19,12 @@ function taskRow(page: Page, taskName: string) {
   return page.getByText(taskName, { exact: true }).first().locator("..");
 }
 
-test("2 タブ同時編集で後勝ち側に ConflictDialog が表示される (BL-031 a)", async ({
+// BL-042 (task-card-actions) でカード上の「編集」 button と編集フォームを撤去したため,
+// task の名称編集に依存する本 E2E は実行不能になる. ConflictDialog 経路自体は単体テスト
+// (today-view.test.tsx / tomorrow-view.test.tsx) で BL-042 後も green を保っており,
+// project / 完了 操作経由の ConflictDialog テストは引き続き green.
+// 編集 UI の代替経路 (タスク編集ダイアログの再導入 / 仮称 BL-048) で skip 解除し新 UI に追随予定.
+test.skip("2 タブ同時編集で後勝ち側に ConflictDialog が表示される (BL-031 a) (BL-042 で UI 撤去 / 後続 BL で復活予定)", async ({
   browser,
   request,
 }) => {
@@ -154,7 +159,10 @@ test("401 が返るとエラー通知バナーが表示される (BL-034)", asyn
   await expect(page.getByText("通信に失敗しました")).toBeVisible();
 });
 
-test("オフラインで編集した PATCH がオンライン復帰で flush され server に反映される (BL-031 b)", async ({
+// BL-042 でカード上の「編集」 button を撤去したため, task 名称編集に依存する本 E2E も
+// 実行不能になる. オフライン flush 自体は他 mutation (今日にする / 削除 / 完了) で動作する
+// ため offline-flush.spec.ts の他シナリオで間接的にカバー. BL-048 (タスク編集ダイアログ再導入) で復活予定.
+test.skip("オフラインで編集した PATCH がオンライン復帰で flush され server に反映される (BL-031 b) (BL-042 で UI 撤去 / 後続 BL で復活予定)", async ({
   page,
   context,
   request,
