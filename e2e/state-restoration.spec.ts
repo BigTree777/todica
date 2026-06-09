@@ -16,7 +16,15 @@ function taskRow(page: Page, taskName: string) {
 }
 
 test("リロード後も完了タスクのカウントが復元される", async ({ page }) => {
+  // 先行する他 spec の完了が /today refetch でカウンタに反映され終えるのを待つ.
+  // 初期ロード時の counter が「0 → サーバ正本値」と変化する間に beforeText を読むと,
+  // 後続の完了で counter+1 ではなく +2 のように見える flaky を防ぐ.
+  const todayResponsePromise = page.waitForResponse(
+    (res) => res.url().includes("/api/v1/today") && res.status() === 200,
+  );
   await page.goto("/");
+  await todayResponsePromise;
+
   const taskName = `カウント復元 ${Date.now()}`;
   const countDisplay = page.getByLabel("今日の完了タスク数");
 

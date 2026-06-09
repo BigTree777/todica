@@ -310,10 +310,14 @@ describe("TodayView (Web クライアント UI)", () => {
     const nameInput = await screen.findByLabelText(/タスク名/);
     expect(nameInput).toBeRequired();
 
-    // 「プロジェクト」は任意項目として存在する (UI 上に存在するが required ではない)
-    const projectInput = screen.queryByLabelText(/プロジェクト/);
-    expect(projectInput).not.toBeNull();
-    expect(projectInput).not.toBeRequired();
+    // BL-041: 「プロジェクト」は <select> ではなくトグルボタン (<ProjectToggle />) で表現される.
+    // 起票フォーム scope 内に「プロジェクト」を name に持つ button が 1 つ存在する.
+    const form = screen.getByRole("form", { name: "タスク起票フォーム" });
+    const projectToggle = within(form).getByRole("button", { name: /プロジェクト/ });
+    expect(projectToggle).not.toBeNull();
+    expect(projectToggle.tagName).toBe("BUTTON");
+    // required 概念はトグル button には適用されない (任意項目). 旧 select 互換の意図のみ残す.
+    expect(projectToggle).not.toBeRequired();
 
     // BL-039: 期限 UI は起票フォームから削除済み (foundation REQ-4 / inline-create-form REQ-1).
     // ビュー文脈で dueDate が決まるため起票時に期限を選ばせない.
@@ -344,16 +348,19 @@ describe("TodayView (Web クライアント UI)", () => {
     // id="task-due-date" の DOM 要素も存在しない.
     expect(form.querySelector("#task-due-date")).toBeNull();
 
-    // 起票フォーム内の input / select は 2 つのみ:
-    //   タスク名 (input) / プロジェクト (select). 「優先度」は星 UI (button 3 つ) で
-    //   input/select には含まれない. 「追加」ボタンは別.
+    // 起票フォーム内の input / select は 1 つのみ:
+    //   タスク名 (input). 「優先度」は星 UI (button 3 つ) で input/select には含まれない.
+    //   BL-041: 「プロジェクト」も <select> ではなくトグルボタンに置き換わる
+    //   (= input/select 集計には含まれない). 「追加」ボタンは別.
     // BL-040 priority-star-ui REQ-1: <select id="task-priority"> は撤去され,
     //   role="radiogroup" + 3 つの role="radio" (button 実装) に置き換わる.
     const formInputs = form.querySelectorAll("input, select");
-    expect(formInputs).toHaveLength(2);
+    expect(formInputs).toHaveLength(1);
 
     // 旧 select id は DOM 上に存在しない (BL-040 / spec AC-1).
     expect(form.querySelector("#task-priority")).toBeNull();
+    // BL-041 spec AC-1: 旧プロジェクト select も DOM 上に存在しない.
+    expect(form.querySelector("#task-project")).toBeNull();
   });
 
   it("シナリオ: BL-039 起票時に dueDate=\"today\" で create が呼ばれる", async () => {
@@ -1648,13 +1655,12 @@ describe("書込キュー統合 (BL-018 フェーズ D)", () => {
 // 以下のテストはすべて red になる. implementer が green 化する.
 // ============================================================
 
-describe("TodayView (BL-016 プロジェクト選択 UI)", () => {
-  it("シナリオ: 起票フォームにプロジェクト選択ドロップダウンが表示される", async () => {
-    // spec.md §「起票フォームにプロジェクト選択ドロップダウンが表示される」
-    //   Given プロジェクト「仕事」と「個人」が存在する
-    //   When  TodayView の起票フォームが表示される
-    //   Then  「プロジェクト」ドロップダウンに「仕事」と「個人」の選択肢が表示される
-    //   And   「（未分類）」という選択肢も含まれる
+describe("TodayView (BL-016 / BL-041 プロジェクト選択 UI)", () => {
+  it("シナリオ AC-1: 起票フォームにプロジェクトトグルボタンが表示され, 旧 <select id=\"task-project\"> は存在しない", async () => {
+    // BL-041 spec.md AC-1:
+    //   起票フォーム内に role="button" の 1 個の要素が「プロジェクト用トグル」として存在する.
+    //   <select id="task-project"> は DOM に存在しない.
+    //   ボタンの aria-label に「未分類」相当が含まれる.
     const projectRepo = makeMockProjectRepository([
       {
         id: PROJECT_ID_P1,
@@ -1677,28 +1683,37 @@ describe("TodayView (BL-016 プロジェクト選択 UI)", () => {
       <TodayView repository={taskRepo} projectRepository={projectRepo} />,
     );
 
-    // 「プロジェクト」ラベルを持つドロップダウン（select）が存在する.
-    // 既存テスト（今日ビューの起票フォームはタスク名のみ必須である）で
-    // queryByLabelText(/プロジェクト/) が存在することを確認済みの要件を継承する.
-    const projectSelect = await screen.findByLabelText(/プロジェクト/);
-    expect(projectSelect).toBeInTheDocument();
+    // タスク名入力欄の描画完了を待つ (= 起票フォームのレンダリング待ち).
+    await screen.findByLabelText(/タスク名/);
 
-    // 「仕事」と「個人」の選択肢が存在する
-    expect(await screen.findByText("仕事")).toBeInTheDocument();
-    expect(await screen.findByText("個人")).toBeInTheDocument();
+    // 起票フォーム scope で検証する.
+    const form = screen.getByRole("form", { name: "タスク起票フォーム" });
 
-    // 「（未分類）」の選択肢が存在する
-    expect(await screen.findByText(/未分類/)).toBeInTheDocument();
+    // BL-041 spec AC-1: 旧 <select id="task-project"> は DOM 上に存在しない.
+    expect(form.querySelector("#task-project")).toBeNull();
+    // フォーム scope 内に <select> が 1 つも存在しないこと (= プロジェクト選択は button のみ).
+    expect(form.querySelectorAll("select")).toHaveLength(0);
 
-    // projectRepository.list() が呼ばれている
+    // role="button" のトグル要素が起票フォーム内に存在する.
+    const toggleButton = within(form).getByRole("button", { name: /プロジェクト/ });
+    expect(toggleButton).toBeInTheDocument();
+    expect(toggleButton.tagName).toBe("BUTTON");
+
+    // 初期表示は「（未分類）」 (REQ-3).
+    expect(toggleButton.textContent ?? "").toMatch(/（未分類）/);
+    // aria-label に「未分類」相当が含まれる (REQ-4).
+    const ariaLabel = toggleButton.getAttribute("aria-label") ?? "";
+    expect(ariaLabel).toMatch(/未分類/);
+
+    // projectRepository.list() が呼ばれている (BL-016 既存挙動の維持).
     expect(projectRepo.listMock).toHaveBeenCalledTimes(1);
   });
 
-  it("シナリオ: プロジェクトを選択してタスクを起票すると POST に projectId が含まれる", async () => {
-    // spec.md §「プロジェクトを選択してタスクを起票できる」
-    //   Given プロジェクト「仕事」（id: "p-1"）が存在する
-    //   When  起票フォームでプロジェクト「仕事」を選択してタスクを追加する
-    //   Then  repository.create に { projectId: "p-1" } が含まれる
+  it("シナリオ AC-3: トグルを 1 回クリックして「仕事」を選択してタスクを起票すると create.projectId === \"p-1\" が送信される", async () => {
+    // BL-041 spec.md AC-3:
+    //   Given プロジェクト「仕事」(id: "p-1") が登録されている.
+    //   When  トグルを 1 回クリックし「仕事」を選んで「追加」.
+    //   Then  TaskRepository.create が projectId="p-1" を含む引数で呼ばれる.
     const projectRepo = makeMockProjectRepository([
       {
         id: PROJECT_ID_P1,
@@ -1719,27 +1734,43 @@ describe("TodayView (BL-016 プロジェクト選択 UI)", () => {
     const nameInput = await screen.findByLabelText(/タスク名/);
     await user.type(nameInput, "資料を作る");
 
-    // プロジェクト選択ドロップダウンで「仕事」を選択
-    const projectSelect = await screen.findByLabelText(/プロジェクト/);
-    await user.selectOptions(projectSelect, PROJECT_ID_P1);
+    // BL-041: 起票フォーム内のトグルボタンを取得する (旧 select ではない).
+    const form = screen.getByRole("form", { name: "タスク起票フォーム" });
+    const toggleButton = await within(form).findByRole("button", {
+      name: /プロジェクト/,
+    });
+    // 1 周巡回: null → projects[0] = "仕事" (REQ-2).
+    await user.click(toggleButton);
 
-    // 追加ボタンをクリック
+    // クリック後 textContent / aria-label が「仕事」を含むことを確認 (AC-2).
+    expect(toggleButton.textContent ?? "").toContain("仕事");
+    expect(toggleButton.getAttribute("aria-label") ?? "").toMatch(/仕事/);
+
+    // 追加ボタンをクリック.
     const submit = screen.getByRole("button", { name: /追加|起票|登録|送信/ });
     await user.click(submit);
 
-    // create() が呼ばれて projectId が渡っている
+    // create() が呼ばれて projectId が渡っている (REQ-6).
     expect(taskRepo.createMock).toHaveBeenCalledTimes(1);
     const arg = taskRepo.createMock.mock.calls[0]?.[0] as CreateTaskCommand;
     expect(arg.name).toBe("資料を作る");
     expect(arg.projectId).toBe(PROJECT_ID_P1);
   });
 
-  it("シナリオ: プロジェクト未選択（「（未分類）」）で起票すると POST に projectId: null が含まれる", async () => {
-    // spec.md §「プロジェクト未選択（未分類）でタスクを起票できる」
-    //   Given プロジェクトが 1 件も存在しない、または「（未分類）」を選択している
-    //   When  起票フォームでプロジェクトを選択せずタスクを追加する
-    //   Then  repository.create に { projectId: null } が含まれる
-    const projectRepo = makeMockProjectRepository([]);
+  it("シナリオ AC-4: トグルをクリックせず「（未分類）」のまま起票すると create.projectId が null", async () => {
+    // BL-041 spec.md AC-4:
+    //   Given プロジェクトが 1 件以上登録されている.
+    //   When  トグルをクリックせず「（未分類）」のまま「追加」を押す.
+    //   Then  TaskRepository.create が projectId=null を含む引数で呼ばれる.
+    const projectRepo = makeMockProjectRepository([
+      {
+        id: PROJECT_ID_P1,
+        name: "仕事",
+        version: 1,
+        createdAt: NOW,
+        updatedAt: NOW,
+      },
+    ]);
     const taskRepo = makeMockRepository();
     const user = userEvent.setup();
 
@@ -1751,17 +1782,65 @@ describe("TodayView (BL-016 プロジェクト選択 UI)", () => {
     const nameInput = await screen.findByLabelText(/タスク名/);
     await user.type(nameInput, "牛乳を買う");
 
-    // プロジェクトは未選択のまま（または「（未分類）」を明示選択）
-    // デフォルト選択肢が「（未分類）」であることを前提とする.
+    // BL-041: トグルはクリックせず「（未分類）」のまま起票する.
+    // 念のため初期表示が「（未分類）」であることを確認.
+    const form = screen.getByRole("form", { name: "タスク起票フォーム" });
+    const toggleButton = within(form).getByRole("button", { name: /プロジェクト/ });
+    expect(toggleButton.textContent ?? "").toMatch(/（未分類）/);
 
-    // 追加ボタンをクリック
+    // 追加ボタンをクリック.
     const submit = screen.getByRole("button", { name: /追加|起票|登録|送信/ });
     await user.click(submit);
 
-    // create() が呼ばれて projectId が null になっている
+    // create() が呼ばれて projectId が null になっている (REQ-6 / D-004 "" ↔ null 境界変換).
     expect(taskRepo.createMock).toHaveBeenCalledTimes(1);
     const arg = taskRepo.createMock.mock.calls[0]?.[0] as CreateTaskCommand;
     expect(arg.name).toBe("牛乳を買う");
     expect(arg.projectId).toBeNull();
+  });
+
+  it("シナリオ AC-10: 起票成功後にトグルが「（未分類）」にリセットされる", async () => {
+    // BL-041 spec.md AC-10:
+    //   Given プロジェクト「仕事」を選び, タスク名「リセット確認」で「追加」を押した.
+    //   When  起票完了直後にトグルを観察する.
+    //   Then  トグル表示は「（未分類）」に戻っている (= 親 state の setProjectId("") リセットで「（未分類）」表示に戻る).
+    const projectRepo = makeMockProjectRepository([
+      {
+        id: PROJECT_ID_P1,
+        name: "仕事",
+        version: 1,
+        createdAt: NOW,
+        updatedAt: NOW,
+      },
+    ]);
+    const taskRepo = makeMockRepository();
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <TodayView repository={taskRepo} projectRepository={projectRepo} />,
+    );
+
+    const nameInput = await screen.findByLabelText(/タスク名/);
+    await user.type(nameInput, "リセット確認");
+
+    const form = screen.getByRole("form", { name: "タスク起票フォーム" });
+    const toggleButton = await within(form).findByRole("button", {
+      name: /プロジェクト/,
+    });
+    // 「仕事」を選ぶ.
+    await user.click(toggleButton);
+    expect(toggleButton.textContent ?? "").toContain("仕事");
+
+    // 追加.
+    const submit = screen.getByRole("button", { name: /追加|起票|登録|送信/ });
+    await user.click(submit);
+
+    // 起票完了後にトグル表示が「（未分類）」にリセットされていること.
+    // 同じ form 内のトグル button を再取得 (rerender 後の最新参照).
+    const formAfter = screen.getByRole("form", { name: "タスク起票フォーム" });
+    const toggleAfter = within(formAfter).getByRole("button", {
+      name: /プロジェクト/,
+    });
+    expect(toggleAfter.textContent ?? "").toMatch(/（未分類）/);
   });
 });
