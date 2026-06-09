@@ -18,7 +18,7 @@ import { serve } from "@hono/node-server";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import { SystemClock } from "@todica/domain/clock";
+import { FakeClock, SystemClock, type Clock } from "@todica/domain/clock";
 import { createApp } from "./app.js";
 import { schema } from "./db/schema.js";
 import { DrizzleTaskRepository } from "./infra/persistence/drizzle/task-repository.js";
@@ -32,6 +32,7 @@ import { DrizzleRoutineRepository } from "./infra/persistence/drizzle/routine-re
 const DATABASE_PATH = process.env.DATABASE_PATH ?? "./todica.db";
 const PORT = Number.parseInt(process.env.PORT ?? "3000", 10);
 const AUTH_TOKEN = process.env.AUTH_TOKEN ?? "";
+const TEST_NOW = process.env.TEST_NOW;
 
 if (!AUTH_TOKEN) {
   // eslint-disable-next-line no-console
@@ -44,6 +45,11 @@ sqlite.pragma("journal_mode = WAL");
 const db = drizzle(sqlite, { schema });
 migrate(db, { migrationsFolder: join(process.cwd(), "server", "drizzle") });
 
+// E2E テスト用 (BL-030): `TEST_NOW` が設定されていればその時刻を初期値とする
+// `FakeClock` を使う. `/api/v1/test/clock/*` エンドポイントがこの clock を進める手段を提供する.
+// 本番では `TEST_NOW` を立てない (= 常に `SystemClock`).
+const clock: Clock = TEST_NOW ? new FakeClock(TEST_NOW) : new SystemClock();
+
 const app = createApp({
   taskRepository: new DrizzleTaskRepository({ db }),
   projectRepository: new DrizzleProjectRepository({ db }),
@@ -55,7 +61,9 @@ const app = createApp({
   settingsRepository: new DrizzleSettingsRepository({ db }),
   // BL-017 / routine: SQLite + drizzle-orm による物理永続化.
   routineRepository: new DrizzleRoutineRepository({ db }),
-  clock: new SystemClock(),
+  clock,
+  // BL-030: testClock が渡されると app は test-only エンドポイントを生やす.
+  testClock: clock instanceof FakeClock ? clock : undefined,
   authToken: AUTH_TOKEN,
   db,
 });

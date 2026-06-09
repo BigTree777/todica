@@ -8,7 +8,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Context, MiddlewareHandler } from "hono";
-import type { Clock } from "@todica/domain/clock";
+import type { Clock, FakeClock } from "@todica/domain/clock";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { and, eq, isNull } from "drizzle-orm";
 import { tasks as tasksTable, projects as projectsTable, routines as routinesTable, schema } from "./db/schema.js";
@@ -79,6 +79,12 @@ export interface AppDeps {
    * BL-017 / routine: RoutineRepository.
    */
   routineRepository?: RoutineRepository;
+  /**
+   * BL-030: E2E テスト用. `TEST_NOW` 環境変数が設定された時に main.ts が `FakeClock`
+   * インスタンスを渡す. 渡された場合のみ `/api/v1/test/clock/*` エンドポイントが
+   * 生え, 時刻を tick / set できる. 本番では `undefined`.
+   */
+  testClock?: FakeClock;
 }
 
 const WRITE_METHODS = new Set(["POST", "PATCH", "PUT", "DELETE"]);
@@ -135,6 +141,11 @@ export function createApp(deps: AppDeps): Hono {
       return;
     }
     if (!c.req.path.startsWith("/api/")) {
+      await next();
+      return;
+    }
+    // BL-030: テスト用エンドポイントは冪等性管理対象外.
+    if (c.req.path.startsWith("/api/v1/test/")) {
       await next();
       return;
     }
@@ -1084,6 +1095,37 @@ export function createApp(deps: AppDeps): Hono {
     await clearFocusIfMatches(deps, id);
     return saveAndReturn(c, deps, 204, null);
   });
+
+  // ---------- E2E テスト用エンドポイント (BL-030) ----------
+  // `deps.testClock` が渡された時 (main.ts で `TEST_NOW` env が設定された時) のみ生やす.
+  // 本番では `undefined` のためルートそのものが存在せず, 誤って public expose されない.
+  // 認証は `/api/` 全般の Bearer middleware で担保される.
+  if (deps.testClock) {
+    const testClock = deps.testClock;
+
+    // 現在の fake 時刻を確認する.
+    app.get("/api/v1/test/clock", (c) => c.json({ now: testClock.now() }, 200));
+
+    // 任意の時刻 (ISO 8601) にジャンプ.
+    app.post("/api/v1/test/clock/set", async (c) => {
+      const body = (await c.req.json()) as { now?: unknown };
+      if (typeof body.now !== "string") {
+        return errorJson(c, 400, "INVALID_REQUEST_BODY", "now must be ISO 8601 string");
+      }
+      testClock.set(body.now);
+      return c.json({ now: testClock.now() }, 200);
+    });
+
+    // 現在時刻を ms 進める. 境界時刻またぎを再現するのに使う.
+    app.post("/api/v1/test/clock/advance", async (c) => {
+      const body = (await c.req.json()) as { ms?: unknown };
+      if (typeof body.ms !== "number" || !Number.isFinite(body.ms)) {
+        return errorJson(c, 400, "INVALID_REQUEST_BODY", "ms must be a finite number");
+      }
+      testClock.tick(body.ms);
+      return c.json({ now: testClock.now() }, 200);
+    });
+  }
 
   return app;
 }

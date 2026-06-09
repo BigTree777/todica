@@ -52,6 +52,11 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
       env: {
         DATABASE_PATH: E2E_DB_PATH,
+        // BL-030: server に FakeClock を注入 + `/api/v1/test/clock/*` エンドポイントを
+        // 有効化. 境界時刻またぎの自動 reset を再現可能にする. 値は UTC 5 時で,
+        // デフォルト境界時刻 04:00 を既に通過しているため初回 /today で自動 reset が
+        // 1 回走り, 以降の clock advance(24h) で再度 reset が triggered される.
+        TEST_NOW: "2026-06-09T05:00:00.000Z",
       },
     },
     {
