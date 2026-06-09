@@ -16,7 +16,7 @@ npm install
 
 | 変数 | デフォルト | 説明 |
 |---|---|---|
-| `AUTH_TOKEN` | `""` | Bearer 認証トークン。空だと認証なしで動作する |
+| `AUTH_TOKEN` | （必須） | Bearer 認証トークン。未設定だと起動失敗（`process.exit(1)`） |
 | `PORT` | `3000` | リッスンポート |
 | `DATABASE_PATH` | `./todica.db` | SQLite データベースファイルのパス |
 

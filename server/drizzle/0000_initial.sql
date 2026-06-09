@@ -1,3 +1,19 @@
+CREATE TABLE `counter` (
+	`id` text PRIMARY KEY NOT NULL,
+	`completed_count` integer DEFAULT 0 NOT NULL,
+	`last_reset_executed_at` text,
+	`updated_at` text NOT NULL,
+	`version` integer DEFAULT 1 NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE `focus_selection` (
+	`id` text PRIMARY KEY NOT NULL,
+	`current_task_id` text,
+	`created_at` text NOT NULL,
+	`updated_at` text NOT NULL,
+	`version` integer DEFAULT 1 NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE `idempotency_keys` (
 	`key` text PRIMARY KEY NOT NULL,
 	`method` text NOT NULL,
@@ -13,6 +29,23 @@ CREATE TABLE `projects` (
 	`created_at` text NOT NULL,
 	`updated_at` text NOT NULL,
 	`trashed_at` text,
+	`version` integer DEFAULT 1 NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE `routines` (
+	`id` text PRIMARY KEY NOT NULL,
+	`name` text NOT NULL,
+	`days_of_week` text NOT NULL,
+	`default_priority` text NOT NULL,
+	`version` integer DEFAULT 1 NOT NULL,
+	`created_at` text NOT NULL,
+	`updated_at` text NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE `settings` (
+	`id` text PRIMARY KEY NOT NULL,
+	`day_boundary_time` text DEFAULT '04:00' NOT NULL,
+	`updated_at` text NOT NULL,
 	`version` integer DEFAULT 1 NOT NULL
 );
 --> statement-breakpoint

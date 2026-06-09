@@ -6,6 +6,7 @@
  */
 import type { Clock } from "@todica/domain/clock";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+import type { schema } from "../db/schema.js";
 import type { TaskRepository } from "../data/task-repository.js";
 import type { CounterRepository } from "../data/counter-repository.js";
 import type { SettingsRepository } from "../data/settings-repository.js";
@@ -55,7 +56,7 @@ export interface DailyResetDeps {
    * 指定された場合はトランザクション内でリセット処理を実行する（本番用）.
    * 未指定の場合は Repository の非同期メソッドを順次呼ぶフォールバック（テスト用）.
    */
-  db?: BetterSQLite3Database;
+  db?: BetterSQLite3Database<typeof schema>;
   /**
    * BL-017: RoutineRepository（オプショナル）.
    * 注入された場合、日次リセット時にルーティンタスクの削除と生成を行う.
@@ -145,7 +146,7 @@ export async function maybeRunDailyReset(deps: DailyResetDeps): Promise<DailyRes
 
   // purgeTrash を呼び出す（plan.md D-002 d / D-005）.
   // 境界時刻より古いゴミ箱タスクを物理削除する（通常タスク・完了済みルーティンタスクを含む）.
-  await purgeTrash(deps.db as BetterSQLite3Database, deps.clock, deps.settingsRepository, deps.taskRepository);
+  await purgeTrash(deps.db as BetterSQLite3Database<typeof schema>, deps.clock, deps.settingsRepository, deps.taskRepository);
 
   return { executed: true, appliedBoundaryAt: todayBoundaryAt };
 }

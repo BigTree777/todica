@@ -6,6 +6,7 @@
  */
 import type { Clock } from "@todica/domain/clock";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+import type { schema } from "../db/schema.js";
 import type { SettingsRepository } from "../data/settings-repository.js";
 import type { TaskRepository } from "../data/task-repository.js";
 import { calcTodayBoundaryAt } from "./daily-reset.js";
@@ -17,7 +18,7 @@ import { calcTodayBoundaryAt } from "./daily-reset.js";
  * - db は後方互換のために引数に残すが、in-memory テスト環境では使用しない.
  */
 export async function purgeTrash(
-  _db: BetterSQLite3Database,
+  _db: BetterSQLite3Database<typeof schema>,
   clock: Clock,
   settingsRepository?: SettingsRepository,
   taskRepository?: TaskRepository,

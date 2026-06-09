@@ -9,11 +9,15 @@
  *   PWA-003: Chrome / Edge / Android Chrome のアドレスバーに「インストール」ボタンが表示される。
  *   PWA-004: インストール後、独立ウィンドウ（standalone モード）でアプリが起動する。
  */
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
+  // env はリポジトリルートの .env に集約する (server 用と web 用を 1 ファイルにまとめる).
+  // VITE_ プレフィックスを持つ変数だけがクライアントに expose される.
+  envDir: fileURLToPath(new URL("..", import.meta.url)),
   plugins: [
     react(),
     VitePWA({

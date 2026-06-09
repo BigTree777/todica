@@ -2,6 +2,17 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "type": "node",
+      "request": "attach",
+      "name": "Server: デバッガを attach",
+      "port": 9229,
+      "address": "localhost",
+      "preLaunchTask": "server-dev",
+      "restart": true,
+      "skipFiles": ["<node_internals>/**"],
+      "sourceMaps": true
+    },
+    {
       "type": "chrome",
       "request": "launch",
       "name": "Web: Chrome を起動してデバッグ",
@@ -9,6 +20,13 @@
       "webRoot": "${workspaceFolder}/web",
       "preLaunchTask": "vite-dev",
       "sourceMaps": true
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Web + Server: フルスタック",
+      "configurations": ["Server: デバッガを attach", "Web: Chrome を起動してデバッグ"],
+      "stopAll": true
     }
   ]
 }

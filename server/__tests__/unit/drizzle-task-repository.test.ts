@@ -19,6 +19,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import type { Task } from "@todica/domain/task";
+import { schema } from "../../src/db/schema.js";
 import { DrizzleTaskRepository } from "../../src/infra/persistence/drizzle/task-repository.js";
 
 const TASK_ID = "11111111-1111-4111-8111-111111111111";
@@ -71,7 +72,7 @@ let repo: DrizzleTaskRepository;
 beforeEach(() => {
   sqlite = new Database(":memory:");
   sqlite.exec(CREATE_TASKS_SQL);
-  const db = drizzle(sqlite);
+  const db = drizzle(sqlite, { schema });
   repo = new DrizzleTaskRepository({ db });
 });
 

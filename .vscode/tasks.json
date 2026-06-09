@@ -4,22 +4,58 @@
     {
       "label": "vite-dev",
       "type": "shell",
-      "command": "npm run dev -w web",
+      "command": "npm run dev -w web -- --debug",
       "isBackground": true,
       "presentation": {
-        "reveal": "silent",
+        "reveal": "always",
         "panel": "dedicated",
+        "echo": true,
+        "showReuseMessage": true,
+        "revealProblems": "onProblem",
         "clear": true
       },
       "problemMatcher": {
         "owner": "vite",
+        "fileLocation": ["relative", "${workspaceFolder}"],
+        "pattern": {
+          "regexp": "^\\s*(\\S+\\.[a-zA-Z]+):(\\d+):(\\d+):?\\s*(?:error|warning)?:?\\s*(.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "message": 4
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".",
+          "endsPattern": "ready in"
+        }
+      }
+    },
+    {
+      "label": "server-dev",
+      "type": "shell",
+      "command": "node --inspect --env-file-if-exists=.env node_modules/vite-node/vite-node.mjs --watch server/src/main.ts",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "echo": true,
+        "showReuseMessage": true,
+        "revealProblems": "onProblem",
+        "clear": true
+      },
+      "problemMatcher": {
+        "owner": "todica-server",
         "pattern": {
           "regexp": "^$"
         },
         "background": {
           "activeOnStart": true,
           "beginsPattern": ".",
-          "endsPattern": "ready in"
+          "endsPattern": "Todica server listening"
         }
       }
     }

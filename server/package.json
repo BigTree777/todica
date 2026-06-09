@@ -16,7 +16,7 @@
     "test": "vitest run",
     "build": "tsc",
     "start": "node dist/src/main.js",
-    "dev": "node --experimental-strip-types src/main.ts"
+    "dev": "cd .. && node --env-file-if-exists=.env node_modules/vite-node/vite-node.mjs --watch server/src/main.ts"
   },
   "dependencies": {
     "@todica/domain": "*",

@@ -3,8 +3,9 @@
  *
  * - better-sqlite3 で SQLite ファイルを開く.
  * - drizzle-orm でラップし, Drizzle ベースの Repository を構築.
- * - 起動時に server/drizzle/*.sql のマイグレーションを `--> statement-breakpoint` で
- *   split して `sqlite.exec()` で適用する (drizzle-orm の migrator は使わない).
+ * - 起動時に drizzle 標準 `migrate()` で server/drizzle/*.sql を適用する.
+ *   適用済み migration は `__drizzle_migrations` テーブルで自動追跡されるため,
+ *   何度起動しても安全 (冪等).
  * - Hono の `app` (fetch ハンドラ) を default export する. 実 listen
  *   (`@hono/node-server` 等での `serve()` 呼び出し) は後続 feature で配線する.
  *
@@ -12,11 +13,11 @@
  *   - DATABASE_PATH (default: ./todica.db)
  *   - AUTH_TOKEN (必須: Bearer 認証用の固定トークン)
  */
-import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { serve } from "@hono/node-server";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
+import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { SystemClock } from "@todica/domain/clock";
 import { createApp } from "./app.js";
 import { schema } from "./db/schema.js";
@@ -38,34 +39,10 @@ if (!AUTH_TOKEN) {
   process.exit(1);
 }
 
-/** drizzle のマイグレーション SQL を生 SQL として適用する. */
-function applyMigrations(sqlite: Database.Database, migrationsDir: string): void {
-  if (!existsSync(migrationsDir)) {
-    // eslint-disable-next-line no-console
-    console.warn(`migrations dir not found: ${migrationsDir} (skipping)`);
-    return;
-  }
-  const files = readdirSync(migrationsDir)
-    .filter((f) => f.endsWith(".sql"))
-    .sort();
-  for (const f of files) {
-    const sqlText = readFileSync(join(migrationsDir, f), "utf8");
-    // statement-breakpoint コメントで分割して順番に実行する
-    const statements = sqlText
-      .split("--> statement-breakpoint")
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
-    for (const stmt of statements) {
-      sqlite.exec(stmt);
-    }
-  }
-}
-
 const sqlite = new Database(DATABASE_PATH);
 sqlite.pragma("journal_mode = WAL");
-applyMigrations(sqlite, join(process.cwd(), "server", "drizzle"));
-
 const db = drizzle(sqlite, { schema });
+migrate(db, { migrationsFolder: join(process.cwd(), "server", "drizzle") });
 
 const app = createApp({
   taskRepository: new DrizzleTaskRepository({ db }),

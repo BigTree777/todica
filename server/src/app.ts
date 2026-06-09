@@ -10,7 +10,7 @@ import type { Context, MiddlewareHandler } from "hono";
 import type { Clock } from "@todica/domain/clock";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { and, eq, isNull } from "drizzle-orm";
-import { tasks as tasksTable, projects as projectsTable, routines as routinesTable } from "./db/schema.js";
+import { tasks as tasksTable, projects as projectsTable, routines as routinesTable, schema } from "./db/schema.js";
 import {
   completeTask,
   createTask,
@@ -73,7 +73,7 @@ export interface AppDeps {
    * BL-010 / daily-reset: plan.md D-004 トランザクション実行のための Drizzle DB インスタンス（オプショナル）.
    * 本番では渡す. テストでは省略し、Repository の非同期メソッドを使うフォールバックで動作する.
    */
-  db?: BetterSQLite3Database;
+  db?: BetterSQLite3Database<typeof schema>;
   /**
    * BL-017 / routine: RoutineRepository.
    */
