@@ -1147,9 +1147,8 @@ describe("TodayView (BL-006 現在のタスク強調表示と操作)", () => {
     expect(itemTexts.some((t) => t.includes("BBB"))).toBe(false);
   });
 
-  // BL-042: 「現在に設定」 button をカードから撤去. focus 切替の代替経路は BL-043
-  // (set-focus-gesture) で別途設計する. それまではスキップして仕様の退行を防ぐ.
-  it.skip("シナリオ: 通常リストの行から「現在に設定」を押すと setFocus({ taskId, ifMatch: focus.version }) が呼ばれる (BL-042 で UI 撤去 / BL-043 で復活予定)", async () => {
+  // BL-043 (set-focus-gesture): 「現在のタスクにする」 button として復活.
+  it("シナリオ: 通常リストの行から「現在のタスクにする」を押すと setFocus({ taskId, ifMatch: focus.version }) が呼ばれる", async () => {
     // spec.md §「UI: 操作」第 1 ケース.
     const repo = makeMockRepository(
       [
@@ -1189,9 +1188,9 @@ describe("TodayView (BL-006 現在のタスク強調表示と操作)", () => {
     const bRow = items.find((li) => (li.textContent ?? "").includes("BBB"));
     expect(bRow).toBeDefined();
 
-    // 「現在に設定」ボタンを行内で探してクリック.
+    // 「現在のタスクにする」ボタンを行内で探してクリック.
     const setFocusButton = within(bRow!).getByRole("button", {
-      name: /現在に設定/,
+      name: "現在のタスクにする",
     });
     await user.click(setFocusButton);
 
@@ -1201,50 +1200,9 @@ describe("TodayView (BL-006 現在のタスク強調表示と操作)", () => {
     expect(arg.ifMatch).toBe(7);
   });
 
-  // BL-042: 「現在解除」 button をカードから撤去. focus 解除の代替経路は BL-043
-  // (set-focus-gesture) で別途設計する. それまではスキップして仕様の退行を防ぐ.
-  it.skip("シナリオ: 強調セクションの「現在解除」ボタンを押すと setFocus({ taskId: null, ifMatch: focus.version }) が呼ばれる (BL-042 で UI 撤去 / BL-043 で復活予定)", async () => {
-    // spec.md §「UI: 操作」第 2 ケース.
-    const repo = makeMockRepository(
-      [
-        makeTask({
-          id: "task-A",
-          name: "AAA",
-          priority: "highest",
-          createdAt: "2026-06-07T08:00:00.000Z",
-          version: 1,
-        }),
-        makeTask({
-          id: "task-B",
-          name: "BBB",
-          priority: "normal",
-          createdAt: "2026-06-07T08:00:01.000Z",
-          version: 1,
-        }),
-      ],
-      {
-        initialFocus: {
-          id: "singleton",
-          currentTaskId: "task-A",
-          version: 9,
-          updatedAt: NOW,
-        },
-      },
-    );
-    const user = userEvent.setup();
-    renderWithQueryClient(<TodayView repository={repo} projectRepository={makeMockProjectRepository()} />);
-
-    const focusSection = await screen.findByRole("region", { name: /現在のタスク/ });
-    const clearButton = within(focusSection).getByRole("button", {
-      name: /現在解除/,
-    });
-    await user.click(clearButton);
-
-    expect(repo.setFocusMock).toHaveBeenCalledTimes(1);
-    const arg = repo.setFocusMock.mock.calls[0]?.[0] as SetFocusCommand;
-    expect(arg.taskId).toBeNull();
-    expect(arg.ifMatch).toBe(9);
-  });
+  // BL-042 で「現在解除」 button を撤去し, BL-043 (set-focus-gesture) REQ-4 で
+  // 解除 UI は恒久的に提供しないことが確定した (解除は完了/削除/期限変更時の
+  // サーバ側自動解除のみ). 旧テストは仕様と矛盾するため削除済み.
 
   it("シナリオ: 今日のタスクが 0 件のとき, 「現在のタスク」セクションは描画されない", async () => {
     // spec.md §「UI: 視覚的強調」第 3 ケース.
@@ -1835,13 +1793,20 @@ describe("TodayView (BL-042 タスクカードのアクション 3 ボタン化)
     // 旧ラベル「明日へ」も残らないこと (BL-042 でラベル統一済み).
     expect(within(card!).queryByRole("button", { name: "明日へ" })).toBeNull();
     expect(within(card!).queryByRole("button", { name: "今日へ" })).toBeNull();
-    // 撤去対象 (編集 / focus 操作) も居ない.
+    // 撤去対象 (編集 / 旧ラベルの focus 操作) も居ない.
     expect(within(card!).queryByRole("button", { name: "編集" })).toBeNull();
     expect(within(card!).queryByRole("button", { name: "現在に設定" })).toBeNull();
-    // routine origin の card 内の button は「削除」「完了」の 2 個ちょうど
+    // BL-043 (set-focus-gesture) REQ-1: 状態系コントロール「現在のタスクにする」は
+    // origin="routine" のカードにも 1 個置かれる (focus 対象としてルーティン由来を
+    // 区別しない. PriorityStars と同じ状態系グループでアクション 3 ボタンのカウント外).
+    expect(
+      within(card!).getAllByRole("button", { name: "現在のタスクにする" }),
+    ).toHaveLength(1);
+    // routine origin の card 内のアクション button は「削除」「完了」の 2 個ちょうど.
+    // button 総数は アクション 2 個 + 状態系「現在のタスクにする」1 個 = 3 個
     // (PriorityStars の星 button は role="radio" でカウント外).
     const cardButtons = within(card!).getAllByRole("button");
-    expect(cardButtons).toHaveLength(2);
+    expect(cardButtons).toHaveLength(3);
   });
 });
 
