@@ -2166,3 +2166,288 @@ describe("TodayView (BL-016 / BL-041 プロジェクト選択 UI)", () => {
     expect(toggleAfter.textContent ?? "").toMatch(/（未分類）/);
   });
 });
+
+// ============================================================
+// BL-047: 完了タスク数カウンタの配置見直し
+//
+// spec.md (completion-counter-placement) §「受け入れ基準」と 1:1 対応する.
+//
+// 受け入れ基準:
+//   - 配置 (REQ-1 / REQ-2): カウンタが <header> の子孫に存在する
+//   - ヘッダ 3 要素 (REQ-1): h1「今日」/ カウンタ / 「＋プロジェクトの追加」が同じ <header> 内
+//   - マークアップ (REQ-2): カウンタ要素が <span> タグであること（<div> ではない）
+//   - 他ビューへの非波及 (REQ-4): focus-view / tomorrow-view にカウンタが存在しない
+//
+// 現時点の実装:
+//   カウンタは <header> の「外」に <div aria-label="今日の完了タスク数"> として存在する.
+//   → 以下のテスト 1・2・3 は red（失敗）になる.
+//   テスト 4・5 は既存の状態で green になる可能性がある.
+// ============================================================
+
+describe("TodayView (BL-047 完了タスク数カウンタの配置見直し)", () => {
+  it("シナリオ: 完了数カウンタが today-view のヘッダ内に存在する (REQ-1 / REQ-2)", async () => {
+    // spec.md §「配置 (REQ-1 / REQ-2)」:
+    //   Given ユーザーが今日ビュー（/today）を開く
+    //   When  ページを描画する
+    //   Then  aria-label="今日の完了タスク数" を持つ要素が画面に存在する
+    //   And   その要素が header 要素の子孫であることをセレクタで確認できる
+    //
+    // 現在のカウンタは <header> の外にあるため、このテストは red になる.
+    // 実装後: カウンタが <header> 内に移動され green になる.
+    const repo = makeMockRepository();
+    renderWithQueryClient(
+      <TodayView repository={repo} projectRepository={makeMockProjectRepository()} />,
+    );
+
+    // 描画完了を待つ.
+    await screen.findByRole("heading", { name: "今日" });
+
+    // ヘッダ要素を取得する.
+    const header = document.querySelector("header");
+    expect(header).not.toBeNull();
+
+    // カウンタ要素を取得する.
+    const counter = screen.queryByLabelText("今日の完了タスク数");
+    expect(counter).not.toBeNull();
+
+    // カウンタが header の子孫であること（REQ-1 配置).
+    // 現在は <header> の外に存在するため、このアサーションが red になる.
+    expect(header!.contains(counter)).toBe(true);
+  });
+
+  it("シナリオ: ヘッダに h1「今日」・カウンタ・「＋プロジェクトの追加」ボタンが同居する (REQ-1)", async () => {
+    // spec.md §「ヘッダの 3 要素が左から h1 / カウンタ / ＋プロジェクトの追加 の順で並ぶ」:
+    //   Given ユーザーが今日ビュー（/today）を開く
+    //   When  header 内の子要素を確認する
+    //   Then  h1「今日」と aria-label="今日の完了タスク数" 要素と「＋プロジェクトの追加」ボタンが
+    //         同じ header 内に存在する
+    //
+    // 現在のカウンタは <header> 外にあるため、このテストは red になる.
+    const repo = makeMockRepository();
+    renderWithQueryClient(
+      <TodayView repository={repo} projectRepository={makeMockProjectRepository()} />,
+    );
+
+    await screen.findByRole("heading", { name: "今日" });
+
+    const header = document.querySelector("header");
+    expect(header).not.toBeNull();
+
+    // h1「今日」が header 内に存在する（既存仕様 / このアサーションは green のはず）.
+    const h1 = header!.querySelector("h1");
+    expect(h1).not.toBeNull();
+    expect(h1!.textContent).toBe("今日");
+
+    // カウンタが header 内に存在する（このアサーションが red になる）.
+    const counter = header!.querySelector("[aria-label='今日の完了タスク数']");
+    expect(counter).not.toBeNull();
+
+    // 「＋プロジェクトの追加」ボタンが header 内に存在する（既存仕様 / このアサーションは green のはず）.
+    const addProjectButton = within(header!).getByRole("button", { name: /プロジェクトの追加/ });
+    expect(addProjectButton).toBeInTheDocument();
+
+    // DOM 順序: h1 → カウンタ → ＋プロジェクトの追加 の順であること (REQ-1 / auditor 指摘).
+    const h1Pos = h1!.compareDocumentPosition(counter!);
+    expect(h1Pos & Node.DOCUMENT_POSITION_FOLLOWING, "h1 の後にカウンタが来る").toBeTruthy();
+    const counterPos = counter!.compareDocumentPosition(addProjectButton);
+    expect(counterPos & Node.DOCUMENT_POSITION_FOLLOWING, "カウンタの後に＋プロジェクトの追加が来る").toBeTruthy();
+  });
+
+  it("シナリオ: カウンタ要素が <span> タグである（<div> ではない）(REQ-2)", async () => {
+    // spec.md §「マークアップ (REQ-2)」:
+    //   要素は <span aria-label="今日の完了タスク数"> として変更する.
+    //   ラッパー <div aria-label="..."> は削除し、インライン表示に適した <span> に変更する.
+    //
+    // 現在は <div aria-label="今日の完了タスク数"> が存在するため、このテストは red になる.
+    const repo = makeMockRepository();
+    renderWithQueryClient(
+      <TodayView repository={repo} projectRepository={makeMockProjectRepository()} />,
+    );
+
+    await screen.findByRole("heading", { name: "今日" });
+
+    // aria-label でカウンタ要素を取得する.
+    const counter = screen.queryByLabelText("今日の完了タスク数");
+    expect(counter).not.toBeNull();
+
+    // <span> タグであること（<div> ではない）.
+    // 現在は <div> なので red. 実装後 <span> に変わり green になる.
+    expect(counter!.tagName).toBe("SPAN");
+  });
+
+  it("シナリオ: focus-view には aria-label=\"今日の完了タスク数\" 要素が存在しない (REQ-4)", async () => {
+    // spec.md §「focus-view には完了数カウンタが存在しない」:
+    //   Given ユーザーが現在のタスクビュー（/focus）を開く
+    //   When  ページを描画する
+    //   Then  aria-label="今日の完了タスク数" を持つ要素が存在しない
+    //
+    // focus-view は BL-035 U-003 候補(b)を採用しないため、カウンタを表示しない.
+    // この仕様は既存状態でも満たされているため、green になる可能性がある.
+    // 実装後も green を維持することを確認する.
+    const { FocusView } = await import("../src/ui/focus-view/focus-view.js");
+    const focusRepo = (() => {
+      const focusMakeMockRepository = (initial: import("@todica/domain/task").Task[] = []) => {
+        const state = [...initial];
+        const focusState = {
+          id: "singleton",
+          currentTaskId: null as string | null,
+          version: 1,
+          updatedAt: "2026-06-10T09:00:00.000Z",
+        };
+        const counterState = {
+          id: "singleton",
+          completedCount: 0,
+          lastResetExecutedAt: null as string | null,
+          version: 1,
+          updatedAt: "2026-06-10T09:00:00.000Z",
+        };
+        const PRIORITY_ORDER: Record<string, number> = { highest: 0, normal: 1, later: 2 };
+        return {
+          list: vi.fn(async () => [...state]),
+          create: vi.fn(async () => { throw new Error("not used"); }),
+          update: vi.fn(async () => { throw new Error("not used"); }),
+          delete: vi.fn(async () => {}),
+          complete: vi.fn(async () => { throw new Error("not used"); }),
+          today: vi.fn(async () => {
+            const filtered = state.filter((t) => t.dueDate === "today" && t.trashedAt === null);
+            const sorted = [...filtered].sort((a, b) => {
+              const p = (PRIORITY_ORDER[a.priority] ?? 99) - (PRIORITY_ORDER[b.priority] ?? 99);
+              if (p !== 0) return p;
+              return a.createdAt.localeCompare(b.createdAt);
+            });
+            return {
+              tasks: sorted,
+              nextTaskId: sorted[0]?.id ?? null,
+              currentTaskId: focusState.currentTaskId,
+              completionCount: counterState.completedCount,
+            };
+          }),
+          getFocus: vi.fn(async () => ({ ...focusState })),
+          setFocus: vi.fn(async () => ({ ...focusState })),
+          getCounter: vi.fn(async () => ({ ...counterState })),
+        };
+      };
+      return focusMakeMockRepository();
+    })();
+
+    const { QueryClient, QueryClientProvider } = await import("@tanstack/react-query");
+    const { render: renderDom } = await import("@testing-library/react");
+    const React = await import("react");
+
+    const focusQueryClient = new QueryClient({
+      defaultOptions: {
+        queries: { staleTime: Number.POSITIVE_INFINITY, retry: false, networkMode: "offlineFirst" },
+        mutations: { retry: false, networkMode: "offlineFirst" },
+      },
+    });
+
+    const makeFocusMockProjectRepository = () => ({
+      list: vi.fn(async () => []),
+      create: vi.fn(async () => { throw new Error("not used"); }),
+      update: vi.fn(async () => { throw new Error("not used"); }),
+      delete: vi.fn(async () => {}),
+    });
+
+    renderDom(
+      React.createElement(
+        QueryClientProvider,
+        { client: focusQueryClient },
+        React.createElement(FocusView, {
+          repository: focusRepo,
+          projectRepository: makeFocusMockProjectRepository(),
+        }),
+      ),
+    );
+
+    // 描画完了を待つ（空状態でも「現在のタスクはありません」が表示される）.
+    await screen.findByRole("heading", { name: "現在のタスク", level: 1 });
+
+    // focus-view には完了数カウンタが存在しない（REQ-4 非波及）.
+    expect(screen.queryByLabelText("今日の完了タスク数")).toBeNull();
+  });
+
+  it("シナリオ: tomorrow-view には aria-label=\"今日の完了タスク数\" 要素が存在しない (REQ-4)", async () => {
+    // spec.md §「tomorrow-view には完了数カウンタが存在しない」:
+    //   Given ユーザーが明日のタスクビュー（/tomorrow）を開く
+    //   When  ページを描画する
+    //   Then  aria-label="今日の完了タスク数" を持つ要素が存在しない
+    //
+    // tomorrow-view は「今日」のタスク文脈を持たないため、カウンタを表示しない.
+    // この仕様は既存状態でも満たされているため、green になる可能性がある.
+    // 実装後も green を維持することを確認する.
+    const { TomorrowView } = await import("../src/ui/tomorrow-view/tomorrow-view.js");
+    const { QueryClient, QueryClientProvider } = await import("@tanstack/react-query");
+    const { render: renderDom } = await import("@testing-library/react");
+    const React = await import("react");
+
+    const tomorrowQueryClient = new QueryClient({
+      defaultOptions: {
+        queries: { staleTime: Number.POSITIVE_INFINITY, retry: false, networkMode: "offlineFirst" },
+        mutations: { retry: false, networkMode: "offlineFirst" },
+      },
+    });
+
+    const makeTomorrowMockRepo = () => {
+      const PRIORITY_ORDER: Record<string, number> = { highest: 0, normal: 1, later: 2 };
+      return {
+        list: vi.fn(async () => []),
+        create: vi.fn(async () => { throw new Error("not used"); }),
+        update: vi.fn(async () => { throw new Error("not used"); }),
+        delete: vi.fn(async () => {}),
+        complete: vi.fn(async () => { throw new Error("not used"); }),
+        today: vi.fn(async () => ({
+          tasks: [],
+          nextTaskId: null,
+          currentTaskId: null,
+          completionCount: 0,
+        })),
+        getFocus: vi.fn(async () => ({
+          id: "singleton",
+          currentTaskId: null as string | null,
+          version: 1,
+          updatedAt: "2026-06-10T09:00:00.000Z",
+        })),
+        setFocus: vi.fn(async () => ({
+          id: "singleton",
+          currentTaskId: null as string | null,
+          version: 1,
+          updatedAt: "2026-06-10T09:00:00.000Z",
+        })),
+        getCounter: vi.fn(async () => ({
+          id: "singleton",
+          completedCount: 0,
+          lastResetExecutedAt: null as string | null,
+          version: 1,
+          updatedAt: "2026-06-10T09:00:00.000Z",
+        })),
+        // tomorrow-view 用: list({ dueDate }) に対応
+        _priorityOrder: PRIORITY_ORDER,
+      };
+    };
+
+    const makeTomorrowMockProjectRepository = () => ({
+      list: vi.fn(async () => []),
+      create: vi.fn(async () => { throw new Error("not used"); }),
+      update: vi.fn(async () => { throw new Error("not used"); }),
+      delete: vi.fn(async () => {}),
+    });
+
+    renderDom(
+      React.createElement(
+        QueryClientProvider,
+        { client: tomorrowQueryClient },
+        React.createElement(TomorrowView, {
+          repository: makeTomorrowMockRepo(),
+          projectRepository: makeTomorrowMockProjectRepository(),
+        }),
+      ),
+    );
+
+    // 描画完了を待つ（tomorrow-view の見出しが表示されるまで）.
+    // tomorrow-view の h1 は「明日のタスク」.
+    await screen.findByRole("heading", { name: "明日のタスク" });
+
+    // tomorrow-view には完了数カウンタが存在しない（REQ-4 非波及）.
+    expect(screen.queryByLabelText("今日の完了タスク数")).toBeNull();
+  });
+});
