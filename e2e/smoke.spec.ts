@@ -19,7 +19,7 @@ test("タスクを追加すると今日の一覧に表示される", async ({ pa
   const taskName = `スモーク ${Date.now()}`;
 
   await page.getByLabel("タスク名").fill(taskName);
-  await page.getByRole("button", { name: "追加" }).click();
+  await page.getByRole("button", { name: "追加", exact: true }).click();
 
   await expect(page.getByText(taskName)).toBeVisible();
 });

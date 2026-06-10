@@ -57,6 +57,7 @@ import { notifyError } from "../../error-notification.js";
 import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
 import { PriorityStars } from "../priority-stars/priority-stars.js";
+import { ProjectCreateDialog } from "../project-create-dialog/project-create-dialog.js";
 import { ProjectToggle } from "../project-toggle/project-toggle.js";
 
 export interface TodayViewProps {
@@ -113,6 +114,8 @@ export function TodayView(props: TodayViewProps): JSX.Element {
   const [name, setName] = useState("");
   const [projectId, setProjectId] = useState("");
   const [priority, setPriority] = useState<Priority>("normal");
+  // BL-044: プロジェクト追加モーダルの開閉 state.
+  const [projectDialogOpen, setProjectDialogOpen] = useState(false);
 
   /** mutation 成功時に today / focus を再フェッチする */
   const invalidateAll = useCallback(() => {
@@ -425,7 +428,15 @@ export function TodayView(props: TodayViewProps): JSX.Element {
 
   return (
     <main>
-      <h1>今日</h1>
+      {/* BL-044 / spec REQ-1: 見出しと同じヘッダ領域 (h1 直後, 起票フォームより前) に
+          「＋プロジェクトの追加」button を置く. 可視ラベル = アクセシブルネーム (WCAG 2.5.3).
+          TODO(BL-046): 右上配置の視覚仕上げはデザイントークン BL で扱う (暫定の最小 flex 配置). */}
+      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <h1>今日</h1>
+        <button type="button" onClick={() => setProjectDialogOpen(true)}>
+          ＋プロジェクトの追加
+        </button>
+      </header>
 
       {/* BL-008 / FR-040 / NFR-013: 今日の完了タスク数を画面上部に常時表示する.
           plan.md §UI 設計 D-008: 楽観 UI を持たず, サーバ正本値 (completionCount) を
@@ -543,6 +554,16 @@ export function TodayView(props: TodayViewProps): JSX.Element {
           </li>
         ))}
       </ul>
+
+      {/* BL-044: プロジェクト追加モーダル. mutation はダイアログ側に閉じ,
+          today-view との結合は onCreated (起票フォームのトグルへの自動選択) の 1 点のみ
+          (plan D-003 / D-004). */}
+      <ProjectCreateDialog
+        repository={projectRepository}
+        open={projectDialogOpen}
+        onClose={() => setProjectDialogOpen(false)}
+        onCreated={(project) => setProjectId(project.id)}
+      />
 
       <ConflictDialog
         open={conflictDialog.dialogState.open}

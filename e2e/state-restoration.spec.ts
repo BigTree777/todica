@@ -37,7 +37,7 @@ test("リロード後も完了タスクのカウントが復元される", async
   const expectedAfter = `今日の完了: ${beforeCount + 1}`;
 
   await page.getByLabel("タスク名").fill(taskName);
-  await page.getByRole("button", { name: "追加" }).click();
+  await page.getByRole("button", { name: "追加", exact: true }).click();
   await taskRow(page, taskName).getByRole("button", { name: "完了" }).click();
   await expect(countDisplay).toHaveText(expectedAfter);
 

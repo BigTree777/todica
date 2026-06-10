@@ -32,7 +32,7 @@ test("オフラインでタスクを起票 → オンライン復帰でキュー
 
   // 起票フォームから追加 (オフライン中は IndexedDB キューに保存され, fetch は飛ばない).
   await page.getByLabel("タスク名").fill(taskName);
-  await page.getByRole("button", { name: "追加" }).click();
+  await page.getByRole("button", { name: "追加", exact: true }).click();
 
   // オフライン中はサーバ側には未到達であることを確認.
   const offlineCheck = await request.get(`${API_BASE}/api/v1/tasks?trashed=false`, {
