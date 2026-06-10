@@ -14,6 +14,7 @@
  * BL-018: TanStack Query (useQuery / useMutation) + 書込キュー統合.
  */
 import { useCallback } from "react";
+import "./trash-view.css";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { TrashRepository, TrashedTask } from "../../repositories/trash-repository.js";
 import { RestoreConflictError } from "../../repositories/trash-repository.js";
@@ -147,19 +148,20 @@ export function TrashView(props: TrashViewProps): JSX.Element {
   }, [emptyMutation]);
 
   return (
-    <main>
-      <h1>ゴミ箱</h1>
-
-      <button type="button" onClick={handleEmpty}>
-        ゴミ箱を空にする
-      </button>
+    <main className="trash-view">
+      <header className="trash-view__header">
+        <h1>ゴミ箱</h1>
+        <button type="button" onClick={handleEmpty}>
+          ゴミ箱を空にする
+        </button>
+      </header>
 
       {tasks.length === 0 ? (
-        <p>ゴミ箱は空です</p>
+        <p className="trash-view__empty">ゴミ箱は空です</p>
       ) : (
-        <ul aria-label="ゴミ箱のタスク一覧">
+        <ul aria-label="ゴミ箱のタスク一覧" className="trash-view__list">
           {tasks.map((task) => (
-            <li key={task.id}>
+            <li key={task.id} className="trash-view__item">
               <span>{task.name}</span>
               <button type="button" onClick={() => handleRestore(task)}>
                 復元
