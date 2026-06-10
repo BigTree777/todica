@@ -1,24 +1,18 @@
 /**
- * focus-view CSS (BL-037 暫定値).
- *
- * 全ての数値は BL-046 でデザイントークン化する前提.
- * grep 可能な `TODO(BL-046)` マーカーで置換漏れを防ぐ.
+ * focus-view CSS (BL-037).
+ * BL-046: 暫定値をデザイントークンに置換済み。
+ * D-005: __name の font-size: 28px はトークン体系外の固定値として残す。
  */
-
-/* TODO(BL-046): 全体: デザイントークンに置換する. */
 
 .focus-view {
   display: flex;
   flex-direction: column;
-  /* AppShell の <main> 内で縦いっぱいに広がる. */
   min-height: 100%;
 }
 
 .focus-view h1 {
-  /* TODO(BL-046): --font-size-h1 */
-  font-size: 24px;
-  /* TODO(BL-046): --space-md */
-  margin: 0 0 16px 0;
+  font-size: var(--font-size-h1);
+  margin: 0 0 var(--space-md) 0;
 }
 
 .focus-view__card {
@@ -28,53 +22,36 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  /* TODO(BL-046): --radius-lg */
-  border-radius: 16px;
-  /* TODO(BL-046): --color-border */
-  border: 1px solid #ccc;
-  /* TODO(BL-046): --space-xl */
-  padding: 32px;
-  /* アクションを下部に配置するため. */
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  padding: var(--space-xl);
   position: relative;
 }
 
 .focus-view__project {
-  /* タスク名の上に小さく出る副情報 (project 名). */
-  /* TODO(BL-046): --font-size-small */
-  font-size: 14px;
-  /* TODO(BL-046): --color-fg-subtle */
-  color: #666;
-  /* TODO(BL-046): --space-sm */
-  margin-bottom: 8px;
+  font-size: var(--font-size-small);
+  color: var(--color-fg-subtle);
+  margin-bottom: var(--space-sm);
 }
 
 .focus-view__name {
-  /* タスク名は見出しより 1 段下のサイズで中央寄せ. */
-  /* TODO(BL-046): --font-size-h2 */
+  /* D-005: 28px はデザイン上の固定値。トークン体系外として残す。 */
   font-size: 28px;
   text-align: center;
-  /* spec U-003: 長いタスク名は自然な折返し. */
   word-break: normal;
   overflow-wrap: anywhere;
 }
 
 .focus-view__empty {
-  /* 空状態の中央テキスト. */
-  /* TODO(BL-046): --font-size-body */
-  font-size: 18px;
-  /* TODO(BL-046): --color-fg-subtle. WCAG 2.1 AA 4.5:1 を満たす #595959 (7:1) を採用. */
-  color: #595959;
+  font-size: var(--font-size-body);
+  color: var(--color-fg-subtle);
 }
 
 .focus-view__actions {
-  /* 枠の下部に左=削除 / 右=完了 を配置 (spec U-006). */
   position: absolute;
-  /* TODO(BL-046): --space-md */
-  bottom: 16px;
-  /* TODO(BL-046): --space-md */
-  left: 16px;
-  /* TODO(BL-046): --space-md */
-  right: 16px;
+  bottom: var(--space-md);
+  left: var(--space-md);
+  right: var(--space-md);
   display: flex;
   justify-content: space-between;
 }

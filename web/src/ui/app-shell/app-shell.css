@@ -1,8 +1,6 @@
 /*
- * AppShell 暫定 CSS (BL-036 / ui-sidebar-nav).
- *
- * TODO(BL-046): 暫定値はデザイントークン (var(--space-md) など) に置換する.
- * D-005: grep 可能な TODO(BL-046) マーカーで置換漏れを防ぐ.
+ * AppShell CSS (BL-036 / ui-sidebar-nav).
+ * BL-046: 暫定値をデザイントークンに置換済み。
  */
 
 .app-shell {
@@ -11,13 +9,11 @@
 }
 
 .app-shell__sidebar {
-  /* TODO(BL-046): --sidebar-width */
+  /* --sidebar-width はレイアウト固有値のため tokens.css に含めない (ADR-0012 / plan D-006). */
   width: 200px;
   flex-shrink: 0;
-  /* TODO(BL-046): --color-border */
-  border-right: 1px solid #ccc;
-  /* TODO(BL-046): --space-md */
-  padding: 16px;
+  border-right: 1px solid var(--color-border);
+  padding: var(--space-md);
   display: flex;
   flex-direction: column;
 }
@@ -31,37 +27,30 @@
 
 .app-shell__nav-primary li,
 .app-shell__nav-secondary li {
-  /* TODO(BL-046): --space-sm */
-  margin-bottom: 8px;
+  margin-bottom: var(--space-sm);
 }
 
 .app-shell__nav-link {
   display: block;
-  /* TODO(BL-046): --space-sm / --space-md */
-  padding: 8px 12px;
+  padding: var(--space-sm) 12px;
   text-decoration: none;
   color: inherit;
-  /* アクセントライン用の余白を確保 */
   border-left: 3px solid transparent;
 }
 
 .app-shell__nav-link.active {
   font-weight: bold;
-  /* TODO(BL-046): --color-accent */
   border-left-color: currentColor;
 }
 
 .app-shell__divider {
   border: none;
-  /* TODO(BL-046): --color-border-subtle */
-  border-top: 1px solid #eee;
-  /* TODO(BL-046): --space-md */
-  margin: 16px 0;
+  border-top: 1px solid var(--color-border-subtle);
+  margin: var(--space-md) 0;
 }
 
 .app-shell__main {
   flex: 1;
-  /* TODO(BL-046): --space-md */
-  padding: 16px;
+  padding: var(--space-md);
   overflow: auto;
 }

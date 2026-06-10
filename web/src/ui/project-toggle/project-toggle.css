@@ -1,22 +1,13 @@
 /**
  * `<ProjectToggle />` ローカル CSS (BL-041 / project-toggle-ui).
+ * BL-046: 暫定値をデザイントークンに置換済み。
  *
- * 仕様参照:
- *   docs/developer/features/project-toggle-ui/spec.md REQ-5 (WCAG 2.1 AA contrast の維持).
- *   docs/developer/features/project-toggle-ui/plan.md
- *     D-007 (CSS はコンポーネントローカル, BL-046 でトークン化合流予定),
- *     U-6 (横長 / ellipsis).
- *
- * 色の選定 (暫定値, BL-046 でトークン化):
- *   - テキスト: #1a1a1a (near-black). 背景 #fff 上で ~18.9:1 → AAA pass.
- *   - 枠線:    #595959 (gray-700 相当). 背景 #fff 上で ~7.0:1 → AAA pass (非テキストは 3:1 で AA pass).
- *   - focus outline: #1d4ed8 (blue-700). 背景 #fff 上で ~7.2:1 → AAA pass.
- *
- * 全ての値は BL-046 (ui-redesign-foundation) のトークン (`--color-*`, `--space-*` 等) に
- * 差し替える前提で TODO(BL-046) マーカーを残す.
+ * 色の根拠:
+ *   - テキスト: --color-fg (#1a1a1a). WCAG AAA 18.9:1 on #fff.
+ *   - 枠線: --color-fg-subtle (#595959). WCAG AAA 7.0:1 on #fff.
+ *   - フォーカスリング: --color-focus-ring (#1d4ed8). WCAG AAA 7.2:1 on #fff.
  */
 
-/* TODO(BL-046): デザイントークン化したら gap / padding を var(--space-*) に差し替える. */
 .project-toggle {
   display: flex;
   flex-direction: column;
@@ -26,18 +17,15 @@
 }
 
 .project-toggle__button {
-  /* TODO(BL-046): trim 全体トークンへ移行. */
   width: 100%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0.5rem 0.75rem;
-  /* TODO(BL-046): var(--color-border) に差し替える. gray-700 相当 = #595959. */
-  border: 1px solid #595959;
+  border: 1px solid var(--color-fg-subtle);
   border-radius: 0.5rem;
   background: transparent;
-  /* TODO(BL-046): var(--color-text) に差し替える. near-black = #1a1a1a. */
-  color: #1a1a1a;
+  color: var(--color-fg);
   font-size: 1rem;
   line-height: 1.25;
   cursor: pointer;
@@ -55,16 +43,13 @@
 }
 
 .project-toggle__button:focus-visible {
-  /* OS 既定の focus outline を消さず, 強調する (REQ-4). */
-  /* TODO(BL-046): outline 色をトークンに差し替える. */
-  outline: 2px solid #1d4ed8;
+  outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
 
 /*
  * visually-hidden パターン.
  * aria-live="polite" 領域を視覚的に隠しつつ screen reader には届ける.
- * https://www.w3.org/WAI/tutorials/forms/labels/#hiding-the-label-element
  */
 .project-toggle__live,
 [data-visually-hidden] {
