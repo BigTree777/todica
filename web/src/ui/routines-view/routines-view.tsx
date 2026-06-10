@@ -16,6 +16,7 @@
  */
 import { useCallback, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import "./routines-view.css";
 import type {
   WebRoutine,
   WebRoutineRepository,
@@ -260,10 +261,10 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
   );
 
   return (
-    <main>
+    <main className="routines-view">
       <h1>ルーティン</h1>
 
-      <form onSubmit={handleCreate} aria-label="ルーティン作成フォーム">
+      <form onSubmit={handleCreate} aria-label="ルーティン作成フォーム" className="routines-view__form">
         <div>
           <label htmlFor="routine-name">名前</label>
           <input
@@ -301,9 +302,9 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
         <button type="submit">追加</button>
       </form>
 
-      <ul>
+      <ul className="routines-view__list">
         {routines.map((routine) => (
-          <li key={routine.id}>
+          <li key={routine.id} className="routines-view__item">
             {editingId === routine.id ? (
               <form onSubmit={handleSaveEdit} aria-label="ルーティン名称変更フォーム">
                 <input

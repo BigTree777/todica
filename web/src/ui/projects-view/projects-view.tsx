@@ -15,6 +15,7 @@
  */
 import { useCallback, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import "./projects-view.css";
 import type {
   Project,
   ProjectRepository,
@@ -233,10 +234,10 @@ export function ProjectsView(props: ProjectsViewProps): JSX.Element {
   );
 
   return (
-    <main>
+    <main className="projects-view">
       <h1>プロジェクト</h1>
 
-      <form onSubmit={handleCreate} aria-label="プロジェクト作成フォーム">
+      <form onSubmit={handleCreate} aria-label="プロジェクト作成フォーム" className="projects-view__form">
         <div>
           <label htmlFor="project-name">プロジェクト名</label>
           <input
@@ -250,9 +251,9 @@ export function ProjectsView(props: ProjectsViewProps): JSX.Element {
         <button type="submit">追加</button>
       </form>
 
-      <ul>
+      <ul className="projects-view__list">
         {projects.map((project) => (
-          <li key={project.id}>
+          <li key={project.id} className="projects-view__item">
             {editingId === project.id ? (
               <form onSubmit={handleSaveEdit} aria-label="プロジェクト名称変更フォーム">
                 <input

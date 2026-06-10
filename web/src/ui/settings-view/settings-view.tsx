@@ -15,6 +15,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import "./settings-view.css";
 import { PatchConflictError } from "../../repositories/settings-repository.js";
 import type {
   PatchSettingsCommand,
@@ -122,11 +123,11 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
   );
 
   return (
-    <main>
+    <main className="settings-view">
       <h1>設定</h1>
 
       {settings && (
-        <div aria-label="設定値">
+        <div className="settings-view__current" aria-label="設定値">
           <span>{settings.dayBoundaryTime}</span>
         </div>
       )}
@@ -137,7 +138,7 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
         </div>
       )}
 
-      <form onSubmit={handleSave} aria-label="設定フォーム">
+      <form onSubmit={handleSave} aria-label="設定フォーム" className="settings-view__form">
         <div>
           <label htmlFor="day-boundary-time">境界時刻</label>
           <input
@@ -151,7 +152,7 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
       </form>
 
       {onSaveServer !== undefined && (
-        <section aria-label="サーバ接続設定">
+        <section aria-label="サーバ接続設定" className="settings-view__section">
           <h2>サーバ接続設定</h2>
           <form
             onSubmit={(e) => {
@@ -184,7 +185,7 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
       )}
 
       {currentMode !== undefined && (
-        <section aria-label="モード切替">
+        <section aria-label="モード切替" className="settings-view__section">
           <h2>モード切替</h2>
           <p>
             {currentMode === "local" ? "現在: ローカルモード" : "現在: サーバモード"}
