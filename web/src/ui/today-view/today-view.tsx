@@ -33,6 +33,7 @@ import type { DueDate, Priority, Task } from "@todica/domain/task";
  */
 import { useCallback, useState } from "react";
 import { notifyError } from "../../error-notification.js";
+import "./today-view.css";
 import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
 import { ConflictError, dequeue, enqueue, findEntryByKey, getAll } from "../../offline-queue.js";
 import type { Project, ProjectRepository } from "../../repositories/project-repository.js";
@@ -417,20 +418,21 @@ export function TodayView(props: TodayViewProps): JSX.Element {
   return (
     <main>
       {/* BL-044 / spec REQ-1: 見出しと同じヘッダ領域 (h1 直後, 起票フォームより前) に
-          「＋プロジェクトの追加」button を置く. 可視ラベル = アクセシブルネーム (WCAG 2.5.3). */}
-      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          「＋プロジェクトの追加」button を置く. 可視ラベル = アクセシブルネーム (WCAG 2.5.3).
+          BL-047 / REQ-1 / REQ-2: カウンタを header 内の h1 と追加ボタンの間に配置する. */}
+      <header className="today-view__header">
         <h1>今日</h1>
+        {/* BL-008 / FR-040 / NFR-013: 今日の完了タスク数を画面上部に常時表示する.
+            BL-047 / REQ-2: <div> から <span> に変更し, header 内に配置する.
+            plan.md §UI 設計 D-008: 楽観 UI を持たず, サーバ正本値 (completionCount) を
+            再フェッチで反映する. */}
+        <span className="today-view__completion-count" aria-label="今日の完了タスク数">
+          今日の完了: {completionCount}
+        </span>
         <button type="button" onClick={() => setProjectDialogOpen(true)}>
           ＋プロジェクトの追加
         </button>
       </header>
-
-      {/* BL-008 / FR-040 / NFR-013: 今日の完了タスク数を画面上部に常時表示する.
-          plan.md §UI 設計 D-008: 楽観 UI を持たず, サーバ正本値 (completionCount) を
-          再フェッチで反映する. */}
-      <div aria-label="今日の完了タスク数">
-        <span>今日の完了: {completionCount}</span>
-      </div>
 
       <form onSubmit={handleCreate} aria-label="タスク起票フォーム">
         <div>

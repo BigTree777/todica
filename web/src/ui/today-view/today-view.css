@@ -1,0 +1,10 @@
+.today-view__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.today-view__completion-count {
+  font-size: var(--font-size-small);
+  color: var(--color-fg-subtle);
+}
