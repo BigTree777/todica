@@ -10,17 +10,13 @@
     "url": "https://github.com/BigTree777/todica.git"
   },
   "type": "module",
-  "workspaces": [
-    "domain",
-    "server",
-    "web"
-  ],
+  "workspaces": ["domain", "server", "web"],
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "typecheck": "tsc -b --noEmit",
+    "typecheck": "tsc -p domain/tsconfig.json --noEmit && tsc -p server/tsconfig.json --noEmit && tsc -p web/tsconfig.json --noEmit",
     "lint": "biome check .",
     "format": "biome format --write .",
     "android:sync": "npm run build -w web && npx cap sync android",

@@ -1,3 +1,6 @@
+import type { Task } from "@todica/domain/task";
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
 /**
  * 単体テスト: DrizzleTaskRepository (better-sqlite3 + drizzle-orm).
  *
@@ -16,9 +19,6 @@
  * 現状: DrizzleTaskRepository は全メソッドが throw のスタブ. 全テストが red になる想定.
  */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import type { Task } from "@todica/domain/task";
 import { schema } from "../../src/db/schema.js";
 import { DrizzleTaskRepository } from "../../src/infra/persistence/drizzle/task-repository.js";
 
@@ -213,7 +213,11 @@ describe("DrizzleTaskRepository", () => {
     // LATER = "2026-06-07T10:00:00.000Z" >= BOUNDARY → 残る
     const newTrashed = makeTask({ id: TASK_ID_2, trashedAt: LATER, trashedReason: "completed" });
     // 境界値: ちょうど BOUNDARY と等しい → 削除されない
-    const boundaryTrashed = makeTask({ id: TASK_ID_3, trashedAt: BOUNDARY, trashedReason: "deleted" });
+    const boundaryTrashed = makeTask({
+      id: TASK_ID_3,
+      trashedAt: BOUNDARY,
+      trashedReason: "deleted",
+    });
     // trashedAt = null → 削除されない
     const active = makeTask({ id: TASK_ID_4, trashedAt: null });
 

@@ -10,7 +10,7 @@
  * (c) 401 / ネットワークエラー時の UI 反応は UI 設計判断 (toast / banner / 静かな refetch)
  *     を要するため別 BL に切り出し済み.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { type Page, expect, test } from "@playwright/test";
 
 const API_BASE = "http://localhost:3000";
 const AUTH_HEADER = { Authorization: "Bearer dev-token" };
@@ -72,9 +72,7 @@ test.skip("2 タブ同時編集で後勝ち側に ConflictDialog が表示され
     .getByRole("button", { name: "保存" })
     .click();
 
-  await expect(
-    pageB.getByRole("dialog", { name: "変更が衝突しました" }),
-  ).toBeVisible();
+  await expect(pageB.getByRole("dialog", { name: "変更が衝突しました" })).toBeVisible();
 
   await ctxA.close();
   await ctxB.close();
@@ -127,9 +125,7 @@ test("2 タブ同時編集でプロジェクト名衝突時にも ConflictDialog
     .getByRole("button", { name: "保存" })
     .click();
 
-  await expect(
-    pageB.getByRole("dialog", { name: "変更が衝突しました" }),
-  ).toBeVisible();
+  await expect(pageB.getByRole("dialog", { name: "変更が衝突しました" })).toBeVisible();
 
   await ctxA.close();
   await ctxB.close();
@@ -183,20 +179,16 @@ test.skip("オフラインで編集した PATCH がオンライン復帰で flus
   // オフライン中に編集 → IndexedDB queue に PATCH が積まれる (実 fetch は飛ばない).
   await context.setOffline(true);
   await taskRow(page, originalName).getByRole("button", { name: "編集" }).click();
-  await page
-    .getByRole("form", { name: "タスク編集フォーム" })
-    .getByLabel("名称")
-    .fill(updatedName);
+  await page.getByRole("form", { name: "タスク編集フォーム" }).getByLabel("名称").fill(updatedName);
   await page
     .getByRole("form", { name: "タスク編集フォーム" })
     .getByRole("button", { name: "保存" })
     .click();
 
   // オフライン中は server 側は変わらない.
-  const offlineCheck = await request.get(
-    `${API_BASE}/api/v1/tasks?trashed=false`,
-    { headers: AUTH_HEADER },
-  );
+  const offlineCheck = await request.get(`${API_BASE}/api/v1/tasks?trashed=false`, {
+    headers: AUTH_HEADER,
+  });
   const offlineList = (await offlineCheck.json()) as {
     tasks: Array<{ id: string; name: string }>;
   };
@@ -213,10 +205,9 @@ test.skip("オフラインで編集した PATCH がオンライン復帰で flus
   await patchResponse;
 
   // server 側で名前が更新されている (header に If-Match が乗ったので reject されない).
-  const onlineCheck = await request.get(
-    `${API_BASE}/api/v1/tasks?trashed=false`,
-    { headers: AUTH_HEADER },
-  );
+  const onlineCheck = await request.get(`${API_BASE}/api/v1/tasks?trashed=false`, {
+    headers: AUTH_HEADER,
+  });
   const onlineList = (await onlineCheck.json()) as {
     tasks: Array<{ id: string; name: string }>;
   };

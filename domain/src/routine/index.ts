@@ -9,7 +9,7 @@ import type { Clock } from "../clock/index.js";
 export interface Routine {
   id: string;
   name: string;
-  daysOfWeek: number[];   // 0=日〜6=土, 重複排除済み, 昇順
+  daysOfWeek: number[]; // 0=日〜6=土, 重複排除済み, 昇順
   defaultPriority: "highest" | "normal" | "later";
   version: number;
   createdAt: string;
@@ -22,7 +22,8 @@ const MAX_NAME_LENGTH = 200;
  * 制御文字判定 (C0: U+0000-U+001F, DEL: U+007F, C1: U+0080-U+009F).
  */
 function containsControlChar(value: string): boolean {
-  return /[\x00-\x1F\x7F\x80-\x9F]/.test(value);
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: 制御文字を意図的に検出するための正規表現
+  return /[\u0000-\u001F\u007F\u0080-\u009F]/.test(value);
 }
 
 /**
@@ -82,9 +83,7 @@ export function validateDaysOfWeek(days: unknown): { code: "INVALID_DAYS_OF_WEEK
  * - "highest"/"normal"/"later" 以外 → INVALID_PRIORITY
  * - 正常値 → null
  */
-export function validateDefaultPriority(
-  priority: unknown,
-): { code: "INVALID_PRIORITY" } | null {
+export function validateDefaultPriority(priority: unknown): { code: "INVALID_PRIORITY" } | null {
   if (priority !== "highest" && priority !== "normal" && priority !== "later") {
     return { code: "INVALID_PRIORITY" };
   }
@@ -100,7 +99,10 @@ type CreateRoutineInput = {
 
 type CreateRoutineResult =
   | { ok: true; routine: Routine }
-  | { ok: false; error: { code: "INVALID_ROUTINE_NAME" | "INVALID_DAYS_OF_WEEK" | "INVALID_PRIORITY" } };
+  | {
+      ok: false;
+      error: { code: "INVALID_ROUTINE_NAME" | "INVALID_DAYS_OF_WEEK" | "INVALID_PRIORITY" };
+    };
 
 /**
  * ルーティン起票. バリデーション後 version=1, createdAt=updatedAt=clock.now() を返す.
@@ -146,7 +148,10 @@ type UpdateRoutinePatch = {
 
 type UpdateRoutineResult =
   | { ok: true; routine: Routine }
-  | { ok: false; error: { code: "INVALID_ROUTINE_NAME" | "INVALID_DAYS_OF_WEEK" | "INVALID_PRIORITY" } };
+  | {
+      ok: false;
+      error: { code: "INVALID_ROUTINE_NAME" | "INVALID_DAYS_OF_WEEK" | "INVALID_PRIORITY" };
+    };
 
 /**
  * ルーティン更新. 送られたフィールドだけ上書きし version+1, updatedAt 更新.

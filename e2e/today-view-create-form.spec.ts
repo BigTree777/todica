@@ -22,9 +22,7 @@ const API_BASE = "http://localhost:3000";
 const AUTH_HEADER = { Authorization: "Bearer dev-token" };
 
 test.describe("BL-039 今日ビュー起票フォームのスコープ", () => {
-  test("シナリオ: 起票フォーム内に「期限」UI が存在しない (REQ-1)", async ({
-    page,
-  }) => {
+  test("シナリオ: 起票フォーム内に「期限」UI が存在しない (REQ-1)", async ({ page }) => {
     await page.goto("/");
 
     // 起票フォーム自体は表示されている.
@@ -43,7 +41,7 @@ test.describe("BL-039 今日ビュー起票フォームのスコープ", () => {
     await expect(form.locator("input, select")).toHaveCount(1);
   });
 
-  test("シナリオ: 起票したタスクは dueDate=\"today\" でサーバに永続化される (REQ-2)", async ({
+  test('シナリオ: 起票したタスクは dueDate="today" でサーバに永続化される (REQ-2)', async ({
     page,
     request,
   }) => {

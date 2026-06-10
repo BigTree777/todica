@@ -1,3 +1,4 @@
+import { act, render, screen } from "@testing-library/react";
 /**
  * フェーズ C: OfflineBanner コンポーネントの単体テスト
  *
@@ -15,8 +16,7 @@
  * NOTE: `offline-banner.tsx` はまだ存在しない。このテストは意図的に失敗する (red)。
  *       implementer が `web/src/ui/offline-banner/offline-banner.tsx` を実装することで green 化する。
  */
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, act } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { OfflineBanner } from "./offline-banner.js";
 
 // useNetworkStatus をモックする（コンポーネントが内部で呼び出すため）

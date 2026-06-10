@@ -1,3 +1,4 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 /**
  * ルーティン管理ビュー (BL-017 / routine).
  *
@@ -15,16 +16,12 @@
  * BL-018: TanStack Query (useQuery / useMutation) でデータ取得・書込みを管理.
  */
 import { useCallback, useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import "./routines-view.css";
-import type {
-  WebRoutine,
-  WebRoutineRepository,
-} from "../../repositories/routine-repository.js";
-import { enqueue, dequeue, getAll, mapConflict, ConflictError } from "../../offline-queue.js";
-import { RoutineConflictError } from "../../repositories/routine-repository.js";
 import { notifyError } from "../../error-notification.js";
 import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
+import { ConflictError, dequeue, enqueue, getAll, mapConflict } from "../../offline-queue.js";
+import type { WebRoutine, WebRoutineRepository } from "../../repositories/routine-repository.js";
+import { RoutineConflictError } from "../../repositories/routine-repository.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
 
 /** UUID v4 風の文字列を生成する. crypto.randomUUID が無い jsdom 環境向けのフォールバック. */
@@ -32,8 +29,7 @@ function generateId(): string {
   const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
   if (c?.randomUUID) return c.randomUUID();
   const random = (n: number) => Math.floor(Math.random() * n);
-  const hex = (n: number) =>
-    Array.from({ length: n }, () => random(16).toString(16)).join("");
+  const hex = (n: number) => Array.from({ length: n }, () => random(16).toString(16)).join("");
   return `${hex(8)}-${hex(4)}-4${hex(3)}-8${hex(3)}-${hex(12)}`;
 }
 
@@ -264,7 +260,11 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
     <main className="routines-view">
       <h1>ルーティン</h1>
 
-      <form onSubmit={handleCreate} aria-label="ルーティン作成フォーム" className="routines-view__form">
+      <form
+        onSubmit={handleCreate}
+        aria-label="ルーティン作成フォーム"
+        className="routines-view__form"
+      >
         <div>
           <label htmlFor="routine-name">名前</label>
           <input
@@ -321,9 +321,7 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
             ) : (
               <>
                 <span>{routine.name}</span>
-                <span>
-                  {routine.daysOfWeek.map((d) => DAY_LABELS[d]).join("・")}
-                </span>
+                <span>{routine.daysOfWeek.map((d) => DAY_LABELS[d]).join("・")}</span>
                 <button type="button" onClick={() => openEdit(routine)}>
                   名称変更
                 </button>

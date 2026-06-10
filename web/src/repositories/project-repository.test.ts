@@ -1,3 +1,5 @@
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 /**
  * 単体テスト: HttpProjectRepository (BL-016 / project-crud).
  *
@@ -17,8 +19,6 @@
  * HTTP スタブ: 既存パターン（trash-repository.test.ts）に合わせ msw を使用する。
  */
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { http, HttpResponse } from "msw";
-import { setupServer } from "msw/node";
 import { HttpProjectRepository } from "./project-repository.js";
 import type { Project } from "./project-repository.js";
 

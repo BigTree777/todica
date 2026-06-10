@@ -7,18 +7,18 @@
  * テスト環境では SQLiteDBConnection をモックして利用する (NFR-LOC-003).
  */
 
-import type { Task, DueDate, Priority } from "@todica/domain/task";
+import type { DueDate, Priority, Task } from "@todica/domain/task";
 import type {
+  CompleteTaskCommand,
+  Counter,
+  CreateTaskCommand,
+  DeleteTaskCommand,
+  FocusSelection,
+  ListTasksFilter,
+  SetFocusCommand,
   TaskRepository,
   TodayViewResponse,
-  FocusSelection,
-  CreateTaskCommand,
   UpdateTaskCommand,
-  DeleteTaskCommand,
-  CompleteTaskCommand,
-  SetFocusCommand,
-  Counter,
-  ListTasksFilter,
 } from "./task-repository.js";
 import { OptimisticLockError } from "./task-repository.js";
 

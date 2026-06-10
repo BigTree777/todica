@@ -111,7 +111,9 @@ export async function getDb(): Promise<unknown> {
     db = conn;
     return conn;
   } catch {
-    throw new Error("SQLite の初期化に失敗しました。@capacitor-community/sqlite が利用できない環境です。");
+    throw new Error(
+      "SQLite の初期化に失敗しました。@capacitor-community/sqlite が利用できない環境です。",
+    );
   }
 }
 

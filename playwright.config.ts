@@ -75,9 +75,7 @@ export default defineConfig({
       use: {
         ...devices["Desktop Chrome"],
         baseURL: "http://localhost:4173",
-        launchOptions: FULL_CHROMIUM_PATH
-          ? { executablePath: FULL_CHROMIUM_PATH }
-          : undefined,
+        launchOptions: FULL_CHROMIUM_PATH ? { executablePath: FULL_CHROMIUM_PATH } : undefined,
       },
     },
   ],

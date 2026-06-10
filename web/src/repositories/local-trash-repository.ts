@@ -5,7 +5,7 @@
  * trashedAt IS NOT NULL のレコードを操作する.
  */
 
-import type { TrashedTask, TrashRepository, RestoreTaskCommand } from "./trash-repository.js";
+import type { RestoreTaskCommand, TrashRepository, TrashedTask } from "./trash-repository.js";
 
 type Row = Record<string, unknown>;
 
@@ -47,7 +47,7 @@ export class LocalTrashRepository implements TrashRepository {
     const newVersion = (row.version as number) + 1;
 
     await this.db.run(
-      `UPDATE tasks SET trashed_at = NULL, trashed_reason = NULL, updated_at = ?, version = ? WHERE id = ?`,
+      "UPDATE tasks SET trashed_at = NULL, trashed_reason = NULL, updated_at = ?, version = ? WHERE id = ?",
       [now, newVersion, cmd.id],
     );
 

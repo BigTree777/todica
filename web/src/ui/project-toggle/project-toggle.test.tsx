@@ -1,3 +1,5 @@
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 /**
  * 単体テスト: `<ProjectToggle />` (BL-041 / project-toggle-ui).
  *
@@ -29,13 +31,11 @@
  *   - BL-040 priority-stars のテスト記法 (vitest + @testing-library/react + userEvent) を踏襲する.
  */
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 
+import type { Project } from "../../repositories/project-repository.js";
 // ProjectToggle 本体はまだ存在しない. implementer が
 // web/src/ui/project-toggle/project-toggle.tsx を作るまでこの import で red になる.
 import { ProjectToggle } from "./project-toggle.js";
-import type { Project } from "../../repositories/project-repository.js";
 
 const NOW = "2026-06-09T09:00:00.000Z";
 
@@ -60,14 +60,7 @@ function getToggleButton(): HTMLButtonElement {
 describe("<ProjectToggle /> (BL-041 単体)", () => {
   it("シナリオ AC-1: value=null の時, button の textContent に「（未分類）」が含まれる (REQ-1 / REQ-3)", () => {
     // AC-1: 初期表示は「（未分類）」.
-    render(
-      <ProjectToggle
-        value={null}
-        onChange={() => {}}
-        projects={[]}
-        idPrefix="create"
-      />,
-    );
+    render(<ProjectToggle value={null} onChange={() => {}} projects={[]} idPrefix="create" />);
 
     // role="button" の単一要素が存在する (= 起票フォームのプロジェクト入力).
     const button = getToggleButton();
@@ -83,14 +76,7 @@ describe("<ProjectToggle /> (BL-041 単体)", () => {
       makeProject({ id: "p-2", name: "個人" }),
     ];
 
-    render(
-      <ProjectToggle
-        value="p-2"
-        onChange={() => {}}
-        projects={projects}
-        idPrefix="create"
-      />,
-    );
+    render(<ProjectToggle value="p-2" onChange={() => {}} projects={projects} idPrefix="create" />);
 
     const button = getToggleButton();
     expect(button.textContent ?? "").toContain("個人");
@@ -110,12 +96,7 @@ describe("<ProjectToggle /> (BL-041 単体)", () => {
 
     // 初期 value=null.
     const { rerender } = render(
-      <ProjectToggle
-        value={null}
-        onChange={onChange}
-        projects={projects}
-        idPrefix="create"
-      />,
+      <ProjectToggle value={null} onChange={onChange} projects={projects} idPrefix="create" />,
     );
 
     // クリック 1 回目: null → projects[0] = "p-1".
@@ -124,12 +105,7 @@ describe("<ProjectToggle /> (BL-041 単体)", () => {
 
     // 親側の state 更新を模倣して rerender.
     rerender(
-      <ProjectToggle
-        value="p-1"
-        onChange={onChange}
-        projects={projects}
-        idPrefix="create"
-      />,
+      <ProjectToggle value="p-1" onChange={onChange} projects={projects} idPrefix="create" />,
     );
 
     // クリック 2 回目: "p-1" → "p-2".
@@ -137,12 +113,7 @@ describe("<ProjectToggle /> (BL-041 単体)", () => {
     expect(onChange).toHaveBeenNthCalledWith(2, "p-2");
 
     rerender(
-      <ProjectToggle
-        value="p-2"
-        onChange={onChange}
-        projects={projects}
-        idPrefix="create"
-      />,
+      <ProjectToggle value="p-2" onChange={onChange} projects={projects} idPrefix="create" />,
     );
 
     // クリック 3 回目: "p-2" → null (1 周).
@@ -158,14 +129,7 @@ describe("<ProjectToggle /> (BL-041 単体)", () => {
     const onChange = vi.fn<(next: string | null) => void>();
     const user = userEvent.setup();
 
-    render(
-      <ProjectToggle
-        value={null}
-        onChange={onChange}
-        projects={[]}
-        idPrefix="create"
-      />,
-    );
+    render(<ProjectToggle value={null} onChange={onChange} projects={[]} idPrefix="create" />);
 
     const button = getToggleButton();
     await user.click(button);
@@ -188,12 +152,7 @@ describe("<ProjectToggle /> (BL-041 単体)", () => {
     const user = userEvent.setup();
 
     render(
-      <ProjectToggle
-        value="p-deleted"
-        onChange={onChange}
-        projects={projects}
-        idPrefix="create"
-      />,
+      <ProjectToggle value="p-deleted" onChange={onChange} projects={projects} idPrefix="create" />,
     );
 
     await user.click(getToggleButton());
@@ -211,12 +170,7 @@ describe("<ProjectToggle /> (BL-041 単体)", () => {
 
     // 初期 value=null のとき aria-label に「未分類」が含まれる.
     const { rerender } = render(
-      <ProjectToggle
-        value={null}
-        onChange={() => {}}
-        projects={projects}
-        idPrefix="create"
-      />,
+      <ProjectToggle value={null} onChange={() => {}} projects={projects} idPrefix="create" />,
     );
     {
       const button = getToggleButton();
@@ -227,12 +181,7 @@ describe("<ProjectToggle /> (BL-041 単体)", () => {
 
     // value="p-1" のとき aria-label に「仕事」が含まれる.
     rerender(
-      <ProjectToggle
-        value="p-1"
-        onChange={() => {}}
-        projects={projects}
-        idPrefix="create"
-      />,
+      <ProjectToggle value="p-1" onChange={() => {}} projects={projects} idPrefix="create" />,
     );
     {
       const button = getToggleButton();
@@ -252,12 +201,7 @@ describe("<ProjectToggle /> (BL-041 単体)", () => {
     const user = userEvent.setup();
 
     render(
-      <ProjectToggle
-        value={null}
-        onChange={onChange}
-        projects={projects}
-        idPrefix="create"
-      />,
+      <ProjectToggle value={null} onChange={onChange} projects={projects} idPrefix="create" />,
     );
 
     const button = getToggleButton();
@@ -281,12 +225,7 @@ describe("<ProjectToggle /> (BL-041 単体)", () => {
     const user = userEvent.setup();
 
     render(
-      <ProjectToggle
-        value={null}
-        onChange={onChange}
-        projects={projects}
-        idPrefix="create"
-      />,
+      <ProjectToggle value={null} onChange={onChange} projects={projects} idPrefix="create" />,
     );
 
     const button = getToggleButton();
@@ -302,18 +241,11 @@ describe("<ProjectToggle /> (BL-041 単体)", () => {
 
   it("シナリオ REQ-4: Tab キーで button にフォーカスが到達する (キーボード Tab 到達)", async () => {
     // REQ-4: Tab でフォーカス到達できる (= tabIndex 排除されていない <button>).
-    const projects: Project[] = [
-      makeProject({ id: "p-1", name: "仕事" }),
-    ];
+    const projects: Project[] = [makeProject({ id: "p-1", name: "仕事" })];
     const user = userEvent.setup();
 
     render(
-      <ProjectToggle
-        value={null}
-        onChange={() => {}}
-        projects={projects}
-        idPrefix="create"
-      />,
+      <ProjectToggle value={null} onChange={() => {}} projects={projects} idPrefix="create" />,
     );
 
     // 初期では body にフォーカス. Tab で button に到達する.

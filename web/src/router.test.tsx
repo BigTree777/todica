@@ -1,3 +1,6 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
+import { MemoryRouter, Navigate, Route, Routes } from "react-router-dom";
 /**
  * 単体テスト: ルーティング (BL-014 / web-client-foundation).
  *
@@ -24,18 +27,15 @@
  * MemoryRouter でルーティング構成を再現して各コンポーネントの表示を検証する。
  */
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
-import { MemoryRouter, Navigate, Route, Routes } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { TodayView } from "./ui/today-view/today-view.js";
-import { SettingsView } from "./ui/settings-view/settings-view.js";
-import { TrashView } from "./ui/trash-view/trash-view.js";
-import { RoutinesView } from "./ui/routines-view/routines-view.js";
-import type { TaskRepository } from "./repositories/task-repository.js";
-import type { SettingsRepository } from "./repositories/settings-repository.js";
-import type { TrashRepository } from "./repositories/trash-repository.js";
 import type { ProjectRepository } from "./repositories/project-repository.js";
 import type { WebRoutineRepository } from "./repositories/routine-repository.js";
+import type { SettingsRepository } from "./repositories/settings-repository.js";
+import type { TaskRepository } from "./repositories/task-repository.js";
+import type { TrashRepository } from "./repositories/trash-repository.js";
+import { RoutinesView } from "./ui/routines-view/routines-view.js";
+import { SettingsView } from "./ui/settings-view/settings-view.js";
+import { TodayView } from "./ui/today-view/today-view.js";
+import { TrashView } from "./ui/trash-view/trash-view.js";
 
 // ============================================================
 // モック Repository ファクトリ
@@ -45,10 +45,16 @@ import type { WebRoutineRepository } from "./repositories/routine-repository.js"
 function makeMockTaskRepository(): TaskRepository {
   return {
     list: vi.fn(async () => []),
-    create: vi.fn(async () => { throw new Error("not implemented"); }),
-    update: vi.fn(async () => { throw new Error("not implemented"); }),
+    create: vi.fn(async () => {
+      throw new Error("not implemented");
+    }),
+    update: vi.fn(async () => {
+      throw new Error("not implemented");
+    }),
     delete: vi.fn(async () => undefined),
-    complete: vi.fn(async () => { throw new Error("not implemented"); }),
+    complete: vi.fn(async () => {
+      throw new Error("not implemented");
+    }),
     today: vi.fn(async () => ({
       tasks: [],
       nextTaskId: null,
@@ -61,7 +67,9 @@ function makeMockTaskRepository(): TaskRepository {
       version: 1,
       updatedAt: "2026-06-07T09:00:00.000Z",
     })),
-    setFocus: vi.fn(async () => { throw new Error("not implemented"); }),
+    setFocus: vi.fn(async () => {
+      throw new Error("not implemented");
+    }),
     getCounter: vi.fn(async () => ({
       id: "singleton",
       completedCount: 0,
@@ -81,7 +89,9 @@ function makeMockSettingsRepository(): SettingsRepository {
       version: 1,
       updatedAt: "2026-06-07T09:00:00.000Z",
     })),
-    patchSettings: vi.fn(async () => { throw new Error("not implemented"); }),
+    patchSettings: vi.fn(async () => {
+      throw new Error("not implemented");
+    }),
   };
 }
 
@@ -89,7 +99,9 @@ function makeMockSettingsRepository(): SettingsRepository {
 function makeMockTrashRepository(): TrashRepository {
   return {
     list: vi.fn(async () => []),
-    restore: vi.fn(async () => { throw new Error("not implemented"); }),
+    restore: vi.fn(async () => {
+      throw new Error("not implemented");
+    }),
     empty: vi.fn(async () => undefined),
   };
 }
@@ -98,8 +110,12 @@ function makeMockTrashRepository(): TrashRepository {
 function makeMockProjectRepository(): ProjectRepository {
   return {
     list: vi.fn(async () => []),
-    create: vi.fn(async () => { throw new Error("not implemented"); }),
-    update: vi.fn(async () => { throw new Error("not implemented"); }),
+    create: vi.fn(async () => {
+      throw new Error("not implemented");
+    }),
+    update: vi.fn(async () => {
+      throw new Error("not implemented");
+    }),
     delete: vi.fn(async () => undefined),
   };
 }
@@ -108,8 +124,12 @@ function makeMockProjectRepository(): ProjectRepository {
 function makeMockRoutineRepository(): WebRoutineRepository {
   return {
     list: vi.fn(async () => []),
-    create: vi.fn(async () => { throw new Error("not implemented"); }),
-    update: vi.fn(async () => { throw new Error("not implemented"); }),
+    create: vi.fn(async () => {
+      throw new Error("not implemented");
+    }),
+    update: vi.fn(async () => {
+      throw new Error("not implemented");
+    }),
     delete: vi.fn(async () => undefined),
   };
 }
@@ -144,10 +164,18 @@ function TestRouter({ initialPath }: TestRouterProps) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[initialPath]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <MemoryRouter
+        initialEntries={[initialPath]}
+        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+      >
         <Routes>
           <Route path="/" element={<Navigate to="/today" replace />} />
-          <Route path="/today" element={<TodayView repository={taskRepository} projectRepository={projectRepository} />} />
+          <Route
+            path="/today"
+            element={
+              <TodayView repository={taskRepository} projectRepository={projectRepository} />
+            }
+          />
           <Route path="/settings" element={<SettingsView repository={settingsRepository} />} />
           <Route path="/trash" element={<TrashView repository={trashRepository} />} />
           <Route path="/routines" element={<RoutinesView repository={routineRepository} />} />
@@ -168,15 +196,13 @@ describe("ルーティング (BL-014 Web クライアント基盤)", () => {
    *   When  ルーティングが解決される
    *   Then  URL が "/today" になり TodayView がレンダリングされる
    */
-  it("シナリオ: \"/\" へのアクセスは \"/today\" にリダイレクトされ TodayView が表示される", async () => {
+  it('シナリオ: "/" へのアクセスは "/today" にリダイレクトされ TodayView が表示される', async () => {
     // spec.md §「ルーティング」第 1 ケース:
     // "/"  → Navigate to="/today" replace → TodayView
     // 確認: <h1>今日</h1> が存在する
     render(<TestRouter initialPath="/" />);
 
-    expect(
-      await screen.findByRole("heading", { name: "今日" }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "今日" })).toBeInTheDocument();
   });
 
   /**
@@ -185,13 +211,11 @@ describe("ルーティング (BL-014 Web クライアント基盤)", () => {
    *   When  ルーティングが解決される
    *   Then  TodayView がレンダリングされる（<h1>今日</h1> が存在する）
    */
-  it("シナリオ: \"/today\" にアクセスすると TodayView がレンダリングされる（<h1>今日</h1>）", async () => {
+  it('シナリオ: "/today" にアクセスすると TodayView がレンダリングされる（<h1>今日</h1>）', async () => {
     // spec.md §「ルーティング」第 2 ケース
     render(<TestRouter initialPath="/today" />);
 
-    expect(
-      await screen.findByRole("heading", { name: "今日" }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "今日" })).toBeInTheDocument();
   });
 
   /**
@@ -200,13 +224,11 @@ describe("ルーティング (BL-014 Web クライアント基盤)", () => {
    *   When  ルーティングが解決される
    *   Then  SettingsView がレンダリングされる（<h1>設定</h1> が存在する）
    */
-  it("シナリオ: \"/settings\" にアクセスすると SettingsView がレンダリングされる（<h1>設定</h1>）", async () => {
+  it('シナリオ: "/settings" にアクセスすると SettingsView がレンダリングされる（<h1>設定</h1>）', async () => {
     // spec.md §「ルーティング」第 3 ケース
     render(<TestRouter initialPath="/settings" />);
 
-    expect(
-      await screen.findByRole("heading", { name: "設定" }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "設定" })).toBeInTheDocument();
   });
 
   /**
@@ -215,13 +237,11 @@ describe("ルーティング (BL-014 Web クライアント基盤)", () => {
    *   When  ルーティングが解決される
    *   Then  TrashView がレンダリングされる（<h1>ゴミ箱</h1> が存在する）
    */
-  it("シナリオ: \"/trash\" にアクセスすると TrashView がレンダリングされる（<h1>ゴミ箱</h1>）", async () => {
+  it('シナリオ: "/trash" にアクセスすると TrashView がレンダリングされる（<h1>ゴミ箱</h1>）', async () => {
     // spec.md §「ルーティング」第 4 ケース
     render(<TestRouter initialPath="/trash" />);
 
-    expect(
-      await screen.findByRole("heading", { name: "ゴミ箱" }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "ゴミ箱" })).toBeInTheDocument();
   });
 
   /**
@@ -230,11 +250,9 @@ describe("ルーティング (BL-014 Web クライアント基盤)", () => {
    *   When  ルーティングが解決される
    *   Then  RoutinesView がレンダリングされる（<h1>ルーティン</h1> が存在する）
    */
-  it("シナリオ: \"/routines\" にアクセスすると RoutinesView がレンダリングされる", async () => {
+  it('シナリオ: "/routines" にアクセスすると RoutinesView がレンダリングされる', async () => {
     render(<TestRouter initialPath="/routines" />);
 
-    expect(
-      await screen.findByRole("heading", { name: "ルーティン" }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "ルーティン" })).toBeInTheDocument();
   });
 });

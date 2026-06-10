@@ -1,3 +1,5 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { Priority, Task } from "@todica/domain/task";
 /**
  * 「明日のタスク」独立ビュー (BL-038 / tomorrow-view).
  *
@@ -26,8 +28,10 @@
  *   - offline → 書込キューに enqueue し楽観成功 (BL-018).
  */
 import { useCallback, useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Priority, Task } from "@todica/domain/task";
+import { notifyError } from "../../error-notification.js";
+import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
+import { ConflictError, dequeue, enqueue, findEntryByKey, getAll } from "../../offline-queue.js";
+import type { Project, ProjectRepository } from "../../repositories/project-repository.js";
 import type {
   CompleteTaskCommand,
   CreateTaskCommand,
@@ -36,19 +40,6 @@ import type {
   UpdateTaskCommand,
 } from "../../repositories/task-repository.js";
 import { OptimisticLockError } from "../../repositories/task-repository.js";
-import type {
-  Project,
-  ProjectRepository,
-} from "../../repositories/project-repository.js";
-import {
-  enqueue,
-  dequeue,
-  getAll,
-  findEntryByKey,
-  ConflictError,
-} from "../../offline-queue.js";
-import { notifyError } from "../../error-notification.js";
-import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
 import { PriorityStars } from "../priority-stars/priority-stars.js";
 import { ProjectToggle } from "../project-toggle/project-toggle.js";
@@ -64,8 +55,7 @@ function generateId(): string {
   const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
   if (c?.randomUUID) return c.randomUUID();
   const random = (n: number) => Math.floor(Math.random() * n);
-  const hex = (n: number) =>
-    Array.from({ length: n }, () => random(16).toString(16)).join("");
+  const hex = (n: number) => Array.from({ length: n }, () => random(16).toString(16)).join("");
   return `${hex(8)}-${hex(4)}-4${hex(3)}-8${hex(3)}-${hex(12)}`;
 }
 
@@ -421,47 +411,43 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
 
       {/* REQ-6: 空状態は <ul> の外に出し, listitem role と分離する.
           (テストは tasks > 0 のときだけ listitem 数を assert する想定.) */}
-      {tasks.length === 0 && (
-        <p className="tomorrow-view__empty">明日のタスクはありません</p>
-      )}
+      {tasks.length === 0 && <p className="tomorrow-view__empty">明日のタスクはありません</p>}
 
       <ul aria-label="明日のタスク一覧" className="tomorrow-view__list">
-        {tasks.length === 0 ? null : (
-          tasks.map((task) => {
-            const project = task.projectId
-              ? projects.find((p) => p.id === task.projectId) ?? null
-              : null;
-            return (
-              <li key={task.id} className="tomorrow-view__item">
-                <div className="tomorrow-view__item-body">
-                  {project && (
-                    <span className="tomorrow-view__project">{project.name}</span>
-                  )}
-                  <span className="tomorrow-view__name">{task.name}</span>
-                  {/* BL-040 / plan D-004: [優先度: ...] 補助表示は撤去.
+        {tasks.length === 0
+          ? null
+          : tasks.map((task) => {
+              const project = task.projectId
+                ? (projects.find((p) => p.id === task.projectId) ?? null)
+                : null;
+              return (
+                <li key={task.id} className="tomorrow-view__item">
+                  <div className="tomorrow-view__item-body">
+                    {project && <span className="tomorrow-view__project">{project.name}</span>}
+                    <span className="tomorrow-view__name">{task.name}</span>
+                    {/* BL-040 / plan D-004: [優先度: ...] 補助表示は撤去.
                       tomorrow カードは「削除」「今日にする」のみ (BL-038 REQ-3) で,
                       優先度 UI 自体を持たないため, ここでは何も描画しない. */}
-                </div>
-                <div className="tomorrow-view__actions">
-                  <button type="button" onClick={() => handleDelete(task)}>
-                    削除
-                  </button>
-                  {/* BL-042 REQ-2 / AC-8: routine 由来タスクは「今日にする」を非表示にする.
-                      routine は毎日自動生成されるため移送すると翌日に重複が出る. */}
-                  {task.origin !== "routine" && (
-                    <button type="button" onClick={() => handleMoveToToday(task)}>
-                      今日にする
+                  </div>
+                  <div className="tomorrow-view__actions">
+                    <button type="button" onClick={() => handleDelete(task)}>
+                      削除
                     </button>
-                  )}
-                  {/* BL-042: 「完了」 button を追加 (today と対称な 3 ボタン化). */}
-                  <button type="button" onClick={() => handleComplete(task)}>
-                    完了
-                  </button>
-                </div>
-              </li>
-            );
-          })
-        )}
+                    {/* BL-042 REQ-2 / AC-8: routine 由来タスクは「今日にする」を非表示にする.
+                      routine は毎日自動生成されるため移送すると翌日に重複が出る. */}
+                    {task.origin !== "routine" && (
+                      <button type="button" onClick={() => handleMoveToToday(task)}>
+                        今日にする
+                      </button>
+                    )}
+                    {/* BL-042: 「完了」 button を追加 (today と対称な 3 ボタン化). */}
+                    <button type="button" onClick={() => handleComplete(task)}>
+                      完了
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
       </ul>
 
       <ConflictDialog

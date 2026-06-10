@@ -1,3 +1,5 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { DueDate, Priority, Task } from "@todica/domain/task";
 /**
  * 今日ビュー (BL-005 本実装 + BL-001 / BL-002 / BL-003 / BL-006 を統合).
  *
@@ -30,8 +32,10 @@
  * BL-018: TanStack Query (useQuery / useMutation) でデータ取得・書込みを管理.
  */
 import { useCallback, useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { DueDate, Priority, Task } from "@todica/domain/task";
+import { notifyError } from "../../error-notification.js";
+import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
+import { ConflictError, dequeue, enqueue, findEntryByKey, getAll } from "../../offline-queue.js";
+import type { Project, ProjectRepository } from "../../repositories/project-repository.js";
 import type {
   CompleteTaskCommand,
   CreateTaskCommand,
@@ -42,19 +46,6 @@ import type {
   UpdateTaskCommand,
 } from "../../repositories/task-repository.js";
 import { OptimisticLockError } from "../../repositories/task-repository.js";
-import type {
-  Project,
-  ProjectRepository,
-} from "../../repositories/project-repository.js";
-import {
-  enqueue,
-  dequeue,
-  getAll,
-  findEntryByKey,
-  ConflictError,
-} from "../../offline-queue.js";
-import { notifyError } from "../../error-notification.js";
-import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
 import { PriorityStars } from "../priority-stars/priority-stars.js";
 import { ProjectCreateDialog } from "../project-create-dialog/project-create-dialog.js";
@@ -70,8 +61,7 @@ function generateId(): string {
   const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
   if (c?.randomUUID) return c.randomUUID();
   const random = (n: number) => Math.floor(Math.random() * n);
-  const hex = (n: number) =>
-    Array.from({ length: n }, () => random(16).toString(16)).join("");
+  const hex = (n: number) => Array.from({ length: n }, () => random(16).toString(16)).join("");
   return `${hex(8)}-${hex(4)}-4${hex(3)}-8${hex(3)}-${hex(12)}`;
 }
 
@@ -419,12 +409,10 @@ export function TodayView(props: TodayViewProps): JSX.Element {
   const focusData = focus as FocusSelection | undefined;
   const focusedId: string | null = focusData?.currentTaskId ?? nextTaskId;
   const focusedTask: Task | null = focusedId
-    ? tasks.find((t) => t.id === focusedId) ?? null
+    ? (tasks.find((t) => t.id === focusedId) ?? null)
     : null;
   // 通常リストから強調対象を除外 (D-008 重複表示禁止).
-  const otherTasks = focusedTask
-    ? tasks.filter((t) => t.id !== focusedTask.id)
-    : tasks;
+  const otherTasks = focusedTask ? tasks.filter((t) => t.id !== focusedTask.id) : tasks;
 
   return (
     <main>

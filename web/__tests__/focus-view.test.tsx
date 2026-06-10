@@ -1,3 +1,8 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { Task } from "@todica/domain/task";
+import type { ReactNode } from "react";
 /**
  * Web クライアント単体テスト: 「現在のタスク」独立ビュー (focus-view) (BL-037).
  *
@@ -13,14 +18,9 @@
  * / `makeMockProjectRepository` のパターンをほぼそのまま踏襲する.
  */
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, within, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { ReactNode } from "react";
-import type { Task } from "@todica/domain/task";
-// FocusView はまだ実装されていない (placeholder のみ存在する).
-// 本 import は implementer が `web/src/ui/focus-view/focus-view.tsx` を作るまで red.
-import { FocusView } from "../src/ui/focus-view/focus-view.js";
+// BL-034 / REQ-8 関連: notifyError をスパイするために import.
+import * as ErrorNotification from "../src/error-notification.js";
+import type { Project, ProjectRepository } from "../src/repositories/project-repository.js";
 import type {
   CompleteTaskCommand,
   Counter,
@@ -32,12 +32,9 @@ import type {
   UpdateTaskCommand,
 } from "../src/repositories/task-repository.js";
 import { OptimisticLockError } from "../src/repositories/task-repository.js";
-import type {
-  Project,
-  ProjectRepository,
-} from "../src/repositories/project-repository.js";
-// BL-034 / REQ-8 関連: notifyError をスパイするために import.
-import * as ErrorNotification from "../src/error-notification.js";
+// FocusView はまだ実装されていない (placeholder のみ存在する).
+// 本 import は implementer が `web/src/ui/focus-view/focus-view.tsx` を作るまで red.
+import { FocusView } from "../src/ui/focus-view/focus-view.js";
 
 const NOW = "2026-06-09T09:00:00.000Z";
 
@@ -46,7 +43,7 @@ function createTestQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: Infinity,
+        staleTime: Number.POSITIVE_INFINITY,
         retry: false,
         networkMode: "offlineFirst",
       },
@@ -60,9 +57,7 @@ function createTestQueryClient(): QueryClient {
 
 function renderWithQueryClient(ui: ReactNode): ReturnType<typeof render> {
   const queryClient = createTestQueryClient();
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
-  );
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
 function makeTask(overrides: Partial<Task> = {}): Task {
@@ -165,13 +160,9 @@ function makeMockRepository(
     later: 2,
   };
   const todayMock = vi.fn(async () => {
-    const filtered = state.filter(
-      (t) => t.dueDate === "today" && t.trashedAt === null,
-    );
+    const filtered = state.filter((t) => t.dueDate === "today" && t.trashedAt === null);
     const sorted = [...filtered].sort((a, b) => {
-      const p =
-        (PRIORITY_ORDER_LOCAL[a.priority] ?? 99) -
-        (PRIORITY_ORDER_LOCAL[b.priority] ?? 99);
+      const p = (PRIORITY_ORDER_LOCAL[a.priority] ?? 99) - (PRIORITY_ORDER_LOCAL[b.priority] ?? 99);
       if (p !== 0) return p;
       const c = a.createdAt.localeCompare(b.createdAt);
       if (c !== 0) return c;
@@ -299,9 +290,7 @@ describe("FocusView (BL-037 REQ-1 表示: フォーカス対象あり)", () => {
     ]);
     const projectRepo = makeMockProjectRepository([project]);
 
-    renderWithQueryClient(
-      <FocusView repository={repo} projectRepository={projectRepo} />,
-    );
+    renderWithQueryClient(<FocusView repository={repo} projectRepository={projectRepo} />);
 
     // 見出し「現在のタスク」(<h1>) が描画される.
     expect(
@@ -350,10 +339,7 @@ describe("FocusView (BL-037 REQ-1 表示: フォーカス対象あり)", () => {
     );
 
     renderWithQueryClient(
-      <FocusView
-        repository={repo}
-        projectRepository={makeMockProjectRepository()}
-      />,
+      <FocusView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
 
     // currentTaskId = B が優先されるため B (BBB) が表示される.
@@ -372,10 +358,7 @@ describe("FocusView (BL-037 REQ-2 空状態: フォーカス対象なし)", () =
     const repo = makeMockRepository([]);
 
     renderWithQueryClient(
-      <FocusView
-        repository={repo}
-        projectRepository={makeMockProjectRepository()}
-      />,
+      <FocusView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
 
     // 見出し「現在のタスク」は引き続き表示される.
@@ -384,9 +367,7 @@ describe("FocusView (BL-037 REQ-2 空状態: フォーカス対象なし)", () =
     ).toBeInTheDocument();
 
     // 空状態テキスト.
-    expect(
-      await screen.findByText("現在のタスクはありません"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("現在のタスクはありません")).toBeInTheDocument();
 
     // 「削除」「完了」ボタンは存在しない (D-008 非表示の方針).
     // 「無効化」案でも済むよう, 「disabled でも可」とせずに「null」を期待する.
@@ -404,10 +385,7 @@ describe("FocusView (BL-037 REQ-4 アクション数の規約)", () => {
     const repo = makeMockRepository([makeTask({ id: "A", name: "牛乳", version: 1 })]);
 
     renderWithQueryClient(
-      <FocusView
-        repository={repo}
-        projectRepository={makeMockProjectRepository()}
-      />,
+      <FocusView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
 
     // タスク名が表示されるまで待つ.
@@ -445,10 +423,7 @@ describe("FocusView (BL-037 REQ-7 起票フォーム無し)", () => {
     const repo = makeMockRepository([makeTask({ id: "A", name: "牛乳", version: 1 })]);
 
     renderWithQueryClient(
-      <FocusView
-        repository={repo}
-        projectRepository={makeMockProjectRepository()}
-      />,
+      <FocusView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
     await screen.findByText("牛乳");
 
@@ -466,10 +441,7 @@ describe("FocusView (BL-037 REQ-7 起票フォーム無し)", () => {
     const repo = makeMockRepository([]);
 
     renderWithQueryClient(
-      <FocusView
-        repository={repo}
-        projectRepository={makeMockProjectRepository()}
-      />,
+      <FocusView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
     await screen.findByText("現在のタスクはありません");
 
@@ -484,24 +456,18 @@ describe("FocusView (BL-037 REQ-7 起票フォーム無し)", () => {
 
 describe("FocusView (BL-037 REQ-5 完了操作)", () => {
   it("シナリオ: 「完了」クリックで repository.complete({ id, ifMatch }) が 1 回呼ばれる", async () => {
-    const repo = makeMockRepository(
-      [makeTask({ id: "A", name: "牛乳", version: 1 })],
-      {
-        initialFocus: {
-          id: "singleton",
-          currentTaskId: "A",
-          version: 1,
-          updatedAt: NOW,
-        },
+    const repo = makeMockRepository([makeTask({ id: "A", name: "牛乳", version: 1 })], {
+      initialFocus: {
+        id: "singleton",
+        currentTaskId: "A",
+        version: 1,
+        updatedAt: NOW,
       },
-    );
+    });
     const user = userEvent.setup();
 
     renderWithQueryClient(
-      <FocusView
-        repository={repo}
-        projectRepository={makeMockProjectRepository()}
-      />,
+      <FocusView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
     await screen.findByText("牛乳");
 
@@ -544,10 +510,7 @@ describe("FocusView (BL-037 REQ-5 完了操作)", () => {
     const user = userEvent.setup();
 
     renderWithQueryClient(
-      <FocusView
-        repository={repo}
-        projectRepository={makeMockProjectRepository()}
-      />,
+      <FocusView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
     await screen.findByText("AAA");
 
@@ -576,24 +539,18 @@ describe("FocusView (BL-037 REQ-5 完了操作)", () => {
 
 describe("FocusView (BL-037 REQ-6 削除操作)", () => {
   it("シナリオ: 「削除」クリックで repository.delete({ id, ifMatch }) が 1 回呼ばれる", async () => {
-    const repo = makeMockRepository(
-      [makeTask({ id: "A", name: "牛乳", version: 1 })],
-      {
-        initialFocus: {
-          id: "singleton",
-          currentTaskId: "A",
-          version: 1,
-          updatedAt: NOW,
-        },
+    const repo = makeMockRepository([makeTask({ id: "A", name: "牛乳", version: 1 })], {
+      initialFocus: {
+        id: "singleton",
+        currentTaskId: "A",
+        version: 1,
+        updatedAt: NOW,
       },
-    );
+    });
     const user = userEvent.setup();
 
     renderWithQueryClient(
-      <FocusView
-        repository={repo}
-        projectRepository={makeMockProjectRepository()}
-      />,
+      <FocusView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
     await screen.findByText("牛乳");
 
@@ -637,10 +594,7 @@ describe("FocusView (BL-037 REQ-6 削除操作)", () => {
     const user = userEvent.setup();
 
     renderWithQueryClient(
-      <FocusView
-        repository={repo}
-        projectRepository={makeMockProjectRepository()}
-      />,
+      <FocusView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
     await screen.findByText("AAA");
 
@@ -685,10 +639,7 @@ describe("FocusView (BL-037 D-001 setFocus を呼ばない)", () => {
     const user = userEvent.setup();
 
     renderWithQueryClient(
-      <FocusView
-        repository={repo}
-        projectRepository={makeMockProjectRepository()}
-      />,
+      <FocusView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
     await screen.findByText("AAA");
 
@@ -715,28 +666,22 @@ describe("FocusView (BL-037 D-001 setFocus を呼ばない)", () => {
 
 describe("FocusView (BL-037 REQ-8 ConflictDialog)", () => {
   it("シナリオ: 「完了」操作で online 412 が返ったとき ConflictDialog が開く", async () => {
-    const repo = makeMockRepository(
-      [makeTask({ id: "A", name: "牛乳", version: 1 })],
-      {
-        initialFocus: {
-          id: "singleton",
-          currentTaskId: "A",
-          version: 1,
-          updatedAt: NOW,
-        },
-        completeError: new OptimisticLockError(
-          "optimistic lock conflict on complete",
-          makeTask({ id: "A", name: "牛乳 (サーバ最新)", version: 5 }),
-        ),
+    const repo = makeMockRepository([makeTask({ id: "A", name: "牛乳", version: 1 })], {
+      initialFocus: {
+        id: "singleton",
+        currentTaskId: "A",
+        version: 1,
+        updatedAt: NOW,
       },
-    );
+      completeError: new OptimisticLockError(
+        "optimistic lock conflict on complete",
+        makeTask({ id: "A", name: "牛乳 (サーバ最新)", version: 5 }),
+      ),
+    });
     const user = userEvent.setup();
 
     renderWithQueryClient(
-      <FocusView
-        repository={repo}
-        projectRepository={makeMockProjectRepository()}
-      />,
+      <FocusView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
     await screen.findByText("牛乳");
 
@@ -748,45 +693,35 @@ describe("FocusView (BL-037 REQ-8 ConflictDialog)", () => {
     });
     expect(dialog).toBeInTheDocument();
     // ダイアログ内に 2 択ボタンがある (CR-002).
-    expect(
-      within(dialog).getByRole("button", { name: "サーバの値を採用" }),
-    ).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "サーバの値を採用" })).toBeInTheDocument();
     expect(
       within(dialog).getByRole("button", { name: "クライアントの値で再送" }),
     ).toBeInTheDocument();
   });
 
   it("シナリオ: 「削除」操作で online 412 が返ったとき ConflictDialog が開く", async () => {
-    const repo = makeMockRepository(
-      [makeTask({ id: "A", name: "牛乳", version: 1 })],
-      {
-        initialFocus: {
-          id: "singleton",
-          currentTaskId: "A",
-          version: 1,
-          updatedAt: NOW,
-        },
-        deleteError: new OptimisticLockError(
-          "optimistic lock conflict on delete",
-          makeTask({ id: "A", name: "牛乳 (サーバ最新)", version: 5 }),
-        ),
+    const repo = makeMockRepository([makeTask({ id: "A", name: "牛乳", version: 1 })], {
+      initialFocus: {
+        id: "singleton",
+        currentTaskId: "A",
+        version: 1,
+        updatedAt: NOW,
       },
-    );
+      deleteError: new OptimisticLockError(
+        "optimistic lock conflict on delete",
+        makeTask({ id: "A", name: "牛乳 (サーバ最新)", version: 5 }),
+      ),
+    });
     const user = userEvent.setup();
 
     renderWithQueryClient(
-      <FocusView
-        repository={repo}
-        projectRepository={makeMockProjectRepository()}
-      />,
+      <FocusView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
     await screen.findByText("牛乳");
 
     await user.click(screen.getByRole("button", { name: "削除" }));
 
-    expect(
-      await screen.findByRole("dialog", { name: "変更が衝突しました" }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: "変更が衝突しました" })).toBeInTheDocument();
   });
 });
 
@@ -798,25 +733,19 @@ describe("FocusView (BL-037 BL-034 通信エラー時の notifyError)", () => {
   it("シナリオ: complete が一般エラー (= ConflictError でない) を throw すると notifyError が呼ばれる", async () => {
     const notifySpy = vi.spyOn(ErrorNotification, "notifyError");
 
-    const repo = makeMockRepository(
-      [makeTask({ id: "A", name: "牛乳", version: 1 })],
-      {
-        initialFocus: {
-          id: "singleton",
-          currentTaskId: "A",
-          version: 1,
-          updatedAt: NOW,
-        },
-        completeError: new Error("network failure"),
+    const repo = makeMockRepository([makeTask({ id: "A", name: "牛乳", version: 1 })], {
+      initialFocus: {
+        id: "singleton",
+        currentTaskId: "A",
+        version: 1,
+        updatedAt: NOW,
       },
-    );
+      completeError: new Error("network failure"),
+    });
     const user = userEvent.setup();
 
     renderWithQueryClient(
-      <FocusView
-        repository={repo}
-        projectRepository={makeMockProjectRepository()}
-      />,
+      <FocusView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
     await screen.findByText("牛乳");
 

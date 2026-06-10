@@ -1,3 +1,4 @@
+import type { Routine } from "@todica/domain/routine";
 /**
  * DrizzleRoutineRepository: RoutineRepository の本実装 (BL-017 / routine).
  *
@@ -8,9 +9,8 @@
  */
 import { asc, eq } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
-import type { Routine } from "@todica/domain/routine";
 import type { RoutineRepository } from "../../../data/routine-repository.js";
-import { routines, schema } from "../../../db/schema.js";
+import { routines, type schema } from "../../../db/schema.js";
 
 export interface DrizzleRoutineRepositoryDeps {
   db: BetterSQLite3Database<typeof schema>;
@@ -61,20 +61,12 @@ export class DrizzleRoutineRepository implements RoutineRepository {
   }
 
   async list(): Promise<Routine[]> {
-    const rows = this.db
-      .select()
-      .from(routines)
-      .orderBy(asc(routines.name))
-      .all();
+    const rows = this.db.select().from(routines).orderBy(asc(routines.name)).all();
     return rows.map(rowToRoutine);
   }
 
   async findById(id: string): Promise<Routine | null> {
-    const rows = this.db
-      .select()
-      .from(routines)
-      .where(eq(routines.id, id))
-      .all();
+    const rows = this.db.select().from(routines).where(eq(routines.id, id)).all();
     const row = rows[0];
     if (!row) return null;
     return rowToRoutine(row);

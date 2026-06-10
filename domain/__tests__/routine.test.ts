@@ -13,13 +13,13 @@
  *   - plan.md §D-002 バリデーション規則
  */
 import { describe, expect, it } from "vitest";
+import { FakeClock } from "../src/index.js";
 import {
   createRoutine,
   updateRoutine,
   validateDaysOfWeek,
   validateRoutineName,
 } from "../src/routine/index.js";
-import { FakeClock } from "../src/index.js";
 
 const NOW = "2026-06-08T09:00:00.000Z";
 const LATER = "2026-06-08T09:00:01.000Z";
@@ -320,11 +320,7 @@ describe("updateRoutine (spec.md §「ルーティン編集（FR-035）」)", ()
     // spec.md: PATCH /api/v1/routines/R1 に name="夜の運動" を送る
     // Then: version=2 になっている
     const clock = new FakeClock(LATER);
-    const result = updateRoutine(
-      { ...baseRoutine },
-      { name: "夜の運動" },
-      clock,
-    );
+    const result = updateRoutine({ ...baseRoutine }, { name: "夜の運動" }, clock);
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -337,11 +333,7 @@ describe("updateRoutine (spec.md §「ルーティン編集（FR-035）」)", ()
   it("daysOfWeek を更新できる", () => {
     // spec.md: PATCH /api/v1/routines/R1 に daysOfWeek=[6,0] を送る
     const clock = new FakeClock(LATER);
-    const result = updateRoutine(
-      { ...baseRoutine },
-      { daysOfWeek: [6, 0] },
-      clock,
-    );
+    const result = updateRoutine({ ...baseRoutine }, { daysOfWeek: [6, 0] }, clock);
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -352,11 +344,7 @@ describe("updateRoutine (spec.md §「ルーティン編集（FR-035）」)", ()
   it("defaultPriority を更新できる", () => {
     // spec.md: PATCH /api/v1/routines/R1 に defaultPriority="later" を送る
     const clock = new FakeClock(LATER);
-    const result = updateRoutine(
-      { ...baseRoutine },
-      { defaultPriority: "later" },
-      clock,
-    );
+    const result = updateRoutine({ ...baseRoutine }, { defaultPriority: "later" }, clock);
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -383,11 +371,7 @@ describe("updateRoutine (spec.md §「ルーティン編集（FR-035）」)", ()
 
   it("更新時に空 name は INVALID_ROUTINE_NAME を返す", () => {
     const clock = new FakeClock(LATER);
-    const result = updateRoutine(
-      { ...baseRoutine },
-      { name: "" },
-      clock,
-    );
+    const result = updateRoutine({ ...baseRoutine }, { name: "" }, clock);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.code).toBe("INVALID_ROUTINE_NAME");
@@ -395,11 +379,7 @@ describe("updateRoutine (spec.md §「ルーティン編集（FR-035）」)", ()
 
   it("更新時に daysOfWeek が空配列は INVALID_DAYS_OF_WEEK を返す", () => {
     const clock = new FakeClock(LATER);
-    const result = updateRoutine(
-      { ...baseRoutine },
-      { daysOfWeek: [] },
-      clock,
-    );
+    const result = updateRoutine({ ...baseRoutine }, { daysOfWeek: [] }, clock);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.code).toBe("INVALID_DAYS_OF_WEEK");
@@ -407,11 +387,7 @@ describe("updateRoutine (spec.md §「ルーティン編集（FR-035）」)", ()
 
   it("更新時も daysOfWeek の重複は排除される", () => {
     const clock = new FakeClock(LATER);
-    const result = updateRoutine(
-      { ...baseRoutine },
-      { daysOfWeek: [1, 1, 2] },
-      clock,
-    );
+    const result = updateRoutine({ ...baseRoutine }, { daysOfWeek: [1, 1, 2] }, clock);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.routine.daysOfWeek).toEqual([1, 2]);
@@ -420,11 +396,7 @@ describe("updateRoutine (spec.md §「ルーティン編集（FR-035）」)", ()
   it("指定しなかったフィールドは変更されない（部分上書き原則）", () => {
     // name のみ更新 → daysOfWeek と defaultPriority は元のまま
     const clock = new FakeClock(LATER);
-    const result = updateRoutine(
-      { ...baseRoutine },
-      { name: "変更後" },
-      clock,
-    );
+    const result = updateRoutine({ ...baseRoutine }, { name: "変更後" }, clock);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.routine.daysOfWeek).toEqual([1, 2, 3, 4, 5]);

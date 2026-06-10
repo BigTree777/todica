@@ -23,14 +23,8 @@
  *       implementer が実装・インストールすることで green 化する。
  */
 import "fake-indexeddb/auto";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
-  enqueue,
-  dequeue,
-  getAll,
-  flush,
-  ConflictError,
-} from "./offline-queue.js";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ConflictError, dequeue, enqueue, flush, getAll } from "./offline-queue.js";
 import type { QueueEntry } from "./offline-queue.js";
 
 // fetch をグローバルモックとして使う
@@ -138,8 +132,12 @@ describe("offline-queue: enqueue / dequeue / getAll の基本動作 (WQ-001/WQ-0
 describe("offline-queue: flush() 正常系 (WQ-003/WQ-007)", () => {
   it("シナリオ: flush() でキュー内の全エントリがサーバに送信され、成功後にキューから削除される", async () => {
     // Given キューに 2 件のエントリがある
-    await enqueue(makeEntry({ idempotencyKey: "ikey-flush-A", url: "/api/v1/tasks", method: "POST" }));
-    await enqueue(makeEntry({ idempotencyKey: "ikey-flush-B", url: "/api/v1/tasks/t1", method: "PATCH" }));
+    await enqueue(
+      makeEntry({ idempotencyKey: "ikey-flush-A", url: "/api/v1/tasks", method: "POST" }),
+    );
+    await enqueue(
+      makeEntry({ idempotencyKey: "ikey-flush-B", url: "/api/v1/tasks/t1", method: "PATCH" }),
+    );
 
     // fetch が 200 を返すようにモック
     mockFetch.mockResolvedValue(new Response(JSON.stringify({ id: "t1" }), { status: 200 }));
@@ -183,8 +181,16 @@ describe("offline-queue: flush() 正常系 (WQ-003/WQ-007)", () => {
   it("シナリオ: flush() はキューを enqueuedAt 昇順（追加順）に送信する", async () => {
     // Given キューに 2 件のエントリがある（A が先、B が後）
     const sentUrls: string[] = [];
-    await enqueue(makeEntry({ idempotencyKey: "ikey-order-first", url: "/api/v1/tasks/first", method: "POST" }));
-    await enqueue(makeEntry({ idempotencyKey: "ikey-order-second", url: "/api/v1/tasks/second", method: "POST" }));
+    await enqueue(
+      makeEntry({ idempotencyKey: "ikey-order-first", url: "/api/v1/tasks/first", method: "POST" }),
+    );
+    await enqueue(
+      makeEntry({
+        idempotencyKey: "ikey-order-second",
+        url: "/api/v1/tasks/second",
+        method: "POST",
+      }),
+    );
 
     mockFetch.mockImplementation((url: string) => {
       sentUrls.push(url as string);
@@ -212,10 +218,7 @@ describe("offline-queue: flush() 7 日経過エントリの自動破棄 (NFR-SW-
 
     // enqueue した後に DB を直接操作するか、テスト専用 API を使う前提
     // ここでは enqueue の overrides に _enqueuedAt を許容する設計を想定する。
-    await enqueue(
-      makeEntry({ idempotencyKey: "ikey-expired" }),
-      { _enqueuedAt: eightDaysAgo },
-    );
+    await enqueue(makeEntry({ idempotencyKey: "ikey-expired" }), { _enqueuedAt: eightDaysAgo });
 
     mockFetch.mockResolvedValue(new Response("{}", { status: 200 }));
 
@@ -238,10 +241,9 @@ describe("offline-queue: flush() 7 日経過エントリの自動破棄 (NFR-SW-
     // Given enqueuedAt を 6 日前に設定したエントリ（まだ有効期限内）
     const sixDaysAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString();
 
-    await enqueue(
-      makeEntry({ idempotencyKey: "ikey-valid-6days", url: "/api/v1/tasks/valid" }),
-      { _enqueuedAt: sixDaysAgo },
-    );
+    await enqueue(makeEntry({ idempotencyKey: "ikey-valid-6days", url: "/api/v1/tasks/valid" }), {
+      _enqueuedAt: sixDaysAgo,
+    });
 
     mockFetch.mockResolvedValue(new Response("{}", { status: 200 }));
 
@@ -256,10 +258,7 @@ describe("offline-queue: flush() 7 日経過エントリの自動破棄 (NFR-SW-
 describe("offline-queue: flush() retryCount 上限 (NFR-SW-03)", () => {
   it("シナリオ: retryCount が 5 のエントリは flush() 時にキューから除外され送信されない", async () => {
     // Given retryCount === 5 のエントリがキューにある
-    await enqueue(
-      makeEntry({ idempotencyKey: "ikey-retry-maxed" }),
-      { _retryCount: 5 },
-    );
+    await enqueue(makeEntry({ idempotencyKey: "ikey-retry-maxed" }), { _retryCount: 5 });
 
     mockFetch.mockResolvedValue(new Response("{}", { status: 200 }));
 
@@ -296,10 +295,7 @@ describe("offline-queue: flush() retryCount 上限 (NFR-SW-03)", () => {
 
   it("シナリオ: retryCount が 4 のエントリが再度失敗すると retryCount が 5 になりキューから除去される", async () => {
     // Given retryCount === 4 のエントリがキューにある
-    await enqueue(
-      makeEntry({ idempotencyKey: "ikey-retry-4" }),
-      { _retryCount: 4 },
-    );
+    await enqueue(makeEntry({ idempotencyKey: "ikey-retry-4" }), { _retryCount: 4 });
 
     // fetch がネットワークエラーを投げるようにモック
     mockFetch.mockRejectedValue(new TypeError("Failed to fetch"));
@@ -321,10 +317,9 @@ describe("offline-queue: flush() 412 Precondition Failed (CR-001)", () => {
 
     // fetch が 412 を返すようにモック
     mockFetch.mockResolvedValue(
-      new Response(
-        JSON.stringify({ message: "Precondition Failed", currentVersion: 5 }),
-        { status: 412 },
-      ),
+      new Response(JSON.stringify({ message: "Precondition Failed", currentVersion: 5 }), {
+        status: 412,
+      }),
     );
 
     // When flush() を呼ぶ
@@ -343,9 +338,7 @@ describe("offline-queue: flush() 412 Precondition Failed (CR-001)", () => {
     );
 
     const serverResponse = { message: "Precondition Failed", id: "t1", version: 10 };
-    mockFetch.mockResolvedValue(
-      new Response(JSON.stringify(serverResponse), { status: 412 }),
-    );
+    mockFetch.mockResolvedValue(new Response(JSON.stringify(serverResponse), { status: 412 }));
 
     // When flush() を呼ぶ
     let caughtError: unknown;

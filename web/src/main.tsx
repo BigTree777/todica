@@ -21,34 +21,34 @@
  *   - LocalResetUsecase.runIfNeeded() を起動時に実行する.
  */
 import "./styles/tokens.css";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-router-dom";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { queryClient } from "./query-client.js";
-import { HttpTaskRepository } from "./repositories/task-repository.js";
-import { HttpSettingsRepository } from "./repositories/settings-repository.js";
-import { HttpTrashRepository } from "./repositories/trash-repository.js";
-import { HttpProjectRepository } from "./repositories/project-repository.js";
-import { HttpRoutineRepository } from "./repositories/routine-repository.js";
-import type { TaskRepository } from "./repositories/task-repository.js";
-import type { SettingsRepository } from "./repositories/settings-repository.js";
-import type { TrashRepository } from "./repositories/trash-repository.js";
-import type { ProjectRepository } from "./repositories/project-repository.js";
-import type { WebRoutineRepository } from "./repositories/routine-repository.js";
-import { TodayView } from "./ui/today-view/today-view.js";
-import { SettingsView } from "./ui/settings-view/settings-view.js";
-import { TrashView } from "./ui/trash-view/trash-view.js";
-import { ProjectsView } from "./ui/projects-view/projects-view.js";
-import { RoutinesView } from "./ui/routines-view/routines-view.js";
-import { SetupView } from "./ui/setup-view/setup-view.js";
-import { AppShell } from "./ui/app-shell/app-shell.js";
-import { FocusView } from "./ui/focus-view/focus-view.js";
-import { TomorrowView } from "./ui/tomorrow-view/tomorrow-view.js";
-import { OfflineBanner } from "./ui/offline-banner/offline-banner.js";
-import { ErrorNotification } from "./ui/error-notification/error-notification.js";
-import { PwaUpdateBanner } from "./ui/pwa-update-banner/pwa-update-banner.js";
 import { useSyncQueue } from "./hooks/use-sync-queue.js";
+import { queryClient } from "./query-client.js";
+import { HttpProjectRepository } from "./repositories/project-repository.js";
+import type { ProjectRepository } from "./repositories/project-repository.js";
+import { HttpRoutineRepository } from "./repositories/routine-repository.js";
+import type { WebRoutineRepository } from "./repositories/routine-repository.js";
+import { HttpSettingsRepository } from "./repositories/settings-repository.js";
+import type { SettingsRepository } from "./repositories/settings-repository.js";
+import { HttpTaskRepository } from "./repositories/task-repository.js";
+import type { TaskRepository } from "./repositories/task-repository.js";
+import { HttpTrashRepository } from "./repositories/trash-repository.js";
+import type { TrashRepository } from "./repositories/trash-repository.js";
+import { AppShell } from "./ui/app-shell/app-shell.js";
+import { ErrorNotification } from "./ui/error-notification/error-notification.js";
+import { FocusView } from "./ui/focus-view/focus-view.js";
+import { OfflineBanner } from "./ui/offline-banner/offline-banner.js";
+import { ProjectsView } from "./ui/projects-view/projects-view.js";
+import { PwaUpdateBanner } from "./ui/pwa-update-banner/pwa-update-banner.js";
+import { RoutinesView } from "./ui/routines-view/routines-view.js";
+import { SettingsView } from "./ui/settings-view/settings-view.js";
+import { SetupView } from "./ui/setup-view/setup-view.js";
+import { TodayView } from "./ui/today-view/today-view.js";
+import { TomorrowView } from "./ui/tomorrow-view/tomorrow-view.js";
+import { TrashView } from "./ui/trash-view/trash-view.js";
 
 interface ViteEnv {
   VITE_API_BASE_URL?: string;
@@ -100,92 +100,118 @@ function App({ config, repos: initialRepos }: AppProps) {
 
   const defaultRoute = config.needsSetup ? "/setup" : "/today";
 
-  const handleSelectLocal = config.isNative ? async () => {
-    try {
-      const { Preferences } = await import("@capacitor/preferences");
-      await Preferences.set({ key: "mode", value: "local" });
-      const { getDb } = await import("./repositories/local-db.js");
-      const { LocalTaskRepository } = await import("./repositories/local-task-repository.js");
-      const { LocalSettingsRepository } = await import("./repositories/local-settings-repository.js");
-      const { LocalTrashRepository } = await import("./repositories/local-trash-repository.js");
-      const { LocalProjectRepository } = await import("./repositories/local-project-repository.js");
-      const { LocalRoutineRepository } = await import("./repositories/local-routine-repository.js");
-      const { LocalResetUsecase } = await import("./usecases/local-reset-usecase.js");
-      const db = await getDb();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const anyDb = db as any;
-      await new LocalResetUsecase(anyDb).runIfNeeded(new Date());
-      setCurrentMode("local");
-      setRepos({
-        task: new LocalTaskRepository(anyDb),
-        settings: new LocalSettingsRepository(anyDb),
-        trash: new LocalTrashRepository(anyDb),
-        project: new LocalProjectRepository(anyDb),
-        routine: new LocalRoutineRepository(anyDb),
-      });
-    } catch {
-      // ローカル DB の初期化に失敗した場合はそのまま
-    }
-    navigate("/today", { replace: true });
-  } : undefined;
+  const handleSelectLocal = config.isNative
+    ? async () => {
+        try {
+          const { Preferences } = await import("@capacitor/preferences");
+          await Preferences.set({ key: "mode", value: "local" });
+          const { getDb } = await import("./repositories/local-db.js");
+          const { LocalTaskRepository } = await import("./repositories/local-task-repository.js");
+          const { LocalSettingsRepository } = await import(
+            "./repositories/local-settings-repository.js"
+          );
+          const { LocalTrashRepository } = await import("./repositories/local-trash-repository.js");
+          const { LocalProjectRepository } = await import(
+            "./repositories/local-project-repository.js"
+          );
+          const { LocalRoutineRepository } = await import(
+            "./repositories/local-routine-repository.js"
+          );
+          const { LocalResetUsecase } = await import("./usecases/local-reset-usecase.js");
+          const db = await getDb();
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const anyDb = db as any;
+          await new LocalResetUsecase(anyDb).runIfNeeded(new Date());
+          setCurrentMode("local");
+          setRepos({
+            task: new LocalTaskRepository(anyDb),
+            settings: new LocalSettingsRepository(anyDb),
+            trash: new LocalTrashRepository(anyDb),
+            project: new LocalProjectRepository(anyDb),
+            routine: new LocalRoutineRepository(anyDb),
+          });
+        } catch {
+          // ローカル DB の初期化に失敗した場合はそのまま
+        }
+        navigate("/today", { replace: true });
+      }
+    : undefined;
 
-  const handleSwitchMode = config.isNative ? async () => {
-    if (currentMode === "local") {
-      // ローカル → サーバ切替: ローカルデータ消去 → mode = 'server' → /setup へ遷移
-      try {
-        const { getDb, resetDbCache } = await import("./repositories/local-db.js");
-        const db = await getDb();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const anyDb = db as any;
-        await anyDb.execute(
-          "DELETE FROM tasks; DELETE FROM projects; DELETE FROM routines; " +
-          "DELETE FROM counter; DELETE FROM settings; DELETE FROM focus_selection;",
-        );
-        resetDbCache();
-      } catch { /* SQLite が利用できない場合はスキップ */ }
-      try {
-        const { Preferences } = await import("@capacitor/preferences");
-        await Preferences.remove({ key: "serverUrl" });
-        await Preferences.remove({ key: "authToken" });
-        await Preferences.set({ key: "mode", value: "server" });
-      } catch { /* Preferences が利用できない場合はスキップ */ }
-      setCurrentMode("server");
-      setRepos(buildHttpRepos("", ""));
-      navigate("/setup", { replace: true });
-    } else {
-      // サーバ → ローカル切替: Preferences 消去 → ローカル DB 初期化 → /today へ遷移
-      try {
-        const { Preferences } = await import("@capacitor/preferences");
-        await Preferences.remove({ key: "serverUrl" });
-        await Preferences.remove({ key: "authToken" });
-        await Preferences.set({ key: "mode", value: "local" });
-      } catch { /* Preferences が利用できない場合はスキップ */ }
-      try {
-        const { resetDbCache } = await import("./repositories/local-db.js");
-        resetDbCache();
-        const { getDb } = await import("./repositories/local-db.js");
-        const { LocalTaskRepository } = await import("./repositories/local-task-repository.js");
-        const { LocalSettingsRepository } = await import("./repositories/local-settings-repository.js");
-        const { LocalTrashRepository } = await import("./repositories/local-trash-repository.js");
-        const { LocalProjectRepository } = await import("./repositories/local-project-repository.js");
-        const { LocalRoutineRepository } = await import("./repositories/local-routine-repository.js");
-        const db = await getDb();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const anyDb = db as any;
-        setCurrentMode("local");
-        setBaseUrl("");
-        setAuthToken("");
-        setRepos({
-          task: new LocalTaskRepository(anyDb),
-          settings: new LocalSettingsRepository(anyDb),
-          trash: new LocalTrashRepository(anyDb),
-          project: new LocalProjectRepository(anyDb),
-          routine: new LocalRoutineRepository(anyDb),
-        });
-      } catch { /* SQLite が利用できない場合はスキップ */ }
-      navigate("/today", { replace: true });
-    }
-  } : undefined;
+  const handleSwitchMode = config.isNative
+    ? async () => {
+        if (currentMode === "local") {
+          // ローカル → サーバ切替: ローカルデータ消去 → mode = 'server' → /setup へ遷移
+          try {
+            const { getDb, resetDbCache } = await import("./repositories/local-db.js");
+            const db = await getDb();
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const anyDb = db as any;
+            await anyDb.execute(
+              "DELETE FROM tasks; DELETE FROM projects; DELETE FROM routines; " +
+                "DELETE FROM counter; DELETE FROM settings; DELETE FROM focus_selection;",
+            );
+            resetDbCache();
+          } catch {
+            /* SQLite が利用できない場合はスキップ */
+          }
+          try {
+            const { Preferences } = await import("@capacitor/preferences");
+            await Preferences.remove({ key: "serverUrl" });
+            await Preferences.remove({ key: "authToken" });
+            await Preferences.set({ key: "mode", value: "server" });
+          } catch {
+            /* Preferences が利用できない場合はスキップ */
+          }
+          setCurrentMode("server");
+          setRepos(buildHttpRepos("", ""));
+          navigate("/setup", { replace: true });
+        } else {
+          // サーバ → ローカル切替: Preferences 消去 → ローカル DB 初期化 → /today へ遷移
+          try {
+            const { Preferences } = await import("@capacitor/preferences");
+            await Preferences.remove({ key: "serverUrl" });
+            await Preferences.remove({ key: "authToken" });
+            await Preferences.set({ key: "mode", value: "local" });
+          } catch {
+            /* Preferences が利用できない場合はスキップ */
+          }
+          try {
+            const { resetDbCache } = await import("./repositories/local-db.js");
+            resetDbCache();
+            const { getDb } = await import("./repositories/local-db.js");
+            const { LocalTaskRepository } = await import("./repositories/local-task-repository.js");
+            const { LocalSettingsRepository } = await import(
+              "./repositories/local-settings-repository.js"
+            );
+            const { LocalTrashRepository } = await import(
+              "./repositories/local-trash-repository.js"
+            );
+            const { LocalProjectRepository } = await import(
+              "./repositories/local-project-repository.js"
+            );
+            const { LocalRoutineRepository } = await import(
+              "./repositories/local-routine-repository.js"
+            );
+            const db = await getDb();
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const anyDb = db as any;
+            setCurrentMode("local");
+            setBaseUrl("");
+            setAuthToken("");
+            setRepos({
+              task: new LocalTaskRepository(anyDb),
+              settings: new LocalSettingsRepository(anyDb),
+              trash: new LocalTrashRepository(anyDb),
+              project: new LocalProjectRepository(anyDb),
+              routine: new LocalRoutineRepository(anyDb),
+            });
+          } catch {
+            /* SQLite が利用できない場合はスキップ */
+          }
+          navigate("/today", { replace: true });
+        }
+      }
+    : undefined;
 
   return (
     <>
@@ -208,7 +234,9 @@ function App({ config, repos: initialRepos }: AppProps) {
                   await Preferences.set({ key: "serverUrl", value: url });
                   await Preferences.set({ key: "authToken", value: token });
                   await Preferences.set({ key: "mode", value: "server" });
-                } catch { /* Preferences が利用できない環境ではスキップ */ }
+                } catch {
+                  /* Preferences が利用できない環境ではスキップ */
+                }
                 setBaseUrl(url);
                 setAuthToken(token);
                 setCurrentMode("server");
@@ -221,9 +249,18 @@ function App({ config, repos: initialRepos }: AppProps) {
         {/* BL-036: 残りのルートは AppShell (左サイドバー + Outlet) 配下にまとめる */}
         <Route element={<AppShell />}>
           <Route path="/" element={<Navigate to={defaultRoute} replace />} />
-          <Route path="/focus" element={<FocusView repository={repos.task} projectRepository={repos.project} />} />
-          <Route path="/today" element={<TodayView repository={repos.task} projectRepository={repos.project} />} />
-          <Route path="/tomorrow" element={<TomorrowView repository={repos.task} projectRepository={repos.project} />} />
+          <Route
+            path="/focus"
+            element={<FocusView repository={repos.task} projectRepository={repos.project} />}
+          />
+          <Route
+            path="/today"
+            element={<TodayView repository={repos.task} projectRepository={repos.project} />}
+          />
+          <Route
+            path="/tomorrow"
+            element={<TomorrowView repository={repos.task} projectRepository={repos.project} />}
+          />
           <Route
             path="/settings"
             element={
@@ -267,10 +304,12 @@ function SetupViewWithNav({ onSave, onSelectLocal }: SetupViewWithNavProps) {
     navigate("/today", { replace: true });
   };
 
-  const handleSelectLocal = onSelectLocal ? async () => {
-    await onSelectLocal();
-    // onSelectLocal 内で navigate("/today") が呼ばれるため、ここでは不要
-  } : undefined;
+  const handleSelectLocal = onSelectLocal
+    ? async () => {
+        await onSelectLocal();
+        // onSelectLocal 内で navigate("/today") が呼ばれるため、ここでは不要
+      }
+    : undefined;
 
   return <SetupView onSave={handleSave} onSelectLocal={handleSelectLocal} />;
 }
@@ -300,7 +339,9 @@ async function init() {
       // BL-020: ローカルモード
       const { getDb } = await import("./repositories/local-db.js");
       const { LocalTaskRepository } = await import("./repositories/local-task-repository.js");
-      const { LocalSettingsRepository } = await import("./repositories/local-settings-repository.js");
+      const { LocalSettingsRepository } = await import(
+        "./repositories/local-settings-repository.js"
+      );
       const { LocalTrashRepository } = await import("./repositories/local-trash-repository.js");
       const { LocalProjectRepository } = await import("./repositories/local-project-repository.js");
       const { LocalRoutineRepository } = await import("./repositories/local-routine-repository.js");

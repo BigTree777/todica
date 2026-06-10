@@ -15,12 +15,12 @@
  */
 import { useCallback } from "react";
 import "./trash-view.css";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { TrashRepository, TrashedTask } from "../../repositories/trash-repository.js";
-import { RestoreConflictError } from "../../repositories/trash-repository.js";
-import { enqueue, dequeue, getAll, mapConflict, ConflictError } from "../../offline-queue.js";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { notifyError } from "../../error-notification.js";
 import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
+import { ConflictError, dequeue, enqueue, getAll, mapConflict } from "../../offline-queue.js";
+import type { TrashRepository, TrashedTask } from "../../repositories/trash-repository.js";
+import { RestoreConflictError } from "../../repositories/trash-repository.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
 
 interface HasBaseUrlAndToken {
@@ -32,8 +32,7 @@ function generateId(): string {
   const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
   if (c?.randomUUID) return c.randomUUID();
   const random = (n: number) => Math.floor(Math.random() * n);
-  const hex = (n: number) =>
-    Array.from({ length: n }, () => random(16).toString(16)).join("");
+  const hex = (n: number) => Array.from({ length: n }, () => random(16).toString(16)).join("");
   return `${hex(8)}-${hex(4)}-4${hex(3)}-8${hex(3)}-${hex(12)}`;
 }
 

@@ -14,11 +14,8 @@
  */
 import { eq } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
-import type {
-  Counter,
-  CounterRepository,
-} from "../../../data/counter-repository.js";
-import { counter, schema } from "../../../db/schema.js";
+import type { Counter, CounterRepository } from "../../../data/counter-repository.js";
+import { counter, type schema } from "../../../db/schema.js";
 
 const SINGLETON_ID = "singleton";
 
@@ -34,11 +31,7 @@ export class DrizzleCounterRepository implements CounterRepository {
   }
 
   async get(): Promise<Counter> {
-    const rows = this.db
-      .select()
-      .from(counter)
-      .where(eq(counter.id, SINGLETON_ID))
-      .all();
+    const rows = this.db.select().from(counter).where(eq(counter.id, SINGLETON_ID)).all();
     const row = rows[0];
     if (row) {
       return {

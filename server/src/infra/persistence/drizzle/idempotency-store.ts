@@ -9,11 +9,8 @@
  */
 import { eq } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
-import type {
-  IdempotencyRecord,
-  IdempotencyStore,
-} from "../../../data/idempotency-store.js";
-import { idempotencyKeys, schema } from "../../../db/schema.js";
+import type { IdempotencyRecord, IdempotencyStore } from "../../../data/idempotency-store.js";
+import { idempotencyKeys, type schema } from "../../../db/schema.js";
 
 export interface DrizzleIdempotencyStoreDeps {
   db: BetterSQLite3Database<typeof schema>;
@@ -27,11 +24,7 @@ export class DrizzleIdempotencyStore implements IdempotencyStore {
   }
 
   async get(key: string): Promise<IdempotencyRecord | null> {
-    const rows = this.db
-      .select()
-      .from(idempotencyKeys)
-      .where(eq(idempotencyKeys.key, key))
-      .all();
+    const rows = this.db.select().from(idempotencyKeys).where(eq(idempotencyKeys.key, key)).all();
     const row = rows[0];
     if (!row) return null;
     return {

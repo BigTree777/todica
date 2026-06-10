@@ -1,3 +1,7 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 /**
  * SetupView コンポーネント 単体テスト (BL-019 / AC-AND-003).
  *
@@ -21,10 +25,6 @@
  * 実装者は `onSave` で実装すること（矛盾があれば project-designer にフィードバック）.
  */
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { ReactNode } from "react";
 import { SetupView } from "./setup-view.js";
 
 // ============================================================
@@ -34,13 +34,11 @@ import { SetupView } from "./setup-view.js";
 function renderWithQueryClient(ui: ReactNode): ReturnType<typeof render> {
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: { retry: false, staleTime: Infinity, networkMode: "offlineFirst" },
+      queries: { retry: false, staleTime: Number.POSITIVE_INFINITY, networkMode: "offlineFirst" },
       mutations: { retry: false, networkMode: "offlineFirst" },
     },
   });
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
-  );
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
 // ============================================================
@@ -68,9 +66,7 @@ describe("SetupView (BL-019 AC-AND-003: SetupView 初回起動)", () => {
     expect(screen.getByLabelText(/認証\s*トークン/)).toBeInTheDocument();
 
     // 「接続する」または「保存」ボタンが存在する
-    expect(
-      screen.getByRole("button", { name: /接続する|保存/ }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /接続する|保存/ })).toBeInTheDocument();
   });
 
   // ----------------------------------------------------------
@@ -78,7 +74,7 @@ describe("SetupView (BL-019 AC-AND-003: SetupView 初回起動)", () => {
   // spec.md §「未決事項 / 確認待ち」:
   //   現時点ではパスワードフィールドを採用する（変更容易）
   // ----------------------------------------------------------
-  it("AC-AND-003: 認証トークン入力欄は type=\"password\" のフィールドである", () => {
+  it('AC-AND-003: 認証トークン入力欄は type="password" のフィールドである', () => {
     const onSave = vi.fn();
     renderWithQueryClient(<SetupView onSave={onSave} />);
 
@@ -128,9 +124,7 @@ describe("SetupView (BL-019 AC-AND-003: SetupView 初回起動)", () => {
       />,
     );
 
-    expect(screen.getByLabelText(/サーバ\s*URL/)).toHaveValue(
-      "https://initial.example.com",
-    );
+    expect(screen.getByLabelText(/サーバ\s*URL/)).toHaveValue("https://initial.example.com");
     expect(screen.getByLabelText(/認証\s*トークン/)).toHaveValue("initial-token");
   });
 
@@ -172,10 +166,7 @@ describe("SetupView (BL-019 AC-AND-003: SetupView 初回起動)", () => {
     renderWithQueryClient(<SetupView onSave={onSave} />);
 
     // 認証トークンは空、サーバ URL だけ入力する
-    await user.type(
-      screen.getByLabelText(/サーバ\s*URL/),
-      "https://example.com",
-    );
+    await user.type(screen.getByLabelText(/サーバ\s*URL/), "https://example.com");
     await user.click(screen.getByRole("button", { name: /接続する|保存/ }));
 
     // エラーメッセージが表示される
@@ -242,9 +233,7 @@ describe("SetupView (BL-020 AC-LOC-002: ローカルモード選択 onSelectLoca
     renderWithQueryClient(<SetupView onSave={onSave} onSelectLocal={onSelectLocal} />);
 
     // 「ローカルモードで使う」ボタンが存在する
-    expect(
-      screen.getByRole("button", { name: /ローカルモード/ }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /ローカルモード/ })).toBeInTheDocument();
   });
 
   // ----------------------------------------------------------

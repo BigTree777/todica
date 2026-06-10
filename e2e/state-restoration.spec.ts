@@ -9,7 +9,7 @@
  * 単体・統合テストでは「ページリロード」というブラウザの全 React state リセット
  * イベントを再現できず, サーバ側 state からの初期化経路が壊れていても検出できない.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { type Page, expect, test } from "@playwright/test";
 
 function taskRow(page: Page, taskName: string) {
   return page.getByText(taskName, { exact: true }).first().locator("..");
@@ -30,10 +30,7 @@ test("リロード後も完了タスクのカウントが復元される", async
 
   // 既存テスト由来の累積を考慮し, before 値を読み取って delta で検証する.
   const beforeText = (await countDisplay.textContent()) ?? "";
-  const beforeCount = Number.parseInt(
-    beforeText.match(/今日の完了:\s*(\d+)/)?.[1] ?? "0",
-    10,
-  );
+  const beforeCount = Number.parseInt(beforeText.match(/今日の完了:\s*(\d+)/)?.[1] ?? "0", 10);
   const expectedAfter = `今日の完了: ${beforeCount + 1}`;
 
   await page.getByLabel("タスク名").fill(taskName);

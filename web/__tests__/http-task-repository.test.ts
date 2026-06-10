@@ -1,3 +1,5 @@
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 /**
  * 単体テスト: HttpTaskRepository (MSW で fetch をモック).
  *
@@ -15,12 +17,7 @@
  * 現状: HttpTaskRepository は全メソッドが throw のスタブ. 全テストが red になる想定.
  */
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { http, HttpResponse } from "msw";
-import { setupServer } from "msw/node";
-import {
-  HttpTaskRepository,
-  OptimisticLockError,
-} from "../src/repositories/task-repository.js";
+import { HttpTaskRepository, OptimisticLockError } from "../src/repositories/task-repository.js";
 
 const BASE_URL = "http://localhost:3000";
 const AUTH_TOKEN = "test-token";
@@ -70,7 +67,10 @@ describe("HttpTaskRepository", () => {
           auth: request.headers.get("Authorization"),
           idemKey: request.headers.get("Idempotency-Key"),
         };
-        return HttpResponse.json({ task: defaultTaskResponse({ id: TASK_ID, name: "牛乳を買う" }) }, { status: 201 });
+        return HttpResponse.json(
+          { task: defaultTaskResponse({ id: TASK_ID, name: "牛乳を買う" }) },
+          { status: 201 },
+        );
       }),
     );
 
@@ -85,9 +85,7 @@ describe("HttpTaskRepository", () => {
     // クライアントの実装が `id` をそのまま Idempotency-Key として使う場合もあるため,
     // TASK_ID または UUID v4 形式の文字列なら通る.
     expect(received!.idemKey).not.toBeNull();
-    expect(
-      received!.idemKey === TASK_ID || UUID_V4.test(received!.idemKey ?? ""),
-    ).toBe(true);
+    expect(received!.idemKey === TASK_ID || UUID_V4.test(received!.idemKey ?? "")).toBe(true);
   });
 
   it("update() は PATCH /api/v1/tasks/{id} に If-Match: <version> を付ける", async () => {

@@ -1,3 +1,4 @@
+import type { Priority } from "@todica/domain/task";
 /**
  * `<PriorityStars />` (BL-040 / priority-star-ui).
  *
@@ -24,7 +25,6 @@
  *   - キーボード操作は `<button>` の標準挙動 (Tab + Enter / Space) のみで満たす (D-006).
  */
 import { useId } from "react";
-import type { Priority } from "@todica/domain/task";
 import "./priority-stars.css";
 
 /** 星の点灯数とドメイン値の対応 (plan §マッピング). */

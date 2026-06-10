@@ -7,11 +7,11 @@
  */
 
 import type {
+  CreateRoutineCommand,
+  DeleteRoutineCommand,
+  UpdateRoutineCommand,
   WebRoutine,
   WebRoutineRepository,
-  CreateRoutineCommand,
-  UpdateRoutineCommand,
-  DeleteRoutineCommand,
 } from "./routine-repository.js";
 
 type Row = Record<string, unknown>;
@@ -97,7 +97,7 @@ export class LocalRoutineRepository implements WebRoutineRepository {
     const newPriority = cmd.defaultPriority ?? (row.default_priority as string);
 
     await this.db.run(
-      `UPDATE routines SET name = ?, generate_on_weekdays = ?, default_priority = ?, updated_at = ?, version = ? WHERE id = ?`,
+      "UPDATE routines SET name = ?, generate_on_weekdays = ?, default_priority = ?, updated_at = ?, version = ? WHERE id = ?",
       [newName, newDays, newPriority, now, newVersion, cmd.id],
     );
 

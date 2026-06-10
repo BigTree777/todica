@@ -1,3 +1,7 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 /**
  * Web クライアント単体テスト: 境界時刻の設定 SettingsView (BL-009 / FR-041 / FR-042).
  * サーバ接続設定セクション追加テスト (BL-019 / AC-AND-005) も含む.
@@ -36,12 +40,8 @@
  *   }
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { ReactNode } from "react";
-import { SettingsView } from "../src/ui/settings-view/settings-view.js";
 import { PatchConflictError } from "../src/repositories/settings-repository.js";
+import { SettingsView } from "../src/ui/settings-view/settings-view.js";
 
 // ============================================================
 // 型定義 (web 側 SettingsRepository — implementer が本ファイルを作成する前の inline 定義)
@@ -71,13 +71,11 @@ interface SettingsRepository {
 function renderWithQueryClient(ui: ReactNode): ReturnType<typeof render> {
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: { retry: false, staleTime: Infinity, networkMode: "offlineFirst" },
+      queries: { retry: false, staleTime: Number.POSITIVE_INFINITY, networkMode: "offlineFirst" },
       mutations: { retry: false, networkMode: "offlineFirst" },
     },
   });
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
-  );
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
 // ============================================================
@@ -134,7 +132,7 @@ describe("SettingsView (BL-009 境界時刻の設定)", () => {
     expect(repo.getSettingsMock).toHaveBeenCalledTimes(1);
   });
 
-  it("シナリオ: SettingsView のフォームで dayBoundaryTime を \"06:00\" に更新できる", async () => {
+  it('シナリオ: SettingsView のフォームで dayBoundaryTime を "06:00" に更新できる', async () => {
     // spec.md §「Web クライアント SettingsView」第 2 ケース.
     // Given SettingsView が開かれており dayBoundaryTime = "04:00" が表示されている
     // When  ユーザーがフォームに "06:00" を入力して保存操作をする
@@ -168,7 +166,7 @@ describe("SettingsView (BL-009 境界時刻の設定)", () => {
     expect(repo.getSettingsMock).toHaveBeenCalledTimes(2);
   });
 
-  it("シナリオ: バリデーション違反の \"25:00\" を入力して保存するとエラーメッセージが表示される", async () => {
+  it('シナリオ: バリデーション違反の "25:00" を入力して保存するとエラーメッセージが表示される', async () => {
     // spec.md §「Web クライアント SettingsView」第 3 ケース.
     // Given SettingsView が開かれている
     // When  ユーザーがフォームに "25:00" を入力して保存操作をする
@@ -210,9 +208,7 @@ describe("SettingsView (BL-009 境界時刻の設定)", () => {
     const user = userEvent.setup();
 
     // patchSettings が PatchConflictError をスロー (版不一致). サーバ側の最新値を含む.
-    repo.patchSettingsMock.mockRejectedValueOnce(
-      new PatchConflictError(serverCurrentSettings),
-    );
+    repo.patchSettingsMock.mockRejectedValueOnce(new PatchConflictError(serverCurrentSettings));
 
     renderWithQueryClient(<SettingsView repository={repo} />);
 
@@ -334,10 +330,7 @@ describe("SettingsView サーバ接続設定セクション (BL-019 AC-AND-005)"
 
     // onSaveServer が新しい値で呼ばれる
     expect(onSaveServer).toHaveBeenCalledTimes(1);
-    expect(onSaveServer).toHaveBeenCalledWith(
-      "https://new.example.com",
-      "new-token",
-    );
+    expect(onSaveServer).toHaveBeenCalledWith("https://new.example.com", "new-token");
   });
 
   // ----------------------------------------------------------
@@ -392,11 +385,7 @@ describe("SettingsView モード切替セクション (BL-020 AC-LOC-005)", () =
     const onSwitchMode = vi.fn();
 
     renderWithQueryClient(
-      <SettingsView
-        repository={repo}
-        currentMode="local"
-        onSwitchMode={onSwitchMode}
-      />,
+      <SettingsView repository={repo} currentMode="local" onSwitchMode={onSwitchMode} />,
     );
 
     // 「ローカルモード」というテキストが表示される
@@ -416,11 +405,7 @@ describe("SettingsView モード切替セクション (BL-020 AC-LOC-005)", () =
     const onSwitchMode = vi.fn();
 
     renderWithQueryClient(
-      <SettingsView
-        repository={repo}
-        currentMode="server"
-        onSwitchMode={onSwitchMode}
-      />,
+      <SettingsView repository={repo} currentMode="server" onSwitchMode={onSwitchMode} />,
     );
 
     // 「サーバモードへ切り替える」ボタンは currentMode='local' のとき
@@ -449,11 +434,7 @@ describe("SettingsView モード切替セクション (BL-020 AC-LOC-005)", () =
     vi.spyOn(window, "confirm").mockReturnValue(true);
 
     renderWithQueryClient(
-      <SettingsView
-        repository={repo}
-        currentMode="local"
-        onSwitchMode={onSwitchMode}
-      />,
+      <SettingsView repository={repo} currentMode="local" onSwitchMode={onSwitchMode} />,
     );
 
     // 切替ボタンをクリック

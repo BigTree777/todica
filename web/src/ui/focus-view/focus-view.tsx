@@ -1,3 +1,5 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { Task } from "@todica/domain/task";
 /**
  * 「現在のタスク」独立ビュー (BL-037 / focus-view).
  *
@@ -23,8 +25,10 @@
  *   - offline → 書込キューに enqueue し楽観成功 (BL-018).
  */
 import { useCallback } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Task } from "@todica/domain/task";
+import { notifyError } from "../../error-notification.js";
+import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
+import { ConflictError, dequeue, enqueue, findEntryByKey, getAll } from "../../offline-queue.js";
+import type { Project, ProjectRepository } from "../../repositories/project-repository.js";
 import type {
   CompleteTaskCommand,
   DeleteTaskCommand,
@@ -32,19 +36,6 @@ import type {
   TaskRepository,
 } from "../../repositories/task-repository.js";
 import { OptimisticLockError } from "../../repositories/task-repository.js";
-import type {
-  Project,
-  ProjectRepository,
-} from "../../repositories/project-repository.js";
-import {
-  enqueue,
-  dequeue,
-  getAll,
-  findEntryByKey,
-  ConflictError,
-} from "../../offline-queue.js";
-import { notifyError } from "../../error-notification.js";
-import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
 import "./focus-view.css";
 
@@ -58,8 +49,7 @@ function generateId(): string {
   const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
   if (c?.randomUUID) return c.randomUUID();
   const random = (n: number) => Math.floor(Math.random() * n);
-  const hex = (n: number) =>
-    Array.from({ length: n }, () => random(16).toString(16)).join("");
+  const hex = (n: number) => Array.from({ length: n }, () => random(16).toString(16)).join("");
   return `${hex(8)}-${hex(4)}-4${hex(3)}-8${hex(3)}-${hex(12)}`;
 }
 
@@ -97,10 +87,10 @@ export function FocusView(props: FocusViewProps): JSX.Element {
   // D-002: 暗黙フォールバック.
   const focusedId: string | null = focusData?.currentTaskId ?? nextTaskId;
   const focusedTask: Task | null = focusedId
-    ? tasks.find((t) => t.id === focusedId) ?? null
+    ? (tasks.find((t) => t.id === focusedId) ?? null)
     : null;
   const project: Project | null = focusedTask?.projectId
-    ? (projectsData ?? []).find((p) => p.id === focusedTask.projectId) ?? null
+    ? ((projectsData ?? []).find((p) => p.id === focusedTask.projectId) ?? null)
     : null;
 
   /** mutation 成功時に today / focus を再フェッチ. */
@@ -240,9 +230,7 @@ export function FocusView(props: FocusViewProps): JSX.Element {
       <div className="focus-view__card">
         {focusedTask ? (
           <>
-            {project && (
-              <span className="focus-view__project">{project.name}</span>
-            )}
+            {project && <span className="focus-view__project">{project.name}</span>}
             <div className="focus-view__name">{focusedTask.name}</div>
             <div className="focus-view__actions">
               <button type="button" onClick={handleDelete}>

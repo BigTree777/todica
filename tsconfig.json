@@ -1,8 +1,4 @@
 {
   "files": [],
-  "references": [
-    { "path": "./domain" },
-    { "path": "./server" },
-    { "path": "./web" }
-  ]
+  "references": [{ "path": "./domain" }, { "path": "./server" }, { "path": "./web" }]
 }

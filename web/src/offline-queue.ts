@@ -106,9 +106,7 @@ export async function dequeue(id: number): Promise<void> {
 export async function getAll(): Promise<QueueEntry[]> {
   const db = await getDB();
   const all = await db.getAll(STORE_NAME);
-  return (all as QueueEntry[]).sort((a, b) =>
-    a.enqueuedAt.localeCompare(b.enqueuedAt),
-  );
+  return (all as QueueEntry[]).sort((a, b) => a.enqueuedAt.localeCompare(b.enqueuedAt));
 }
 
 /**
@@ -119,9 +117,7 @@ export async function getAll(): Promise<QueueEntry[]> {
  * Mutation 側で safeEnqueue した直後の key で本関数を呼ぶことで, その entry を
  * 取得して `new ConflictError(entry, serverValue)` に橋渡しできる.
  */
-export async function findEntryByKey(
-  idempotencyKey: string,
-): Promise<QueueEntry | undefined> {
+export async function findEntryByKey(idempotencyKey: string): Promise<QueueEntry | undefined> {
   const entries = await getAll();
   return entries.find((e) => e.idempotencyKey === idempotencyKey);
 }

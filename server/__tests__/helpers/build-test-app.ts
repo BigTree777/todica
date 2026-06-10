@@ -20,9 +20,11 @@ import {
 export const TEST_AUTH_TOKEN = "test-token";
 export const TEST_INITIAL_TIME = "2026-06-07T09:00:00.000Z";
 
-export function buildTestApp(options: {
-  initialTime?: string;
-} = {}) {
+export function buildTestApp(
+  options: {
+    initialTime?: string;
+  } = {},
+) {
   const taskRepository = new InMemoryTaskRepository();
   const projectRepository = new InMemoryProjectRepository();
   const idempotencyStore = new InMemoryIdempotencyStore();

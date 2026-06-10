@@ -396,24 +396,17 @@
       "indexes": {
         "tasks_due_date_priority_idx": {
           "name": "tasks_due_date_priority_idx",
-          "columns": [
-            "due_date",
-            "priority"
-          ],
+          "columns": ["due_date", "priority"],
           "isUnique": false
         },
         "tasks_project_id_idx": {
           "name": "tasks_project_id_idx",
-          "columns": [
-            "project_id"
-          ],
+          "columns": ["project_id"],
           "isUnique": false
         },
         "tasks_trashed_at_idx": {
           "name": "tasks_trashed_at_idx",
-          "columns": [
-            "trashed_at"
-          ],
+          "columns": ["trashed_at"],
           "isUnique": false
         }
       },

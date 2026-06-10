@@ -23,10 +23,7 @@ function navLinkClass({ isActive }: { isActive: boolean }): string {
 export function AppShell(): JSX.Element {
   return (
     <div className="app-shell">
-      <nav
-        className="app-shell__sidebar"
-        aria-label="サイドバーナビゲーション"
-      >
+      <nav className="app-shell__sidebar" aria-label="サイドバーナビゲーション">
         {/* プライマリナビ (REQ-2): 現在のタスク / 今日のタスク / 明日のタスク */}
         <ul className="app-shell__nav-primary">
           <li>

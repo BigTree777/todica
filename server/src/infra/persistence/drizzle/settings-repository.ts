@@ -13,11 +13,8 @@
  */
 import { eq } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
-import type {
-  Settings,
-  SettingsRepository,
-} from "../../../data/settings-repository.js";
-import { settings, schema } from "../../../db/schema.js";
+import type { Settings, SettingsRepository } from "../../../data/settings-repository.js";
+import { type schema, settings } from "../../../db/schema.js";
 
 const SINGLETON_ID = "singleton";
 
@@ -33,11 +30,7 @@ export class DrizzleSettingsRepository implements SettingsRepository {
   }
 
   async get(): Promise<Settings> {
-    const rows = this.db
-      .select()
-      .from(settings)
-      .where(eq(settings.id, SINGLETON_ID))
-      .all();
+    const rows = this.db.select().from(settings).where(eq(settings.id, SINGLETON_ID)).all();
     const row = rows[0];
     if (row) {
       return {

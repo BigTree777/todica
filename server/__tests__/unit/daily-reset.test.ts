@@ -15,10 +15,7 @@
 import { describe, expect, it } from "vitest";
 // NOTE: このファイルは実装前のため、以下の import はコンパイルエラーになる（red）。
 // implementer が server/src/use-cases/daily-reset.ts を作成することで解消される。
-import {
-  calcTodayBoundaryAt,
-  needsDailyReset,
-} from "../../src/use-cases/daily-reset.js";
+import { calcTodayBoundaryAt, needsDailyReset } from "../../src/use-cases/daily-reset.js";
 
 // ============================================================
 // calcTodayBoundaryAt
@@ -52,7 +49,7 @@ describe("calcTodayBoundaryAt (plan.md D-001)", () => {
     expect(result).toBe("2026-06-08T04:00:00.000Z");
   });
 
-  it("dayBoundaryTime = \"00:00\" の場合: 当日 00:00:00.000Z を返す", () => {
+  it('dayBoundaryTime = "00:00" の場合: 当日 00:00:00.000Z を返す', () => {
     // Given: clock.now() = "2026-06-08T23:59:00.000Z", dayBoundaryTime = "00:00"
     // When:  calcTodayBoundaryAt を呼ぶ
     // Then:  "2026-06-08T00:00:00.000Z" が返る

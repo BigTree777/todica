@@ -9,10 +9,7 @@
  *   現状の方針はトースト的な短時間表示 (5 秒) で auto-dismiss. user の操作を
  *   ブロックしない. ConflictDialog はモーダルなので別経路.
  */
-import {
-  dismissError,
-  useErrorNotification,
-} from "../../error-notification.js";
+import { dismissError, useErrorNotification } from "../../error-notification.js";
 
 export function ErrorNotification(): JSX.Element | null {
   const message = useErrorNotification();

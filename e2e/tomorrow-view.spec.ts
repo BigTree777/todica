@@ -16,7 +16,7 @@
  *   - 既存テストとの分離のため, タスク名は `Date.now()` suffix を含めて衝突しないようにする.
  *   - サーバ初期状態には既存テストの残骸が含まれうるため, テスト由来のタスク名のみで assert する.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { type Page, expect, test } from "@playwright/test";
 
 const API_BASE = "http://localhost:3000";
 const AUTH_HEADER = { Authorization: "Bearer dev-token" };
@@ -45,15 +45,11 @@ function todayHeading(page: Page) {
 }
 
 test.describe("tomorrow-view (/tomorrow) のシナリオ", () => {
-  test("シナリオ P (REQ-2): /tomorrow で起票したタスクが一覧に出る", async ({
-    page,
-  }) => {
+  test("シナリオ P (REQ-2): /tomorrow で起票したタスクが一覧に出る", async ({ page }) => {
     await gotoTomorrowViaSidebar(page);
 
     // 見出し <h1>明日のタスク</h1> が描画されている (placeholder と新実装で共通の文言).
-    await expect(
-      page.getByRole("heading", { name: "明日のタスク", level: 1 }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "明日のタスク", level: 1 })).toBeVisible();
 
     // 起票フォームの入力欄 (タスク名) があり, 期限 UI は無い (REQ-2).
     const taskName = `TOMORROW起票 ${Date.now()}`;
@@ -66,9 +62,7 @@ test.describe("tomorrow-view (/tomorrow) のシナリオ", () => {
     await page.getByRole("button", { name: /追加|起票|登録|送信/ }).click();
 
     // 起票したタスク名が tomorrow-view 内に表示される.
-    await expect(
-      tomorrowRegion(page).getByText(taskName, { exact: true }),
-    ).toBeVisible();
+    await expect(tomorrowRegion(page).getByText(taskName, { exact: true })).toBeVisible();
   });
 
   test("シナリオ Q (REQ-4): 「今日にする」で /tomorrow から消えて /today に現れる", async ({
@@ -86,20 +80,14 @@ test.describe("tomorrow-view (/tomorrow) のシナリオ", () => {
     await gotoTomorrowViaSidebar(page);
 
     // /tomorrow に表示されていることを確認.
-    await expect(
-      tomorrowRegion(page).getByText(taskName, { exact: true }),
-    ).toBeVisible();
+    await expect(tomorrowRegion(page).getByText(taskName, { exact: true })).toBeVisible();
 
     // 該当タスク行内の「今日にする」をクリック.
-    const taskRow = tomorrowRegion(page)
-      .getByRole("listitem")
-      .filter({ hasText: taskName });
+    const taskRow = tomorrowRegion(page).getByRole("listitem").filter({ hasText: taskName });
     await taskRow.getByRole("button", { name: /今日にする/ }).click();
 
     // /tomorrow から消える.
-    await expect(
-      tomorrowRegion(page).getByText(taskName, { exact: true }),
-    ).toHaveCount(0);
+    await expect(tomorrowRegion(page).getByText(taskName, { exact: true })).toHaveCount(0);
 
     // サイドバーから /today に遷移する.
     await page
@@ -113,10 +101,9 @@ test.describe("tomorrow-view (/tomorrow) のシナリオ", () => {
     await expect(page.getByText(taskName, { exact: true })).toBeVisible();
 
     // サーバ side: dueDate=today になっている (= サーバ側で正しく移送されている).
-    const after = await request.get(
-      `${API_BASE}/api/v1/tasks?dueDate=today`,
-      { headers: AUTH_HEADER },
-    );
+    const after = await request.get(`${API_BASE}/api/v1/tasks?dueDate=today`, {
+      headers: AUTH_HEADER,
+    });
     const afterBody = (await after.json()) as {
       tasks: Array<{ id: string; dueDate: string }>;
     };
@@ -140,26 +127,19 @@ test.describe("tomorrow-view (/tomorrow) のシナリオ", () => {
     await gotoTomorrowViaSidebar(page);
 
     // 表示されていることを確認.
-    await expect(
-      tomorrowRegion(page).getByText(taskName, { exact: true }),
-    ).toBeVisible();
+    await expect(tomorrowRegion(page).getByText(taskName, { exact: true })).toBeVisible();
 
     // 「削除」をクリック.
-    const taskRow = tomorrowRegion(page)
-      .getByRole("listitem")
-      .filter({ hasText: taskName });
+    const taskRow = tomorrowRegion(page).getByRole("listitem").filter({ hasText: taskName });
     await taskRow.getByRole("button", { name: /削除/ }).click();
 
     // /tomorrow から消える.
-    await expect(
-      tomorrowRegion(page).getByText(taskName, { exact: true }),
-    ).toHaveCount(0);
+    await expect(tomorrowRegion(page).getByText(taskName, { exact: true })).toHaveCount(0);
 
     // サーバ side: trashedReason = "deleted" でゴミ箱送りされている.
-    const trashed = await request.get(
-      `${API_BASE}/api/v1/tasks?trashed=true`,
-      { headers: AUTH_HEADER },
-    );
+    const trashed = await request.get(`${API_BASE}/api/v1/tasks?trashed=true`, {
+      headers: AUTH_HEADER,
+    });
     const trashedBody = (await trashed.json()) as {
       tasks: Array<{ id: string; trashedReason: string | null }>;
     };

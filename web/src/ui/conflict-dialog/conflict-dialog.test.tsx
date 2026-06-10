@@ -1,3 +1,5 @@
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 /**
  * フェーズ E: ConflictDialog コンポーネントの単体テスト
  *
@@ -18,9 +20,7 @@
  * NOTE: `conflict-dialog.tsx` はまだ存在しない。このテストは意図的に失敗する (red)。
  *       implementer が `web/src/ui/conflict-dialog/conflict-dialog.tsx` を実装することで green 化する。
  */
-import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 import { ConflictDialog } from "./conflict-dialog.js";
 
 /** テスト用のサーバ値サンプル */
@@ -110,7 +110,9 @@ describe("ConflictDialog (フェーズ E: 競合解決 UI)", () => {
     );
 
     // Then 「クライアントの値で再送」ボタンが存在する
-    const retryButton = screen.getByRole("button", { name: /クライアント.*再送|クライアントの値で再送/ });
+    const retryButton = screen.getByRole("button", {
+      name: /クライアント.*再送|クライアントの値で再送/,
+    });
     expect(retryButton).toBeInTheDocument();
   });
 
@@ -157,7 +159,9 @@ describe("ConflictDialog (フェーズ E: 競合解決 UI)", () => {
     );
 
     // When 「クライアントの値で再送」を選択する
-    const retryButton = screen.getByRole("button", { name: /クライアント.*再送|クライアントの値で再送/ });
+    const retryButton = screen.getByRole("button", {
+      name: /クライアント.*再送|クライアントの値で再送/,
+    });
     await user.click(retryButton);
 
     // Then onRetryWithServer が呼ばれる

@@ -21,7 +21,7 @@
  *     衝突を避ける.
  *   - サーバ初期状態には他テストの残骸が含まれうるため, テスト由来の名前でのみ assert する.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { type Page, expect, test } from "@playwright/test";
 
 /** タスク名から「カード行」相当を取り出す helper. projects.spec.ts と同じ流儀. */
 function taskRow(page: Page, taskName: string) {
@@ -44,7 +44,7 @@ function projectToggleButton(page: Page) {
 }
 
 test.describe("BL-041 プロジェクトトグル UI (今日ビュー)", () => {
-  test("シナリオ AC-1: 起票フォームにプロジェクトトグル button が存在し, 旧 <select id=\"task-project\"> は存在しない", async ({
+  test('シナリオ AC-1: 起票フォームにプロジェクトトグル button が存在し, 旧 <select id="task-project"> は存在しない', async ({
     page,
   }) => {
     await page.goto("/today");
@@ -102,7 +102,10 @@ test.describe("BL-041 プロジェクトトグル UI (今日ビュー)", () => {
       }
       await toggle.click();
     }
-    expect(reached, `トグルを ${maxIterations} 回クリックしても "${projectName}" に到達しなかった`).toBe(true);
+    expect(
+      reached,
+      `トグルを ${maxIterations} 回クリックしても "${projectName}" に到達しなかった`,
+    ).toBe(true);
 
     // トグルが目的プロジェクトを指している状態で「追加」.
     await expect(toggle).toContainText(projectName);
@@ -167,7 +170,10 @@ test.describe("BL-041 プロジェクトトグル UI (明日ビュー)", () => {
       }
       await toggle.click();
     }
-    expect(reached, `トグルを ${maxIterations} 回クリックしても "${projectName}" に到達しなかった`).toBe(true);
+    expect(
+      reached,
+      `トグルを ${maxIterations} 回クリックしても "${projectName}" に到達しなかった`,
+    ).toBe(true);
 
     await expect(toggle).toContainText(projectName);
     await page.getByRole("button", { name: "追加", exact: true }).click();

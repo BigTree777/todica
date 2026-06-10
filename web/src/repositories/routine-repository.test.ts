@@ -1,3 +1,5 @@
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 /**
  * 単体テスト: HttpRoutineRepository (BL-017 / routine).
  *
@@ -17,8 +19,6 @@
  * HTTP スタブ: 既存パターン（project-repository.test.ts）に合わせ msw を使用する。
  */
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { http, HttpResponse } from "msw";
-import { setupServer } from "msw/node";
 import { HttpRoutineRepository } from "./routine-repository.js";
 import type { WebRoutine } from "./routine-repository.js";
 

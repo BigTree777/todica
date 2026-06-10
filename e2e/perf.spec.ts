@@ -38,7 +38,5 @@ test("1000 件タスク投入下で /today が 1 秒以内に返る", async ({ r
   expect(elapsed).toBeLessThan(1000);
 
   // 観測値を log で残す (CI で degradation 監視に使えるよう).
-  console.log(
-    `[perf] /today returned ${body.tasks.length} tasks in ${elapsed} ms`,
-  );
+  console.log(`[perf] /today returned ${body.tasks.length} tasks in ${elapsed} ms`);
 });

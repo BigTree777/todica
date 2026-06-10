@@ -10,9 +10,9 @@
  * テストが通る == 各ドキュメントが仕様を満たした状態で作成されている。
  */
 
-import { describe, it, expect } from "vitest";
-import { readFileSync, existsSync } from "fs";
-import { resolve } from "path";
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { describe, expect, it } from "vitest";
 
 const repoRoot = resolve(__dirname, "../..");
 
@@ -27,14 +27,14 @@ describe("v1.0.0 安定化 (BL-024)", () => {
 
   it("docs/developer/features/v1-stabilization/coverage-audit.md が存在する", () => {
     expect(
-      existsSync(resolve(repoRoot, "docs/developer/features/v1-stabilization/coverage-audit.md"))
+      existsSync(resolve(repoRoot, "docs/developer/features/v1-stabilization/coverage-audit.md")),
     ).toBe(true);
   });
 
   it("coverage-audit.md に「FR-001」が含まれる（FR-001〜FR-070 の記録）", () => {
     const content = readFileSync(
       resolve(repoRoot, "docs/developer/features/v1-stabilization/coverage-audit.md"),
-      "utf-8"
+      "utf-8",
     );
     expect(content).toContain("FR-001");
   });
@@ -42,7 +42,7 @@ describe("v1.0.0 安定化 (BL-024)", () => {
   it("coverage-audit.md に「FR-070」が含まれる（最後の FR まで記録）", () => {
     const content = readFileSync(
       resolve(repoRoot, "docs/developer/features/v1-stabilization/coverage-audit.md"),
-      "utf-8"
+      "utf-8",
     );
     expect(content).toContain("FR-070");
   });
@@ -50,7 +50,7 @@ describe("v1.0.0 安定化 (BL-024)", () => {
   it("coverage-audit.md に「NFR-001」が含まれる（NFR-001〜NFR-050 の記録）", () => {
     const content = readFileSync(
       resolve(repoRoot, "docs/developer/features/v1-stabilization/coverage-audit.md"),
-      "utf-8"
+      "utf-8",
     );
     expect(content).toContain("NFR-001");
   });
@@ -58,7 +58,7 @@ describe("v1.0.0 安定化 (BL-024)", () => {
   it("coverage-audit.md に「NFR-050」が含まれる（最後の NFR まで記録）", () => {
     const content = readFileSync(
       resolve(repoRoot, "docs/developer/features/v1-stabilization/coverage-audit.md"),
-      "utf-8"
+      "utf-8",
     );
     expect(content).toContain("NFR-050");
   });
@@ -66,7 +66,7 @@ describe("v1.0.0 安定化 (BL-024)", () => {
   it("coverage-audit.md に「非適合」の文字列が含まれない（全件適合 or 対象外のみ）", () => {
     const content = readFileSync(
       resolve(repoRoot, "docs/developer/features/v1-stabilization/coverage-audit.md"),
-      "utf-8"
+      "utf-8",
     );
     expect(content).not.toContain("非適合");
   });
@@ -74,7 +74,7 @@ describe("v1.0.0 安定化 (BL-024)", () => {
   it("coverage-audit.md に FR が 31 件以上記録されている", () => {
     const content = readFileSync(
       resolve(repoRoot, "docs/developer/features/v1-stabilization/coverage-audit.md"),
-      "utf-8"
+      "utf-8",
     );
     const frRows = content.split("\n").filter((line) => /\|\s*FR-\d+/.test(line));
     expect(frRows.length).toBeGreaterThanOrEqual(31);
@@ -83,7 +83,7 @@ describe("v1.0.0 安定化 (BL-024)", () => {
   it("coverage-audit.md に NFR が 12 件以上記録されている", () => {
     const content = readFileSync(
       resolve(repoRoot, "docs/developer/features/v1-stabilization/coverage-audit.md"),
-      "utf-8"
+      "utf-8",
     );
     const nfrRows = content.split("\n").filter((line) => /\|\s*NFR-\d+/.test(line));
     expect(nfrRows.length).toBeGreaterThanOrEqual(12);
@@ -99,7 +99,7 @@ describe("v1.0.0 安定化 (BL-024)", () => {
   it("coverage-audit.md に「BL-001」が含まれる（BL-001〜023 全件の記録）", () => {
     const content = readFileSync(
       resolve(repoRoot, "docs/developer/features/v1-stabilization/coverage-audit.md"),
-      "utf-8"
+      "utf-8",
     );
     expect(content).toContain("BL-001");
   });
@@ -107,7 +107,7 @@ describe("v1.0.0 安定化 (BL-024)", () => {
   it("coverage-audit.md に「BL-023」が含まれる（BL-001〜023 全件の記録）", () => {
     const content = readFileSync(
       resolve(repoRoot, "docs/developer/features/v1-stabilization/coverage-audit.md"),
-      "utf-8"
+      "utf-8",
     );
     expect(content).toContain("BL-023");
   });
@@ -115,7 +115,7 @@ describe("v1.0.0 安定化 (BL-024)", () => {
   it("coverage-audit.md に「Done」が含まれる（全件 Done の記録）", () => {
     const content = readFileSync(
       resolve(repoRoot, "docs/developer/features/v1-stabilization/coverage-audit.md"),
-      "utf-8"
+      "utf-8",
     );
     expect(content).toContain("Done");
   });
@@ -123,7 +123,7 @@ describe("v1.0.0 安定化 (BL-024)", () => {
   it("coverage-audit.md の BL-024 行が Done になっていない（Doing または Todo として記録）", () => {
     const content = readFileSync(
       resolve(repoRoot, "docs/developer/features/v1-stabilization/coverage-audit.md"),
-      "utf-8"
+      "utf-8",
     );
     // BL-024 の行を抽出して Done でないことを確認
     const bl024Line = content.split("\n").find((line) => line.includes("BL-024"));
@@ -140,14 +140,14 @@ describe("v1.0.0 安定化 (BL-024)", () => {
 
   it("docs/developer/features/v1-stabilization/test-results.md が存在する", () => {
     expect(
-      existsSync(resolve(repoRoot, "docs/developer/features/v1-stabilization/test-results.md"))
+      existsSync(resolve(repoRoot, "docs/developer/features/v1-stabilization/test-results.md")),
     ).toBe(true);
   });
 
   it("test-results.md に 531 以上のテスト件数が含まれる", () => {
     const content = readFileSync(
       resolve(repoRoot, "docs/developer/features/v1-stabilization/test-results.md"),
-      "utf-8"
+      "utf-8",
     );
     // 531 以上の数値が含まれることを確認する
     expect(content).toMatch(/53[1-9]|5[4-9]\d|[6-9]\d{2}|\d{4}/);
@@ -156,7 +156,7 @@ describe("v1.0.0 安定化 (BL-024)", () => {
   it("test-results.md に失敗件数 0 件の記録が含まれる", () => {
     const content = readFileSync(
       resolve(repoRoot, "docs/developer/features/v1-stabilization/test-results.md"),
-      "utf-8"
+      "utf-8",
     );
     expect(content).toMatch(/失敗件数.*0|0.*失敗/);
   });
@@ -164,7 +164,7 @@ describe("v1.0.0 安定化 (BL-024)", () => {
   it("test-results.md に実行日時（2026 年）が含まれる", () => {
     const content = readFileSync(
       resolve(repoRoot, "docs/developer/features/v1-stabilization/test-results.md"),
-      "utf-8"
+      "utf-8",
     );
     expect(content).toContain("2026");
   });
@@ -178,15 +178,15 @@ describe("v1.0.0 安定化 (BL-024)", () => {
   it("docs/developer/features/v1-stabilization/release-checklist.md が存在する", () => {
     expect(
       existsSync(
-        resolve(repoRoot, "docs/developer/features/v1-stabilization/release-checklist.md")
-      )
+        resolve(repoRoot, "docs/developer/features/v1-stabilization/release-checklist.md"),
+      ),
     ).toBe(true);
   });
 
   it("release-checklist.md の README がチェック済み（- [x]）として記録されている", () => {
     const content = readFileSync(
       resolve(repoRoot, "docs/developer/features/v1-stabilization/release-checklist.md"),
-      "utf-8"
+      "utf-8",
     );
     expect(content).toMatch(/\[x\].*README|README.*\[x\]/);
   });
@@ -194,7 +194,7 @@ describe("v1.0.0 安定化 (BL-024)", () => {
   it("release-checklist.md の LICENSE がチェック済み（- [x]）として記録されている", () => {
     const content = readFileSync(
       resolve(repoRoot, "docs/developer/features/v1-stabilization/release-checklist.md"),
-      "utf-8"
+      "utf-8",
     );
     expect(content).toMatch(/\[x\].*LICENSE|LICENSE.*\[x\]/);
   });
@@ -202,7 +202,7 @@ describe("v1.0.0 安定化 (BL-024)", () => {
   it("release-checklist.md の CONTRIBUTING がチェック済み（- [x]）として記録されている", () => {
     const content = readFileSync(
       resolve(repoRoot, "docs/developer/features/v1-stabilization/release-checklist.md"),
-      "utf-8"
+      "utf-8",
     );
     expect(content).toMatch(/\[x\].*CONTRIBUTING|CONTRIBUTING.*\[x\]/);
   });
@@ -217,7 +217,7 @@ describe("v1.0.0 安定化 (BL-024)", () => {
   it("release-checklist.md に「ドッグフーディング」が含まれる", () => {
     const content = readFileSync(
       resolve(repoRoot, "docs/developer/features/v1-stabilization/release-checklist.md"),
-      "utf-8"
+      "utf-8",
     );
     expect(content).toContain("ドッグフーディング");
   });
@@ -225,7 +225,7 @@ describe("v1.0.0 安定化 (BL-024)", () => {
   it("release-checklist.md に「- [ ]」形式のチェックボックスが含まれる", () => {
     const content = readFileSync(
       resolve(repoRoot, "docs/developer/features/v1-stabilization/release-checklist.md"),
-      "utf-8"
+      "utf-8",
     );
     expect(content).toContain("- [ ]");
   });
@@ -239,7 +239,7 @@ describe("v1.0.0 安定化 (BL-024)", () => {
   it("release-checklist.md に「リリースゲート」が含まれる", () => {
     const content = readFileSync(
       resolve(repoRoot, "docs/developer/features/v1-stabilization/release-checklist.md"),
-      "utf-8"
+      "utf-8",
     );
     expect(content).toContain("リリースゲート");
   });
@@ -247,7 +247,7 @@ describe("v1.0.0 安定化 (BL-024)", () => {
   it("release-checklist.md に「v1.0.0」が含まれる", () => {
     const content = readFileSync(
       resolve(repoRoot, "docs/developer/features/v1-stabilization/release-checklist.md"),
-      "utf-8"
+      "utf-8",
     );
     expect(content).toContain("v1.0.0");
   });
@@ -255,7 +255,7 @@ describe("v1.0.0 安定化 (BL-024)", () => {
   it("release-checklist.md に「auditor」または「承認」が含まれる", () => {
     const content = readFileSync(
       resolve(repoRoot, "docs/developer/features/v1-stabilization/release-checklist.md"),
-      "utf-8"
+      "utf-8",
     );
     expect(content).toMatch(/auditor|承認/);
   });
@@ -263,7 +263,7 @@ describe("v1.0.0 安定化 (BL-024)", () => {
   it("release-checklist.md のリリースゲートに「全テスト green」または「失敗件数 0」に相当する文言がある", () => {
     const content = readFileSync(
       resolve(repoRoot, "docs/developer/features/v1-stabilization/release-checklist.md"),
-      "utf-8"
+      "utf-8",
     );
     expect(content).toMatch(/全テスト.*green|green.*全テスト|失敗件数.*0|0.*失敗/);
   });

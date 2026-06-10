@@ -32,10 +32,7 @@ export function PwaUpdateBanner(): JSX.Element | null {
         if (!newWorker) return;
 
         newWorker.addEventListener("statechange", () => {
-          if (
-            newWorker.state === "installed" &&
-            navigator.serviceWorker.controller
-          ) {
+          if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
             setWaitingWorker(newWorker);
             setShowUpdateBanner(true);
           }

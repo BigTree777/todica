@@ -6,11 +6,11 @@
  */
 import type { Clock } from "@todica/domain/clock";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
-import type { schema } from "../db/schema.js";
-import type { TaskRepository } from "../data/task-repository.js";
 import type { CounterRepository } from "../data/counter-repository.js";
-import type { SettingsRepository } from "../data/settings-repository.js";
 import type { RoutineRepository } from "../data/routine-repository.js";
+import type { SettingsRepository } from "../data/settings-repository.js";
+import type { TaskRepository } from "../data/task-repository.js";
+import type { schema } from "../db/schema.js";
 import { purgeTrash } from "./purge-trash.js";
 
 /**
@@ -146,7 +146,12 @@ export async function maybeRunDailyReset(deps: DailyResetDeps): Promise<DailyRes
 
   // purgeTrash を呼び出す（plan.md D-002 d / D-005）.
   // 境界時刻より古いゴミ箱タスクを物理削除する（通常タスク・完了済みルーティンタスクを含む）.
-  await purgeTrash(deps.db as BetterSQLite3Database<typeof schema>, deps.clock, deps.settingsRepository, deps.taskRepository);
+  await purgeTrash(
+    deps.db as BetterSQLite3Database<typeof schema>,
+    deps.clock,
+    deps.settingsRepository,
+    deps.taskRepository,
+  );
 
   return { executed: true, appliedBoundaryAt: todayBoundaryAt };
 }

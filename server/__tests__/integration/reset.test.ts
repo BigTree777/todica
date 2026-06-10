@@ -1,3 +1,6 @@
+import type { FakeClock } from "@todica/domain/clock";
+import type { DueDate, Priority, Task, TrashedReason } from "@todica/domain/task";
+import type { Hono } from "hono";
 /**
  * 結合テスト: POST /api/v1/reset (BL-010 / FR-043 / FR-051 / NFR-020).
  *
@@ -15,20 +18,17 @@
  *   テスト観点は「HTTP レスポンスの形状」と「状態変化（counter / taskの dueDate）」とする。
  */
 import { beforeEach, describe, expect, it } from "vitest";
-import type { Hono } from "hono";
 import {
-  authHeaders,
-  buildTestApp,
   TEST_AUTH_TOKEN,
   TEST_INITIAL_TIME,
+  authHeaders,
+  buildTestApp,
 } from "../helpers/build-test-app.js";
 import type {
   InMemoryCounterRepository,
   InMemorySettingsRepository,
   InMemoryTaskRepository,
 } from "../helpers/in-memory-repositories.js";
-import type { Task, DueDate, Priority, TrashedReason } from "@todica/domain/task";
-import { FakeClock } from "@todica/domain/clock";
 
 // dayBoundaryTime = "04:00" として、境界を「超えた」時刻と「超えていない」時刻を定義する。
 const BOUNDARY_TIME = "04:00";
@@ -150,7 +150,7 @@ describe("POST /api/v1/reset (新規リセット実行)", () => {
     expect(body.appliedBoundaryAt).toBe(TODAY_BOUNDARY_AT);
   });
 
-  it("シナリオ: \"tomorrow\" タスクがリセットで \"today\" に変わる (FR-043)", async () => {
+  it('シナリオ: "tomorrow" タスクがリセットで "today" に変わる (FR-043)', async () => {
     // spec.md §「タスク繰り越し（FR-043）」:
     //   Given dueDate: "tomorrow", trashedAt: null のタスク T1
     //   When  POST /api/v1/reset を送る
@@ -172,7 +172,7 @@ describe("POST /api/v1/reset (新規リセット実行)", () => {
     expect(task?.dueDate).toBe("today");
   });
 
-  it("シナリオ: \"today\" タスクはリセットで変わらない", async () => {
+  it('シナリオ: "today" タスクはリセットで変わらない', async () => {
     // spec.md §「タスク繰り越し（FR-043）」:
     //   Given dueDate: "today", trashedAt: null のタスク T2
     //   When  POST /api/v1/reset を送る

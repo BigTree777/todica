@@ -5,11 +5,11 @@
  */
 
 import type {
+  CreateProjectCommand,
+  DeleteProjectCommand,
   Project,
   ProjectRepository,
-  CreateProjectCommand,
   UpdateProjectCommand,
-  DeleteProjectCommand,
 } from "./project-repository.js";
 
 type Row = Record<string, unknown>;
@@ -71,10 +71,12 @@ export class LocalProjectRepository implements ProjectRepository {
     const now = new Date().toISOString();
     const newVersion = (row.version as number) + 1;
 
-    await this.db.run(
-      `UPDATE projects SET name = ?, updated_at = ?, version = ? WHERE id = ?`,
-      [cmd.name, now, newVersion, cmd.id],
-    );
+    await this.db.run("UPDATE projects SET name = ?, updated_at = ?, version = ? WHERE id = ?", [
+      cmd.name,
+      now,
+      newVersion,
+      cmd.id,
+    ]);
 
     const afterUpdate = await this.db.query("SELECT * FROM projects WHERE id = ?", [cmd.id]);
     const updatedRow = (afterUpdate.values ?? [])[0];

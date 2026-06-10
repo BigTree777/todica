@@ -1,3 +1,4 @@
+import type { Task } from "@todica/domain/task";
 /**
  * DrizzleTaskRepository: TaskRepository の本実装 (better-sqlite3 + drizzle-orm).
  *
@@ -13,13 +14,8 @@
  */
 import { and, eq, isNotNull, isNull, lt } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
-import type { Task } from "@todica/domain/task";
-import type {
-  ListTasksFilter,
-  Priority,
-  TaskRepository,
-} from "../../../data/task-repository.js";
-import { schema, tasks } from "../../../db/schema.js";
+import type { ListTasksFilter, Priority, TaskRepository } from "../../../data/task-repository.js";
+import { type schema, tasks } from "../../../db/schema.js";
 
 export interface DrizzleTaskRepositoryDeps {
   db: BetterSQLite3Database<typeof schema>;
@@ -86,11 +82,7 @@ export class DrizzleTaskRepository implements TaskRepository {
   }
 
   async findById(id: string): Promise<Task | null> {
-    const rows = this.db
-      .select()
-      .from(tasks)
-      .where(eq(tasks.id, id))
-      .all();
+    const rows = this.db.select().from(tasks).where(eq(tasks.id, id)).all();
     const row = rows[0];
     if (!row) return null;
     return rowToTask(row);
@@ -106,18 +98,11 @@ export class DrizzleTaskRepository implements TaskRepository {
         : filter.trashed === "false"
           ? isNull(tasks.trashedAt)
           : undefined;
-    const dueDateCond = filter.dueDate
-      ? eq(tasks.dueDate, filter.dueDate)
-      : undefined;
+    const dueDateCond = filter.dueDate ? eq(tasks.dueDate, filter.dueDate) : undefined;
     const conds = [trashedCond, dueDateCond].filter(
       (c): c is NonNullable<typeof c> => c !== undefined,
     );
-    const where =
-      conds.length === 0
-        ? undefined
-        : conds.length === 1
-          ? conds[0]
-          : and(...conds);
+    const where = conds.length === 0 ? undefined : conds.length === 1 ? conds[0] : and(...conds);
     const rows = where
       ? this.db.select().from(tasks).where(where).all()
       : this.db.select().from(tasks).all();
@@ -125,11 +110,7 @@ export class DrizzleTaskRepository implements TaskRepository {
   }
 
   async update(task: Task): Promise<void> {
-    this.db
-      .update(tasks)
-      .set(taskToValues(task))
-      .where(eq(tasks.id, task.id))
-      .run();
+    this.db.update(tasks).set(taskToValues(task)).where(eq(tasks.id, task.id)).run();
   }
 
   async hardDelete(id: string): Promise<void> {
@@ -148,23 +129,13 @@ export class DrizzleTaskRepository implements TaskRepository {
   }
 
   async nullifyProjectId(projectId: string): Promise<void> {
-    this.db
-      .update(tasks)
-      .set({ projectId: null })
-      .where(eq(tasks.projectId, projectId))
-      .run();
+    this.db.update(tasks).set({ projectId: null }).where(eq(tasks.projectId, projectId)).run();
   }
 
   async deleteRoutineTasksForToday(): Promise<void> {
     await this.db
       .delete(tasks)
-      .where(
-        and(
-          eq(tasks.origin, "routine"),
-          eq(tasks.dueDate, "today"),
-          isNull(tasks.trashedAt),
-        ),
-      )
+      .where(and(eq(tasks.origin, "routine"), eq(tasks.dueDate, "today"), isNull(tasks.trashedAt)))
       .run();
   }
 
@@ -173,11 +144,7 @@ export class DrizzleTaskRepository implements TaskRepository {
       .select()
       .from(tasks)
       .where(
-        and(
-          eq(tasks.routineId, routineId),
-          eq(tasks.dueDate, "today"),
-          isNull(tasks.trashedAt),
-        ),
+        and(eq(tasks.routineId, routineId), eq(tasks.dueDate, "today"), isNull(tasks.trashedAt)),
       )
       .all();
     const row = rows[0];
@@ -214,12 +181,7 @@ export class DrizzleTaskRepository implements TaskRepository {
   async deleteByRoutineId(routineId: string): Promise<void> {
     await this.db
       .delete(tasks)
-      .where(
-        and(
-          eq(tasks.routineId, routineId),
-          isNull(tasks.trashedAt),
-        ),
-      )
+      .where(and(eq(tasks.routineId, routineId), isNull(tasks.trashedAt)))
       .run();
   }
 }
