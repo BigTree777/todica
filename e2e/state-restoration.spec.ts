@@ -46,12 +46,11 @@ test("リロード後も完了タスクのカウントが復元される", async
   await expect(countDisplay).toHaveText(expectedAfter);
 });
 
-// BL-042 (task-card-actions) でカード上の「現在に設定」 button を撤去したため,
-// UI から currentTaskId を明示設定する経路が無くなり, 本 E2E は実行不能になる.
-// focus 設定の代替経路 (カード長押し / コンテキストメニュー等) は BL-043
-// (set-focus-gesture) で再導入予定であり, その時点で skip を解除し新 UI のフローに
-// 追随させる. (focus 永続化サーバ層は無改修のため統合テストでカバー済み.)
-test.skip("リロード後も明示的に設定したフォーカス対象が復元される (BL-042 で UI 撤去 / BL-043 で復活予定)", async ({
+// BL-043 (set-focus-gesture) AC-4: 一覧カードの「現在のタスクにする」button (BL-042 で
+// 撤去された「現在に設定」の後継) で明示設定した focus がリロード後も復元されることを
+// 検証する. currentTaskId が DB に永続化されており, 暗黙フォールバック (並び先頭) では
+// なく明示 focus 経路で復元されることの確認.
+test("リロード後も明示的に設定したフォーカス対象が復元される (BL-043 で UI 再導入)", async ({
   page,
   request,
 }) => {
@@ -75,11 +74,11 @@ test.skip("リロード後も明示的に設定したフォーカス対象が復
 
   await page.goto("/");
 
-  // タスク一覧側に現れるまで待ち, 「現在に設定」をクリック.
+  // タスク一覧側に現れるまで待ち, 「現在のタスクにする」をクリック (BL-043 の新ラベル).
   const list = page.getByRole("list", { name: "タスク一覧" });
   const listRow = list.getByRole("listitem").filter({ hasText: focusName });
   await expect(listRow).toBeVisible();
-  await listRow.getByRole("button", { name: "現在に設定" }).click();
+  await listRow.getByRole("button", { name: "現在のタスクにする" }).click();
 
   // 「現在のタスク」セクションに移動.
   const focusedRegion = page.getByRole("region", { name: "現在のタスク" });

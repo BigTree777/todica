@@ -20,7 +20,12 @@
  * BL-042 (task-card-actions):
  *   - カード上のアクションは「削除 / 明日にする / 完了」の 3 ボタンに削減.
  *   - 旧「編集」「現在に設定」「現在解除」 button および編集フォームを撤去.
- *   - `setFocusMutation` も併せて撤去 (BL-043 で別経路から再導入予定).
+ *
+ * BL-043 (set-focus-gesture) / FR-012:
+ *   - `setFocusMutation` / `handleSetFocus` を再導入し, 一覧の各カードに
+ *     状態系コントロール「現在のタスクにする」 button を追加 (アクション 3 ボタンのカウント外).
+ *   - 解除 UI は提供しない (解除は完了 / 削除 / 期限変更によるサーバ側自動解除のみ. plan D-003).
+ *   - 失敗時は notifyError + ["focus"] invalidate で最新 version を取り直す (plan D-005).
  *
  * BL-018: TanStack Query (useQuery / useMutation) でデータ取得・書込みを管理.
  */
@@ -32,6 +37,7 @@ import type {
   CreateTaskCommand,
   DeleteTaskCommand,
   FocusSelection,
+  SetFocusCommand,
   TaskRepository,
   UpdateTaskCommand,
 } from "../../repositories/task-repository.js";
@@ -296,6 +302,40 @@ export function TodayView(props: TodayViewProps): JSX.Element {
     networkMode: "offlineFirst",
   });
 
+  // BL-043 / FR-012: 明示 focus 設定 (PUT /api/v1/focus).
+  //   - ConflictDialog は task エントリ前提の機構のため FocusSelection には適用しない (plan D-006).
+  //   - 失敗時 (412 / ネットワークエラー) も ["focus"] を invalidate して最新 version を
+  //     取り直し, 再試行可能にする (plan D-005. 旧 BL-006 実装からの改善点).
+  const setFocusMutation = useMutation({
+    mutationFn: async (cmd: SetFocusCommand) => {
+      const idempotencyKey = generateId();
+      void safeEnqueue({
+        url: `${baseUrl}/api/v1/focus`,
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+          "Idempotency-Key": idempotencyKey,
+          "If-Match": String(cmd.ifMatch),
+        },
+        body: JSON.stringify({ taskId: cmd.taskId }),
+        idempotencyKey,
+      });
+      if (!navigator.onLine) {
+        return undefined;
+      }
+      const result = await repository.setFocus(cmd);
+      void safeDequeueByKey(idempotencyKey);
+      return result;
+    },
+    onSuccess: invalidateAll,
+    onError: () => {
+      notifyError("通信に失敗しました");
+      void queryClient.invalidateQueries({ queryKey: ["focus"] });
+    },
+    networkMode: "offlineFirst",
+  });
+
   const handleCreate = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
@@ -358,6 +398,18 @@ export function TodayView(props: TodayViewProps): JSX.Element {
       await updateMutation.mutateAsync(cmd);
     },
     [updateMutation],
+  );
+
+  // BL-043 / FR-012: 一覧カードの「現在のタスクにする」.
+  //   - FocusSelection 未ロード中は no-op (spec REQ-2. 旧 BL-006 実装の踏襲).
+  //   - 解除用の null 引数経路は実装しない (spec REQ-4 / plan D-003).
+  const handleSetFocus = useCallback(
+    async (taskId: string) => {
+      if (!focus) return;
+      const cmd: SetFocusCommand = { taskId, ifMatch: focus.version };
+      await setFocusMutation.mutateAsync(cmd);
+    },
+    [focus, setFocusMutation],
   );
 
   // BL-006: 強調対象 = currentTaskId ?? nextTaskId (plan.md D-001 暗黙フォールバック).
@@ -465,6 +517,14 @@ export function TodayView(props: TodayViewProps): JSX.Element {
               groupLabel={`${task.name} の優先度`}
               idPrefix={`task-${task.id}`}
             />
+            {/* BL-043 / FR-012: 状態系コントロール「現在のタスクにする」.
+                PriorityStars と同じ状態系グループ (アクション 3 ボタンのカウント外) として
+                アクションボタン群より前に置く (spec REQ-1).
+                ネイティブ button のセマンティクスで Tab + Enter / Space に対応 (spec REQ-3).
+                TODO(BL-046): 視覚スタイル (アイコン化・配色) はデザイントークン BL で扱う. */}
+            <button type="button" onClick={() => handleSetFocus(task.id)}>
+              現在のタスクにする
+            </button>
             {/* BL-042: 各カードのアクションは「削除」「明日にする」「完了」の 3 つだけに削減
                 (編集 / 現在に設定 を撤去, ラベルを「明日にする」に統一). */}
             <button type="button" onClick={() => handleDelete(task)}>
