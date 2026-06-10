@@ -9,12 +9,10 @@
  * (best practice は dev チームの優先度判断に委ねる)
  */
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type Page } from "@playwright/test";
+import { type Page, expect, test } from "@playwright/test";
 
 async function scanWcag(page: Page) {
-  return new AxeBuilder({ page })
-    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-    .analyze();
+  return new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
 }
 
 test.describe("WCAG 2.1 AA 違反 0 件", () => {
@@ -63,6 +61,22 @@ test.describe("WCAG 2.1 AA 違反 0 件", () => {
   test("設定ビュー (/settings)", async ({ page }) => {
     await page.goto("/settings");
     await page.getByRole("heading", { name: "設定" }).waitFor();
+    const result = await scanWcag(page);
+    expect(result.violations).toEqual([]);
+  });
+
+  /**
+   * BL-044 (inline-project-create) AC-12 / NFR-A11Y:
+   * プロジェクト追加モーダルを開いた状態の /today もスキャン対象に加える.
+   * (spec: docs/developer/features/inline-project-create/spec.md §受け入れ基準 AC-12)
+   */
+  test("今日ビュー モーダル展開状態 (/today + プロジェクト追加モーダル, BL-044)", async ({
+    page,
+  }) => {
+    await page.goto("/today");
+    await page.getByRole("heading", { name: "今日" }).waitFor();
+    await page.getByRole("button", { name: "＋プロジェクトの追加" }).click();
+    await page.getByRole("dialog", { name: "プロジェクトの追加" }).waitFor();
     const result = await scanWcag(page);
     expect(result.violations).toEqual([]);
   });

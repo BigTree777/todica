@@ -14,7 +14,7 @@ function taskRow(page: Page, taskName: string) {
 async function createAndDelete(page: Page, taskName: string): Promise<void> {
   await page.goto("/today");
   await page.getByLabel("タスク名").fill(taskName);
-  await page.getByRole("button", { name: "追加" }).click();
+  await page.getByRole("button", { name: "追加", exact: true }).click();
   await taskRow(page, taskName).getByRole("button", { name: "削除" }).click();
   await expect(page.getByText(taskName, { exact: true })).toHaveCount(0);
 }

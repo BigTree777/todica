@@ -374,7 +374,12 @@ describe("TodayView (Web クライアント UI)", () => {
     const nameInput = await screen.findByLabelText(/タスク名/);
     await user.type(nameInput, "BL-039 起票テスト");
 
-    const submit = screen.getByRole("button", { name: /追加|起票|登録|送信/ });
+    // BL-044: ヘッダ領域に「＋プロジェクトの追加」button が増えたため,
+    // 起票フォーム scope 内で submit button を特定する (検証内容は不変).
+    const submit = within(screen.getByRole("form", { name: "タスク起票フォーム" })).getByRole(
+      "button",
+      { name: /追加|起票|登録|送信/ },
+    );
     await user.click(submit);
 
     expect(repo.createMock).toHaveBeenCalledTimes(1);
@@ -392,7 +397,12 @@ describe("TodayView (Web クライアント UI)", () => {
     const nameInput = await screen.findByLabelText(/タスク名/);
     await user.type(nameInput, "牛乳を買う");
 
-    const submit = screen.getByRole("button", { name: /追加|起票|登録|送信/ });
+    // BL-044: ヘッダ領域に「＋プロジェクトの追加」button が増えたため,
+    // 起票フォーム scope 内で submit button を特定する (検証内容は不変).
+    const submit = within(screen.getByRole("form", { name: "タスク起票フォーム" })).getByRole(
+      "button",
+      { name: /追加|起票|登録|送信/ },
+    );
     await user.click(submit);
 
     // POST に相当する create が呼ばれる
@@ -534,7 +544,12 @@ describe("TodayView (BL-002 / BL-040 優先度 UI 星 3 つ)", () => {
 
     const nameInput = await screen.findByLabelText(/タスク名/);
     await user.type(nameInput, "x");
-    const submit = screen.getByRole("button", { name: /追加|起票|登録|送信/ });
+    // BL-044: ヘッダ領域に「＋プロジェクトの追加」button が増えたため,
+    // 起票フォーム scope 内で submit button を特定する (検証内容は不変).
+    const submit = within(screen.getByRole("form", { name: "タスク起票フォーム" })).getByRole(
+      "button",
+      { name: /追加|起票|登録|送信/ },
+    );
     await user.click(submit);
 
     expect(repo.createMock).toHaveBeenCalledTimes(1);
@@ -561,7 +576,12 @@ describe("TodayView (BL-002 / BL-040 優先度 UI 星 3 つ)", () => {
     expect(stars).toHaveLength(3);
     await user.click(stars[2]!);
 
-    const submit = screen.getByRole("button", { name: /追加|起票|登録|送信/ });
+    // BL-044: ヘッダ領域に「＋プロジェクトの追加」button が増えたため,
+    // 起票フォーム scope 内で submit button を特定する (検証内容は不変).
+    const submit = within(screen.getByRole("form", { name: "タスク起票フォーム" })).getByRole(
+      "button",
+      { name: /追加|起票|登録|送信/ },
+    );
     await user.click(submit);
 
     expect(repo.createMock).toHaveBeenCalledTimes(1);
@@ -584,7 +604,12 @@ describe("TodayView (BL-002 / BL-040 優先度 UI 星 3 つ)", () => {
     const stars = within(group).getAllByRole("radio");
     await user.click(stars[0]!);
 
-    const submit = screen.getByRole("button", { name: /追加|起票|登録|送信/ });
+    // BL-044: ヘッダ領域に「＋プロジェクトの追加」button が増えたため,
+    // 起票フォーム scope 内で submit button を特定する (検証内容は不変).
+    const submit = within(screen.getByRole("form", { name: "タスク起票フォーム" })).getByRole(
+      "button",
+      { name: /追加|起票|登録|送信/ },
+    );
     await user.click(submit);
 
     expect(repo.createMock).toHaveBeenCalledTimes(1);
@@ -1835,7 +1860,12 @@ describe("書込キュー統合 (BL-018 フェーズ D)", () => {
     const nameInput = await screen.findByLabelText(/タスク名/);
     await user.type(nameInput, "オフラインタスク");
 
-    const submit = screen.getByRole("button", { name: /追加|起票|登録|送信/ });
+    // BL-044: ヘッダ領域に「＋プロジェクトの追加」button が増えたため,
+    // 起票フォーム scope 内で submit button を特定する (検証内容は不変).
+    const submit = within(screen.getByRole("form", { name: "タスク起票フォーム" })).getByRole(
+      "button",
+      { name: /追加|起票|登録|送信/ },
+    );
     await user.click(submit);
 
     // repository.create が呼ばれないことを確認
@@ -1863,7 +1893,12 @@ describe("書込キュー統合 (BL-018 フェーズ D)", () => {
     const nameInput = await screen.findByLabelText(/タスク名/);
     await user.type(nameInput, "オンラインタスク");
 
-    const submit = screen.getByRole("button", { name: /追加|起票|登録|送信/ });
+    // BL-044: ヘッダ領域に「＋プロジェクトの追加」button が増えたため,
+    // 起票フォーム scope 内で submit button を特定する (検証内容は不変).
+    const submit = within(screen.getByRole("form", { name: "タスク起票フォーム" })).getByRole(
+      "button",
+      { name: /追加|起票|登録|送信/ },
+    );
     await user.click(submit);
 
     // repository.create が呼ばれることを確認
@@ -1975,7 +2010,12 @@ describe("TodayView (BL-016 / BL-041 プロジェクト選択 UI)", () => {
     expect(toggleButton.getAttribute("aria-label") ?? "").toMatch(/仕事/);
 
     // 追加ボタンをクリック.
-    const submit = screen.getByRole("button", { name: /追加|起票|登録|送信/ });
+    // BL-044: ヘッダ領域に「＋プロジェクトの追加」button が増えたため,
+    // 起票フォーム scope 内で submit button を特定する (検証内容は不変).
+    const submit = within(screen.getByRole("form", { name: "タスク起票フォーム" })).getByRole(
+      "button",
+      { name: /追加|起票|登録|送信/ },
+    );
     await user.click(submit);
 
     // create() が呼ばれて projectId が渡っている (REQ-6).
@@ -2017,7 +2057,12 @@ describe("TodayView (BL-016 / BL-041 プロジェクト選択 UI)", () => {
     expect(toggleButton.textContent ?? "").toMatch(/（未分類）/);
 
     // 追加ボタンをクリック.
-    const submit = screen.getByRole("button", { name: /追加|起票|登録|送信/ });
+    // BL-044: ヘッダ領域に「＋プロジェクトの追加」button が増えたため,
+    // 起票フォーム scope 内で submit button を特定する (検証内容は不変).
+    const submit = within(screen.getByRole("form", { name: "タスク起票フォーム" })).getByRole(
+      "button",
+      { name: /追加|起票|登録|送信/ },
+    );
     await user.click(submit);
 
     // create() が呼ばれて projectId が null になっている (REQ-6 / D-004 "" ↔ null 境界変換).
@@ -2060,7 +2105,12 @@ describe("TodayView (BL-016 / BL-041 プロジェクト選択 UI)", () => {
     expect(toggleButton.textContent ?? "").toContain("仕事");
 
     // 追加.
-    const submit = screen.getByRole("button", { name: /追加|起票|登録|送信/ });
+    // BL-044: ヘッダ領域に「＋プロジェクトの追加」button が増えたため,
+    // 起票フォーム scope 内で submit button を特定する (検証内容は不変).
+    const submit = within(screen.getByRole("form", { name: "タスク起票フォーム" })).getByRole(
+      "button",
+      { name: /追加|起票|登録|送信/ },
+    );
     await user.click(submit);
 
     // 起票完了後にトグル表示が「（未分類）」にリセットされていること.

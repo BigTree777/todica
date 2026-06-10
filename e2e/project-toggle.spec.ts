@@ -75,7 +75,7 @@ test.describe("BL-041 プロジェクトトグル UI (今日ビュー)", () => {
     // 1. プロジェクト作成.
     await page.goto("/projects");
     await page.getByLabel("プロジェクト名").fill(projectName);
-    await page.getByRole("button", { name: "追加" }).click();
+    await page.getByRole("button", { name: "追加", exact: true }).click();
     await expect(page.getByText(projectName, { exact: true })).toBeVisible();
 
     // 2. /today に戻ってトグルを 1 回クリック → 作成したプロジェクトに進む.
@@ -106,7 +106,7 @@ test.describe("BL-041 プロジェクトトグル UI (今日ビュー)", () => {
 
     // トグルが目的プロジェクトを指している状態で「追加」.
     await expect(toggle).toContainText(projectName);
-    await page.getByRole("button", { name: "追加" }).click();
+    await page.getByRole("button", { name: "追加", exact: true }).click();
 
     // 3. 起票後, カードがビューに現れる.
     await expect(taskRow(page, taskName)).toBeVisible();
@@ -134,7 +134,7 @@ test.describe("BL-041 プロジェクトトグル UI (明日ビュー)", () => {
     // 1. プロジェクト作成.
     await page.goto("/projects");
     await page.getByLabel("プロジェクト名").fill(projectName);
-    await page.getByRole("button", { name: "追加" }).click();
+    await page.getByRole("button", { name: "追加", exact: true }).click();
     await expect(page.getByText(projectName, { exact: true })).toBeVisible();
 
     // 2. /tomorrow に遷移.
@@ -170,7 +170,7 @@ test.describe("BL-041 プロジェクトトグル UI (明日ビュー)", () => {
     expect(reached, `トグルを ${maxIterations} 回クリックしても "${projectName}" に到達しなかった`).toBe(true);
 
     await expect(toggle).toContainText(projectName);
-    await page.getByRole("button", { name: "追加" }).click();
+    await page.getByRole("button", { name: "追加", exact: true }).click();
 
     // 3. 起票後, 明日のタスクとしてカードがビューに現れ, プロジェクト副情報も紐付く.
     await expect(taskRow(page, taskName)).toBeVisible();

@@ -152,7 +152,7 @@ test("401 が返るとエラー通知バナーが表示される (BL-034)", asyn
   });
 
   await page.getByLabel("タスク名").fill(`401テスト ${Date.now()}`);
-  await page.getByRole("button", { name: "追加" }).click();
+  await page.getByRole("button", { name: "追加", exact: true }).click();
 
   // エラー通知バナーが表示される.
   await expect(page.getByRole("alert", { name: "通信エラー通知" })).toBeVisible();

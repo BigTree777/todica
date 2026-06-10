@@ -25,7 +25,7 @@ function taskRow(page: Page, taskName: string) {
 
 async function createTask(page: Page, taskName: string): Promise<void> {
   await page.getByLabel("タスク名").fill(taskName);
-  await page.getByRole("button", { name: "追加" }).click();
+  await page.getByRole("button", { name: "追加", exact: true }).click();
 }
 
 test.describe("タスク基本操作", () => {

@@ -34,7 +34,7 @@ test("プロジェクトを削除すると紐付いていたタスクは残る (
   // 1. プロジェクト作成
   await page.goto("/projects");
   await page.getByLabel("プロジェクト名").fill(projectName);
-  await page.getByRole("button", { name: "追加" }).click();
+  await page.getByRole("button", { name: "追加", exact: true }).click();
   await expect(page.getByText(projectName, { exact: true })).toBeVisible();
 
   // 2. タスクに紐付けて起票
@@ -58,7 +58,7 @@ test("プロジェクトを削除すると紐付いていたタスクは残る (
   expect(reached, `トグルを ${maxIterations} 回クリックしても "${projectName}" に到達しなかった`).toBe(true);
   await expect(toggle).toContainText(projectName);
 
-  await page.getByRole("button", { name: "追加" }).click();
+  await page.getByRole("button", { name: "追加", exact: true }).click();
   await expect(taskRow(page, taskName)).toBeVisible();
 
   // 3. プロジェクト削除
