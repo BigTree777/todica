@@ -20,6 +20,7 @@
  *   - mode = 'local' の場合は Local Repository 実装を注入する.
  *   - LocalResetUsecase.runIfNeeded() を起動時に実行する.
  */
+import "./styles/tokens.css";
 import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-router-dom";

@@ -1,37 +1,26 @@
 /**
- * projects-view CSS (BL-045 暫定値).
- *
- * 全ての数値は BL-046 でデザイントークン化する前提.
- * grep 可能な `TODO(BL-046)` マーカーで置換漏れを防ぐ.
+ * projects-view CSS (BL-045).
+ * BL-046: 暫定値をデザイントークンに置換済み。
  */
-
-/* TODO(BL-046): 全体: デザイントークンに置換する. */
 
 .projects-view {
   display: flex;
   flex-direction: column;
-  /* TODO(BL-046): --space-md */
-  gap: 16px;
+  gap: var(--space-md);
 }
 
 .projects-view h1 {
-  /* TODO(BL-046): --font-size-h1 */
-  font-size: 24px;
-  /* TODO(BL-046): --space-md */
-  margin: 0 0 16px 0;
+  font-size: var(--font-size-h1);
+  margin: 0 0 var(--space-md) 0;
 }
 
 .projects-view__form {
   display: flex;
   flex-direction: column;
-  /* TODO(BL-046): --space-sm */
-  gap: 8px;
-  /* TODO(BL-046): --color-border */
-  border: 1px solid #ccc;
-  /* TODO(BL-046): --radius-md */
-  border-radius: 12px;
-  /* TODO(BL-046): --space-md */
-  padding: 16px;
+  gap: var(--space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
 }
 
 .projects-view__list {
@@ -40,35 +29,28 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  /* TODO(BL-046): --space-sm */
-  gap: 8px;
+  gap: var(--space-sm);
 }
 
 .projects-view__item {
-  /* TODO(BL-046): --color-border */
-  border: 1px solid #ccc;
-  /* TODO(BL-046): --radius-md */
-  border-radius: 12px;
-  /* TODO(BL-046): --space-md */
-  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  /* TODO(BL-046): --space-sm */
-  gap: 8px;
+  gap: var(--space-sm);
 }
 
 .projects-view__actions {
   display: flex;
-  /* TODO(BL-046): --space-sm */
-  gap: 8px;
+  gap: var(--space-sm);
   margin-left: auto;
 }
 
 .projects-view__empty {
-  /* TODO(BL-046): --color-fg-subtle. WCAG 2.1 AA 4.5:1 を満たす #595959 (7:1) を採用. */
-  color: #595959;
+  /* WCAG 2.1 AA 4.5:1 を満たす --color-fg-subtle (#595959, 7:1) を採用. */
+  color: var(--color-fg-subtle);
   text-align: center;
-  /* TODO(BL-046): --space-lg */
-  padding: 24px 0;
+  padding: var(--space-lg) 0;
 }

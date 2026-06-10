@@ -429,8 +429,7 @@ export function TodayView(props: TodayViewProps): JSX.Element {
   return (
     <main>
       {/* BL-044 / spec REQ-1: 見出しと同じヘッダ領域 (h1 直後, 起票フォームより前) に
-          「＋プロジェクトの追加」button を置く. 可視ラベル = アクセシブルネーム (WCAG 2.5.3).
-          TODO(BL-046): 右上配置の視覚仕上げはデザイントークン BL で扱う (暫定の最小 flex 配置). */}
+          「＋プロジェクトの追加」button を置く. 可視ラベル = アクセシブルネーム (WCAG 2.5.3). */}
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <h1>今日</h1>
         <button type="button" onClick={() => setProjectDialogOpen(true)}>
@@ -531,8 +530,7 @@ export function TodayView(props: TodayViewProps): JSX.Element {
             {/* BL-043 / FR-012: 状態系コントロール「現在のタスクにする」.
                 PriorityStars と同じ状態系グループ (アクション 3 ボタンのカウント外) として
                 アクションボタン群より前に置く (spec REQ-1).
-                ネイティブ button のセマンティクスで Tab + Enter / Space に対応 (spec REQ-3).
-                TODO(BL-046): 視覚スタイル (アイコン化・配色) はデザイントークン BL で扱う. */}
+                ネイティブ button のセマンティクスで Tab + Enter / Space に対応 (spec REQ-3). */}
             <button type="button" onClick={() => handleSetFocus(task.id)}>
               現在のタスクにする
             </button>

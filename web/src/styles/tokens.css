@@ -1,0 +1,40 @@
+/**
+ * デザイントークン定義 (BL-046 / design-tokens).
+ *
+ * ADR-0012: vanilla CSS + :root CSS variables を採用。
+ * web/src/main.tsx から import することで全 view でグローバル参照可能になる。
+ */
+
+:root {
+  /* ---- タイポグラフィ ---- */
+  --font-size-h1: 24px;
+  --font-size-h2: 20px;
+  --font-size-body: 16px;
+  --font-size-small: 14px;
+
+  /* ---- 余白 ---- */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+
+  /* ---- 角丸 ---- */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  /* ---- カラー ---- */
+  /* 背景・前景 */
+  --color-bg: #fff;
+  --color-fg: #1a1a1a;
+  /* 補足テキスト (#595959, WCAG AA 7:1). #666 はこちらに統一する. */
+  --color-fg-subtle: #595959;
+  /* ボーダー */
+  --color-border: #ccc;
+  --color-border-subtle: #eee;
+  /* アクセント (amber-700, WCAG AA 5.94:1 on #fff) */
+  --color-accent: #B45309;
+  /* フォーカスリング (blue-700, WCAG AAA 7.2:1 on #fff) */
+  --color-focus-ring: #1d4ed8;
+}
