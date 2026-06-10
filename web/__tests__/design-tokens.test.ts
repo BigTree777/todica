@@ -320,10 +320,11 @@ describe("デザイントークン / CSS 基盤の整備 (BL-046)", () => {
       );
     });
 
-    it("app-shell.css のサイドバー width に 200px のハードコードが残っている（spec.md REQ-4）", () => {
+    it("app-shell.css に --sidebar-width 変数定義が存在しない（spec.md REQ-4 / BL-049 で固定サイドバー廃止済み）", () => {
       const content = readFileSync(resolve(webSrcRoot, "ui/app-shell/app-shell.css"), "utf-8");
-      // REQ-4: --sidebar-width は tokens.css に含めず、200px をそのまま残す.
-      expect(content).toContain("200px");
+      // BL-049 でサイドバー固定幅レイアウトを廃止したため 200px のハードコードは存在しない.
+      // REQ-4 の本質（--sidebar-width をトークン体系に含めない）は tokens.css 側のテストで担保済み.
+      expect(content).not.toContain("--sidebar-width");
     });
   });
 });

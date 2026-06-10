@@ -1,4 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Outlet, Route, Routes } from "react-router-dom";
 /**
  * 単体テスト: AppShell (BL-036 / ui-sidebar-nav).
@@ -258,5 +259,301 @@ describe("AppShell - アクティブリンクのハイライト (REQ-6)", () => 
     expect(within(sidebar).getByRole("link", { name: "明日のタスク" })).not.toHaveAttribute(
       "aria-current",
     );
+  });
+});
+
+// ============================================================
+// BL-049: ハンバーガーナビゲーション
+// 出典: docs/developer/features/hamburger-nav/spec.md §「受け入れ基準」
+// ============================================================
+
+describe("AppShell (BL-049 ハンバーガーナビゲーション)", () => {
+  // ----------------------------------------------------------
+  // AC-1: ハンバーガーボタンの初期表示
+  // ----------------------------------------------------------
+
+  /**
+   * シナリオ: ページロード時にハンバーガーボタンが表示される
+   *   Given アプリが起動している
+   *   When  任意のページ（/today など）を開く
+   *   Then  画面左上にハンバーガーボタン（☰）が表示される
+   *   And   aria-expanded="false" が付与されている
+   *   And   aria-label="メニューを開く" が付与されている
+   *   And   オーバーレイメニューは表示されていない
+   *
+   * 対応要件: REQ-1 / REQ-9 / REQ-10
+   */
+  it("AC-1: ハンバーガーボタンが aria-expanded=false / aria-label=メニューを開く で表示される", () => {
+    renderShell({ initialPath: "/today" });
+
+    const hamburger = screen.getByRole("button", { name: "メニューを開く" });
+    expect(hamburger).toBeInTheDocument();
+    expect(hamburger).toHaveAttribute("aria-expanded", "false");
+    // メニューパネルは閉じている（role="dialog" の要素が存在しないか、非表示）
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  // ----------------------------------------------------------
+  // AC-2: メニューを開く
+  // ----------------------------------------------------------
+
+  /**
+   * シナリオ: ハンバーガーボタンをクリックするとメニューが開く
+   *   Given ページが表示されていてオーバーレイメニューが閉じている
+   *   When  ハンバーガーボタンをクリックする
+   *   Then  オーバーレイメニューが表示される
+   *   And   ボタンの aria-expanded="true" に変わる
+   *   And   ボタンの aria-label="メニューを閉じる" に変わる
+   *   And   メニュー内の最初のリンク（現在のタスク）にフォーカスが移動する
+   *
+   * 対応要件: REQ-2 / REQ-9 / REQ-10 / REQ-12
+   */
+  it("AC-2: ハンバーガーボタンをクリックするとメニューが開き aria-expanded=true になる", async () => {
+    const user = userEvent.setup();
+    renderShell({ initialPath: "/today" });
+
+    const hamburger = screen.getByRole("button", { name: "メニューを開く" });
+    await user.click(hamburger);
+
+    // ボタンの属性変化
+    expect(screen.getByRole("button", { name: "メニューを閉じる" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    // メニューパネルが DOM に現れている
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    // 最初のリンク（現在のタスク）にフォーカスが移動している (REQ-12)
+    expect(screen.getByRole("link", { name: "現在のタスク" })).toHaveFocus();
+  });
+
+  // ----------------------------------------------------------
+  // AC-3: リンク選択でメニューが閉じる
+  // ----------------------------------------------------------
+
+  /**
+   * シナリオ: ナビゲーションリンクを選択するとメニューが閉じる
+   *   Given オーバーレイメニューが開いている
+   *   When  メニュー内のナビゲーションリンク（例: 今日のタスク）をクリックする
+   *   Then  対応するビューに遷移する
+   *   And   オーバーレイメニューが閉じる
+   *   And   ハンバーガーボタンの aria-expanded="false" に戻る
+   *
+   * 対応要件: REQ-4
+   */
+  it("AC-3: メニュー内のリンクをクリックするとメニューが閉じる", async () => {
+    const user = userEvent.setup();
+    renderShell({ initialPath: "/today" });
+
+    // メニューを開く
+    await user.click(screen.getByRole("button", { name: "メニューを開く" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    // 「今日のタスク」リンクをクリック
+    await user.click(screen.getByRole("link", { name: "今日のタスク" }));
+
+    // メニューが閉じる
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    // ハンバーガーボタンの状態が戻る
+    expect(screen.getByRole("button", { name: "メニューを開く" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+  });
+
+  // ----------------------------------------------------------
+  // AC-4: オーバーレイ背景クリックでメニューが閉じる
+  // ----------------------------------------------------------
+
+  /**
+   * シナリオ: メニュー外の領域をクリックするとメニューが閉じる
+   *   Given オーバーレイメニューが開いている
+   *   When  オーバーレイ背景（メニューパネル外の暗転領域）をクリックする
+   *   Then  オーバーレイメニューが閉じる
+   *   And   ハンバーガーボタンにフォーカスが戻る
+   *
+   * 対応要件: REQ-3 / REQ-13
+   */
+  it("AC-4: オーバーレイ背景をクリックするとメニューが閉じ、ハンバーガーボタンにフォーカスが戻る", async () => {
+    const user = userEvent.setup();
+    renderShell({ initialPath: "/today" });
+
+    // メニューを開く
+    await user.click(screen.getByRole("button", { name: "メニューを開く" }));
+
+    // オーバーレイ背景要素をクリック（plan.md §「コンポーネント構造」より aria-hidden="true" の div）
+    const overlay = document.querySelector(".app-shell__overlay");
+    expect(overlay).toBeInTheDocument();
+    await user.click(overlay as Element);
+
+    // メニューが閉じる
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    // ハンバーガーボタンにフォーカスが戻る (REQ-13)
+    expect(screen.getByRole("button", { name: "メニューを開く" })).toHaveFocus();
+  });
+
+  // ----------------------------------------------------------
+  // AC-5: Escape キーでメニューが閉じる
+  // ----------------------------------------------------------
+
+  /**
+   * シナリオ: Escape キーを押すとメニューが閉じる
+   *   Given オーバーレイメニューが開いている
+   *   When  Escape キーを押す
+   *   Then  オーバーレイメニューが閉じる
+   *   And   ハンバーガーボタンにフォーカスが戻る
+   *
+   * 対応要件: REQ-5 / REQ-13
+   */
+  it("AC-5: Escape キーを押すとメニューが閉じ、ハンバーガーボタンにフォーカスが戻る", async () => {
+    const user = userEvent.setup();
+    renderShell({ initialPath: "/today" });
+
+    // メニューを開く
+    await user.click(screen.getByRole("button", { name: "メニューを開く" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    // Escape キーを押す
+    await user.keyboard("{Escape}");
+
+    // メニューが閉じる
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    // ハンバーガーボタンにフォーカスが戻る (REQ-13)
+    expect(screen.getByRole("button", { name: "メニューを開く" })).toHaveFocus();
+  });
+
+  // ----------------------------------------------------------
+  // AC-6: メイン領域の全幅表示（固定サイドバーが存在しない）
+  // ----------------------------------------------------------
+
+  /**
+   * シナリオ: メニューが閉じているときメイン領域が全幅を占有する
+   *   Given オーバーレイメニューが閉じている
+   *   When  今日のタスク画面を表示する
+   *   Then  .app-shell__main の幅が 100% である（固定サイドバーが存在しない）
+   *
+   * 対応要件: REQ-6
+   *
+   * 注: jsdom は CSS の計算幅を解決しないため、固定サイドバーの「不在」を
+   *     DOM 構造で検証する（`.app-shell__sidebar` 要素が存在しないこと）。
+   */
+  it("AC-6: メニューが閉じているとき .app-shell__sidebar が DOM に存在せず .app-shell__main が存在する", () => {
+    renderShell({ initialPath: "/today" });
+
+    // 固定サイドバーは廃止されているので存在しない
+    expect(document.querySelector(".app-shell__sidebar")).not.toBeInTheDocument();
+    // メイン領域は存在する
+    expect(document.querySelector(".app-shell__main")).toBeInTheDocument();
+  });
+
+  // ----------------------------------------------------------
+  // AC-7: ナビゲーション項目の構成
+  // ----------------------------------------------------------
+
+  /**
+   * シナリオ: メニュー内にすべてのナビゲーション項目が表示される
+   *   Given ページが表示されていてオーバーレイメニューが閉じている
+   *   When  ハンバーガーボタンをクリックしてメニューを開く
+   *   Then  プライマリナビとして「現在のタスク」「今日のタスク」「明日のタスク」が表示される
+   *   And   区切り線が表示される
+   *   And   セカンダリナビとして「プロジェクト」「ルーティン」「ゴミ箱」「設定」が表示される
+   *
+   * 対応要件: REQ-7
+   */
+  it("AC-7: メニューを開くとプライマリ 3 件・区切り線・セカンダリ 4 件の計 7 リンクが揃っている", async () => {
+    const user = userEvent.setup();
+    renderShell({ initialPath: "/today" });
+
+    await user.click(screen.getByRole("button", { name: "メニューを開く" }));
+
+    const menu = screen.getByRole("dialog");
+
+    // プライマリ 3 件
+    expect(within(menu).getByRole("link", { name: "現在のタスク" })).toHaveAttribute(
+      "href",
+      "/focus",
+    );
+    expect(within(menu).getByRole("link", { name: "今日のタスク" })).toHaveAttribute(
+      "href",
+      "/today",
+    );
+    expect(within(menu).getByRole("link", { name: "明日のタスク" })).toHaveAttribute(
+      "href",
+      "/tomorrow",
+    );
+
+    // 区切り線
+    expect(menu.querySelector("hr")).toBeInTheDocument();
+
+    // セカンダリ 4 件
+    expect(within(menu).getByRole("link", { name: "プロジェクト" })).toHaveAttribute(
+      "href",
+      "/projects",
+    );
+    expect(within(menu).getByRole("link", { name: "ルーティン" })).toHaveAttribute(
+      "href",
+      "/routines",
+    );
+    expect(within(menu).getByRole("link", { name: "ゴミ箱" })).toHaveAttribute("href", "/trash");
+    expect(within(menu).getByRole("link", { name: "設定" })).toHaveAttribute("href", "/settings");
+
+    // 合計 7 リンク
+    expect(within(menu).getAllByRole("link")).toHaveLength(7);
+  });
+
+  // ----------------------------------------------------------
+  // AC-8: アクティブリンクのスタイル
+  // ----------------------------------------------------------
+
+  /**
+   * シナリオ: 現在表示中のページのリンクがアクティブ表示になる
+   *   Given /today を表示している
+   *   When  ハンバーガーボタンをクリックしてメニューを開く
+   *   Then  「今日のタスク」リンクにアクティブスタイル（太字など）が適用されている
+   *
+   * 対応要件: REQ-8
+   *
+   * 注: React Router v6 の <NavLink> はアクティブ時に aria-current="page" を付与し、
+   *     navLinkClass ヘルパが "active" クラスを付与する。両方を検証する。
+   */
+  it("AC-8: /today でメニューを開くと「今日のタスク」リンクに active クラスと aria-current=page が付与される", async () => {
+    const user = userEvent.setup();
+    renderShell({ initialPath: "/today" });
+
+    await user.click(screen.getByRole("button", { name: "メニューを開く" }));
+
+    const menu = screen.getByRole("dialog");
+    const todayLink = within(menu).getByRole("link", { name: "今日のタスク" });
+
+    // aria-current="page" (React Router NavLink のデフォルト動作)
+    expect(todayLink).toHaveAttribute("aria-current", "page");
+    // "active" クラス (navLinkClass ヘルパ)
+    expect(todayLink).toHaveClass("active");
+  });
+
+  // ----------------------------------------------------------
+  // AC-9: アクセシビリティ属性
+  // ----------------------------------------------------------
+
+  /**
+   * シナリオ: オーバーレイメニューに適切な ARIA 属性が付与される
+   *   Given ページが表示されている
+   *   When  ハンバーガーボタンをクリックしてメニューを開く
+   *   Then  メニューパネルに role="dialog" が付与されている
+   *   And   メニューパネルに aria-modal="true" が付与されている
+   *   And   メニューパネルに aria-label または aria-labelledby が付与されている
+   *
+   * 対応要件: REQ-11
+   */
+  it("AC-9: メニューパネルに role=dialog / aria-modal=true / aria-label が付与されている", async () => {
+    const user = userEvent.setup();
+    renderShell({ initialPath: "/today" });
+
+    await user.click(screen.getByRole("button", { name: "メニューを開く" }));
+
+    const menu = screen.getByRole("dialog");
+    expect(menu).toHaveAttribute("aria-modal", "true");
+    // aria-label か aria-labelledby のいずれかが付与されている
+    const hasLabel = menu.hasAttribute("aria-label") || menu.hasAttribute("aria-labelledby");
+    expect(hasLabel).toBe(true);
   });
 });

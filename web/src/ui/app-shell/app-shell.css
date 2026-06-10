@@ -1,6 +1,7 @@
 /*
- * AppShell CSS (BL-036 / ui-sidebar-nav).
+ * AppShell CSS (BL-036 / ui-sidebar-nav, BL-049 / hamburger-nav).
  * BL-046: 暫定値をデザイントークンに置換済み。
+ * BL-049: ハンバーガーナビ用クラス追加。固定サイドバー (.app-shell__sidebar) を廃止。
  */
 
 .app-shell {
@@ -8,14 +9,47 @@
   min-height: 100vh;
 }
 
-.app-shell__sidebar {
-  /* --sidebar-width はレイアウト固有値のため tokens.css に含めない (ADR-0012 / plan D-006). */
-  width: 200px;
-  flex-shrink: 0;
+/* ハンバーガーボタン：画面左上に固定 */
+.app-shell__hamburger {
+  position: fixed;
+  top: var(--space-sm);
+  left: var(--space-sm);
+  z-index: 200;
+  background: none;
+  border: none;
+  font-size: var(--font-size-h2);
+  cursor: pointer;
+  padding: var(--space-xs);
+  color: var(--color-fg);
+}
+
+/* オーバーレイ背景：メニュー外クリックで閉じる用 */
+.app-shell__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.4); /* 半透明黒 - トークン化不可の値 */
+}
+
+/* メニューパネル：左端からスライドイン */
+.app-shell__menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 240px;
+  z-index: 150;
+  background: var(--color-bg);
   border-right: 1px solid var(--color-border);
   padding: var(--space-md);
+  transform: translateX(-100%);
+  transition: transform 0.2s ease;
   display: flex;
   flex-direction: column;
+}
+
+.app-shell__menu--open {
+  transform: translateX(0);
 }
 
 .app-shell__nav-primary,
@@ -32,10 +66,10 @@
 
 .app-shell__nav-link {
   display: block;
-  padding: var(--space-sm) 12px;
+  padding: var(--space-sm) 12px; /* 12px: ナビリンクのレイアウト固有値、トークン追加は別 BL */
   text-decoration: none;
   color: inherit;
-  border-left: 3px solid transparent;
+  border-left: 3px solid transparent; /* 3px: アクティブインジケーターの固有値 */
 }
 
 .app-shell__nav-link.active {
@@ -51,6 +85,7 @@
 
 .app-shell__main {
   flex: 1;
+  width: 100%;
   padding: var(--space-md);
   overflow: auto;
 }
