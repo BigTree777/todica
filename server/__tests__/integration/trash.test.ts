@@ -1,3 +1,6 @@
+import type { FakeClock } from "@todica/domain/clock";
+import type { DueDate, Priority, Task, TrashedReason } from "@todica/domain/task";
+import type { Hono } from "hono";
 /**
  * 結合テスト: ゴミ箱 API (BL-011 / FR-061 / FR-062 / NFR-020 / NFR-021).
  *
@@ -10,20 +13,17 @@
  *       implementer がエンドポイントを実装することで green 化する.
  */
 import { beforeEach, describe, expect, it } from "vitest";
-import type { Hono } from "hono";
 import {
-  authHeaders,
-  buildTestApp,
   TEST_AUTH_TOKEN,
   TEST_INITIAL_TIME,
+  authHeaders,
+  buildTestApp,
 } from "../helpers/build-test-app.js";
 import type {
   InMemoryCounterRepository,
   InMemorySettingsRepository,
   InMemoryTaskRepository,
 } from "../helpers/in-memory-repositories.js";
-import type { Task, DueDate, Priority, TrashedReason } from "@todica/domain/task";
-import { FakeClock } from "@todica/domain/clock";
 
 const TASK_ID_1 = "11111111-1111-4111-8111-111111111111";
 const TASK_ID_2 = "22222222-2222-4222-8222-222222222222";
@@ -133,7 +133,9 @@ describe("GET /api/v1/trash (BL-011 ゴミ箱一覧)", () => {
     });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { tasks: Array<{ id: string; trashedReason: string | null; trashedAt: string | null }> };
+    const body = (await res.json()) as {
+      tasks: Array<{ id: string; trashedReason: string | null; trashedAt: string | null }>;
+    };
     expect(body.tasks).toHaveLength(1);
     expect(body.tasks[0]?.id).toBe(TASK_ID_1);
     expect(body.tasks[0]?.trashedReason).toBe("completed");
@@ -154,7 +156,9 @@ describe("GET /api/v1/trash (BL-011 ゴミ箱一覧)", () => {
     });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { tasks: Array<{ id: string; trashedReason: string | null }> };
+    const body = (await res.json()) as {
+      tasks: Array<{ id: string; trashedReason: string | null }>;
+    };
     expect(body.tasks).toHaveLength(1);
     expect(body.tasks[0]?.id).toBe(TASK_ID_1);
     expect(body.tasks[0]?.trashedReason).toBe("deleted");
@@ -212,12 +216,14 @@ describe("POST /api/v1/trash/:id/restore (BL-011 タスク復元)", () => {
     //   And   ヘッダに Idempotency-Key と If-Match: 2 を付ける
     //   Then  HTTP 200 OK が返る
     //   And   レスポンスボディの task は { trashedAt: null, trashedReason: null, dueDate: "today", version: 3 } を含む
-    taskRepo.seed(makeTrashedTask({
-      id: TASK_ID_1,
-      trashedReason: "deleted",
-      dueDate: "tomorrow",
-      version: 2,
-    }));
+    taskRepo.seed(
+      makeTrashedTask({
+        id: TASK_ID_1,
+        trashedReason: "deleted",
+        dueDate: "tomorrow",
+        version: 2,
+      }),
+    );
 
     const res = await app.request(`/api/v1/trash/${TASK_ID_1}/restore`, {
       method: "POST",
@@ -345,17 +351,19 @@ describe("POST /api/v1/trash/:id/restore (BL-011 タスク復元)", () => {
     //   Then  HTTP 412 Precondition Failed が返る
     //   And   レスポンスボディに現行 task（version = 3 の状態）が含まれる
     //   And   ストア上の T は変更されない
-    taskRepo.seed(makeTrashedTask({
-      id: TASK_ID_1,
-      trashedReason: "deleted",
-      version: 3,
-    }));
+    taskRepo.seed(
+      makeTrashedTask({
+        id: TASK_ID_1,
+        trashedReason: "deleted",
+        version: 3,
+      }),
+    );
 
     const res = await app.request(`/api/v1/trash/${TASK_ID_1}/restore`, {
       method: "POST",
       headers: authHeaders({
         "Idempotency-Key": "restore-412",
-        "If-Match": "2",  // 実際の version は 3
+        "If-Match": "2", // 実際の version は 3
       }),
     });
 
@@ -631,31 +639,37 @@ describe("purgeTrash（日次清算 BL-011 / FR-062）", () => {
     localCounterRepo.seed({ completedCount: 0, lastResetExecutedAt: null });
 
     // T1: 境界 "2026-06-08T04:00:00.000Z" より古い trashedAt
-    localTaskRepo.seed(makeTask({
-      id: TASK_ID_1,
-      trashedAt: "2026-06-07T03:59:59.999Z",
-      trashedReason: "deleted",
-      updatedAt: "2026-06-07T03:59:59.999Z",
-      version: 2,
-    }));
+    localTaskRepo.seed(
+      makeTask({
+        id: TASK_ID_1,
+        trashedAt: "2026-06-07T03:59:59.999Z",
+        trashedReason: "deleted",
+        updatedAt: "2026-06-07T03:59:59.999Z",
+        version: 2,
+      }),
+    );
 
     // T2: 昨日の境界より後、今日の境界より前
-    localTaskRepo.seed(makeTask({
-      id: TASK_ID_2,
-      trashedAt: "2026-06-07T10:00:00.000Z",
-      trashedReason: "completed",
-      updatedAt: "2026-06-07T10:00:00.000Z",
-      version: 2,
-    }));
+    localTaskRepo.seed(
+      makeTask({
+        id: TASK_ID_2,
+        trashedAt: "2026-06-07T10:00:00.000Z",
+        trashedReason: "completed",
+        updatedAt: "2026-06-07T10:00:00.000Z",
+        version: 2,
+      }),
+    );
 
     // T3: 今日の境界時刻以降（清算対象外）
-    localTaskRepo.seed(makeTask({
-      id: TASK_ID_3,
-      trashedAt: "2026-06-08T05:00:00.000Z",
-      trashedReason: "deleted",
-      updatedAt: "2026-06-08T05:00:00.000Z",
-      version: 2,
-    }));
+    localTaskRepo.seed(
+      makeTask({
+        id: TASK_ID_3,
+        trashedAt: "2026-06-08T05:00:00.000Z",
+        trashedReason: "deleted",
+        updatedAt: "2026-06-08T05:00:00.000Z",
+        version: 2,
+      }),
+    );
 
     // T4: 通常状態（変更されない）
     localTaskRepo.seed(makeTask({ id: TASK_ID_4, name: "アクティブタスク" }));
@@ -729,22 +743,26 @@ describe("purgeTrash（日次清算 BL-011 / FR-062）", () => {
     localCounterRepo.seed({ completedCount: 0, lastResetExecutedAt: null });
 
     // T1: 今日の境界 "2026-06-08T04:00:00.000Z" より古い → 削除対象
-    localTaskRepo.seed(makeTask({
-      id: TASK_ID_1,
-      trashedAt: "2026-06-07T10:00:00.000Z",
-      trashedReason: "deleted",
-      updatedAt: "2026-06-07T10:00:00.000Z",
-      version: 2,
-    }));
+    localTaskRepo.seed(
+      makeTask({
+        id: TASK_ID_1,
+        trashedAt: "2026-06-07T10:00:00.000Z",
+        trashedReason: "deleted",
+        updatedAt: "2026-06-07T10:00:00.000Z",
+        version: 2,
+      }),
+    );
 
     // T2: 今日の境界以降 → 残る
-    localTaskRepo.seed(makeTask({
-      id: TASK_ID_2,
-      trashedAt: "2026-06-08T05:00:00.000Z",
-      trashedReason: "completed",
-      updatedAt: "2026-06-08T05:00:00.000Z",
-      version: 2,
-    }));
+    localTaskRepo.seed(
+      makeTask({
+        id: TASK_ID_2,
+        trashedAt: "2026-06-08T05:00:00.000Z",
+        trashedReason: "completed",
+        updatedAt: "2026-06-08T05:00:00.000Z",
+        version: 2,
+      }),
+    );
 
     const res = await localApp.request("/api/v1/today", {
       method: "GET",
@@ -780,21 +798,25 @@ describe("purgeTrash（日次清算 BL-011 / FR-062）", () => {
     localCounterRepo.seed({ completedCount: 0, lastResetExecutedAt: null });
 
     // 境界以降の trashedAt を持つゴミ箱タスク（清算対象外）
-    localTaskRepo.seed(makeTask({
-      id: TASK_ID_1,
-      trashedAt: TODAY_BOUNDARY_AT,  // ちょうど境界時刻
-      trashedReason: "deleted",
-      updatedAt: TODAY_BOUNDARY_AT,
-      version: 2,
-    }));
+    localTaskRepo.seed(
+      makeTask({
+        id: TASK_ID_1,
+        trashedAt: TODAY_BOUNDARY_AT, // ちょうど境界時刻
+        trashedReason: "deleted",
+        updatedAt: TODAY_BOUNDARY_AT,
+        version: 2,
+      }),
+    );
 
-    localTaskRepo.seed(makeTask({
-      id: TASK_ID_2,
-      trashedAt: "2026-06-08T05:00:00.000Z",  // 境界より後
-      trashedReason: "completed",
-      updatedAt: "2026-06-08T05:00:00.000Z",
-      version: 2,
-    }));
+    localTaskRepo.seed(
+      makeTask({
+        id: TASK_ID_2,
+        trashedAt: "2026-06-08T05:00:00.000Z", // 境界より後
+        trashedReason: "completed",
+        updatedAt: "2026-06-08T05:00:00.000Z",
+        version: 2,
+      }),
+    );
 
     const res = await localApp.request("/api/v1/reset", {
       method: "POST",

@@ -34,7 +34,7 @@
   --color-border: #ccc;
   --color-border-subtle: #eee;
   /* アクセント (amber-700, WCAG AA 5.94:1 on #fff) */
-  --color-accent: #B45309;
+  --color-accent: #b45309;
   /* フォーカスリング (blue-700, WCAG AAA 7.2:1 on #fff) */
   --color-focus-ring: #1d4ed8;
 }

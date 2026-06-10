@@ -35,10 +35,7 @@ test.describe("ルーティン", () => {
     await page.getByRole("button", { name: "追加" }).click();
     await expect(page.getByText(routineName, { exact: true })).toBeVisible();
 
-    const routineRow = page
-      .getByText(routineName, { exact: true })
-      .first()
-      .locator("..");
+    const routineRow = page.getByText(routineName, { exact: true }).first().locator("..");
     await routineRow.getByRole("button", { name: "削除" }).click();
 
     await expect(page.getByText(routineName, { exact: true })).toHaveCount(0);

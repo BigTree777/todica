@@ -11,7 +11,7 @@
  *   - drizzle migrate() で初期テーブルが作成される (空 DB → migration 適用)
  *   - POST /api/v1/tasks → DB 永続化 → GET /api/v1/today → UI 反映の経路全部
  */
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 test("タスクを追加すると今日の一覧に表示される", async ({ page }) => {
   await page.goto("/");

@@ -1,3 +1,4 @@
+import type { Hono } from "hono";
 /**
  * 結合テスト: 境界時刻の設定 API (BL-009 / FR-041 / FR-042 / NFR-012).
  *
@@ -17,12 +18,7 @@
  *   - PATCH 後の GET で更新値が返ること
  */
 import { beforeEach, describe, expect, it } from "vitest";
-import type { Hono } from "hono";
-import {
-  authHeaders,
-  buildTestApp,
-  TEST_INITIAL_TIME,
-} from "../helpers/build-test-app.js";
+import { TEST_INITIAL_TIME, authHeaders, buildTestApp } from "../helpers/build-test-app.js";
 import type { InMemorySettingsRepository } from "../helpers/in-memory-repositories.js";
 
 let app: Hono;
@@ -48,7 +44,7 @@ describe("GET /api/v1/settings", () => {
     expect(res.status).toBe(401);
   });
 
-  it("シナリオ: 初回アクセス時の Settings は dayBoundaryTime = \"04:00\" で存在する", async () => {
+  it('シナリオ: 初回アクセス時の Settings は dayBoundaryTime = "04:00" で存在する', async () => {
     // spec.md §「Settings の初期状態」第 1 ケース.
     // Given サーバを起動した直後で Settings を一度も更新していない
     // When  GET /api/v1/settings を認証付きで呼ぶ
@@ -79,7 +75,7 @@ describe("GET /api/v1/settings", () => {
 // ============================================================
 
 describe("PATCH /api/v1/settings — 正常系", () => {
-  it("シナリオ: dayBoundaryTime を有効な値 \"03:30\" に更新できる", async () => {
+  it('シナリオ: dayBoundaryTime を有効な値 "03:30" に更新できる', async () => {
     // spec.md §「境界時刻の更新」第 1 ケース.
     // Given Settings が { dayBoundaryTime: "04:00", version: 1 } で存在する
     // When  PATCH /api/v1/settings に { dayBoundaryTime: "03:30" } を Idempotency-Key と If-Match: 1 で送る
@@ -108,7 +104,7 @@ describe("PATCH /api/v1/settings — 正常系", () => {
     expect(typeof body.settings.updatedAt).toBe("string");
   });
 
-  it("シナリオ: dayBoundaryTime に \"00:00\" を設定できる (境界値: 最小)", async () => {
+  it('シナリオ: dayBoundaryTime に "00:00" を設定できる (境界値: 最小)', async () => {
     // spec.md §「境界時刻の更新」§「dayBoundaryTime に \"00:00\" を設定できる」.
     // Given Settings が { version: 1 } で存在する
     // When  PATCH /api/v1/settings に { dayBoundaryTime: "00:00" } を送る
@@ -128,7 +124,7 @@ describe("PATCH /api/v1/settings — 正常系", () => {
     expect(body.settings.version).toBe(2);
   });
 
-  it("シナリオ: dayBoundaryTime に \"23:59\" を設定できる (境界値: 最大)", async () => {
+  it('シナリオ: dayBoundaryTime に "23:59" を設定できる (境界値: 最大)', async () => {
     // spec.md §「境界時刻の更新」§「dayBoundaryTime に \"23:59\" を設定できる」.
     // Given Settings が { version: 1 } で存在する
     // When  PATCH /api/v1/settings に { dayBoundaryTime: "23:59" } を送る
@@ -154,7 +150,7 @@ describe("PATCH /api/v1/settings — 正常系", () => {
 // ============================================================
 
 describe("PATCH /api/v1/settings — バリデーション", () => {
-  it("シナリオ: HH:MM 形式に合わない \"4:00\" (1 桁の時) は 400 INVALID_DAY_BOUNDARY_TIME", async () => {
+  it('シナリオ: HH:MM 形式に合わない "4:00" (1 桁の時) は 400 INVALID_DAY_BOUNDARY_TIME', async () => {
     // spec.md §「バリデーション」§「HH:MM 形式に合わない文字列は拒否される」.
     // When  PATCH /api/v1/settings に { dayBoundaryTime: "4:00" } を送る
     // Then  400 INVALID_DAY_BOUNDARY_TIME が返る
@@ -172,7 +168,7 @@ describe("PATCH /api/v1/settings — バリデーション", () => {
     expect(body.code).toBe("INVALID_DAY_BOUNDARY_TIME");
   });
 
-  it("シナリオ: 時が 24 以上の \"24:00\" は 400 INVALID_DAY_BOUNDARY_TIME", async () => {
+  it('シナリオ: 時が 24 以上の "24:00" は 400 INVALID_DAY_BOUNDARY_TIME', async () => {
     // spec.md §「バリデーション」§「時が 24 以上の値は拒否される」.
     // When  PATCH /api/v1/settings に { dayBoundaryTime: "24:00" } を送る
     // Then  400 INVALID_DAY_BOUNDARY_TIME が返る
@@ -190,7 +186,7 @@ describe("PATCH /api/v1/settings — バリデーション", () => {
     expect(body.code).toBe("INVALID_DAY_BOUNDARY_TIME");
   });
 
-  it("シナリオ: 分が 60 以上の \"12:60\" は 400 INVALID_DAY_BOUNDARY_TIME", async () => {
+  it('シナリオ: 分が 60 以上の "12:60" は 400 INVALID_DAY_BOUNDARY_TIME', async () => {
     // spec.md §「バリデーション」§「分が 60 以上の値は拒否される」.
     // When  PATCH /api/v1/settings に { dayBoundaryTime: "12:60" } を送る
     // Then  400 INVALID_DAY_BOUNDARY_TIME が返る

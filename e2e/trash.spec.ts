@@ -5,7 +5,7 @@
  *   1. ゴミ箱から復元: タスクを削除 → /trash で「復元」 → /today に戻る
  *   2. ゴミ箱を空にする: タスクを削除 → /trash で「ゴミ箱を空にする」 → 「ゴミ箱は空です」
  */
-import { expect, test, type Page } from "@playwright/test";
+import { type Page, expect, test } from "@playwright/test";
 
 function taskRow(page: Page, taskName: string) {
   return page.getByText(taskName, { exact: true }).first().locator("..");

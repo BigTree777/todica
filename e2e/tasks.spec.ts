@@ -13,7 +13,7 @@
  * `タスク一覧` 固定の locator はテスト順や DB 状態に依存して壊れる. 本ファイルの helper
  * `taskRow` は両セクション共通で動くよう, タスク名 span の親要素 (li or div) を取る.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { type Page, expect, test } from "@playwright/test";
 
 /**
  * タスク名から, そのタスクのボタン群を含む親コンテナを返す.
@@ -29,7 +29,9 @@ async function createTask(page: Page, taskName: string): Promise<void> {
 }
 
 test.describe("タスク基本操作", () => {
-  test("星 1 つ目をクリックすると radiogroup の aria-label が「後回し」を含むに変わる", async ({ page }) => {
+  test("星 1 つ目をクリックすると radiogroup の aria-label が「後回し」を含むに変わる", async ({
+    page,
+  }) => {
     // BL-040 priority-star-ui AC-5:
     //   Given /today にタスク T (priority="normal") が表示されている
     //   When  T のカード上の 1 番目の星をクリックする
@@ -71,9 +73,7 @@ test.describe("タスク基本操作", () => {
 
     await expect(taskRow(page, taskName)).toBeVisible();
     // BL-042: ラベルは「明日へ」→「明日にする」に統一.
-    await taskRow(page, taskName)
-      .getByRole("button", { name: "明日にする" })
-      .click();
+    await taskRow(page, taskName).getByRole("button", { name: "明日にする" }).click();
 
     await expect(page.getByText(taskName, { exact: true })).toHaveCount(0);
   });
@@ -82,7 +82,9 @@ test.describe("タスク基本操作", () => {
   // 本 E2E は実行不能になる. 名称編集の代替 UI (カードタップ → ダイアログ起動など) は
   // 別 BL (タスク編集ダイアログの再導入 / 仮称 BL-048) で再導入予定であり,
   // その時点で skip を解除し新 UI のフローに追随させる.
-  test.skip("タスクを編集すると名前が一覧に反映される (BL-042 で UI 撤去 / 後続 BL で復活予定)", async ({ page }) => {
+  test.skip("タスクを編集すると名前が一覧に反映される (BL-042 で UI 撤去 / 後続 BL で復活予定)", async ({
+    page,
+  }) => {
     await page.goto("/");
     const originalName = `編集元 ${Date.now()}`;
     const newName = `編集後 ${Date.now() + 1}`;

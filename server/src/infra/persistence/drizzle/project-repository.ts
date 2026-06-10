@@ -6,7 +6,7 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type { Project, ProjectRepository } from "../../../data/project-repository.js";
-import { projects, tasks, schema } from "../../../db/schema.js";
+import { projects, type schema, tasks } from "../../../db/schema.js";
 
 export interface DrizzleProjectRepositoryDeps {
   db: BetterSQLite3Database<typeof schema>;
@@ -43,11 +43,7 @@ export class DrizzleProjectRepository implements ProjectRepository {
   }
 
   async findById(id: string): Promise<Project | null> {
-    const rows = this.db
-      .select()
-      .from(projects)
-      .where(eq(projects.id, id))
-      .all();
+    const rows = this.db.select().from(projects).where(eq(projects.id, id)).all();
     const row = rows[0];
     if (!row) return null;
     return {
@@ -60,11 +56,7 @@ export class DrizzleProjectRepository implements ProjectRepository {
   }
 
   async list(): Promise<Project[]> {
-    const rows = this.db
-      .select()
-      .from(projects)
-      .orderBy(asc(projects.name))
-      .all();
+    const rows = this.db.select().from(projects).orderBy(asc(projects.name)).all();
     return rows.map((row) => ({
       id: row.id,
       name: row.name,

@@ -12,7 +12,8 @@
       "build",
       "coverage",
       "**/*.db",
-      "docs/**"
+      "docs/**",
+      "android/app/src/main/assets/public"
     ]
   },
   "formatter": {
@@ -33,7 +34,17 @@
     "rules": {
       "recommended": true,
       "suspicious": {
-        "noExplicitAny": "warn"
+        "noExplicitAny": "warn",
+        "noArrayIndexKey": "off"
+      },
+      "style": {
+        "noNonNullAssertion": "off"
+      },
+      "complexity": {
+        "noForEach": "off"
+      },
+      "a11y": {
+        "useSemanticElements": "off"
       }
     }
   }

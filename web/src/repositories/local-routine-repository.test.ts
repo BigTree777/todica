@@ -16,7 +16,7 @@
  *   読み出し時に JSON.parse して配列として返す（plan.md §D-001）.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LocalRoutineRepository } from "./local-routine-repository.js";
 
 // ---------------------------------------------------------------------------
@@ -140,9 +140,7 @@ describe("LocalRoutineRepository.create() (FR-LOC-002 / T-16)", () => {
     if (insertCall) {
       const [, values] = insertCall;
       const jsonified = Array.isArray(values)
-        ? values.find(
-            (v) => typeof v === "string" && v.includes("[") && v.includes("]"),
-          )
+        ? values.find((v) => typeof v === "string" && v.includes("[") && v.includes("]"))
         : undefined;
       expect(jsonified).toBeDefined();
     }
@@ -197,10 +195,10 @@ describe("LocalRoutineRepository.delete() (FR-LOC-002 / T-16)", () => {
     // run または execute に DELETE 文が呼ばれること
     const allCalls = [
       ...(db.run.mock.calls as [string, unknown[]][]),
-      ...(db.execute.mock.calls as [string][]),
+      ...(db.execute.mock.calls as unknown as [string][]),
     ];
-    const deleteCall = allCalls.find(([sql]) =>
-      typeof sql === "string" && sql.toUpperCase().includes("DELETE"),
+    const deleteCall = allCalls.find(
+      ([sql]) => typeof sql === "string" && sql.toUpperCase().includes("DELETE"),
     );
     expect(deleteCall).toBeDefined();
   });

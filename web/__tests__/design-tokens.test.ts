@@ -147,7 +147,7 @@ describe("デザイントークン / CSS 基盤の整備 (BL-046)", () => {
 
     it("tokens.css に --color-accent: #B45309 が定義されている（spec.md REQ-2 / WCAG AA amber-700）", () => {
       const content = readFileSync(tokensCssPath, "utf-8");
-      expect(content).toMatch(/--color-accent\s*:\s*#B45309/);
+      expect(content).toMatch(/--color-accent\s*:\s*#[Bb]45309/);
     });
 
     it("tokens.css に --color-focus-ring: #1d4ed8 が定義されている（spec.md REQ-2 / WCAG AAA blue-700）", () => {

@@ -1,3 +1,7 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 /**
  * 単体テスト: ProjectsView (BL-016 / project-crud).
  *
@@ -17,15 +21,8 @@
  * モック ProjectRepository を props 注入するパターンは trash-view.test.tsx と同形とする。
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import type { Project, ProjectRepository } from "../../repositories/project-repository.js";
 import { ProjectsView } from "./projects-view.js";
-import type {
-  Project,
-  ProjectRepository,
-} from "../../repositories/project-repository.js";
 
 // ============================================================
 // QueryClientProvider ラッパー
@@ -34,13 +31,11 @@ import type {
 function renderWithQueryClient(ui: ReactNode): ReturnType<typeof render> {
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: { retry: false, staleTime: Infinity, networkMode: "offlineFirst" },
+      queries: { retry: false, staleTime: Number.POSITIVE_INFINITY, networkMode: "offlineFirst" },
       mutations: { retry: false, networkMode: "offlineFirst" },
     },
   });
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
-  );
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
 // ============================================================
@@ -165,9 +160,7 @@ describe("ProjectsView (BL-016 プロジェクト管理 UI)", () => {
     expect(repo.listMock).toHaveBeenCalledTimes(1);
 
     // 「プロジェクト」の見出し（h1 または h2）が存在する
-    expect(
-      await screen.findByRole("heading", { name: /プロジェクト/ }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /プロジェクト/ })).toBeInTheDocument();
 
     // タスク行は無い
     const items = screen.queryAllByRole("listitem");

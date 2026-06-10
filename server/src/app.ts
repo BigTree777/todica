@@ -1,3 +1,23 @@
+import type { Clock, FakeClock } from "@todica/domain/clock";
+import { createProject, updateProject, validateProjectName } from "@todica/domain/project";
+import {
+  createRoutine,
+  updateRoutine,
+  validateDaysOfWeek,
+  validateDefaultPriority,
+  validateRoutineName,
+} from "@todica/domain/routine";
+import {
+  type Task,
+  type UpdateTaskInput,
+  completeTask,
+  createTask,
+  restoreTask,
+  trashTask,
+  updateTask,
+} from "@todica/domain/task";
+import { and, eq, isNull } from "drizzle-orm";
+import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 /**
  * Hono アプリ本体.
  *
@@ -6,40 +26,21 @@
  * - 詳細は docs/developer/features/task-crud/plan.md §処理フロー
  */
 import { Hono } from "hono";
-import { cors } from "hono/cors";
 import type { Context, MiddlewareHandler } from "hono";
-import type { Clock, FakeClock } from "@todica/domain/clock";
-import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
-import { and, eq, isNull } from "drizzle-orm";
-import { tasks as tasksTable, projects as projectsTable, routines as routinesTable, schema } from "./db/schema.js";
-import {
-  completeTask,
-  createTask,
-  restoreTask,
-  trashTask,
-  updateTask,
-  type Task,
-  type UpdateTaskInput,
-} from "@todica/domain/task";
-import {
-  createProject,
-  updateProject,
-  validateProjectName,
-} from "@todica/domain/project";
-import {
-  createRoutine,
-  updateRoutine,
-  validateRoutineName,
-  validateDaysOfWeek,
-  validateDefaultPriority,
-} from "@todica/domain/routine";
-import type { TaskRepository } from "./data/task-repository.js";
+import { cors } from "hono/cors";
+import type { CounterRepository } from "./data/counter-repository.js";
+import type { FocusRepository } from "./data/focus-repository.js";
+import type { IdempotencyStore } from "./data/idempotency-store.js";
 import type { ProjectRepository } from "./data/project-repository.js";
 import type { RoutineRepository } from "./data/routine-repository.js";
-import type { IdempotencyStore } from "./data/idempotency-store.js";
-import type { FocusRepository } from "./data/focus-repository.js";
-import type { CounterRepository } from "./data/counter-repository.js";
 import type { SettingsRepository } from "./data/settings-repository.js";
+import type { TaskRepository } from "./data/task-repository.js";
+import {
+  projects as projectsTable,
+  routines as routinesTable,
+  type schema,
+  tasks as tasksTable,
+} from "./db/schema.js";
 import { filterToday, pickNextTaskId, sortToday } from "./today.js";
 import { maybeRunDailyReset } from "./use-cases/daily-reset.js";
 
@@ -151,12 +152,7 @@ export function createApp(deps: AppDeps): Hono {
     }
     const key = c.req.header("Idempotency-Key") ?? c.req.header("idempotency-key");
     if (!key) {
-      return errorJson(
-        c,
-        400,
-        "MISSING_IDEMPOTENCY_KEY",
-        "Idempotency-Key header is required",
-      );
+      return errorJson(c, 400, "MISSING_IDEMPOTENCY_KEY", "Idempotency-Key header is required");
     }
     // 既に処理済みのキーなら保存済み応答を返す.
     const saved = await deps.idempotencyStore.get(key);
@@ -424,9 +420,7 @@ export function createApp(deps: AppDeps): Hono {
     // 詳細は docs/developer/features/tomorrow-view/plan.md §「サーバ補強の手順」.
     const dueDateParam = c.req.query("dueDate");
     const dueDate: "today" | "tomorrow" | undefined =
-      dueDateParam === "today" || dueDateParam === "tomorrow"
-        ? dueDateParam
-        : undefined;
+      dueDateParam === "today" || dueDateParam === "tomorrow" ? dueDateParam : undefined;
     const tasks = await deps.taskRepository.list({
       trashed,
       ...(dueDate ? { dueDate } : {}),
@@ -478,11 +472,7 @@ export function createApp(deps: AppDeps): Hono {
     }
 
     // 入力フィールドの検証 (バリデーション)
-    if (
-      body.dueDate !== undefined &&
-      body.dueDate !== "today" &&
-      body.dueDate !== "tomorrow"
-    ) {
+    if (body.dueDate !== undefined && body.dueDate !== "today" && body.dueDate !== "tomorrow") {
       return saveAndReturn(c, deps, 400, {
         code: "INVALID_DUE_DATE",
         message: "dueDate must be 'today' or 'tomorrow'",
@@ -1002,7 +992,8 @@ export function createApp(deps: AppDeps): Hono {
       const patch: { name?: string; daysOfWeek?: number[]; defaultPriority?: string } = {};
       if (body.name !== undefined) patch.name = body.name as string;
       if (body.daysOfWeek !== undefined) patch.daysOfWeek = body.daysOfWeek as number[];
-      if (body.defaultPriority !== undefined) patch.defaultPriority = body.defaultPriority as string;
+      if (body.defaultPriority !== undefined)
+        patch.defaultPriority = body.defaultPriority as string;
 
       const updateResult = updateRoutine(current, patch, deps.clock);
       if (!updateResult.ok) {
@@ -1164,12 +1155,7 @@ async function clearFocusIfMatches(deps: AppDeps, targetId: string): Promise<voi
  * 応答を Idempotency-Key に保存しつつ HTTP レスポンスを返す.
  * 書き込み系 (POST / PATCH / DELETE) は middleware が key を c.set("idempotencyKey") に積む.
  */
-async function saveAndReturn(
-  c: Context,
-  deps: AppDeps,
-  status: number,
-  body: unknown,
-) {
+async function saveAndReturn(c: Context, deps: AppDeps, status: number, body: unknown) {
   const key = c.get("idempotencyKey") as string | undefined;
   if (key) {
     await deps.idempotencyStore.save(key, { status, body });

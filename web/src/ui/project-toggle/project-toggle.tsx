@@ -62,10 +62,7 @@ const UNCATEGORIZED_LABEL = "（未分類）";
  *   - current が末尾 → null.
  *   - それ以外 → 次の project.
  */
-function nextValue(
-  current: string | null,
-  projects: Project[],
-): string | null {
+function nextValue(current: string | null, projects: Project[]): string | null {
   if (projects.length === 0) return null;
   if (current === null) {
     return projects[0]?.id ?? null;
@@ -84,8 +81,7 @@ function getCurrentName(value: string | null, projects: Project[]): string {
 }
 
 export function ProjectToggle(props: ProjectToggleProps): JSX.Element {
-  const { value, onChange, projects, idPrefix, groupLabel = "プロジェクト" } =
-    props;
+  const { value, onChange, projects, idPrefix, groupLabel = "プロジェクト" } = props;
   const generatedId = useId();
   const prefix = idPrefix ?? generatedId;
 
@@ -123,12 +119,7 @@ export function ProjectToggle(props: ProjectToggleProps): JSX.Element {
         screen reader へ「現在の選択: ＜name＞」を通知する. 隠しは
         visually-hidden パターン (CSS 側) で実装し, focus / tab 動線に乗らないようにする.
       */}
-      <span
-        id={liveId}
-        aria-live="polite"
-        data-visually-hidden
-        className="project-toggle__live"
-      >
+      <span id={liveId} aria-live="polite" data-visually-hidden className="project-toggle__live">
         {`現在の選択: ${currentName}`}
       </span>
     </div>

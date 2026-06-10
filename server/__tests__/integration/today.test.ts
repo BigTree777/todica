@@ -1,3 +1,5 @@
+import type { DueDate, Priority, Task, TrashedReason } from "@todica/domain/task";
+import type { Hono } from "hono";
 /**
  * 結合テスト: 今日ビュー API (BL-005 / FR-010 / FR-011 / NFR-001 / NFR-013).
  *
@@ -13,18 +15,16 @@
  * regression 検証もここに同梱する.
  */
 import { beforeEach, describe, expect, it } from "vitest";
-import type { Hono } from "hono";
 import {
-  authHeaders,
-  buildTestApp,
   TEST_AUTH_TOKEN,
   TEST_INITIAL_TIME,
+  authHeaders,
+  buildTestApp,
 } from "../helpers/build-test-app.js";
 import type {
   InMemoryCounterRepository,
   InMemoryTaskRepository,
 } from "../helpers/in-memory-repositories.js";
-import type { Task, Priority, DueDate, TrashedReason } from "@todica/domain/task";
 
 // 並び順検証のため id が lexicographic に区別できる固定値を用意する.
 // UUID v4 形式 ("4xxx" 第 3 グループ / "8/9/a/b" 第 4 グループ) で末尾だけ番号で区別する.
@@ -91,7 +91,7 @@ describe("GET /api/v1/today (BL-005 正常系)", () => {
     expect(body.nextTaskId).toBe(ID_001);
   });
 
-  it("シナリオ: 今日ビューには dueDate = \"today\" のタスクのみが含まれる (tomorrow は除外)", async () => {
+  it('シナリオ: 今日ビューには dueDate = "today" のタスクのみが含まれる (tomorrow は除外)', async () => {
     // spec.md §「表示対象の絞り込み」: T_today は含む, T_tomorrow は含まない.
     taskRepo.seed(makeTask({ id: ID_001, name: "today task", dueDate: "today" }));
     taskRepo.seed(makeTask({ id: ID_002, name: "tomorrow task", dueDate: "tomorrow" }));
@@ -145,18 +145,10 @@ describe("GET /api/v1/today (BL-005 正常系)", () => {
 
   it("シナリオ: 今日ビューは全プロジェクト横断 + プロジェクト外 + ルーティン由来を含む", async () => {
     // spec.md §「表示対象の絞り込み」: T1〜T4 のすべてが含まれる.
-    taskRepo.seed(
-      makeTask({ id: ID_001, name: "T1", projectId: "P1", origin: "manual" }),
-    );
-    taskRepo.seed(
-      makeTask({ id: ID_002, name: "T2", projectId: "P2", origin: "manual" }),
-    );
-    taskRepo.seed(
-      makeTask({ id: ID_003, name: "T3", projectId: null, origin: "manual" }),
-    );
-    taskRepo.seed(
-      makeTask({ id: ID_004, name: "T4", projectId: null, origin: "routine" }),
-    );
+    taskRepo.seed(makeTask({ id: ID_001, name: "T1", projectId: "P1", origin: "manual" }));
+    taskRepo.seed(makeTask({ id: ID_002, name: "T2", projectId: "P2", origin: "manual" }));
+    taskRepo.seed(makeTask({ id: ID_003, name: "T3", projectId: null, origin: "manual" }));
+    taskRepo.seed(makeTask({ id: ID_004, name: "T4", projectId: null, origin: "routine" }));
 
     const res = await app.request("/api/v1/today", {
       method: "GET",
@@ -336,13 +328,7 @@ describe("GET /api/v1/today (並び順: priority → createdAt → id)", () => {
     //   3. normal,  createdAt 08:00:01, id ID_003
     //   4. normal,  createdAt 08:00:02, id ID_004
     //   5. later,   createdAt 08:00:00, id ID_005
-    expect(body.tasks.map((t) => t.id)).toEqual([
-      ID_001,
-      ID_002,
-      ID_003,
-      ID_004,
-      ID_005,
-    ]);
+    expect(body.tasks.map((t) => t.id)).toEqual([ID_001, ID_002, ID_003, ID_004, ID_005]);
   });
 
   it("シナリオ: 同じデータ状態であれば 2 回連続取得しても並び順は同一 (決定論性)", async () => {
@@ -583,9 +569,7 @@ describe("GET /api/v1/today (NFR-001 並び順カスタマイズ不在)", () => 
       tasks: Array<{ id: string }>;
     };
     // クエリの有無で結果は変わらない (= 並び順カスタマイズが存在しない).
-    expect(bodyWithQuery.tasks.map((t) => t.id)).toEqual(
-      bodyDefault.tasks.map((t) => t.id),
-    );
+    expect(bodyWithQuery.tasks.map((t) => t.id)).toEqual(bodyDefault.tasks.map((t) => t.id));
   });
 });
 
@@ -778,98 +762,89 @@ describe("補助確認", () => {
 // ============================================================
 
 describe("GET /api/v1/today (BL-010 自動リセット統合)", () => {
-  it(
-    "シナリオ: 境界時刻を超えた状態で GET /today を叩くと自動リセットが実行される " +
-      "(spec.md §「GET /api/v1/today のアクセス時にリセット条件を満たす場合は自動でリセットが実行される」)",
-    async () => {
-      // Given counter.completedCount = 3（リセット前）
-      // And   "tomorrow" のタスクが 1 件ある
-      // And   現在時刻が境界時刻を超えている（lastResetExecutedAt は null）
-      // When  GET /api/v1/today を叩く
-      // Then  200 OK が返る
-      // And   レスポンスの completionCount = 0 になっている（completedCount がリセットされた）
+  it("シナリオ: 境界時刻を超えた状態で GET /today を叩くと自動リセットが実行される " +
+    "(spec.md §「GET /api/v1/today のアクセス時にリセット条件を満たす場合は自動でリセットが実行される」)", async () => {
+    // Given counter.completedCount = 3（リセット前）
+    // And   "tomorrow" のタスクが 1 件ある
+    // And   現在時刻が境界時刻を超えている（lastResetExecutedAt は null）
+    // When  GET /api/v1/today を叩く
+    // Then  200 OK が返る
+    // And   レスポンスの completionCount = 0 になっている（completedCount がリセットされた）
 
-      // 境界時刻（"04:00"）を超えた状態で初期化する。
-      // InMemorySettingsRepository の初期 dayBoundaryTime は "04:00"。
-      // 初期 clock = "2026-06-07T09:00:00.000Z" は境界時刻（04:00）を超えている（09:00 > 04:00）ので
-      // デフォルトの buildTestApp() を使って lastResetExecutedAt = null にすればリセット条件を満たす。
+    // 境界時刻（"04:00"）を超えた状態で初期化する。
+    // InMemorySettingsRepository の初期 dayBoundaryTime は "04:00"。
+    // 初期 clock = "2026-06-07T09:00:00.000Z" は境界時刻（04:00）を超えている（09:00 > 04:00）ので
+    // デフォルトの buildTestApp() を使って lastResetExecutedAt = null にすればリセット条件を満たす。
 
-      counterRepo.seed({ completedCount: 3, lastResetExecutedAt: null });
-      taskRepo.seed(makeTask({ id: ID_001, dueDate: "tomorrow" }));
+    counterRepo.seed({ completedCount: 3, lastResetExecutedAt: null });
+    taskRepo.seed(makeTask({ id: ID_001, dueDate: "tomorrow" }));
 
-      const res = await app.request("/api/v1/today", {
-        method: "GET",
-        headers: authHeaders(),
-      });
+    const res = await app.request("/api/v1/today", {
+      method: "GET",
+      headers: authHeaders(),
+    });
 
-      expect(res.status).toBe(200);
-      const body = (await res.json()) as {
-        tasks: Array<{ id: string; dueDate: string }>;
-        completionCount: number;
-      };
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      tasks: Array<{ id: string; dueDate: string }>;
+      completionCount: number;
+    };
 
-      // 自動リセット後: completionCount = 0 になっている
-      expect(body.completionCount).toBe(0);
-    },
-  );
+    // 自動リセット後: completionCount = 0 になっている
+    expect(body.completionCount).toBe(0);
+  });
 
-  it(
-    "シナリオ: \"tomorrow\" タスクがリセット後に今日ビューで表示される（dueDate = \"today\"）",
-    async () => {
-      // 監査指摘 [中] 3-b:
-      //   Given "tomorrow" のタスクが 1 件ある
-      //   And   境界時刻を超えており lastResetExecutedAt = null
-      //   When  GET /api/v1/today
-      //   Then  200 OK
-      //   And   "tomorrow" タスクがリセット後に今日ビューで表示される（dueDate = "today"）
+  it('シナリオ: "tomorrow" タスクがリセット後に今日ビューで表示される（dueDate = "today"）', async () => {
+    // 監査指摘 [中] 3-b:
+    //   Given "tomorrow" のタスクが 1 件ある
+    //   And   境界時刻を超えており lastResetExecutedAt = null
+    //   When  GET /api/v1/today
+    //   Then  200 OK
+    //   And   "tomorrow" タスクがリセット後に今日ビューで表示される（dueDate = "today"）
 
-      counterRepo.seed({ completedCount: 0, lastResetExecutedAt: null });
-      taskRepo.seed(makeTask({ id: ID_001, dueDate: "tomorrow" }));
+    counterRepo.seed({ completedCount: 0, lastResetExecutedAt: null });
+    taskRepo.seed(makeTask({ id: ID_001, dueDate: "tomorrow" }));
 
-      const res = await app.request("/api/v1/today", {
-        method: "GET",
-        headers: authHeaders(),
-      });
+    const res = await app.request("/api/v1/today", {
+      method: "GET",
+      headers: authHeaders(),
+    });
 
-      expect(res.status).toBe(200);
-      const body = (await res.json()) as {
-        tasks: Array<{ id: string; dueDate: string }>;
-        completionCount: number;
-      };
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      tasks: Array<{ id: string; dueDate: string }>;
+      completionCount: number;
+    };
 
-      // 自動リセット後: "tomorrow" タスクが "today" に変わり、今日ビューに表示される
-      const ids = body.tasks.map((t) => t.id);
-      expect(ids).toContain(ID_001);
-      const task = body.tasks.find((t) => t.id === ID_001);
-      expect(task?.dueDate).toBe("today");
-    },
-  );
+    // 自動リセット後: "tomorrow" タスクが "today" に変わり、今日ビューに表示される
+    const ids = body.tasks.map((t) => t.id);
+    expect(ids).toContain(ID_001);
+    const task = body.tasks.find((t) => t.id === ID_001);
+    expect(task?.dueDate).toBe("today");
+  });
 
-  it(
-    "シナリオ: 境界時刻を超えていない状態では GET /today は自動リセットしない（completionCount が変わらない）",
-    async () => {
-      // 監査指摘 [中] 3-c:
-      //   Given 現在時刻が境界時刻を超えていない（例: "2026-06-07T02:00:00.000Z"）
-      //   And   completedCount = 3
-      //   When  GET /api/v1/today
-      //   Then  completionCount = 3 のまま（リセットされない）
+  it("シナリオ: 境界時刻を超えていない状態では GET /today は自動リセットしない（completionCount が変わらない）", async () => {
+    // 監査指摘 [中] 3-c:
+    //   Given 現在時刻が境界時刻を超えていない（例: "2026-06-07T02:00:00.000Z"）
+    //   And   completedCount = 3
+    //   When  GET /api/v1/today
+    //   Then  completionCount = 3 のまま（リセットされない）
 
-      // 境界時刻（"04:00"）を超えていない時刻で再初期化する
-      const built = buildTestApp({ initialTime: "2026-06-07T02:00:00.000Z" });
-      const appBefore = built.app;
-      built.counterRepository.seed({ completedCount: 3, lastResetExecutedAt: null });
-      built.taskRepository.seed(makeTask({ id: ID_001 }));
+    // 境界時刻（"04:00"）を超えていない時刻で再初期化する
+    const built = buildTestApp({ initialTime: "2026-06-07T02:00:00.000Z" });
+    const appBefore = built.app;
+    built.counterRepository.seed({ completedCount: 3, lastResetExecutedAt: null });
+    built.taskRepository.seed(makeTask({ id: ID_001 }));
 
-      const res = await appBefore.request("/api/v1/today", {
-        method: "GET",
-        headers: authHeaders(),
-      });
+    const res = await appBefore.request("/api/v1/today", {
+      method: "GET",
+      headers: authHeaders(),
+    });
 
-      expect(res.status).toBe(200);
-      const body = (await res.json()) as { completionCount: number };
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { completionCount: number };
 
-      // 境界時刻を超えていないためリセットされず completionCount = 3 のまま
-      expect(body.completionCount).toBe(3);
-    },
-  );
+    // 境界時刻を超えていないためリセットされず completionCount = 3 のまま
+    expect(body.completionCount).toBe(3);
+  });
 });

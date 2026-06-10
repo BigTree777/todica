@@ -1,3 +1,4 @@
+import { act, renderHook } from "@testing-library/react";
 /**
  * フェーズ C: useNetworkStatus フックの単体テスト
  *
@@ -13,8 +14,7 @@
  * NOTE: `use-network-status.ts` はまだ存在しない。このテストは意図的に失敗する (red)。
  *       implementer が `web/src/hooks/use-network-status.ts` を実装することで green 化する。
  */
-import { describe, it, expect, afterEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
 import { useNetworkStatus } from "./use-network-status.js";
 
 describe("useNetworkStatus (フェーズ C: オフラインステータス監視)", () => {

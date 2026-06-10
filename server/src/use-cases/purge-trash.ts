@@ -6,9 +6,9 @@
  */
 import type { Clock } from "@todica/domain/clock";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
-import type { schema } from "../db/schema.js";
 import type { SettingsRepository } from "../data/settings-repository.js";
 import type { TaskRepository } from "../data/task-repository.js";
+import type { schema } from "../db/schema.js";
 import { calcTodayBoundaryAt } from "./daily-reset.js";
 
 /**

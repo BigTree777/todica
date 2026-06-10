@@ -190,8 +190,7 @@ export function updateTask(
     ...current,
     name: patch.name !== undefined ? patch.name : current.name,
     dueDate: patch.dueDate !== undefined ? patch.dueDate : current.dueDate,
-    projectId:
-      patch.projectId !== undefined ? patch.projectId : current.projectId,
+    projectId: patch.projectId !== undefined ? patch.projectId : current.projectId,
     priority: patch.priority !== undefined ? patch.priority : current.priority,
     updatedAt: clock.now(),
     version: current.version + 1,

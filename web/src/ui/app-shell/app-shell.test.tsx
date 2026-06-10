@@ -1,3 +1,5 @@
+import { render, screen, within } from "@testing-library/react";
+import { MemoryRouter, Outlet, Route, Routes } from "react-router-dom";
 /**
  * 単体テスト: AppShell (BL-036 / ui-sidebar-nav).
  *
@@ -20,8 +22,6 @@
  *   - implementer が AppShell を実装することで green 化する.
  */
 import { describe, expect, it } from "vitest";
-import { render, screen, within } from "@testing-library/react";
-import { MemoryRouter, Outlet, Route, Routes } from "react-router-dom";
 // BL-036 実装前は存在しないインポート. テストが red になる主因.
 import { AppShell } from "./app-shell.js";
 
@@ -126,18 +126,19 @@ describe("AppShell - サイドバーの存在 (REQ-1 / REQ-2 / REQ-3)", () => {
 
     const sidebar = getSidebar();
 
-    expect(
-      within(sidebar).getByRole("link", { name: "プロジェクト" }),
-    ).toHaveAttribute("href", "/projects");
-    expect(
-      within(sidebar).getByRole("link", { name: "ルーティン" }),
-    ).toHaveAttribute("href", "/routines");
-    expect(
-      within(sidebar).getByRole("link", { name: "ゴミ箱" }),
-    ).toHaveAttribute("href", "/trash");
-    expect(
-      within(sidebar).getByRole("link", { name: "設定" }),
-    ).toHaveAttribute("href", "/settings");
+    expect(within(sidebar).getByRole("link", { name: "プロジェクト" })).toHaveAttribute(
+      "href",
+      "/projects",
+    );
+    expect(within(sidebar).getByRole("link", { name: "ルーティン" })).toHaveAttribute(
+      "href",
+      "/routines",
+    );
+    expect(within(sidebar).getByRole("link", { name: "ゴミ箱" })).toHaveAttribute("href", "/trash");
+    expect(within(sidebar).getByRole("link", { name: "設定" })).toHaveAttribute(
+      "href",
+      "/settings",
+    );
   });
 });
 
@@ -182,7 +183,7 @@ describe("AppShell - アクティブリンクのハイライト (REQ-6)", () => 
    * 注: React Router v6 の <NavLink> はアクティブ時にデフォルトで
    *     aria-current="page" を付与する (plan.md D-006).
    */
-  it("シナリオ: /today では「今日のタスク」リンクのみが aria-current=\"page\" を持つ", () => {
+  it('シナリオ: /today では「今日のタスク」リンクのみが aria-current="page" を持つ', () => {
     renderShell({ initialPath: "/today" });
 
     const sidebar = getSidebar();
@@ -207,53 +208,55 @@ describe("AppShell - アクティブリンクのハイライト (REQ-6)", () => 
   /**
    * シナリオ: /focus では「現在のタスク」リンクが aria-current="page" を持つ
    */
-  it("シナリオ: /focus では「現在のタスク」リンクのみが aria-current=\"page\" を持つ", () => {
+  it('シナリオ: /focus では「現在のタスク」リンクのみが aria-current="page" を持つ', () => {
     renderShell({ initialPath: "/focus" });
 
     const sidebar = getSidebar();
     const focusLink = within(sidebar).getByRole("link", { name: "現在のタスク" });
     expect(focusLink).toHaveAttribute("aria-current", "page");
 
-    expect(
-      within(sidebar).getByRole("link", { name: "今日のタスク" }),
-    ).not.toHaveAttribute("aria-current");
-    expect(
-      within(sidebar).getByRole("link", { name: "明日のタスク" }),
-    ).not.toHaveAttribute("aria-current");
+    expect(within(sidebar).getByRole("link", { name: "今日のタスク" })).not.toHaveAttribute(
+      "aria-current",
+    );
+    expect(within(sidebar).getByRole("link", { name: "明日のタスク" })).not.toHaveAttribute(
+      "aria-current",
+    );
   });
 
   /**
    * シナリオ: /tomorrow では「明日のタスク」リンクが aria-current="page" を持つ
    */
-  it("シナリオ: /tomorrow では「明日のタスク」リンクのみが aria-current=\"page\" を持つ", () => {
+  it('シナリオ: /tomorrow では「明日のタスク」リンクのみが aria-current="page" を持つ', () => {
     renderShell({ initialPath: "/tomorrow" });
 
     const sidebar = getSidebar();
-    expect(
-      within(sidebar).getByRole("link", { name: "明日のタスク" }),
-    ).toHaveAttribute("aria-current", "page");
+    expect(within(sidebar).getByRole("link", { name: "明日のタスク" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 
   /**
    * シナリオ: セカンダリリンクでもアクティブ判定が機能する (REQ-3 / REQ-6 共通)
    */
-  it("シナリオ: /settings では「設定」リンクが aria-current=\"page\" を持つ", () => {
+  it('シナリオ: /settings では「設定」リンクが aria-current="page" を持つ', () => {
     renderShell({ initialPath: "/settings" });
 
     const sidebar = getSidebar();
-    expect(
-      within(sidebar).getByRole("link", { name: "設定" }),
-    ).toHaveAttribute("aria-current", "page");
+    expect(within(sidebar).getByRole("link", { name: "設定" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
 
     // プライマリ 3 リンクは aria-current を持たない
-    expect(
-      within(sidebar).getByRole("link", { name: "現在のタスク" }),
-    ).not.toHaveAttribute("aria-current");
-    expect(
-      within(sidebar).getByRole("link", { name: "今日のタスク" }),
-    ).not.toHaveAttribute("aria-current");
-    expect(
-      within(sidebar).getByRole("link", { name: "明日のタスク" }),
-    ).not.toHaveAttribute("aria-current");
+    expect(within(sidebar).getByRole("link", { name: "現在のタスク" })).not.toHaveAttribute(
+      "aria-current",
+    );
+    expect(within(sidebar).getByRole("link", { name: "今日のタスク" })).not.toHaveAttribute(
+      "aria-current",
+    );
+    expect(within(sidebar).getByRole("link", { name: "明日のタスク" })).not.toHaveAttribute(
+      "aria-current",
+    );
   });
 });

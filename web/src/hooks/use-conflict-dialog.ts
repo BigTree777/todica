@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 /**
  * useConflictDialog フック (フェーズ E: 競合解決 UI)
  *
@@ -11,8 +12,7 @@
  *   CR-003: 「クライアントの値で再送」選択時のコールバック。
  *   CR-004: 「サーバの値を採用」選択時のコールバック。
  */
-import { useState, useCallback } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useCallback, useState } from "react";
 import { dequeue } from "../offline-queue.js";
 import type { QueueEntry } from "../offline-queue.js";
 
@@ -54,9 +54,7 @@ export function useConflictDialog(): UseConflictDialogReturn {
     }
 
     const safeServerValue =
-      serverValue !== null &&
-      typeof serverValue === "object" &&
-      !Array.isArray(serverValue)
+      serverValue !== null && typeof serverValue === "object" && !Array.isArray(serverValue)
         ? (serverValue as Record<string, unknown>)
         : {};
 

@@ -21,7 +21,7 @@
  *   - 前回境界時刻の UTC 表現 = "2026-06-07T19:00:00.000Z"
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LocalResetUsecase } from "./local-reset-usecase.js";
 
 // ---------------------------------------------------------------------------
@@ -246,9 +246,7 @@ describe("LocalResetUsecase.runIfNeeded() リセット処理 (AC-LOC-004 / FR-LO
     // lastResetExecutedAt に境界時刻が設定されること
     const boundaryUpdate = runCalls.find(([, values]) => {
       if (!Array.isArray(values)) return false;
-      return values.some(
-        (v) => typeof v === "string" && v === BOUNDARY_UTC,
-      );
+      return values.some((v) => typeof v === "string" && v === BOUNDARY_UTC);
     });
     expect(boundaryUpdate).toBeDefined();
   });
@@ -292,10 +290,10 @@ describe("LocalResetUsecase.runIfNeeded() ゴミ箱清算 (AC-LOC-007 / FR-LOC-0
     // DELETE 文が呼ばれること（物理削除）
     const allCalls = [
       ...(db.run.mock.calls as [string, unknown[]][]),
-      ...(db.execute.mock.calls as [string][]),
+      ...(db.execute.mock.calls as unknown as [string][]),
     ];
-    const deleteCall = allCalls.find(([sql]) =>
-      typeof sql === "string" && sql.toUpperCase().includes("DELETE"),
+    const deleteCall = allCalls.find(
+      ([sql]) => typeof sql === "string" && sql.toUpperCase().includes("DELETE"),
     );
     expect(deleteCall).toBeDefined();
   });
@@ -337,7 +335,7 @@ describe("LocalResetUsecase.runIfNeeded() ゴミ箱清算 (AC-LOC-007 / FR-LOC-0
     // DELETE の run/execute 呼び出しに新しいタスクの id が含まれないこと
     const allCalls = [
       ...(db.run.mock.calls as [string, unknown[]][]),
-      ...(db.execute.mock.calls as [string][]),
+      ...(db.execute.mock.calls as unknown as [string][]),
     ];
     const deleteWithNewId = allCalls.find(([sql, values]) => {
       const inSql = typeof sql === "string" && sql.includes("new-trash");

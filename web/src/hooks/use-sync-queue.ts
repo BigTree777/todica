@@ -30,10 +30,7 @@ export function useSyncQueue(): void {
     let messageHandler: ((event: MessageEvent) => void) | null = null;
     if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
       messageHandler = (event: MessageEvent) => {
-        if (
-          event.data &&
-          (event.data as { type?: string }).type === "SYNC_QUEUE"
-        ) {
+        if (event.data && (event.data as { type?: string }).type === "SYNC_QUEUE") {
           void flush().catch((err: unknown) => {
             console.error("[useSyncQueue] flush failed on SW message:", err);
           });
@@ -62,11 +59,7 @@ export function useSyncQueue(): void {
 
     return () => {
       window.removeEventListener("online", handleOnline);
-      if (
-        messageHandler &&
-        typeof navigator !== "undefined" &&
-        "serviceWorker" in navigator
-      ) {
+      if (messageHandler && typeof navigator !== "undefined" && "serviceWorker" in navigator) {
         navigator.serviceWorker.removeEventListener("message", messageHandler);
       }
     };

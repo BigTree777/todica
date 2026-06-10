@@ -1,3 +1,5 @@
+import type { DueDate, Priority, Task, TrashedReason } from "@todica/domain/task";
+import type { Hono } from "hono";
 /**
  * 結合テスト: 今日の完了数 Counter API (BL-008 / FR-040 / FR-006 / FR-007 / NFR-020).
  *
@@ -19,17 +21,11 @@
  *   - Idempotency-Key 再送による二重カウント防止 (NFR-020)
  */
 import { beforeEach, describe, expect, it } from "vitest";
-import type { Hono } from "hono";
-import {
-  authHeaders,
-  buildTestApp,
-  TEST_INITIAL_TIME,
-} from "../helpers/build-test-app.js";
+import { TEST_INITIAL_TIME, authHeaders, buildTestApp } from "../helpers/build-test-app.js";
 import type {
   InMemoryCounterRepository,
   InMemoryTaskRepository,
 } from "../helpers/in-memory-repositories.js";
-import type { Task, Priority, DueDate, TrashedReason } from "@todica/domain/task";
 
 const ID_001 = "00000000-0000-4000-8000-000000000001";
 const ID_002 = "00000000-0000-4000-8000-000000000002";
@@ -193,7 +189,7 @@ describe("POST /api/v1/tasks/{id}/complete (completedCount +1 集計)", () => {
     expect(body.counter.completedCount).toBe(2);
   });
 
-  it("シナリオ: 既にゴミ箱状態 (trashedReason = \"completed\") のタスクへの再 complete では completedCount は増えない", async () => {
+  it('シナリオ: 既にゴミ箱状態 (trashedReason = "completed") のタスクへの再 complete では completedCount は増えない', async () => {
     // spec.md §「完了アクションによる +1」第 3 ケース (既 completed への no-op).
     counterRepo.seed({ completedCount: 1, version: 2 });
     taskRepo.seed(
@@ -227,7 +223,7 @@ describe("POST /api/v1/tasks/{id}/complete (completedCount +1 集計)", () => {
     expect(body.counter.completedCount).toBe(1);
   });
 
-  it("シナリオ: 既に削除済 (trashedReason = \"deleted\") のタスクへの complete は completedCount を増やさない", async () => {
+  it('シナリオ: 既に削除済 (trashedReason = "deleted") のタスクへの complete は completedCount を増やさない', async () => {
     // spec.md §「完了アクションによる +1」第 4 ケース.
     taskRepo.seed(
       makeTask({

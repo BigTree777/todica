@@ -9,7 +9,7 @@
  *   3. プロジェクト削除 (DELETE /api/v1/projects/:id)
  *   4. カスケード null: 紐付いたタスクは削除されず, projectId が null になる. 一覧から消えない
  */
-import { expect, test, type Page } from "@playwright/test";
+import { type Page, expect, test } from "@playwright/test";
 
 function taskRow(page: Page, taskName: string) {
   return page.getByText(taskName, { exact: true }).first().locator("..");
@@ -25,9 +25,7 @@ function projectToggleButton(page: Page) {
     .getByRole("button", { name: /プロジェクト/ });
 }
 
-test("プロジェクトを削除すると紐付いていたタスクは残る (カスケード null)", async ({
-  page,
-}) => {
+test("プロジェクトを削除すると紐付いていたタスクは残る (カスケード null)", async ({ page }) => {
   const projectName = `Pカスケード ${Date.now()}`;
   const taskName = `Tカスケード ${Date.now()}`;
 
@@ -55,7 +53,10 @@ test("プロジェクトを削除すると紐付いていたタスクは残る (
     }
     await toggle.click();
   }
-  expect(reached, `トグルを ${maxIterations} 回クリックしても "${projectName}" に到達しなかった`).toBe(true);
+  expect(
+    reached,
+    `トグルを ${maxIterations} 回クリックしても "${projectName}" に到達しなかった`,
+  ).toBe(true);
   await expect(toggle).toContainText(projectName);
 
   await page.getByRole("button", { name: "追加", exact: true }).click();
@@ -63,10 +64,7 @@ test("プロジェクトを削除すると紐付いていたタスクは残る (
 
   // 3. プロジェクト削除
   await page.goto("/projects");
-  const projectRow = page
-    .getByText(projectName, { exact: true })
-    .first()
-    .locator("..");
+  const projectRow = page.getByText(projectName, { exact: true }).first().locator("..");
   await projectRow.getByRole("button", { name: "削除" }).click();
   await expect(page.getByText(projectName, { exact: true })).toHaveCount(0);
 

@@ -10,13 +10,7 @@
  * - 列挙型は `text({ enum: [...] })` で型安全に表現する.
  */
 import { sql } from "drizzle-orm";
-import {
-  index,
-  integer,
-  sqliteTable,
-  text,
-} from "drizzle-orm/sqlite-core";
-
+import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 /**
  * tasks テーブル.
@@ -46,10 +40,7 @@ export const tasks = sqliteTable(
     version: integer("version").notNull().default(1),
   },
   (table) => ({
-    dueDatePriorityIdx: index("tasks_due_date_priority_idx").on(
-      table.dueDate,
-      table.priority,
-    ),
+    dueDatePriorityIdx: index("tasks_due_date_priority_idx").on(table.dueDate, table.priority),
     projectIdIdx: index("tasks_project_id_idx").on(table.projectId),
     trashedAtIdx: index("tasks_trashed_at_idx").on(table.trashedAt),
   }),
@@ -81,9 +72,7 @@ export const idempotencyKeys = sqliteTable("idempotency_keys", {
   path: text("path").notNull(),
   responseStatus: integer("response_status").notNull(),
   responseBody: text("response_body").notNull(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
 /**

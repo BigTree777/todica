@@ -7,29 +7,14 @@
  *   実装の正しさは createApp() スタブ側で担保する (= テストは赤になる).
  */
 import type { Task } from "@todica/domain/task";
-import type {
-  ListTasksFilter,
-  TaskRepository,
-} from "../../src/data/task-repository.js";
+import type { Counter, CounterRepository } from "../../src/data/counter-repository.js";
+import type { FocusRepository, FocusSelection } from "../../src/data/focus-repository.js";
+import type { IdempotencyRecord, IdempotencyStore } from "../../src/data/idempotency-store.js";
 import type { ProjectRepository } from "../../src/data/project-repository.js";
-import type {
-  IdempotencyRecord,
-  IdempotencyStore,
-} from "../../src/data/idempotency-store.js";
-import type {
-  FocusRepository,
-  FocusSelection,
-} from "../../src/data/focus-repository.js";
-import type {
-  Counter,
-  CounterRepository,
-} from "../../src/data/counter-repository.js";
-import type {
-  Settings,
-  SettingsRepository,
-} from "../../src/data/settings-repository.js";
 // BL-017: RoutineRepository インターフェース（未実装のため型のみ参照）
-import type { RoutineRepository, Routine } from "../../src/data/routine-repository.js";
+import type { Routine, RoutineRepository } from "../../src/data/routine-repository.js";
+import type { Settings, SettingsRepository } from "../../src/data/settings-repository.js";
+import type { ListTasksFilter, TaskRepository } from "../../src/data/task-repository.js";
 
 export class InMemoryTaskRepository implements TaskRepository {
   private store = new Map<string, Task>();
@@ -110,11 +95,7 @@ export class InMemoryTaskRepository implements TaskRepository {
    */
   async findTodayRoutineTask(routineId: string): Promise<Task | null> {
     for (const task of this.store.values()) {
-      if (
-        task.routineId === routineId &&
-        task.dueDate === "today" &&
-        task.trashedAt === null
-      ) {
+      if (task.routineId === routineId && task.dueDate === "today" && task.trashedAt === null) {
         return { ...task };
       }
     }

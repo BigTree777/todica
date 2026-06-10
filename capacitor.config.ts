@@ -1,11 +1,11 @@
-import type { CapacitorConfig } from '@capacitor/cli';
+import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: 'com.todica.app',
-  appName: 'Todica',
-  webDir: 'web/dist',
+  appId: "com.todica.app",
+  appName: "Todica",
+  webDir: "web/dist",
   server: {
-    androidScheme: 'https',
+    androidScheme: "https",
   },
 };
 

@@ -1,3 +1,4 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 /**
  * 境界時刻の設定ビュー (BL-009 / FR-041 / FR-042).
  *
@@ -14,7 +15,6 @@
  * BL-018: TanStack Query (useQuery / useMutation) でデータ取得・書込みを管理.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import "./settings-view.css";
 import { PatchConflictError } from "../../repositories/settings-repository.js";
 import type {
@@ -113,7 +113,9 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
           // 追加の GET リクエストはしない（D-004）.
           setLocalSettings(err.settings);
           setInputValue(err.settings.dayBoundaryTime);
-          setError("設定の更新中に競合が発生しました。最新の値を表示しています。再度お試しください。");
+          setError(
+            "設定の更新中に競合が発生しました。最新の値を表示しています。再度お試しください。",
+          );
         } else {
           setError("保存に失敗しました。");
         }
@@ -187,9 +189,7 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
       {currentMode !== undefined && (
         <section aria-label="モード切替" className="settings-view__section">
           <h2>モード切替</h2>
-          <p>
-            {currentMode === "local" ? "現在: ローカルモード" : "現在: サーバモード"}
-          </p>
+          <p>{currentMode === "local" ? "現在: ローカルモード" : "現在: サーバモード"}</p>
           {onSwitchMode !== undefined && (
             <button
               type="button"

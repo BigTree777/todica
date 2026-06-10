@@ -44,9 +44,7 @@ test("同じ Idempotency-Key の 2 回目 POST は 1 回目と同じ応答を返
     headers: AUTH_HEADER,
   });
   const list = (await listRes.json()) as { tasks: Array<{ id: string; name: string }> };
-  const matches = list.tasks.filter(
-    (t) => t.name === taskName || t.name.startsWith("差替テスト"),
-  );
+  const matches = list.tasks.filter((t) => t.name === taskName || t.name.startsWith("差替テスト"));
   expect(matches).toHaveLength(1);
   expect(matches[0].id).toBe(taskId);
 });

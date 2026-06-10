@@ -12,11 +12,8 @@
  */
 import { eq } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
-import type {
-  FocusRepository,
-  FocusSelection,
-} from "../../../data/focus-repository.js";
-import { focusSelection, schema } from "../../../db/schema.js";
+import type { FocusRepository, FocusSelection } from "../../../data/focus-repository.js";
+import { focusSelection, type schema } from "../../../db/schema.js";
 
 const SINGLETON_ID = "singleton";
 

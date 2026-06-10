@@ -15,19 +15,19 @@
  */
 import { join } from "node:path";
 import { serve } from "@hono/node-server";
+import { type Clock, FakeClock, SystemClock } from "@todica/domain/clock";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import { FakeClock, SystemClock, type Clock } from "@todica/domain/clock";
 import { createApp } from "./app.js";
 import { schema } from "./db/schema.js";
-import { DrizzleTaskRepository } from "./infra/persistence/drizzle/task-repository.js";
-import { DrizzleProjectRepository } from "./infra/persistence/drizzle/project-repository.js";
-import { DrizzleIdempotencyStore } from "./infra/persistence/drizzle/idempotency-store.js";
-import { DrizzleFocusRepository } from "./infra/persistence/drizzle/focus-repository.js";
 import { DrizzleCounterRepository } from "./infra/persistence/drizzle/counter-repository.js";
-import { DrizzleSettingsRepository } from "./infra/persistence/drizzle/settings-repository.js";
+import { DrizzleFocusRepository } from "./infra/persistence/drizzle/focus-repository.js";
+import { DrizzleIdempotencyStore } from "./infra/persistence/drizzle/idempotency-store.js";
+import { DrizzleProjectRepository } from "./infra/persistence/drizzle/project-repository.js";
 import { DrizzleRoutineRepository } from "./infra/persistence/drizzle/routine-repository.js";
+import { DrizzleSettingsRepository } from "./infra/persistence/drizzle/settings-repository.js";
+import { DrizzleTaskRepository } from "./infra/persistence/drizzle/task-repository.js";
 
 const DATABASE_PATH = process.env.DATABASE_PATH ?? "./todica.db";
 const PORT = Number.parseInt(process.env.PORT ?? "3000", 10);

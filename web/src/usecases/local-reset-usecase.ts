@@ -35,8 +35,8 @@ interface DBConnection {
  */
 function calcPreviousBoundary(now: Date, boundaryTime: string, timezone: string): Date {
   const [hStr, mStr] = boundaryTime.split(":");
-  const boundaryHour = parseInt(hStr ?? "4", 10);
-  const boundaryMinute = parseInt(mStr ?? "0", 10);
+  const boundaryHour = Number.parseInt(hStr ?? "4", 10);
+  const boundaryMinute = Number.parseInt(mStr ?? "0", 10);
 
   // now をタイムゾーンでフォーマットして現地の年月日を取得
   const formatter = new Intl.DateTimeFormat("en-CA", {
@@ -52,11 +52,11 @@ function calcPreviousBoundary(now: Date, boundaryTime: string, timezone: string)
   const parts = formatter.formatToParts(now);
   const getPart = (type: string) => parts.find((p) => p.type === type)?.value ?? "0";
 
-  const year = parseInt(getPart("year"), 10);
-  const month = parseInt(getPart("month"), 10);
-  const day = parseInt(getPart("day"), 10);
-  const localHour = parseInt(getPart("hour"), 10);
-  const localMinute = parseInt(getPart("minute"), 10);
+  const year = Number.parseInt(getPart("year"), 10);
+  const month = Number.parseInt(getPart("month"), 10);
+  const day = Number.parseInt(getPart("day"), 10);
+  const localHour = Number.parseInt(getPart("hour"), 10);
+  const localMinute = Number.parseInt(getPart("minute"), 10);
 
   // 現在時刻の現地時間が境界時刻以上かどうかチェック
   const localTimeMinutes = localHour * 60 + localMinute;
@@ -83,16 +83,21 @@ function calcPreviousBoundary(now: Date, boundaryTime: string, timezone: string)
   // オフセットを推定するために候補日の正午で計算
   const noonUtc = new Date(Date.UTC(targetYear, targetMonth - 1, targetDay, 12, 0, 0));
   const noonLocal = formatter.formatToParts(noonUtc);
-  const getNoonPart = (type: string) =>
-    noonLocal.find((p) => p.type === type)?.value ?? "0";
-  const noonLocalHour = parseInt(getNoonPart("hour"), 10);
-  const noonLocalDay = parseInt(getNoonPart("day"), 10);
-  const noonLocalMonth = parseInt(getNoonPart("month"), 10);
-  const noonLocalYear = parseInt(getNoonPart("year"), 10);
+  const getNoonPart = (type: string) => noonLocal.find((p) => p.type === type)?.value ?? "0";
+  const noonLocalHour = Number.parseInt(getNoonPart("hour"), 10);
+  const noonLocalDay = Number.parseInt(getNoonPart("day"), 10);
+  const noonLocalMonth = Number.parseInt(getNoonPart("month"), 10);
+  const noonLocalYear = Number.parseInt(getNoonPart("year"), 10);
 
   // ローカルの正午から UTC の正午を引いてオフセット（分）を求める
-  const noonLocalMs =
-    Date.UTC(noonLocalYear, noonLocalMonth - 1, noonLocalDay, noonLocalHour, 0, 0);
+  const noonLocalMs = Date.UTC(
+    noonLocalYear,
+    noonLocalMonth - 1,
+    noonLocalDay,
+    noonLocalHour,
+    0,
+    0,
+  );
   const offsetMs = noonLocalMs - noonUtc.getTime();
 
   // 境界時刻のローカルタイムスタンプ（UTC で表現）
@@ -165,10 +170,9 @@ export class LocalResetUsecase {
       );
 
       // 5-4. ゴミ箱清算: trashedAt IS NOT NULL AND trashedAt < 前回境界時刻 → DELETE
-      await this.db.run(
-        `DELETE FROM tasks WHERE trashed_at IS NOT NULL AND trashed_at < ?`,
-        [previousBoundaryIso],
-      );
+      await this.db.run("DELETE FROM tasks WHERE trashed_at IS NOT NULL AND trashed_at < ?", [
+        previousBoundaryIso,
+      ]);
 
       await this.db.commitTransaction();
     } catch (e) {

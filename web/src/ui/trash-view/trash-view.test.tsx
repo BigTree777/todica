@@ -1,3 +1,7 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 /**
  * 単体テスト: TrashView (BL-014 / web-client-foundation).
  *
@@ -14,12 +18,12 @@
  * モック TrashRepository を props 注入するパターンは today-view.test.tsx と同形とする (plan.md D-005)。
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import type {
+  RestoreTaskCommand,
+  TrashRepository,
+  TrashedTask,
+} from "../../repositories/trash-repository.js";
 import { TrashView } from "./trash-view.js";
-import type { TrashRepository, TrashedTask, RestoreTaskCommand } from "../../repositories/trash-repository.js";
 
 // ============================================================
 // QueryClientProvider ラッパー
@@ -28,13 +32,11 @@ import type { TrashRepository, TrashedTask, RestoreTaskCommand } from "../../rep
 function renderWithQueryClient(ui: ReactNode): ReturnType<typeof render> {
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: { retry: false, staleTime: Infinity, networkMode: "offlineFirst" },
+      queries: { retry: false, staleTime: Number.POSITIVE_INFINITY, networkMode: "offlineFirst" },
       mutations: { retry: false, networkMode: "offlineFirst" },
     },
   });
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
-  );
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
 // ============================================================
@@ -106,8 +108,18 @@ describe("TrashView (BL-014 Web クライアント基盤)", () => {
    *   Then  タスク T1 と T2 の名前がリスト（aria-label="ゴミ箱のタスク一覧"）に表示される
    */
   it("シナリオ: マウント時に repository.list() を呼び出してタスク一覧が表示される", async () => {
-    const T1 = makeTrashedTask({ id: "t1", name: "削除タスクA", trashedReason: "deleted", version: 1 });
-    const T2 = makeTrashedTask({ id: "t2", name: "完了タスクB", trashedReason: "completed", version: 2 });
+    const T1 = makeTrashedTask({
+      id: "t1",
+      name: "削除タスクA",
+      trashedReason: "deleted",
+      version: 1,
+    });
+    const T2 = makeTrashedTask({
+      id: "t2",
+      name: "完了タスクB",
+      trashedReason: "completed",
+      version: 2,
+    });
     const repo = makeMockRepository([T1, T2]);
 
     renderWithQueryClient(<TrashView repository={repo} />);
@@ -233,8 +245,6 @@ describe("TrashView (BL-014 Web クライアント基盤)", () => {
 
     renderWithQueryClient(<TrashView repository={repo} />);
 
-    expect(
-      await screen.findByRole("heading", { name: "ゴミ箱" }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "ゴミ箱" })).toBeInTheDocument();
   });
 });

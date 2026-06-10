@@ -18,7 +18,7 @@
  *     「サイドバーから /today に戻った際にゴミ箱送りされている」「ゴミ箱に入っている」
  *     方向 (= 確実に検証できる側) を主に確認する.
  */
-import { expect, test, type Page } from "@playwright/test";
+import { type Page, expect, test } from "@playwright/test";
 
 const API_BASE = "http://localhost:3000";
 const AUTH_HEADER = { Authorization: "Bearer dev-token" };
@@ -74,9 +74,7 @@ test.describe("focus-view (/focus) のシナリオ", () => {
     await gotoFocusViaSidebar(page);
 
     // 見出し <h1>現在のタスク</h1> が描画されている (placeholder と新実装で共通の文言).
-    await expect(
-      page.getByRole("heading", { name: "現在のタスク", level: 1 }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "現在のタスク", level: 1 })).toBeVisible();
 
     // 「現在のタスク」ランドマーク内にタスク名が表示されている (= 大表示の枠の中).
     await expect(focusRegion(page).getByText(taskName, { exact: true })).toBeVisible();
@@ -129,17 +127,13 @@ test.describe("focus-view (/focus) のシナリオ", () => {
     await gotoFocusViaSidebar(page);
 
     // current タスク名が大表示されていることを確認.
-    await expect(
-      focusRegion(page).getByText(currentName, { exact: true }),
-    ).toBeVisible();
+    await expect(focusRegion(page).getByText(currentName, { exact: true })).toBeVisible();
 
     // 「完了」を押す.
     await focusRegion(page).getByRole("button", { name: "完了" }).click();
 
     // current タスク名が focus 枠から消える.
-    await expect(
-      focusRegion(page).getByText(currentName, { exact: true }),
-    ).toHaveCount(0);
+    await expect(focusRegion(page).getByText(currentName, { exact: true })).toHaveCount(0);
 
     // 注: ファイル冒頭コメントの方針に従い「次のタスクが繰り上がる」具体的タスク名
     // までは assert しない. 既存テストの残骸タスクが priority=highest で残っていると
@@ -159,10 +153,9 @@ test.describe("focus-view (/focus) のシナリオ", () => {
       .toBe(before + 1);
 
     // サーバ side: current task が trashed (= completed) 扱いになっている.
-    const trashed = await request.get(
-      `${API_BASE}/api/v1/tasks?trashed=true`,
-      { headers: AUTH_HEADER },
-    );
+    const trashed = await request.get(`${API_BASE}/api/v1/tasks?trashed=true`, {
+      headers: AUTH_HEADER,
+    });
     const trashedBody = (await trashed.json()) as {
       tasks: Array<{ id: string; trashedReason: string }>;
     };
@@ -213,17 +206,13 @@ test.describe("focus-view (/focus) のシナリオ", () => {
     await gotoFocusViaSidebar(page);
 
     // current が大表示されている.
-    await expect(
-      focusRegion(page).getByText(currentName, { exact: true }),
-    ).toBeVisible();
+    await expect(focusRegion(page).getByText(currentName, { exact: true })).toBeVisible();
 
     // 「削除」を押す.
     await focusRegion(page).getByRole("button", { name: "削除" }).click();
 
     // current が focus 枠から消える.
-    await expect(
-      focusRegion(page).getByText(currentName, { exact: true }),
-    ).toHaveCount(0);
+    await expect(focusRegion(page).getByText(currentName, { exact: true })).toHaveCount(0);
 
     // 注: ファイル冒頭コメントの方針に従い「次のタスクが繰り上がる」具体的タスク名
     // までは assert しない. 既存テストの残骸タスクが priority=highest で残っていると
@@ -244,10 +233,9 @@ test.describe("focus-view (/focus) のシナリオ", () => {
       .toBe(before);
 
     // サーバ side: current task が trashedReason = "deleted" 扱い.
-    const trashed = await request.get(
-      `${API_BASE}/api/v1/tasks?trashed=true`,
-      { headers: AUTH_HEADER },
-    );
+    const trashed = await request.get(`${API_BASE}/api/v1/tasks?trashed=true`, {
+      headers: AUTH_HEADER,
+    });
     const trashedBody = (await trashed.json()) as {
       tasks: Array<{ id: string; trashedReason: string }>;
     };

@@ -43,10 +43,7 @@ test("Service Worker が登録され activated 状態に到達する", async ({ 
   expect(scope).toMatch(/^http:\/\/localhost:4173\//);
 });
 
-test("SW activate 後にオフラインでも navigation が破綻しない", async ({
-  page,
-  context,
-}) => {
+test("SW activate 後にオフラインでも navigation が破綻しない", async ({ page, context }) => {
   // 1 回目アクセス: SW を登録 → activate.
   await page.goto("/");
   const deadline = Date.now() + 20_000;

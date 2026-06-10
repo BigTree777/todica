@@ -1,3 +1,7 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 /**
  * 単体テスト: RoutinesView (BL-017 / routine).
  *
@@ -16,15 +20,8 @@
  * implementer が RoutinesView を実装することで green 化する。
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import type { WebRoutine, WebRoutineRepository } from "../../repositories/routine-repository.js";
 import { RoutinesView } from "./routines-view.js";
-import type {
-  WebRoutine,
-  WebRoutineRepository,
-} from "../../repositories/routine-repository.js";
 
 // ============================================================
 // QueryClientProvider ラッパー
@@ -33,13 +30,11 @@ import type {
 function renderWithQueryClient(ui: ReactNode): ReturnType<typeof render> {
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: { retry: false, staleTime: Infinity, networkMode: "offlineFirst" },
+      queries: { retry: false, staleTime: Number.POSITIVE_INFINITY, networkMode: "offlineFirst" },
       mutations: { retry: false, networkMode: "offlineFirst" },
     },
   });
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
-  );
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
 // ============================================================
@@ -185,9 +180,7 @@ describe("RoutinesView (BL-017 ルーティン管理 UI)", () => {
     expect(repo.listMock).toHaveBeenCalledTimes(1);
 
     // 「ルーティン」の見出し（h1 または h2）が存在する
-    expect(
-      await screen.findByRole("heading", { name: /ルーティン/ }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /ルーティン/ })).toBeInTheDocument();
 
     // ルーティン行は無い
     const items = screen.queryAllByRole("listitem");

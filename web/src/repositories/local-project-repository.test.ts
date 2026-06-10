@@ -12,7 +12,7 @@
  *   @capacitor-community/sqlite は jsdom 環境で動作しないため vi.mock でモックする.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LocalProjectRepository } from "./local-project-repository.js";
 
 // ---------------------------------------------------------------------------
@@ -214,10 +214,10 @@ describe("LocalProjectRepository.delete() (FR-LOC-002 / T-15)", () => {
     // run または execute に DELETE 文が呼ばれること
     const allCalls = [
       ...(db.run.mock.calls as [string, unknown[]][]),
-      ...(db.execute.mock.calls as [string][]),
+      ...(db.execute.mock.calls as unknown as [string][]),
     ];
-    const deleteCall = allCalls.find(([sql]) =>
-      typeof sql === "string" && sql.toUpperCase().includes("DELETE"),
+    const deleteCall = allCalls.find(
+      ([sql]) => typeof sql === "string" && sql.toUpperCase().includes("DELETE"),
     );
     expect(deleteCall).toBeDefined();
   });

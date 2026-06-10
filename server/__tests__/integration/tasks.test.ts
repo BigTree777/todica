@@ -1,3 +1,4 @@
+import type { Hono } from "hono";
 /**
  * 結合テスト: タスク CRUD API (BL-001 / FR-001 〜 FR-009, NFR-020).
  *
@@ -9,12 +10,11 @@
  *       implementer がエンドポイントを実装することで green 化する.
  */
 import { beforeEach, describe, expect, it } from "vitest";
-import type { Hono } from "hono";
 import {
-  authHeaders,
-  buildTestApp,
   TEST_AUTH_TOKEN,
   TEST_INITIAL_TIME,
+  authHeaders,
+  buildTestApp,
 } from "../helpers/build-test-app.js";
 import type {
   InMemoryIdempotencyStore,
@@ -50,7 +50,7 @@ beforeEach(() => {
 // ============================================================
 
 describe("POST /api/v1/tasks (起票時の優先度 BL-002)", () => {
-  it("シナリオ: 起票時に priority = \"highest\" を明示できる (BL-002 / FR-003)", async () => {
+  it('シナリオ: 起票時に priority = "highest" を明示できる (BL-002 / FR-003)', async () => {
     const res = await app.request("/api/v1/tasks", {
       method: "POST",
       headers: authHeaders({ "Idempotency-Key": TASK_ID_1 }),
@@ -62,7 +62,7 @@ describe("POST /api/v1/tasks (起票時の優先度 BL-002)", () => {
     expect(body.task.priority).toBe("highest");
   });
 
-  it("シナリオ: 起票時に priority = \"later\" を明示できる (BL-002 / FR-003)", async () => {
+  it('シナリオ: 起票時に priority = "later" を明示できる (BL-002 / FR-003)', async () => {
     const res = await app.request("/api/v1/tasks", {
       method: "POST",
       headers: authHeaders({ "Idempotency-Key": TASK_ID_1 }),
@@ -1150,7 +1150,9 @@ describe("POST /api/v1/tasks/{id}/complete (BL-003 完了アクション)", () =
     });
 
     expect(res.status).toBe(412);
-    const body = (await res.json()) as { task: { name: string; version: number; trashedAt: string | null } };
+    const body = (await res.json()) as {
+      task: { name: string; version: number; trashedAt: string | null };
+    };
     expect(body.task.name).toBe("current");
     expect(body.task.version).toBe(2);
 
@@ -1572,13 +1574,10 @@ describe("GET /api/v1/tasks (BL-038 ?dueDate フィルタ)", () => {
     expect(activeList.tasks.find((t) => t.id === TASK_ID_2)).toBeUndefined();
 
     // trashed=true + dueDate=tomorrow → ゴミ箱内の tomorrow タスクのみが返る.
-    const resTrashed = await app.request(
-      "/api/v1/tasks?dueDate=tomorrow&trashed=true",
-      {
-        method: "GET",
-        headers: authHeaders(),
-      },
-    );
+    const resTrashed = await app.request("/api/v1/tasks?dueDate=tomorrow&trashed=true", {
+      method: "GET",
+      headers: authHeaders(),
+    });
     expect(resTrashed.status).toBe(200);
     const trashedList = (await resTrashed.json()) as {
       tasks: Array<{ id: string; dueDate: string; trashedReason: string | null }>;

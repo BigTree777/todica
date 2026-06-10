@@ -1,3 +1,5 @@
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 /**
  * 単体テスト: HttpTrashRepository (BL-014 / web-client-foundation).
  *
@@ -18,12 +20,7 @@
  * HTTP スタブ: 既存パターン（http-task-repository.test.ts）に合わせ msw を使用する。
  */
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { http, HttpResponse } from "msw";
-import { setupServer } from "msw/node";
-import {
-  HttpTrashRepository,
-  RestoreConflictError,
-} from "./trash-repository.js";
+import { HttpTrashRepository, RestoreConflictError } from "./trash-repository.js";
 import type { TrashedTask } from "./trash-repository.js";
 
 const BASE_URL = "http://localhost:3000";
@@ -70,8 +67,18 @@ describe("HttpTrashRepository", () => {
    *   Then  [T1] が返る
    */
   it("list() は GET /api/v1/trash を呼び出し TrashedTask[] を返す", async () => {
-    const T1 = makeTrashedTask({ id: TASK_ID, name: "削除済みタスク", trashedReason: "deleted", version: 1 });
-    const T2 = makeTrashedTask({ id: TASK_ID_2, name: "完了済みタスク", trashedReason: "completed", version: 3 });
+    const T1 = makeTrashedTask({
+      id: TASK_ID,
+      name: "削除済みタスク",
+      trashedReason: "deleted",
+      version: 1,
+    });
+    const T2 = makeTrashedTask({
+      id: TASK_ID_2,
+      name: "完了済みタスク",
+      trashedReason: "completed",
+      version: 3,
+    });
 
     let receivedMethod: string | null = null;
     let receivedAuth: string | null = null;

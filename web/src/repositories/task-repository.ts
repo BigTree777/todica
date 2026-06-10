@@ -8,7 +8,7 @@
  *   - docs/developer/features/task-crud/plan.md §処理フロー (Web → HTTP)
  *   - ADR-0010 (Idempotency-Key, If-Match の必須化)
  */
-import type { Task, DueDate, Priority } from "@todica/domain/task";
+import type { DueDate, Priority, Task } from "@todica/domain/task";
 
 export interface CreateTaskCommand {
   id: string;
@@ -250,9 +250,7 @@ export class HttpTaskRepository implements TaskRepository {
   async list(filter?: ListTasksFilter): Promise<Task[]> {
     // BL-038 / tomorrow-view: filter.dueDate が渡されたら URL に `?dueDate=...` を乗せる.
     // 既存呼び出し (引数なし) との互換のため optional.
-    const qs = filter?.dueDate
-      ? `?dueDate=${encodeURIComponent(filter.dueDate)}`
-      : "";
+    const qs = filter?.dueDate ? `?dueDate=${encodeURIComponent(filter.dueDate)}` : "";
     const res = await fetch(`${this.baseUrl}/api/v1/tasks${qs}`, {
       method: "GET",
       headers: this.authHeaders(),
@@ -285,10 +283,7 @@ export class HttpTaskRepository implements TaskRepository {
 
     if (res.status === 412) {
       const errBody = (await res.json()) as { task?: Task };
-      throw new OptimisticLockError(
-        "optimistic lock conflict on create",
-        errBody.task,
-      );
+      throw new OptimisticLockError("optimistic lock conflict on create", errBody.task);
     }
     if (!res.ok && res.status !== 201) {
       throw new Error(`HTTP ${res.status}: failed to create task`);
@@ -318,10 +313,7 @@ export class HttpTaskRepository implements TaskRepository {
 
     if (res.status === 412) {
       const errBody = (await res.json()) as { task?: Task };
-      throw new OptimisticLockError(
-        "optimistic lock conflict on update",
-        errBody.task,
-      );
+      throw new OptimisticLockError("optimistic lock conflict on update", errBody.task);
     }
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: failed to update task`);
@@ -345,10 +337,7 @@ export class HttpTaskRepository implements TaskRepository {
 
     if (res.status === 412) {
       const errBody = (await res.json()) as { task?: Task };
-      throw new OptimisticLockError(
-        "optimistic lock conflict on delete",
-        errBody.task,
-      );
+      throw new OptimisticLockError("optimistic lock conflict on delete", errBody.task);
     }
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: failed to delete task`);
@@ -450,10 +439,7 @@ export class HttpTaskRepository implements TaskRepository {
 
     if (res.status === 412) {
       const errBody = (await res.json()) as { task?: Task };
-      throw new OptimisticLockError(
-        "optimistic lock conflict on complete",
-        errBody.task,
-      );
+      throw new OptimisticLockError("optimistic lock conflict on complete", errBody.task);
     }
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: failed to complete task`);

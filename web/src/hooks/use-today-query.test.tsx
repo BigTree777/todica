@@ -1,3 +1,7 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook, waitFor } from "@testing-library/react";
+import type { Task } from "@todica/domain/task";
+import type { ReactNode } from "react";
 /**
  * フェーズ B: useTodayQuery フックの単体テスト
  *
@@ -24,13 +28,9 @@
  *       このテストは意図的に失敗する (red)。
  *       implementer が実装・インストールすることで green 化する。
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { ReactNode } from "react";
-import { useTodayQuery } from "./use-today-query.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TaskRepository } from "../repositories/task-repository.js";
-import type { Task } from "@todica/domain/task";
+import { useTodayQuery } from "./use-today-query.js";
 
 const NOW = "2026-06-08T09:00:00.000Z";
 
@@ -57,7 +57,7 @@ function createTestQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: Infinity,
+        staleTime: Number.POSITIVE_INFINITY,
         retry: false,
         networkMode: "offlineFirst",
       },
@@ -133,7 +133,7 @@ describe("useTodayQuery (フェーズ B: TanStack Query 導入)", () => {
     expect(result.current.data?.tasks[0]?.name).toBe("牛乳を買う");
   });
 
-  it("シナリオ: クエリキーは [\"today\"] であること (plan.md §クエリキー設計)", async () => {
+  it('シナリオ: クエリキーは ["today"] であること (plan.md §クエリキー設計)', async () => {
     // Given repository
     const repository = makeMockRepository([]);
     const wrapper = createWrapper(queryClient);

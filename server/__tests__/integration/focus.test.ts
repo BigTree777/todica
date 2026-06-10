@@ -1,3 +1,5 @@
+import type { DueDate, Priority, Task, TrashedReason } from "@todica/domain/task";
+import type { Hono } from "hono";
 /**
  * 結合テスト: 現在のタスク (フォーカス) API (BL-006 / FR-012 / FR-013 / NFR-011).
  *
@@ -17,18 +19,16 @@
  *   - 完了 / 削除 / 期限変更経路でのフォーカス自動解除 (FR-013)
  */
 import { beforeEach, describe, expect, it } from "vitest";
-import type { Hono } from "hono";
 import {
-  authHeaders,
-  buildTestApp,
   TEST_AUTH_TOKEN,
   TEST_INITIAL_TIME,
+  authHeaders,
+  buildTestApp,
 } from "../helpers/build-test-app.js";
 import type {
   InMemoryFocusRepository,
   InMemoryTaskRepository,
 } from "../helpers/in-memory-repositories.js";
-import type { Task, Priority, DueDate, TrashedReason } from "@todica/domain/task";
 
 // 並び順検証のため id が lexicographic に区別できる固定値を用意する.
 const ID_001 = "00000000-0000-4000-8000-000000000001";
@@ -238,7 +238,7 @@ describe("PUT /api/v1/focus (異常系: INVALID_FOCUS_TARGET)", () => {
     expect(focusRepo.current().currentTaskId).toBeNull();
   });
 
-  it("シナリオ: 今日のタスクでない id (dueDate = \"tomorrow\") を currentTaskId に設定しようとすると 400 INVALID_FOCUS_TARGET", async () => {
+  it('シナリオ: 今日のタスクでない id (dueDate = "tomorrow") を currentTaskId に設定しようとすると 400 INVALID_FOCUS_TARGET', async () => {
     // spec.md §「PUT /api/v1/focus」第 3 ケース.
     taskRepo.seed(makeTask({ id: ID_001, dueDate: "tomorrow" }));
 

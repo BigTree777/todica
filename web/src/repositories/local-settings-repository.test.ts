@@ -12,7 +12,7 @@
  *   @capacitor-community/sqlite は jsdom 環境で動作しないため vi.mock でモックする.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LocalSettingsRepository } from "./local-settings-repository.js";
 
 // ---------------------------------------------------------------------------
@@ -79,7 +79,9 @@ describe("LocalSettingsRepository.get() (FR-LOC-002 / T-18)", () => {
     // Then デフォルト値が返る
     expect(settings.dayBoundaryTime).toBe("04:00");
     // dayBoundaryTimezone が追加フィールドとして存在することを確認
-    expect((settings as Record<string, unknown>).dayBoundaryTimezone ?? "Asia/Tokyo").toBe("Asia/Tokyo");
+    expect(
+      (settings as unknown as Record<string, unknown>).dayBoundaryTimezone ?? "Asia/Tokyo",
+    ).toBe("Asia/Tokyo");
   });
 
   // plan.md §T-07: Settings レコードが存在する場合はその値を返す

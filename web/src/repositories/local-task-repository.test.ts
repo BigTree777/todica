@@ -13,7 +13,7 @@
  *   MockDBConnection は SQLiteDBConnection の最小実装として query/run/execute を持つ.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LocalTaskRepository } from "./local-task-repository.js";
 import { OptimisticLockError } from "./task-repository.js";
 
@@ -36,9 +36,7 @@ type Row = Record<string, unknown>;
  * インメモリのテーブルデータを保持し、query/run を横取りするモック DB 接続.
  * テストケースで tables に事前データを仕込むことで SQL 操作の結果を制御する.
  */
-function makeMockDb(
-  tables: Record<string, Row[]> = {},
-): {
+function makeMockDb(tables: Record<string, Row[]> = {}): {
   db: {
     query: ReturnType<typeof vi.fn>;
     run: ReturnType<typeof vi.fn>;
@@ -439,9 +437,7 @@ describe("LocalTaskRepository.delete() (AC-LOC-003 / FR-LOC-002)", () => {
     // Counter の UPDATE は呼ばれない（completedCount 変化なし）
     const counterUpdate = runCalls.find(
       ([sql]) =>
-        typeof sql === "string" &&
-        sql.includes("counter") &&
-        sql.includes("completed_count"),
+        typeof sql === "string" && sql.includes("counter") && sql.includes("completed_count"),
     );
     expect(counterUpdate).toBeUndefined();
   });

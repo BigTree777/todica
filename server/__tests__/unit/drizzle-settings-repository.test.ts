@@ -1,3 +1,5 @@
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
 /**
  * 単体テスト: DrizzleSettingsRepository (better-sqlite3 + drizzle-orm).
  *
@@ -12,10 +14,8 @@
  * - 本テスト内で CREATE TABLE を発行する.
  */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import { DrizzleSettingsRepository } from "../../src/infra/persistence/drizzle/settings-repository.js";
 import { schema } from "../../src/db/schema.js";
+import { DrizzleSettingsRepository } from "../../src/infra/persistence/drizzle/settings-repository.js";
 
 const CREATE_SETTINGS_SQL = `
 CREATE TABLE IF NOT EXISTS settings (

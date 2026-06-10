@@ -10,8 +10,8 @@
  *   PWA-004: インストール後、独立ウィンドウ（standalone モード）でアプリが起動する。
  */
 import { fileURLToPath } from "node:url";
-import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
