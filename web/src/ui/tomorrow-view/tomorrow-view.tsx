@@ -432,22 +432,31 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
                 // actions) を撤去し, 子要素を <li> 直下に並べる (today-view と同形).
                 // <span> の className (tomorrow-view__project / __name) も撤去 (P-003).
                 <li key={task.id} className="day-view__card">
-                  {project && <span className="project-chip">{project.name}</span>}
-                  <span>{task.name}</span>
-                  <button type="button" onClick={() => handleDelete(task)}>
-                    削除
-                  </button>
-                  {/* BL-042 REQ-2 / AC-8: routine 由来タスクは「今日にする」を非表示にする.
-                      routine は毎日自動生成されるため移送すると翌日に重複が出る. */}
-                  {task.origin !== "routine" && (
-                    <button type="button" onClick={() => handleMoveToToday(task)}>
-                      今日にする
+                  {/* BL-057 / REQ-6: 3 段ゾーン構造 (header / title / actions).
+                      tomorrow-view は <PriorityStars /> を持たない既存仕様なので
+                      title 段はタスク名のみ. */}
+                  <div className="day-view__card__header">
+                    {project && <span className="project-chip">{project.name}</span>}
+                  </div>
+                  <div className="day-view__card__title">
+                    <span>{task.name}</span>
+                  </div>
+                  <div className="day-view__card__actions">
+                    <button type="button" onClick={() => handleDelete(task)}>
+                      削除
                     </button>
-                  )}
-                  {/* BL-042: 「完了」 button を追加 (today と対称な 3 ボタン化). */}
-                  <button type="button" onClick={() => handleComplete(task)}>
-                    完了
-                  </button>
+                    {/* BL-042 REQ-2 / AC-8: routine 由来タスクは「今日にする」を非表示にする.
+                        routine は毎日自動生成されるため移送すると翌日に重複が出る. */}
+                    {task.origin !== "routine" && (
+                      <button type="button" onClick={() => handleMoveToToday(task)}>
+                        今日にする
+                      </button>
+                    )}
+                    {/* BL-042: 「完了」 button を追加 (today と対称な 3 ボタン化). */}
+                    <button type="button" onClick={() => handleComplete(task)}>
+                      完了
+                    </button>
+                  </div>
                 </li>
               );
             })}

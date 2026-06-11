@@ -447,8 +447,11 @@ export function TodayView(props: TodayViewProps): JSX.Element {
           return (
             <section aria-label="現在のタスク" className="day-view__card day-view__card--focus">
               <h2>現在のタスク</h2>
-              <div>
+              {/* BL-057 / REQ-5-1: 3 段ゾーン構造 (header / title / actions). */}
+              <div className="day-view__card__header">
                 {focusedProject && <span className="project-chip">{focusedProject.name}</span>}
+              </div>
+              <div className="day-view__card__title">
                 <span>{focusedTask.name}</span>
                 <PriorityStars
                   value={focusedTask.priority}
@@ -456,6 +459,8 @@ export function TodayView(props: TodayViewProps): JSX.Element {
                   groupLabel={`${focusedTask.name} の優先度`}
                   idPrefix={`task-${focusedTask.id}`}
                 />
+              </div>
+              <div className="day-view__card__actions">
                 <button type="button" onClick={() => handleDelete(focusedTask)}>
                   削除
                 </button>
@@ -519,38 +524,44 @@ export function TodayView(props: TodayViewProps): JSX.Element {
             : null;
           return (
             <li key={task.id} className="day-view__card">
-              {project && <span className="project-chip">{project.name}</span>}
-              <span>{task.name}</span>
-              {/* BL-040 / AC-5 / AC-7: 旧 cycle ボタン + [優先度: ...] 文字表示を撤去し
-                <PriorityStars /> に置き換える. */}
-              <PriorityStars
-                value={task.priority}
-                onChange={(next) => handleSetPriority(task, next)}
-                groupLabel={`${task.name} の優先度`}
-                idPrefix={`task-${task.id}`}
-              />
-              {/* BL-043 / FR-012: 状態系コントロール「現在のタスクにする」.
-                PriorityStars と同じ状態系グループ (アクション 3 ボタンのカウント外) として
-                アクションボタン群より前に置く (spec REQ-1).
-                ネイティブ button のセマンティクスで Tab + Enter / Space に対応 (spec REQ-3). */}
-              <button type="button" onClick={() => handleSetFocus(task.id)}>
-                現在のタスクにする
-              </button>
-              {/* BL-042: 各カードのアクションは「削除」「明日にする」「完了」の 3 つだけに削減
-                (編集 / 現在に設定 を撤去, ラベルを「明日にする」に統一). */}
-              <button type="button" onClick={() => handleDelete(task)}>
-                削除
-              </button>
-              {/* BL-017 / FR-033: origin が "routine" でない場合のみ期限切替ボタンを表示.
-                BL-042: ラベルは「明日にする / 今日にする」に統一. */}
-              {task.origin !== "routine" && (
-                <button type="button" onClick={() => handleToggleDueDate(task)}>
-                  {task.dueDate === "today" ? "明日にする" : "今日にする"}
+              {/* BL-057 / REQ-5-2: 3 段ゾーン構造 (header / title / actions). */}
+              <div className="day-view__card__header">
+                {project && <span className="project-chip">{project.name}</span>}
+              </div>
+              <div className="day-view__card__title">
+                <span>{task.name}</span>
+                {/* BL-040 / AC-5 / AC-7: 旧 cycle ボタン + [優先度: ...] 文字表示を撤去し
+                  <PriorityStars /> に置き換える. */}
+                <PriorityStars
+                  value={task.priority}
+                  onChange={(next) => handleSetPriority(task, next)}
+                  groupLabel={`${task.name} の優先度`}
+                  idPrefix={`task-${task.id}`}
+                />
+              </div>
+              <div className="day-view__card__actions">
+                {/* BL-043 / FR-012: 状態系コントロール「現在のタスクにする」.
+                  BL-057 / D-002: アクション段の先頭に配置 (DOM 順は既存実装維持).
+                  ネイティブ button のセマンティクスで Tab + Enter / Space に対応 (spec REQ-3). */}
+                <button type="button" onClick={() => handleSetFocus(task.id)}>
+                  現在のタスクにする
                 </button>
-              )}
-              <button type="button" onClick={() => handleComplete(task)}>
-                完了
-              </button>
+                {/* BL-042: 各カードのアクションは「削除」「明日にする」「完了」の 3 つだけに削減
+                  (編集 / 現在に設定 を撤去, ラベルを「明日にする」に統一). */}
+                <button type="button" onClick={() => handleDelete(task)}>
+                  削除
+                </button>
+                {/* BL-017 / FR-033: origin が "routine" でない場合のみ期限切替ボタンを表示.
+                  BL-042: ラベルは「明日にする / 今日にする」に統一. */}
+                {task.origin !== "routine" && (
+                  <button type="button" onClick={() => handleToggleDueDate(task)}>
+                    {task.dueDate === "today" ? "明日にする" : "今日にする"}
+                  </button>
+                )}
+                <button type="button" onClick={() => handleComplete(task)}>
+                  完了
+                </button>
+              </div>
             </li>
           );
         })}

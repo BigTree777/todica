@@ -20,7 +20,10 @@ import { type Page, expect, test } from "@playwright/test";
  * - 「タスク一覧」配下の `<li>` か, 「現在のタスク」配下の `<div>` を拾う.
  */
 function taskRow(page: Page, taskName: string) {
-  return page.getByText(taskName, { exact: true }).first().locator("..");
+  // BL-057: タスクカードが 3 段ゾーン化されタスク名 span の直接の親が
+  // <div className="day-view__card__title"> になったため, ancestor::li で
+  // タスクカード本体 (<li>) を取得する.
+  return page.getByText(taskName, { exact: true }).first().locator("xpath=ancestor::li");
 }
 
 async function createTask(page: Page, taskName: string): Promise<void> {
