@@ -25,14 +25,52 @@
 }
 
 .day-view__form {
-  /* BL-054: 起票フォームを `.day-view__card` と同じ visual でカード化する. */
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
+  /* BL-058: 2D グリッド配置 (REQ-1 / D-001).
+   * - 上段: project (左) / priority (右)
+   * - 中段: name (全幅)
+   * - 下段: . (空) / submit (右)
+   */
+  display: grid;
+  grid-template-areas:
+    "project priority"
+    "name name"
+    ". submit";
+  grid-template-columns: 1fr auto;
+  gap: var(--space-md);
+  /* BL-054 visual 4 宣言を保持 (REQ-2 / NFR-BL054-PRESERVE). */
   background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: var(--space-md);
+}
+
+/* BL-058: 起票フォーム内の各子要素に grid-area を割り当てる (REQ-3 / D-001). */
+.day-view__form__project {
+  grid-area: project;
+}
+
+.day-view__form__priority {
+  grid-area: priority;
+  /* PriorityStars と hint を縦並びで配置するための minimal layout (D-002 / P-003). */
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.day-view__form__priority-hint {
+  /* 視覚的補助テキスト (REQ-4 / D-002).
+   * font-size / color は将来 BL で調整可能. 本 BL では既定スタイルで十分. */
+  color: var(--color-fg-subtle);
+  font-size: var(--font-size-small);
+}
+
+.day-view__form__name {
+  grid-area: name;
+}
+
+.day-view__form__submit {
+  grid-area: submit;
+  justify-self: end;
 }
 
 .day-view__list {
