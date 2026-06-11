@@ -34,11 +34,12 @@ test.describe("BL-039 今日ビュー起票フォームのスコープ", () => {
     await expect(form.getByLabel(/期限/)).toHaveCount(0);
     await expect(form.locator("#task-due-date")).toHaveCount(0);
 
-    // 起票フォーム内の input/select は 1 つのみ (タスク名 input).
-    // BL-040 で優先度 select は星 button group に置換, BL-041 でプロジェクト select は
-    // トグル button に置換されたため. 「追加」ボタン / プロジェクトトグル / 優先度星は
-    // button 要素であり input/select には数えない.
-    await expect(form.locator("input, select")).toHaveCount(1);
+    // 起票フォーム内の input/select は 2 つ:
+    //   タスク名 (input id="task-name") +
+    //   プロジェクト (<select id="create-project">, BL-065 で BL-041 トグル UI を撤去し戻した).
+    // BL-040 で優先度 select は星 button group (role=radiogroup) に置換されたため
+    // input/select には数えない. 「追加」ボタンも button 要素なので別.
+    await expect(form.locator("input, select")).toHaveCount(2);
   });
 
   test('シナリオ: 起票したタスクは dueDate="today" でサーバに永続化される (REQ-2)', async ({

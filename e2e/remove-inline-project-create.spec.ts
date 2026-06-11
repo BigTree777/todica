@@ -59,13 +59,16 @@ async function clearProjects(request: APIRequestContext): Promise<void> {
 }
 
 /**
- * 起票フォーム scope 内のプロジェクトトグルボタン (BL-041 <ProjectToggle />).
- * project-toggle.spec.ts / inline-project-create.spec.ts と同じ流儀.
+ * 起票フォーム scope 内のプロジェクト選択 `<select>` (BL-065 / project-toggle-removal).
+ *
+ * 旧 BL-041 トグル button (`getByRole("button", { name: /プロジェクト/ })`) は撤去された.
+ * 新 UI は visually-hidden `<label>プロジェクト</label>` + `<select>` のため
+ * `getByLabel("プロジェクト")` で取得する. `<option>` ラベルは「プロジェクトなし」+ 各 project.name.
  */
-function projectToggleButton(page: Page) {
+function projectSelect(page: Page) {
   return page
     .getByRole("form", { name: /タスク起票フォーム|起票フォーム/ })
-    .getByRole("button", { name: /プロジェクト/ });
+    .getByLabel("プロジェクト");
 }
 
 /** /today を開き, 起票フォームの描画完了まで待つ. */
@@ -206,16 +209,17 @@ test.describe("remove-inline-project-create (BL-050) のシナリオ", () => {
     expect(projects.some((p) => p.name === projectName)).toBe(true);
   });
 
-  test("AC-4: /projects で追加したプロジェクトは /today のトグル巡回経路に「（未分類）」とともに現れる", async ({
+  test("AC-4: /projects で追加したプロジェクトは /today の <select> の option 群に「プロジェクトなし」とともに現れる", async ({
     page,
     request,
   }) => {
-    // spec.md AC-4:
+    // spec.md AC-4 (BL-065 / project-toggle-removal 追従):
     //   Given /projects から「個人」プロジェクトを 1 件作成した
-    //   When  ハンバーガーメニューで /today に戻り起票フォームのプロジェクトトグルを巡回する
-    //   Then  巡回経路に「個人」「（未分類）」が含まれる
+    //   When  ハンバーガーメニューで /today に戻り起票フォームの <select> の option を列挙する
+    //   Then  option 一覧に「個人」「プロジェクトなし」が含まれる
     //
     // 既存の ["projects"] キャッシュ共有 (BL-016) を BL-050 が壊さないことの回帰ガード.
+    // 旧 BL-041 トグル巡回経路から BL-065 の <select> + <option> 一覧経路へ書き換えた.
     await clearProjects(request);
     const stamp = Date.now();
     const projectName = `個人 ${stamp}`;
@@ -235,16 +239,11 @@ test.describe("remove-inline-project-create (BL-050) のシナリオ", () => {
     await expect(page).toHaveURL(/\/today$/);
     await expect(page.getByRole("form", { name: "タスク起票フォーム" })).toBeVisible();
 
-    // トグル巡回で「（未分類）」と新規プロジェクトの両方を観察.
-    // プロジェクト 1 件 + 未分類 = 2 ポジション. 6 クリックで十分巡回する.
-    const toggle = projectToggleButton(page);
-    const labels: string[] = [];
-    for (let i = 0; i < 6; i++) {
-      labels.push(((await toggle.textContent()) ?? "").trim());
-      await toggle.click();
-    }
-    expect(labels.some((t) => t.includes(projectName))).toBe(true);
-    expect(labels.some((t) => t.includes("（未分類）"))).toBe(true);
+    // <select> の option ラベルを列挙し「個人」と「プロジェクトなし」が含まれることを確認.
+    const select = projectSelect(page);
+    const optionLabels = await select.locator("option").allTextContents();
+    expect(optionLabels.some((t) => t.trim().includes(projectName))).toBe(true);
+    expect(optionLabels.some((t) => t.trim() === "プロジェクトなし")).toBe(true);
   });
 
   test("AC-9 (E2E 補強): /today に project-create-dialog の DOM ノードがマウントされていない", async ({

@@ -104,7 +104,8 @@ const todayViewTsxPath = resolve(webSrcRoot, "ui/today-view/today-view.tsx");
 const tomorrowViewTsxPath = resolve(webSrcRoot, "ui/tomorrow-view/tomorrow-view.tsx");
 const focusViewTsxPath = resolve(webSrcRoot, "ui/focus-view/focus-view.tsx");
 const priorityStarsTsxPath = resolve(webSrcRoot, "ui/priority-stars/priority-stars.tsx");
-const projectToggleTsxPath = resolve(webSrcRoot, "ui/project-toggle/project-toggle.tsx");
+// BL-065 (project-toggle-removal): projectToggleTsxPath は撤去された. ProjectToggle 本体が
+// 無くなったため AC-23 の不変性 assert 4 件もまとめて削除済み.
 
 const NOW = "2026-06-11T09:00:00.000Z";
 const PROJECT_ID_P1 = "p1p1p1p1-p1p1-4p1p-8p1p-p1p1p1p1p1p1";
@@ -986,7 +987,11 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
       expect(root?.querySelector(".task-card__actions")).not.toBeNull();
     });
 
-    it("header 段に ProjectToggle (button[name~='プロジェクト']) + role=radiogroup (PriorityStars) が存在する", async () => {
+    it("header 段に <select id='create-project'> + role=radiogroup (PriorityStars) が存在する", async () => {
+      // BL-065 (project-toggle-removal): ProjectToggle (button[name~='プロジェクト']) を
+      // <select id="create-project"> + <label htmlFor="create-project"> に置換した.
+      // AC-1 〜 AC-4 (BL-065) の詳細検証は task-form-card-select.test.tsx に集約.
+      // 本 it は「header 段にプロジェクト用 <select> と PriorityStars が同居する」軽量スポット.
       const { TaskFormCard } = await importTaskFormCard();
       const { container } = render(
         <TaskFormCard
@@ -1007,10 +1012,12 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
       );
       const header = container.querySelector(".task-card__header");
       expect(header, ".task-card__header が見つからない").not.toBeNull();
-      // ProjectToggle は role=button + aria-label に「プロジェクト」を含む.
-      const projectToggleBtn = header?.querySelector("button");
-      expect(projectToggleBtn, "header に ProjectToggle (button) が無い").not.toBeNull();
-      expect(projectToggleBtn?.getAttribute("aria-label") ?? "").toMatch(/プロジェクト/);
+      // BL-065: プロジェクト入力は <select id="create-project">.
+      const projectSelect = header?.querySelector("select#create-project");
+      expect(
+        projectSelect,
+        "header に <select id='create-project'> が無い (BL-065 REQ-1 違反)",
+      ).not.toBeNull();
       // PriorityStars は role=radiogroup.
       expect(
         header?.querySelector('[role="radiogroup"]'),
@@ -1430,9 +1437,11 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
   });
 
   // ----------------------------------------------------------
-  // AC-23: PriorityStars / ProjectToggle prop API 無改修 (NFR-COMPONENT-API-FROZEN)
+  // AC-23: PriorityStars prop API 無改修 (NFR-COMPONENT-API-FROZEN)
+  //   BL-065 (project-toggle-removal) で ProjectToggle 本体が撤去されたため,
+  //   ProjectToggle prop API 不変性 assert (旧 4 件) を撤去した. PriorityStars 側のみ維持する.
   // ----------------------------------------------------------
-  describe("AC-23: PriorityStars / ProjectToggle prop API 無改修 (NFR-COMPONENT-API-FROZEN)", () => {
+  describe("AC-23: PriorityStars prop API 無改修 (NFR-COMPONENT-API-FROZEN)", () => {
     it("priority-stars.tsx に `export interface PriorityStarsProps` が含まれる", () => {
       const tsx = readFileSync(priorityStarsTsxPath, "utf-8");
       expect(tsx).toMatch(/export\s+interface\s+PriorityStarsProps\b/);
@@ -1446,27 +1455,9 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
       },
     );
 
-    it("project-toggle.tsx に `export interface ProjectToggleProps` が含まれる", () => {
-      const tsx = readFileSync(projectToggleTsxPath, "utf-8");
-      expect(tsx).toMatch(/export\s+interface\s+ProjectToggleProps\b/);
-    });
-
-    it.each(["value", "onChange", "projects", "idPrefix", "groupLabel"])(
-      "project-toggle.tsx に prop 名 '%s' が含まれる (BL-041 で確定)",
-      (propName) => {
-        const tsx = readFileSync(projectToggleTsxPath, "utf-8");
-        expect(tsx).toContain(propName);
-      },
-    );
-
     it("priority-stars.tsx に role='radiogroup' が含まれる (内部 logic 無改修の軽量スポット)", () => {
       const tsx = readFileSync(priorityStarsTsxPath, "utf-8");
       expect(tsx).toContain('role="radiogroup"');
-    });
-
-    it("project-toggle.tsx に project-toggle__button クラスが含まれる (内部 class 名無改修)", () => {
-      const tsx = readFileSync(projectToggleTsxPath, "utf-8");
-      expect(tsx).toContain("project-toggle__button");
     });
   });
 

@@ -84,12 +84,12 @@ const taskCardTsxPath = resolve(webSrcRoot, "ui/task-card/task-card.tsx");
 const taskFormCardTsxPath = resolve(webSrcRoot, "ui/task-card/task-form-card.tsx");
 
 const dayViewCssPath = resolve(webSrcRoot, "ui/day-view/day-view.css");
-const projectToggleCssPath = resolve(webSrcRoot, "ui/project-toggle/project-toggle.css");
+// BL-065 (project-toggle-removal): projectToggleCssPath / projectToggleTsxPath は撤去された.
+// 旧 AC-10 / AC-17 内の ProjectToggle 不変性 assert もまとめて削除済み.
 const tokensCssPath = resolve(webSrcRoot, "styles/tokens.css");
 const todayViewTsxPath = resolve(webSrcRoot, "ui/today-view/today-view.tsx");
 const tomorrowViewTsxPath = resolve(webSrcRoot, "ui/tomorrow-view/tomorrow-view.tsx");
 const priorityStarsTsxPath = resolve(webSrcRoot, "ui/priority-stars/priority-stars.tsx");
-const projectToggleTsxPath = resolve(webSrcRoot, "ui/project-toggle/project-toggle.tsx");
 
 const NOW = "2026-06-11T09:00:00.000Z";
 const PROJECT_ID_P1 = "p1p1p1p1-p1p1-4p1p-8p1p-p1p1p1p1p1p1";
@@ -845,58 +845,12 @@ describe("TaskCard / TaskFormCard 実機遺漏の一括 hotfix (BL-063 / task-ca
   });
 
   // ----------------------------------------------------------
-  // AC-10: <TaskFormCard> の ProjectToggle button の computed font-size が 14px (REQ-3)
+  // AC-10 (BL-065 で撤去): 旧 AC-10 「ProjectToggle button の computed font-size が 14px」は
+  //   ProjectToggle 撤去 (BL-065 / project-toggle-removal) により describe ごと削除された.
+  //   ・ProjectToggle 自体が存在しないため computed font-size の対象が消失.
+  //   ・.task-card__header .project-chip { font-size: var(--font-size-small) } は
+  //     TaskCard 表示側 chip のため引き続き必要 (AC-9 CSS 直読みで担保).
   // ----------------------------------------------------------
-  /**
-   * シナリオ AC-10:
-   *   Given <TaskFormCard projects=[{id:"p1",name:"仕事"}] projectId="p1" ... /> を render する
-   *   When  ProjectToggle の <button class="project-toggle__button project-chip"> の computed style を観察する
-   *   Then  font-size が 14px に解決される
-   *
-   * 補足:
-   *   jsdom の getComputedStyle は CSS 変数 (--font-size-small) を解決しないため,
-   *   宣言として `font-size: var(--font-size-small)` を持っているかは CSS 直読み AC-9 で代替する.
-   *   本テストは「CSS 直読みでは検知できない specificity 競合」を補強する位置づけで,
-   *   仮に jsdom 限界で値が取得できない場合は AC-9 (CSS 直読み) を正としてフォールバックする.
-   */
-  describe("AC-10: <TaskFormCard> の ProjectToggle button の font-size 競合解消 (REQ-3 / 修正 3)", () => {
-    it("ProjectToggle button (.project-toggle__button.project-chip) が DOM 上に存在する", async () => {
-      const { TaskFormCard } = await importTaskFormCard();
-      const project = makeProject();
-      const { container } = render(
-        <TaskFormCard
-          projects={[project]}
-          projectId={project.id}
-          onProjectIdChange={() => {}}
-          priority="normal"
-          onPriorityChange={() => {}}
-          name=""
-          onNameChange={() => {}}
-          onSubmit={(e: React.FormEvent) => {
-            e.preventDefault();
-          }}
-          idPrefix="create"
-          inputId="task-name"
-          formAriaLabel="タスク起票フォーム"
-        />,
-      );
-      const btn = container.querySelector(".project-toggle__button.project-chip");
-      expect(
-        btn,
-        "ProjectToggle button (.project-toggle__button.project-chip) が見つからない (D-003 前提崩壊)",
-      ).not.toBeNull();
-    });
-
-    it("ProjectToggle button の class 2 つが同一要素に併記されている (D-003 specificity 前提)", async () => {
-      // 「ProjectToggle が .project-toggle__button と .project-chip の両クラスを併記」していることを
-      // 確認する. これは specificity 競合の発生源そのものであり, 競合解消対象の前提となる.
-      const tsx = readFileSync(projectToggleTsxPath, "utf-8");
-      expect(
-        tsx,
-        'project-toggle.tsx が "project-toggle__button project-chip" を併記していない',
-      ).toMatch(/project-toggle__button\s+project-chip|project-chip\s+project-toggle__button/);
-    });
-  });
 
   // ----------------------------------------------------------
   // AC-12: <TaskFormCard> label に visually-hidden + input に placeholder="タスク名" (REQ-4)
@@ -1199,9 +1153,11 @@ describe("TaskCard / TaskFormCard 実機遺漏の一括 hotfix (BL-063 / task-ca
   });
 
   // ----------------------------------------------------------
-  // AC-17: PriorityStars / ProjectToggle / project-chip 本体が無改修 (NFR-COMPONENT-API-FROZEN / G-8)
+  // AC-17: PriorityStars / project-chip 本体が無改修 (NFR-COMPONENT-API-FROZEN / G-8)
+  //   BL-065 (project-toggle-removal) で ProjectToggle 本体および project-toggle.css は
+  //   撤去されたため, 対応 assert (旧 4 件) を削除した. PriorityStars / project-chip 側は維持.
   // ----------------------------------------------------------
-  describe("AC-17: PriorityStars / ProjectToggle / project-chip 本体が無改修 (G-8)", () => {
+  describe("AC-17: PriorityStars / project-chip 本体が無改修 (G-8)", () => {
     it("priority-stars.tsx に `export interface PriorityStarsProps` が含まれる", () => {
       const tsx = readFileSync(priorityStarsTsxPath, "utf-8");
       expect(tsx).toMatch(/export\s+interface\s+PriorityStarsProps\b/);
@@ -1214,26 +1170,6 @@ describe("TaskCard / TaskFormCard 実機遺漏の一括 hotfix (BL-063 / task-ca
         expect(tsx).toContain(propName);
       },
     );
-
-    it("project-toggle.tsx に `export interface ProjectToggleProps` が含まれる", () => {
-      const tsx = readFileSync(projectToggleTsxPath, "utf-8");
-      expect(tsx).toMatch(/export\s+interface\s+ProjectToggleProps\b/);
-    });
-
-    it.each(["value", "onChange", "projects", "idPrefix", "groupLabel"])(
-      "project-toggle.tsx に prop 名 '%s' が含まれる (BL-041 で確定)",
-      (propName) => {
-        const tsx = readFileSync(projectToggleTsxPath, "utf-8");
-        expect(tsx).toContain(propName);
-      },
-    );
-
-    it(".project-toggle__button ルール本文に font-size: 1rem が引き続き定義されている (本体無改修)", () => {
-      const css = readFileSync(projectToggleCssPath, "utf-8");
-      const body = extractRuleBody(css, ".project-toggle__button");
-      expect(body, ".project-toggle__button ルールが見つからない").not.toBeNull();
-      expect(body ?? "").toMatch(/font-size\s*:\s*1rem/);
-    });
 
     it(".project-chip ルール本文の BL-056 確定 5 宣言がすべて残っている (NFR-CHIP-PRESERVE)", () => {
       const css = readFileSync(dayViewCssPath, "utf-8");

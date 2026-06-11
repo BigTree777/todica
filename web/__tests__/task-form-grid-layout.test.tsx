@@ -75,7 +75,8 @@ const tokensCssPath = resolve(webSrcRoot, "styles/tokens.css");
 const focusViewCssPath = resolve(webSrcRoot, "ui/focus-view/focus-view.css");
 const focusViewTsxPath = resolve(webSrcRoot, "ui/focus-view/focus-view.tsx");
 const priorityStarsTsxPath = resolve(webSrcRoot, "ui/priority-stars/priority-stars.tsx");
-const projectToggleTsxPath = resolve(webSrcRoot, "ui/project-toggle/project-toggle.tsx");
+// BL-065 (project-toggle-removal): projectToggleTsxPath は撤去された.
+// 旧 AC-11 内の ProjectToggle 不変性 assert もまとめて削除済み.
 
 const NOW = "2026-06-11T09:00:00.000Z";
 const HINT_TEXT = "↑タップで選択";
@@ -492,9 +493,11 @@ describe("起票フォームのレイアウト (BL-058, BL-059 で 3 段 flex co
   });
 
   // ----------------------------------------------------------
-  // AC-11: PriorityStars / ProjectToggle の prop API が無改修である
+  // AC-11: PriorityStars の prop API が無改修である
+  //   BL-065 (project-toggle-removal) で ProjectToggle 本体は撤去されたため,
+  //   ProjectToggle prop API 不変性 assert (旧 3 件) を削除した. PriorityStars 側は維持.
   // ----------------------------------------------------------
-  describe("AC-11: PriorityStars / ProjectToggle の prop API が無改修", () => {
+  describe("AC-11: PriorityStars の prop API が無改修", () => {
     it("priority-stars.tsx に `export interface PriorityStarsProps` が含まれる", () => {
       const tsx = readFileSync(priorityStarsTsxPath, "utf-8");
       expect(tsx).toMatch(/export\s+interface\s+PriorityStarsProps\b/);
@@ -508,27 +511,9 @@ describe("起票フォームのレイアウト (BL-058, BL-059 で 3 段 flex co
       },
     );
 
-    it("project-toggle.tsx に `export interface ProjectToggleProps` が含まれる", () => {
-      const tsx = readFileSync(projectToggleTsxPath, "utf-8");
-      expect(tsx).toMatch(/export\s+interface\s+ProjectToggleProps\b/);
-    });
-
-    it.each(["value", "onChange", "projects", "idPrefix", "groupLabel"])(
-      "project-toggle.tsx に prop 名 '%s' が含まれる (BL-041 で確定)",
-      (propName) => {
-        const tsx = readFileSync(projectToggleTsxPath, "utf-8");
-        expect(tsx).toContain(propName);
-      },
-    );
-
     it("priority-stars.tsx に role='radiogroup' が含まれる", () => {
       const tsx = readFileSync(priorityStarsTsxPath, "utf-8");
       expect(tsx).toContain('role="radiogroup"');
-    });
-
-    it("project-toggle.tsx に project-toggle__button クラスが含まれる", () => {
-      const tsx = readFileSync(projectToggleTsxPath, "utf-8");
-      expect(tsx).toContain("project-toggle__button");
     });
   });
 

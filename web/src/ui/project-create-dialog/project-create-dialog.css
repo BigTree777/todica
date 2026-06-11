@@ -32,7 +32,7 @@
 }
 
 .project-create-dialog button {
-  /* WCAG 2.5.5: タップターゲットを最小 44px 確保 (project-toggle.css と同慣行). */
+  /* WCAG 2.5.5: タップターゲットを最小 44px 確保 (button 系の共通慣行). */
   min-height: 44px;
   padding: 0.5rem 0.75rem;
 }

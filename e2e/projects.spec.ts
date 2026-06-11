@@ -1,13 +1,14 @@
 /**
- * プロジェクト E2E スモーク (BL-026 / BL-016 / BL-041).
+ * プロジェクト E2E スモーク (BL-026 / BL-016 / BL-041 / BL-065).
  *
  * 検証する happy path:
  *   1. プロジェクト作成 (POST /api/v1/projects)
  *   2. タスクに紐付けて起票 (POST /api/v1/tasks with projectId)
- *      - BL-041: 起票フォームのプロジェクト入力は `<select>` ではなく `<ProjectToggle />` (button).
- *        目的のプロジェクトに到達するまでトグルを連打する経路で書き換え.
+ *      - BL-065 (project-toggle-removal): 起票フォームのプロジェクト入力は再び `<select>` に戻された.
+ *        旧 BL-041 トグル button (1 タップで巡回) は撤去され, `getByLabel("プロジェクト")` で
+ *        `<select>` を取得して `selectOption({ label: "<name>" })` で直接選ぶ.
  *   3. プロジェクト削除 (DELETE /api/v1/projects/:id)
- *   4. カスケード null: 紐付いたタスクは削除されず, projectId が null になる. 一覧から消えない
+ *   4. カスケード null: 紐付いたタスクは削除されず, projectId が null になる. 一覧から消えない.
  */
 import { type Page, expect, test } from "@playwright/test";
 
@@ -16,13 +17,16 @@ function taskRow(page: Page, taskName: string) {
 }
 
 /**
- * 起票フォーム scope 内のプロジェクトトグルボタン (BL-041 / ProjectToggle).
- * 旧 `<select id="task-project">` (= `getByLabel("プロジェクト (任意)")`) からの置換.
+ * 起票フォーム scope 内のプロジェクト選択 `<select>` (BL-065 / project-toggle-removal).
+ *
+ * 旧 BL-041 トグル button (`getByRole("button", { name: /プロジェクト/ })`) は撤去された.
+ * 新 UI は visually-hidden な `<label>プロジェクト</label>` + `<select id="create-project">`
+ * のため, `getByLabel("プロジェクト")` で取得できる.
  */
-function projectToggleButton(page: Page) {
+function projectSelect(page: Page) {
   return page
     .getByRole("form", { name: /タスク起票フォーム|起票フォーム/ })
-    .getByRole("button", { name: /プロジェクト/ });
+    .getByLabel("プロジェクト");
 }
 
 test("プロジェクトを削除すると紐付いていたタスクは残る (カスケード null)", async ({ page }) => {
@@ -36,28 +40,17 @@ test("プロジェクトを削除すると紐付いていたタスクは残る (
   await expect(page.getByText(projectName, { exact: true })).toBeVisible();
 
   // 2. タスクに紐付けて起票
-  //    BL-041: <select> ではなくトグル button. 目的のプロジェクト名に到達するまで連打する.
-  //    最大 N 回 (= 全プロジェクト数 + null) で必ず到達するため決定論的.
+  //    BL-065 (project-toggle-removal): <select> から「目的のプロジェクト」を直接選ぶ.
+  //    旧 BL-041 トグル button 連打方式 (= maxIterations ループ) は不要.
   await page.goto("/today");
   await page.getByLabel("タスク名").fill(taskName);
 
-  const toggle = projectToggleButton(page);
-  await expect(toggle).toBeVisible();
-  const maxIterations = 20;
-  let reached = false;
-  for (let i = 0; i < maxIterations; i++) {
-    const text = (await toggle.textContent()) ?? "";
-    if (text.includes(projectName)) {
-      reached = true;
-      break;
-    }
-    await toggle.click();
-  }
-  expect(
-    reached,
-    `トグルを ${maxIterations} 回クリックしても "${projectName}" に到達しなかった`,
-  ).toBe(true);
-  await expect(toggle).toContainText(projectName);
+  const select = projectSelect(page);
+  await expect(select).toBeVisible();
+  // 「目的のプロジェクト名」を <option> ラベルで指定して直接選択 (BL-065 REQ-2 / D-001).
+  await select.selectOption({ label: projectName });
+  // 選択直後, `<select>` の表示テキスト (= 選択中 option) が projectName を含む.
+  await expect(select).toHaveValue(/.+/); // 非空 (= プロジェクトなしから外れた).
 
   await page.getByRole("button", { name: "追加", exact: true }).click();
   await expect(taskRow(page, taskName)).toBeVisible();
