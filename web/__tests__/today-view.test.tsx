@@ -2215,43 +2215,12 @@ describe("TodayView (BL-047 完了タスク数カウンタの配置見直し)", 
     expect(header!.contains(counter)).toBe(true);
   });
 
-  it("シナリオ: ヘッダに h1「今日」・カウンタ・「＋プロジェクトの追加」ボタンが同居する (REQ-1)", async () => {
-    // spec.md §「ヘッダの 3 要素が左から h1 / カウンタ / ＋プロジェクトの追加 の順で並ぶ」:
-    //   Given ユーザーが今日ビュー（/today）を開く
-    //   When  header 内の子要素を確認する
-    //   Then  h1「今日」と aria-label="今日の完了タスク数" 要素と「＋プロジェクトの追加」ボタンが
-    //         同じ header 内に存在する
-    //
-    // 現在のカウンタは <header> 外にあるため、このテストは red になる.
-    const repo = makeMockRepository();
-    renderWithQueryClient(
-      <TodayView repository={repo} projectRepository={makeMockProjectRepository()} />,
-    );
-
-    await screen.findByRole("heading", { name: "今日" });
-
-    const header = document.querySelector("header");
-    expect(header).not.toBeNull();
-
-    // h1「今日」が header 内に存在する（既存仕様 / このアサーションは green のはず）.
-    const h1 = header!.querySelector("h1");
-    expect(h1).not.toBeNull();
-    expect(h1!.textContent).toBe("今日");
-
-    // カウンタが header 内に存在する（このアサーションが red になる）.
-    const counter = header!.querySelector("[aria-label='今日の完了タスク数']");
-    expect(counter).not.toBeNull();
-
-    // 「＋プロジェクトの追加」ボタンが header 内に存在する（既存仕様 / このアサーションは green のはず）.
-    const addProjectButton = within(header!).getByRole("button", { name: /プロジェクトの追加/ });
-    expect(addProjectButton).toBeInTheDocument();
-
-    // DOM 順序: h1 → カウンタ → ＋プロジェクトの追加 の順であること (REQ-1 / auditor 指摘).
-    const h1Pos = h1!.compareDocumentPosition(counter!);
-    expect(h1Pos & Node.DOCUMENT_POSITION_FOLLOWING, "h1 の後にカウンタが来る").toBeTruthy();
-    const counterPos = counter!.compareDocumentPosition(addProjectButton);
-    expect(counterPos & Node.DOCUMENT_POSITION_FOLLOWING, "カウンタの後に＋プロジェクトの追加が来る").toBeTruthy();
-  });
+  // BL-050 (remove-inline-project-create) で「＋プロジェクトの追加」ボタンを撤去する
+  // 方針が確定したため, BL-047 の「ヘッダの h1・カウンタ・追加ボタンが 3 要素同居する」
+  // テストは前提が崩れる. 当該テスト (`it("シナリオ: ヘッダに h1「今日」・カウンタ・
+  // 「＋プロジェクトの追加」ボタンが同居する (REQ-1)", ...)`) は BL-050 spec REQ-6 /
+  // plan D-004 の指示に従い削除した. 代わりの回帰ガードは後段の BL-050 describe で
+  // 「ボタンが存在しないこと」「ヘッダの子は h1 → カウンタの 2 要素のみ」を検証する.
 
   it("シナリオ: カウンタ要素が <span> タグである（<div> ではない）(REQ-2)", async () => {
     // spec.md §「マークアップ (REQ-2)」:
@@ -2275,7 +2244,7 @@ describe("TodayView (BL-047 完了タスク数カウンタの配置見直し)", 
     expect(counter!.tagName).toBe("SPAN");
   });
 
-  it("シナリオ: focus-view には aria-label=\"今日の完了タスク数\" 要素が存在しない (REQ-4)", async () => {
+  it('シナリオ: focus-view には aria-label="今日の完了タスク数" 要素が存在しない (REQ-4)', async () => {
     // spec.md §「focus-view には完了数カウンタが存在しない」:
     //   Given ユーザーが現在のタスクビュー（/focus）を開く
     //   When  ページを描画する
@@ -2304,10 +2273,16 @@ describe("TodayView (BL-047 完了タスク数カウンタの配置見直し)", 
         const PRIORITY_ORDER: Record<string, number> = { highest: 0, normal: 1, later: 2 };
         return {
           list: vi.fn(async () => [...state]),
-          create: vi.fn(async () => { throw new Error("not used"); }),
-          update: vi.fn(async () => { throw new Error("not used"); }),
+          create: vi.fn(async () => {
+            throw new Error("not used");
+          }),
+          update: vi.fn(async () => {
+            throw new Error("not used");
+          }),
           delete: vi.fn(async () => {}),
-          complete: vi.fn(async () => { throw new Error("not used"); }),
+          complete: vi.fn(async () => {
+            throw new Error("not used");
+          }),
           today: vi.fn(async () => {
             const filtered = state.filter((t) => t.dueDate === "today" && t.trashedAt === null);
             const sorted = [...filtered].sort((a, b) => {
@@ -2343,8 +2318,12 @@ describe("TodayView (BL-047 完了タスク数カウンタの配置見直し)", 
 
     const makeFocusMockProjectRepository = () => ({
       list: vi.fn(async () => []),
-      create: vi.fn(async () => { throw new Error("not used"); }),
-      update: vi.fn(async () => { throw new Error("not used"); }),
+      create: vi.fn(async () => {
+        throw new Error("not used");
+      }),
+      update: vi.fn(async () => {
+        throw new Error("not used");
+      }),
       delete: vi.fn(async () => {}),
     });
 
@@ -2366,7 +2345,7 @@ describe("TodayView (BL-047 完了タスク数カウンタの配置見直し)", 
     expect(screen.queryByLabelText("今日の完了タスク数")).toBeNull();
   });
 
-  it("シナリオ: tomorrow-view には aria-label=\"今日の完了タスク数\" 要素が存在しない (REQ-4)", async () => {
+  it('シナリオ: tomorrow-view には aria-label="今日の完了タスク数" 要素が存在しない (REQ-4)', async () => {
     // spec.md §「tomorrow-view には完了数カウンタが存在しない」:
     //   Given ユーザーが明日のタスクビュー（/tomorrow）を開く
     //   When  ページを描画する
@@ -2391,10 +2370,16 @@ describe("TodayView (BL-047 完了タスク数カウンタの配置見直し)", 
       const PRIORITY_ORDER: Record<string, number> = { highest: 0, normal: 1, later: 2 };
       return {
         list: vi.fn(async () => []),
-        create: vi.fn(async () => { throw new Error("not used"); }),
-        update: vi.fn(async () => { throw new Error("not used"); }),
+        create: vi.fn(async () => {
+          throw new Error("not used");
+        }),
+        update: vi.fn(async () => {
+          throw new Error("not used");
+        }),
         delete: vi.fn(async () => {}),
-        complete: vi.fn(async () => { throw new Error("not used"); }),
+        complete: vi.fn(async () => {
+          throw new Error("not used");
+        }),
         today: vi.fn(async () => ({
           tasks: [],
           nextTaskId: null,
@@ -2427,8 +2412,12 @@ describe("TodayView (BL-047 完了タスク数カウンタの配置見直し)", 
 
     const makeTomorrowMockProjectRepository = () => ({
       list: vi.fn(async () => []),
-      create: vi.fn(async () => { throw new Error("not used"); }),
-      update: vi.fn(async () => { throw new Error("not used"); }),
+      create: vi.fn(async () => {
+        throw new Error("not used");
+      }),
+      update: vi.fn(async () => {
+        throw new Error("not used");
+      }),
       delete: vi.fn(async () => {}),
     });
 
@@ -2449,5 +2438,229 @@ describe("TodayView (BL-047 完了タスク数カウンタの配置見直し)", 
 
     // tomorrow-view には完了数カウンタが存在しない（REQ-4 非波及）.
     expect(screen.queryByLabelText("今日の完了タスク数")).toBeNull();
+  });
+});
+
+// ============================================================
+// BL-050 / remove-inline-project-create: today ヘッダの
+// 「＋プロジェクトの追加」ボタン撤去
+//
+// 仕様参照:
+//   docs/developer/features/remove-inline-project-create/spec.md
+//   §「受け入れ基準」AC-1 / AC-2 / AC-9.
+//
+// 本 describe は TDD の "red" を作るためのテスト群.
+//   - 現状の today-view はヘッダ内に「＋プロジェクトの追加」 button をマウントし
+//     ProjectCreateDialog を子に持つため, 以下のテストは全て失敗する.
+//   - implementer が today-view.tsx から 4 箇所 (ヘッダ内 button JSX / state /
+//     ProjectCreateDialog マウント JSX / import 文) を削除すると green 化する.
+//
+// 既存 BL-047 同居テスト (3 要素同居) は本 BL の前提崩壊のため
+// 上記 describe("TodayView (BL-047 ...)") から既に削除済み (spec REQ-6 / plan D-004).
+// ============================================================
+
+describe("TodayView (BL-050 today ヘッダの「＋プロジェクトの追加」ボタン撤去)", () => {
+  it("シナリオ AC-1: ヘッダから「＋プロジェクトの追加」 button が消えている", async () => {
+    // spec.md AC-1:
+    //   Given /today を開いた
+    //   When  画面全体を観察する
+    //   Then  アクセシブルネーム「＋プロジェクトの追加」の button が DOM 上に存在しない
+    //         (count = 0)
+    //
+    // 現状: today-view はヘッダ内に当該 button をマウントしているため,
+    // queryByRole("button", { name: "＋プロジェクトの追加" }) は要素を返し,
+    // null にならない → fail (red).
+    const repo = makeMockRepository();
+    renderWithQueryClient(
+      <TodayView repository={repo} projectRepository={makeMockProjectRepository()} />,
+    );
+
+    await screen.findByRole("heading", { name: "今日" });
+
+    // 画面全体で「＋プロジェクトの追加」 button が 1 件も存在しない.
+    expect(screen.queryByRole("button", { name: "＋プロジェクトの追加" })).toBeNull();
+    // 同等の queryAll 表現でも 0 件を確認 (回帰ガードの強化).
+    expect(screen.queryAllByRole("button", { name: /＋プロジェクトの追加/ })).toHaveLength(0);
+  });
+
+  it("シナリオ AC-1: ヘッダの直接の子要素は h1「今日」とカウンタ <span> の 2 要素のみで, 順序は h1 → カウンタ", async () => {
+    // spec.md AC-1 (後段):
+    //   ヘッダ (<header>) 内には <h1>今日</h1> と aria-label="今日の完了タスク数" の
+    //   <span> の 2 要素のみが含まれる (順序: h1 → カウンタ).
+    //
+    // 現状: ヘッダ内には h1 / カウンタ <span> / 「＋プロジェクトの追加」 button の
+    // 3 要素が存在するため, 子要素数を 2 と比較する assertion で fail (red).
+    const repo = makeMockRepository();
+    renderWithQueryClient(
+      <TodayView repository={repo} projectRepository={makeMockProjectRepository()} />,
+    );
+
+    await screen.findByRole("heading", { name: "今日" });
+
+    const header = document.querySelector("header");
+    expect(header).not.toBeNull();
+
+    // ヘッダの直接の子要素は h1 と カウンタ <span> の 2 要素のみ.
+    const children = Array.from(header!.children);
+    expect(children).toHaveLength(2);
+
+    // 1 要素目は <h1>今日</h1>.
+    expect(children[0]?.tagName).toBe("H1");
+    expect(children[0]?.textContent).toBe("今日");
+
+    // 2 要素目は カウンタ <span aria-label="今日の完了タスク数">.
+    expect(children[1]?.tagName).toBe("SPAN");
+    expect(children[1]?.getAttribute("aria-label")).toBe("今日の完了タスク数");
+
+    // ヘッダ内に button が一切存在しない (button 数 = 0).
+    expect(within(header!).queryAllByRole("button")).toHaveLength(0);
+  });
+
+  it("シナリオ AC-2: ヘッダ内に存在するすべての button をクリックしてもプロジェクト追加モーダルは表示されない", async () => {
+    // spec.md AC-2:
+    //   Given /today を開いた
+    //   When  ヘッダ (<header>) 内のすべての button をクリックする
+    //   Then  role="dialog" の要素 (アクセシブルネーム「プロジェクトの追加」) は表示されない
+    //
+    // 実装後はそもそもヘッダ内に button が 0 個になる (= ループは 0 回).
+    // ヘッダ内に button が存在しないこと自体を assertion で固定する.
+    // 現状: ヘッダ内には「＋プロジェクトの追加」 button が存在し,
+    // クリックすると role="dialog" が表示されるため fail (red).
+    const repo = makeMockRepository();
+    const user = userEvent.setup();
+    renderWithQueryClient(
+      <TodayView repository={repo} projectRepository={makeMockProjectRepository()} />,
+    );
+
+    await screen.findByRole("heading", { name: "今日" });
+
+    const header = document.querySelector("header");
+    expect(header).not.toBeNull();
+
+    // ヘッダ内のすべての button を順にクリックする.
+    const headerButtons = within(header!).queryAllByRole("button");
+    for (const btn of headerButtons) {
+      await user.click(btn);
+    }
+
+    // クリック後も「プロジェクトの追加」モーダル (role="dialog") は表示されない.
+    expect(screen.queryByRole("dialog", { name: "プロジェクトの追加" })).toBeNull();
+  });
+
+  it("シナリオ AC-9: today-view にプロジェクト追加モーダル (ProjectCreateDialog) がマウントされていない", async () => {
+    // spec.md AC-9:
+    //   today-view.tsx に "ProjectCreateDialog" / "projectDialogOpen" /
+    //   "setProjectDialogOpen" のどの識別子も出現しない.
+    //
+    // ランタイム観点での等価条件:
+    //   ProjectCreateDialog コンポーネントは props.open=false 時には
+    //   非表示 (null 描画) だが, render tree 上に存在し続けることはある.
+    //   本テストでは「クリック起点が消えているので何をやっても dialog が出ない」+
+    //   「project-create-dialog の root 要素 (<div class="project-create-dialog">)
+    //   も DOM 上に存在しない」の 2 段で検証する.
+    //
+    // 現状: today-view が <ProjectCreateDialog open={false} .../> をマウントしており,
+    // dialog の root は描画されている (実装次第) ため fail (red) しうる.
+    // また現状はヘッダボタンをクリックすると open=true になり dialog が現れるため,
+    // 「クリックしても dialog が出ない」も fail する.
+    const repo = makeMockRepository();
+    const user = userEvent.setup();
+    renderWithQueryClient(
+      <TodayView repository={repo} projectRepository={makeMockProjectRepository()} />,
+    );
+
+    await screen.findByRole("heading", { name: "今日" });
+
+    // (1) ヘッダ内に存在する button を全てクリックしても dialog が現れない.
+    const header = document.querySelector("header");
+    const headerButtons = header ? within(header).queryAllByRole("button") : [];
+    for (const btn of headerButtons) {
+      await user.click(btn);
+    }
+
+    // (2) 「プロジェクトの追加」モーダルは表示されない.
+    expect(screen.queryByRole("dialog", { name: "プロジェクトの追加" })).toBeNull();
+
+    // (3) project-create-dialog の root 要素も DOM 上に存在しない
+    //     (= ProjectCreateDialog マウントが消えている).
+    expect(document.querySelector(".project-create-dialog")).toBeNull();
+  });
+});
+
+// ============================================================
+// BL-050 / AC-7 / AC-8: テスト資産の整合性 (meta テスト)
+//
+// 仕様参照:
+//   docs/developer/features/remove-inline-project-create/spec.md
+//   §「受け入れ基準」AC-7 (e2e/inline-project-create.spec.ts の不在) /
+//   AC-8 (BL-047 同居テスト不在 + 本 BL の「ボタン非存在」テスト存在).
+//
+// テスト本体ではなくリポジトリのワーキングツリー / 本テストファイル自身に対する
+// 静的検査. node:fs / node:path で実ファイルを読む.
+//
+// 現状:
+//   - e2e/inline-project-create.spec.ts は存在する → AC-7 は fail (red).
+//   - BL-047 同居テスト (`it("シナリオ: ヘッダに h1「今日」・カウンタ・
+//     「＋プロジェクトの追加」ボタンが同居する (REQ-1)", ...)`) は本 BL の
+//     test-designer フェーズで上記の通り削除済みのため AC-8 前段は green.
+//     AC-8 後段 (= 「ボタンが存在しない」テストが本ファイルに存在する) も
+//     上の describe("TodayView (BL-050 ...)") を書いたので green.
+// 実装後 (implementer が inline-project-create.spec.ts を削除した時点) で
+// AC-7 も green になる.
+// ============================================================
+
+describe("BL-050 テスト資産の整合性 (meta)", () => {
+  it("シナリオ AC-7: e2e/inline-project-create.spec.ts がリポジトリに存在しない", async () => {
+    // spec.md AC-7:
+    //   Given リポジトリのワーキングツリーを観察する
+    //   When  e2e/ ディレクトリの一覧を取る
+    //   Then  inline-project-create.spec.ts が存在しない
+    //
+    // 現状: 当該ファイルは BL-044 で追加され存続している → fail (red).
+    // 実装後: implementer がファイル削除 → green.
+    const { existsSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    // 本テストファイル: web/__tests__/today-view.test.tsx
+    // リポジトリルート: 上に 2 階層 (web/__tests__/ → todica/).
+    // import.meta.url を使うと URL なので fileURLToPath で解決する.
+    const { fileURLToPath } = await import("node:url");
+    const here = fileURLToPath(import.meta.url);
+    // here = .../web/__tests__/today-view.test.tsx
+    // repoRoot = .../
+    const repoRoot = resolve(here, "..", "..", "..");
+    const target = resolve(repoRoot, "e2e", "inline-project-create.spec.ts");
+    expect(existsSync(target)).toBe(false);
+  });
+
+  it("シナリオ AC-8 前段: BL-047 同居テスト (it ブロック) が today-view.test.tsx に存在しない", async () => {
+    // spec.md AC-8 前段:
+    //   今日ヘッダの 3 要素同居 (h1 + カウンタ + ＋プロジェクトの追加) を検証する
+    //   it ブロックが存在しない.
+    //
+    // 本ファイル自身を grep して「同居する (REQ-1)」を含む it 行が無いことを確認する.
+    // 注意: 本コメント文字列に同じ語が出るとマッチしてしまうため,
+    // 実コード上の it ブロック定義パターン (it("シナリオ: ヘッダに h1...) のみ
+    // をマッチさせる. ここではコメント内で語を分割して書く ("3 要" + "素同居" 等).
+    const { readFileSync } = await import("node:fs");
+    const { fileURLToPath } = await import("node:url");
+    const self = readFileSync(fileURLToPath(import.meta.url), "utf-8");
+    // it ブロックの記述 = it("シナリオ:" の直後に同居テストの文言が現れるパターンを探す.
+    const pattern =
+      /it\(\s*"シナリオ:\s*ヘッダに h1「今日」・カウンタ・「＋プロジェクトの追加」ボタンが同居する/;
+    expect(pattern.test(self)).toBe(false);
+  });
+
+  it("シナリオ AC-8 後段: 「today ヘッダに『＋プロジェクトの追加』ボタンが存在しない」を検証する it ブロックが today-view.test.tsx に存在する", async () => {
+    // spec.md AC-8 後段:
+    //   today-view の describe のいずれかに「today ヘッダに『＋プロジェクトの追加』
+    //   ボタンが存在しないこと」を検証する it ブロックが存在する.
+    //
+    // 上で書いた `it("シナリオ AC-1: ヘッダから「＋プロジェクトの追加」 button が
+    // 消えている", ...)` の存在を確認する.
+    const { readFileSync } = await import("node:fs");
+    const { fileURLToPath } = await import("node:url");
+    const self = readFileSync(fileURLToPath(import.meta.url), "utf-8");
+    const pattern = /it\(\s*"シナリオ AC-1: ヘッダから「＋プロジェクトの追加」 button が消えている/;
+    expect(pattern.test(self)).toBe(true);
   });
 });
