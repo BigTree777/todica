@@ -82,10 +82,13 @@ export function TaskFormCard(props: TaskFormCardProps): JSX.Element {
         />
       </div>
       <div className="task-card__title">
-        <label htmlFor={inputId}>タスク名</label>
+        <label htmlFor={inputId} className="visually-hidden">
+          タスク名
+        </label>
         <input
           id={inputId}
           type="text"
+          placeholder="タスク名"
           value={name}
           onChange={(e) => onNameChange(e.target.value)}
           required

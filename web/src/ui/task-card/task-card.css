@@ -51,6 +51,26 @@
   gap: var(--space-sm);
 }
 
+/*
+ * BL-063 (task-card-hotfix) REQ-1 / D-001:
+ * project 未設定タスク (= chip 無し) で PriorityStars が左に寄る問題を解消する.
+ * .task-card__header の justify-content: space-between は維持しつつ,
+ * PriorityStars の wrap div に margin-left: auto を当てて常に右に押し出す.
+ */
+.task-card__header__priority {
+  margin-left: auto;
+}
+
+/*
+ * BL-063 REQ-3 / D-003:
+ * 起票カードの ProjectToggle (= .project-toggle__button.project-chip) の font-size が
+ * .project-toggle__button { font-size: 1rem } に負ける問題を specificity 強化で解消する.
+ * (.project-chip 本体は無改修 / NFR-CHIP-PRESERVE.)
+ */
+.task-card__header .project-chip {
+  font-size: var(--font-size-small);
+}
+
 .task-card__title {
   display: flex;
   align-items: center;
@@ -66,12 +86,61 @@
   font: inherit;
 }
 
+/*
+ * BL-063 REQ-4 / 4-5:
+ * 起票カードのタスク名 placeholder は「薄く」表示する.
+ */
+.task-card__title input[type="text"]::placeholder {
+  color: var(--color-fg-subtle);
+}
+
 .task-card__actions {
   display: flex;
   align-items: center;
-  /* V-2: ボタン中央揃え (旧 .day-view__card__actions の flex-end から変更). */
-  justify-content: center;
+  /* BL-063 REQ-2 / D-002: BL-059 V-2 の中央寄せ宣言を撤去.
+   * 削除/完了 button の auto-margin で「削除 左端 / 中間 中央寄り / 完了 右端」を実現する. */
   gap: var(--space-sm);
   /* 狭幅端末への安全弁. */
   flex-wrap: wrap;
+}
+
+/*
+ * BL-063 REQ-2 / D-002:
+ * 「削除」を左端, 「完了」を右端に固定. 中間ボタンは自然に中央に集まる.
+ * focus-view (actionSet="minimal" / 2 ボタン) でも margin-right: auto と margin-left: auto が
+ * 拮抗して両端配置が成立する.
+ */
+.task-card__actions__delete {
+  margin-right: auto;
+}
+.task-card__actions__complete {
+  margin-left: auto;
+}
+
+/*
+ * BL-063 REQ-5 / D-005:
+ * 起票カード (.task-card--form) の actions は「追加」 button を右端に配置.
+ * .task-card__actions の auto-margin パターン (REQ-2) は子に対象 className を持つ button が
+ * 居ないため作動せず, ここでは単純に justify-content: flex-end で右寄せできる.
+ */
+.task-card--form .task-card__actions {
+  justify-content: flex-end;
+}
+
+/*
+ * BL-063 REQ-4 / D-004:
+ * a11y 用に accessibleName を残しつつ視覚的に label を隠すユーティリティ.
+ * project-toggle.css の [data-visually-hidden] と同等の効果. 本 BL のスコープ内では
+ * <TaskFormCard> の <label htmlFor={inputId}>タスク名</label> でのみ使用する.
+ */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }

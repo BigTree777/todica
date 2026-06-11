@@ -387,14 +387,27 @@ describe("起票フォームのレイアウト (BL-058, BL-059 で 3 段 flex co
   });
 
   // ----------------------------------------------------------
-  // AC-7 (BL-059 追従): submit ボタンが中央揃え (= .task-card__actions の justify-content: center)
+  // AC-7 (BL-063 hotfix 追従): submit ボタンが起票カード内で右寄せ
   // ----------------------------------------------------------
-  describe("AC-7 (BL-059 追従): submit ボタンが .task-card__actions 内で中央揃え", () => {
-    it(".task-card__actions ルール本文に justify-content: center を含む (V-2)", () => {
+  /**
+   * BL-059 当初の AC-7 は ".task-card__actions { justify-content: center }" (V-2) を期待していた.
+   * BL-063 (task-card-hotfix) で V-2 は撤去され, 起票カードでは
+   * ".task-card--form .task-card__actions { justify-content: flex-end }" (REQ-5 / D-005)
+   * で「追加」 button が右端に配置される (D-007 / 追従).
+   */
+  describe("AC-7 (BL-063 hotfix 追従): 起票カードの submit ボタンが右寄せ", () => {
+    it(".task-card__actions ルール本文に justify-content: center を含まない (BL-063 で V-2 を撤去)", () => {
       const css = readFileSync(taskCardCssPath, "utf-8");
       const body = extractRuleBody(css, ".task-card__actions");
       expect(body, ".task-card__actions ルールが見つからない").not.toBeNull();
-      expect(body ?? "").toMatch(/justify-content\s*:\s*center/);
+      expect(body ?? "").not.toMatch(/justify-content\s*:\s*center/);
+    });
+
+    it(".task-card--form .task-card__actions ルール本文に justify-content: flex-end を含む (BL-063 REQ-5 / D-005)", () => {
+      const css = readFileSync(taskCardCssPath, "utf-8");
+      const body = extractRuleBody(css, ".task-card--form .task-card__actions");
+      expect(body, ".task-card--form .task-card__actions ルールが見つからない").not.toBeNull();
+      expect(body ?? "").toMatch(/justify-content\s*:\s*flex-end/);
     });
   });
 

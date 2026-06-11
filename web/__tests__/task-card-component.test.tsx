@@ -14,7 +14,10 @@
  *   AC-2 : .task-card--focus が border-width: 3px / padding-lg 撤去 (CSS 直読み).
  *   AC-3 : .task-card__header に space-between + align-items: center (CSS 直読み).
  *   AC-4 : .task-card__title に justify-content: center + font-size: --font-size-h2 (CSS 直読み).
- *   AC-5 : .task-card__actions に justify-content: center / flex-end 撤去 (CSS 直読み).
+ *   AC-5 : .task-card__actions から justify-content: center / flex-end が撤去 (CSS 直読み).
+ *          BL-059 当初は justify-content: center を期待していたが, BL-063 hotfix で削除/完了の
+ *          auto-margin パターンへ置換されたため, 本 AC は「center も flex-end も含まない」へ追従修正済み
+ *          (BL-063 D-007 / P-009).
  *   AC-6 : .task-card__title input[type="text"] に font: inherit (CSS 直読み).
  *   AC-7 : <TaskCard> が 3 段ゾーン構造で描画される (DOM レンダ).
  *   AC-8 : <TaskCard as="section" variant="focus" aria-label> が反映される (DOM).
@@ -528,31 +531,50 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
   });
 
   // ----------------------------------------------------------
-  // AC-5: .task-card__actions がボタン中央揃えを持つ (V-2)
+  // AC-5: .task-card__actions の justify-content が撤去されている
+  //       (旧 BL-059 V-2 = center を BL-063 hotfix REQ-2 で撤去 / D-007 / P-009)
   // ----------------------------------------------------------
   /**
-   * シナリオ AC-5:
+   * 当初仕様 (BL-059 V-2):
+   *   .task-card__actions { justify-content: center } を期待していた.
+   *
+   * BL-063 (task-card-hotfix) で置換:
+   *   user 要求は「削除: 左端 / 完了: 右端 / 中間: 中央寄り」.
+   *   親 .task-card__actions の justify-content は不問とし, 子に auto-margin
+   *   (.task-card__actions__delete { margin-right: auto } /
+   *    .task-card__actions__complete { margin-left: auto }) を当てて両端配置を実現する.
+   *   したがって BL-063 以降 .task-card__actions ルール本文には:
+   *     - justify-content: center を **含まない** (旧 V-2 撤去 / 本 BL で逆転)
+   *     - justify-content: flex-end を **含まない** (旧 BL-057 値の回帰防止維持)
+   *   子要素側の hotfix className / auto-margin 期待は
+   *   web/__tests__/task-card-hotfix.test.tsx (BL-063 / AC-5 / AC-6 / AC-7) で網羅する.
+   *
+   * シナリオ AC-5 (BL-063 追従後):
    *   Given web/src/ui/task-card/task-card.css を開いた
    *   When  .task-card__actions セレクタのルール本文を観察する
-   *   Then  display: flex / justify-content: center を含み
-   *    かつ justify-content: flex-end を含まない (= 旧 BL-057 値の回帰防止)
+   *   Then  display: flex を含む (3 段 layout は維持)
+   *    かつ justify-content: center を含まない (= V-2 撤去 / BL-063 REQ-2)
+   *    かつ justify-content: flex-end を含まない (= 旧 BL-057 値の回帰防止維持)
    */
-  describe("AC-5: .task-card__actions がボタン中央揃え (V-2)", () => {
-    it(".task-card__actions ルール本文に display: flex を含む", () => {
+  describe("AC-5: .task-card__actions から justify-content: center 撤去 (BL-063 hotfix REQ-2 / D-007)", () => {
+    it(".task-card__actions ルール本文に display: flex を含む (3 段 layout 維持)", () => {
       const css = readFileSync(taskCardCssPath, "utf-8");
       const body = extractRuleBody(css, ".task-card__actions");
       expect(body, ".task-card__actions ルールが見つからない").not.toBeNull();
       expect(body ?? "").toMatch(/display\s*:\s*flex/);
     });
 
-    it(".task-card__actions ルール本文に justify-content: center を含む", () => {
+    it(".task-card__actions ルール本文に justify-content: center を含まない (BL-063 で V-2 を撤去)", () => {
       const css = readFileSync(taskCardCssPath, "utf-8");
       const body = extractRuleBody(css, ".task-card__actions");
       expect(body, ".task-card__actions ルールが見つからない").not.toBeNull();
-      expect(body ?? "").toMatch(/justify-content\s*:\s*center/);
+      expect(
+        body ?? "",
+        ".task-card__actions に justify-content: center が残存 (BL-063 REQ-2 で撤去すべき)",
+      ).not.toMatch(/justify-content\s*:\s*center/);
     });
 
-    it(".task-card__actions ルール本文に justify-content: flex-end を含まない (旧 BL-057 値の回帰防止)", () => {
+    it(".task-card__actions ルール本文に justify-content: flex-end を含まない (旧 BL-057 値の回帰防止維持)", () => {
       const css = readFileSync(taskCardCssPath, "utf-8");
       const body = extractRuleBody(css, ".task-card__actions");
       expect(body, ".task-card__actions ルールが見つからない").not.toBeNull();
