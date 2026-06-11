@@ -118,35 +118,67 @@ describe("起票フォームのカード化 (BL-054 / form-card-design)", () => 
   });
 
   /**
-   * AC-2: 既存の構造系宣言 (display / flex-direction / gap) が維持されている.
+   * AC-2: layout 系宣言が BL-058 (task-form-grid-layout) の値に追従している.
    *
-   * シナリオ AC-2:
+   * BL-054 時点では .day-view__form は `display: flex` / `flex-direction: column` /
+   * `gap: var(--space-sm)` だったが, BL-058 で 2D Grid 配置に置き換わり以下になる:
+   *   - `display: grid` (旧 flex から置換)
+   *   - `grid-template-areas: "project priority" / "name name" / ". submit"`
+   *   - `flex-direction` 宣言は撤去
+   *   - `gap: var(--space-md)` (旧 --space-sm から引き上げ)
+   *
+   * 本テストは BL-054 の「構造系宣言の維持」AC を BL-058 の新値に追従させたもの
+   * (= P-006 の追従修正 / R-005 緩和). BL-054 の core (visual 4 宣言 = AC-1) と
+   * 周辺 NFR (AC-3 / AC-4) は引き続き有効.
+   *
+   * シナリオ AC-2 (BL-058 追従後):
    *   Given web/src/ui/day-view/day-view.css を開いた
    *   When  .day-view__form セレクタのルール本文を観察する
-   *   Then  display: flex の宣言を含む
-   *    かつ flex-direction: column の宣言を含む
-   *    かつ gap: var(--space-sm) の宣言を含む
+   *   Then  display: grid の宣言を含む
+   *    かつ flex-direction の宣言を含まない
+   *    かつ grid-template-areas プロパティに 3 行 ("project priority" / "name name" / ". submit") を持つ
+   *    かつ gap: var(--space-md) の宣言を含む (旧 var(--space-sm) ではなく)
    */
-  describe("AC-2: .day-view__form の既存構造系宣言が維持されている (回帰防止)", () => {
-    it(".day-view__form ルール本文に display: flex を含む", () => {
+  describe("AC-2: .day-view__form の layout 系宣言が BL-058 値に追従している (P-006)", () => {
+    it(".day-view__form ルール本文に display: grid を含む (BL-058 / REQ-1)", () => {
       const css = readFileSync(dayViewCssPath, "utf-8");
       const body = extractRuleBody(css, ".day-view__form");
       expect(body, ".day-view__form ルールが見つからない").not.toBeNull();
-      expect(body ?? "").toMatch(/display\s*:\s*flex/);
+      expect(body ?? "").toMatch(/display\s*:\s*grid/);
     });
 
-    it(".day-view__form ルール本文に flex-direction: column を含む", () => {
+    it(".day-view__form ルール本文に flex-direction 宣言を含まない (BL-058 で撤去)", () => {
       const css = readFileSync(dayViewCssPath, "utf-8");
       const body = extractRuleBody(css, ".day-view__form");
       expect(body, ".day-view__form ルールが見つからない").not.toBeNull();
-      expect(body ?? "").toMatch(/flex-direction\s*:\s*column/);
+      expect(body ?? "").not.toMatch(/(?:^|;|\n)\s*flex-direction\s*:/);
     });
 
-    it(".day-view__form ルール本文に gap: var(--space-sm) を含む", () => {
+    it(".day-view__form ルール本文に grid-template-areas 宣言を含む (BL-058 / D-001)", () => {
       const css = readFileSync(dayViewCssPath, "utf-8");
       const body = extractRuleBody(css, ".day-view__form");
       expect(body, ".day-view__form ルールが見つからない").not.toBeNull();
-      expect(body ?? "").toMatch(/gap\s*:\s*var\(--space-sm\)/);
+      const bodyText = body ?? "";
+      // 3 行 (project priority / name name / . submit) のいずれかを含むことで
+      // grid-template-areas が定義されていることを担保する.
+      expect(bodyText).toMatch(/grid-template-areas\s*:/);
+      expect(bodyText).toMatch(/["']\s*project\s+priority\s*["']/);
+      expect(bodyText).toMatch(/["']\s*name\s+name\s*["']/);
+      expect(bodyText).toMatch(/["']\s*\.\s+submit\s*["']/);
+    });
+
+    it(".day-view__form ルール本文に gap: var(--space-md) を含む (BL-058 / D-006)", () => {
+      const css = readFileSync(dayViewCssPath, "utf-8");
+      const body = extractRuleBody(css, ".day-view__form");
+      expect(body, ".day-view__form ルールが見つからない").not.toBeNull();
+      expect(body ?? "").toMatch(/(?:^|;|\n)\s*gap\s*:\s*var\(--space-md\)/);
+    });
+
+    it(".day-view__form ルール本文に gap: var(--space-sm) を含まない (BL-058 で sm → md に置換)", () => {
+      const css = readFileSync(dayViewCssPath, "utf-8");
+      const body = extractRuleBody(css, ".day-view__form");
+      expect(body, ".day-view__form ルールが見つからない").not.toBeNull();
+      expect(body ?? "").not.toMatch(/(?:^|;|\n)\s*gap\s*:\s*var\(--space-sm\)/);
     });
   });
 

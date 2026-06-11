@@ -480,17 +480,8 @@ export function TodayView(props: TodayViewProps): JSX.Element {
         })()}
 
       <form onSubmit={handleCreate} aria-label="タスク起票フォーム" className="day-view__form">
-        <div>
-          <label htmlFor="task-name">タスク名</label>
-          <input
-            id="task-name"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-        </div>
-        <div>
+        {/* BL-058 / REQ-3 / REQ-5: 2D グリッド配置. ProjectToggle を grid-area: project にラップ. */}
+        <div className="day-view__form__project">
           {/*
             BL-041 / AC-1 / AC-2 / AC-3 / AC-4:
             <select id="task-project"> を撤去し, <ProjectToggle /> に置き換える.
@@ -504,8 +495,9 @@ export function TodayView(props: TodayViewProps): JSX.Element {
             groupLabel="プロジェクト"
           />
         </div>
-        {/* BL-040 / AC-1: <select id="task-priority"> を撤去し, 星 UI に置き換える. */}
-        <div>
+        {/* BL-058 / REQ-3 / REQ-4 / REQ-5: PriorityStars + ヘルプラベルを grid-area: priority にラップ.
+            BL-040 / AC-1: <select id="task-priority"> を撤去し, 星 UI に置き換える. */}
+        <div className="day-view__form__priority">
           <span id="task-priority-label">優先度</span>
           <PriorityStars
             value={priority}
@@ -513,8 +505,24 @@ export function TodayView(props: TodayViewProps): JSX.Element {
             groupLabel="優先度"
             idPrefix="create"
           />
+          {/* BL-058 / REQ-4 / D-002 / P-003: PriorityStars 直下のヘルプラベル. */}
+          <span className="day-view__form__priority-hint">↑タップで選択</span>
         </div>
-        <button type="submit">追加</button>
+        {/* BL-058 / REQ-3 / REQ-5: タスク名 input を grid-area: name にラップ. */}
+        <div className="day-view__form__name">
+          <label htmlFor="task-name">タスク名</label>
+          <input
+            id="task-name"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+        </div>
+        {/* BL-058 / REQ-3 / D-005: 「追加」ボタンを grid-area: submit に. CSS で justify-self: end. */}
+        <button type="submit" className="day-view__form__submit">
+          追加
+        </button>
       </form>
 
       <ul aria-label="タスク一覧" className="day-view__list">
