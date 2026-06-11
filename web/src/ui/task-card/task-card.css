@@ -1,0 +1,77 @@
+/*
+ * BL-059 (task-card-component): TaskCard / TaskFormCard の専用 CSS.
+ *
+ * - <TaskCard> (タスク表示) と <TaskFormCard> (タスク起票) が共有する.
+ * - 系統間で共有しない (project-card / routine-card は別 BL の別 CSS).
+ * - shadow / hover / transition / animation は意図的に持たない
+ *   (NFR-NO-SHADOW / NFR-NO-HOVER-TRANSITION).
+ *
+ * 旧 BL からの責務移譲:
+ *   - BL-052 .day-view__card        → .task-card 基底 (visual 4 宣言)
+ *   - BL-057 .day-view__card__*     → .task-card__* (3 段ゾーン構造)
+ *   - BL-054 .day-view__form        → .task-card.task-card--form (起票カード)
+ *   - BL-058 .day-view__form の 2D grid → 3 段 flex column 構造へ移行
+ *   - BL-037 .focus-view__card      → .task-card.task-card--focus に置換
+ *
+ * モックアップ反映:
+ *   V-1: .task-card--focus { border-width: 3px } (padding は通常と同じ)
+ *   V-2: .task-card__actions { justify-content: center }
+ *   V-3: .task-card__header { justify-content: space-between } で chip 左 / PriorityStars 右
+ *   V-4: .task-card__title { justify-content: center; font-size: var(--font-size-h2) }
+ *   V-7: .task-card__title input[type="text"] { font: inherit }
+ */
+
+.task-card {
+  /* visual 4 宣言 (旧 .day-view__card と等価. BL-052 から責務移譲). */
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  /* 3 段 layout (旧 .day-view__card と等価. BL-057 から責務移譲). */
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.task-card--focus {
+  /* V-1: padding は通常と同じ. border-width だけ太く (3px) して強調. */
+  border-width: 3px;
+}
+
+.task-card--form {
+  /* 起票フォーム用の追加差異は本 BL 時点では無し.
+   * 将来差異が出たらここに追加する足場 (P-004). */
+}
+
+.task-card__header {
+  display: flex;
+  align-items: center;
+  /* V-3: chip (左) と PriorityStars (右) を左右に分ける. */
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.task-card__title {
+  display: flex;
+  align-items: center;
+  /* V-4: タスク名を中央寄せ. */
+  justify-content: center;
+  gap: var(--space-md);
+  /* V-4 / V-7: フォント拡大 (--font-size-h2 = 20px). 子の span / input に継承される. */
+  font-size: var(--font-size-h2);
+}
+
+/* V-7: input はブラウザ既定で font を継承しない. 明示的に親の font を継承させる. */
+.task-card__title input[type="text"] {
+  font: inherit;
+}
+
+.task-card__actions {
+  display: flex;
+  align-items: center;
+  /* V-2: ボタン中央揃え (旧 .day-view__card__actions の flex-end から変更). */
+  justify-content: center;
+  gap: var(--space-sm);
+  /* 狭幅端末への安全弁. */
+  flex-wrap: wrap;
+}

@@ -41,8 +41,8 @@ import type {
 } from "../../repositories/task-repository.js";
 import { OptimisticLockError } from "../../repositories/task-repository.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
-import { PriorityStars } from "../priority-stars/priority-stars.js";
-import { ProjectToggle } from "../project-toggle/project-toggle.js";
+import { TaskCard } from "../task-card/task-card.js";
+import { TaskFormCard } from "../task-card/task-form-card.js";
 import "../day-view/day-view.css";
 
 export interface TomorrowViewProps {
@@ -372,55 +372,20 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
         <h1>明日のタスク</h1>
       </header>
 
-      <form
+      {/* BL-059 / REQ-5-2: 起票フォームを <TaskFormCard> に置換 (V-6 / V-7 反映). */}
+      <TaskFormCard
+        projects={projects}
+        projectId={projectId}
+        onProjectIdChange={setProjectId}
+        priority={priority}
+        onPriorityChange={setPriority}
+        name={name}
+        onNameChange={setName}
         onSubmit={handleCreate}
-        aria-label="明日のタスク起票フォーム"
-        className="day-view__form"
-      >
-        {/* BL-058 / REQ-3 / REQ-6: 2D グリッド配置. ProjectToggle を grid-area: project にラップ. */}
-        <div className="day-view__form__project">
-          {/*
-            BL-041 / AC-5:
-            <select id="tomorrow-task-project"> を撤去し, <ProjectToggle /> に置き換える.
-            親 state (useState("")) との境界で "" ↔ null を変換する (plan D-004).
-          */}
-          <ProjectToggle
-            value={projectId === "" ? null : projectId}
-            onChange={(next) => setProjectId(next ?? "")}
-            projects={projects}
-            idPrefix="tomorrow-create"
-            groupLabel="プロジェクト"
-          />
-        </div>
-        {/* BL-058 / REQ-3 / REQ-4 / REQ-6: PriorityStars + ヘルプラベルを grid-area: priority にラップ.
-            BL-040 / AC-4: <select id="tomorrow-task-priority"> を撤去し, 星 UI に置き換える. */}
-        <div className="day-view__form__priority">
-          <span id="tomorrow-task-priority-label">優先度</span>
-          <PriorityStars
-            value={priority}
-            onChange={setPriority}
-            groupLabel="優先度"
-            idPrefix="tomorrow-create"
-          />
-          {/* BL-058 / REQ-4 / D-002 / P-003: PriorityStars 直下のヘルプラベル. */}
-          <span className="day-view__form__priority-hint">↑タップで選択</span>
-        </div>
-        {/* BL-058 / REQ-3 / REQ-6: タスク名 input を grid-area: name にラップ. */}
-        <div className="day-view__form__name">
-          <label htmlFor="tomorrow-task-name">タスク名</label>
-          <input
-            id="tomorrow-task-name"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-        </div>
-        {/* BL-058 / REQ-3 / D-005: 「追加」ボタンを grid-area: submit に. CSS で justify-self: end. */}
-        <button type="submit" className="day-view__form__submit">
-          追加
-        </button>
-      </form>
+        idPrefix="tomorrow-create"
+        inputId="tomorrow-task-name"
+        formAriaLabel="明日のタスク起票フォーム"
+      />
 
       {/* REQ-6: 空状態は <ul> の外に出し, listitem role と分離する.
           (テストは tasks > 0 のときだけ listitem 数を assert する想定.)
@@ -434,38 +399,25 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
               const project = task.projectId
                 ? (projects.find((p) => p.id === task.projectId) ?? null)
                 : null;
+              // BL-059 / REQ-5-1: tomorrow-view は PriorityStars を持たない既存仕様
+              // (showPriority=false). dueDateMode="tomorrow" で「今日にする」ボタンを出す.
+              // task.origin === "routine" のとき期限切替 button が非表示になる挙動は
+              // <TaskCard> 内に内蔵 (D-010).
               return (
-                // BL-051 / REQ-5 / D-007: 旧 <li className="tomorrow-view__item"> を
-                // <li className="day-view__card"> に置換. 入れ子 <div> (item-body /
-                // actions) を撤去し, 子要素を <li> 直下に並べる (today-view と同形).
-                // <span> の className (tomorrow-view__project / __name) も撤去 (P-003).
-                <li key={task.id} className="day-view__card">
-                  {/* BL-057 / REQ-6: 3 段ゾーン構造 (header / title / actions).
-                      tomorrow-view は <PriorityStars /> を持たない既存仕様なので
-                      title 段はタスク名のみ. */}
-                  <div className="day-view__card__header">
-                    {project && <span className="project-chip">{project.name}</span>}
-                  </div>
-                  <div className="day-view__card__title">
-                    <span>{task.name}</span>
-                  </div>
-                  <div className="day-view__card__actions">
-                    <button type="button" onClick={() => handleDelete(task)}>
-                      削除
-                    </button>
-                    {/* BL-042 REQ-2 / AC-8: routine 由来タスクは「今日にする」を非表示にする.
-                        routine は毎日自動生成されるため移送すると翌日に重複が出る. */}
-                    {task.origin !== "routine" && (
-                      <button type="button" onClick={() => handleMoveToToday(task)}>
-                        今日にする
-                      </button>
-                    )}
-                    {/* BL-042: 「完了」 button を追加 (today と対称な 3 ボタン化). */}
-                    <button type="button" onClick={() => handleComplete(task)}>
-                      完了
-                    </button>
-                  </div>
-                </li>
+                <TaskCard
+                  key={task.id}
+                  as="li"
+                  variant="default"
+                  task={task}
+                  project={project}
+                  showPriority={false}
+                  showSetFocus={false}
+                  actionSet="full"
+                  dueDateMode="tomorrow"
+                  onDelete={() => handleDelete(task)}
+                  onToggleDueDate={() => handleMoveToToday(task)}
+                  onComplete={() => handleComplete(task)}
+                />
               );
             })}
       </ul>

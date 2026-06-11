@@ -1,9 +1,16 @@
 /*
  * 共通レイアウト CSS for /today and /tomorrow (BL-051 / unified-day-view).
  *
- * - 本 BL は HTML 構造の共通化と最小限のレイアウト系プロパティのみ扱う.
- * - カードの border / radius / background / shadow / 強調 variant の visual は
- *   BL-052 (task-card-design) で `.day-view__card` / `.day-view__card--focus` に追加する.
+ * - 本ファイルは「day-view 枠 / ヘッダ / リスト / 空状態」のレイアウト系プロパティと
+ *   `.project-chip` (BL-056) のみを扱う.
+ * - タスクカード / 起票カードの visual と 3 段ゾーン構造は BL-059 で
+ *   `.task-card` 系 (web/src/ui/task-card/task-card.css) に責務移譲した.
+ *
+ * BL-059 で撤去したセレクタ:
+ *   .day-view__card / .day-view__card--focus / .day-view__card__header /
+ *   .day-view__card__title / .day-view__card__actions
+ *   .day-view__form / .day-view__form__project / .day-view__form__priority /
+ *   .day-view__form__priority-hint / .day-view__form__name / .day-view__form__submit
  */
 
 .day-view {
@@ -24,55 +31,6 @@
   margin: 0;
 }
 
-.day-view__form {
-  /* BL-058: 2D グリッド配置 (REQ-1 / D-001).
-   * - 上段: project (左) / priority (右)
-   * - 中段: name (全幅)
-   * - 下段: . (空) / submit (右)
-   */
-  display: grid;
-  grid-template-areas:
-    "project priority"
-    "name name"
-    ". submit";
-  grid-template-columns: 1fr auto;
-  gap: var(--space-md);
-  /* BL-054 visual 4 宣言を保持 (REQ-2 / NFR-BL054-PRESERVE). */
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-md);
-}
-
-/* BL-058: 起票フォーム内の各子要素に grid-area を割り当てる (REQ-3 / D-001). */
-.day-view__form__project {
-  grid-area: project;
-}
-
-.day-view__form__priority {
-  grid-area: priority;
-  /* PriorityStars と hint を縦並びで配置するための minimal layout (D-002 / P-003). */
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.day-view__form__priority-hint {
-  /* 視覚的補助テキスト (REQ-4 / D-002).
-   * font-size / color は将来 BL で調整可能. 本 BL では既定スタイルで十分. */
-  color: var(--color-fg-subtle);
-  font-size: var(--font-size-small);
-}
-
-.day-view__form__name {
-  grid-area: name;
-}
-
-.day-view__form__submit {
-  grid-area: submit;
-  justify-self: end;
-}
-
 .day-view__list {
   list-style: none;
   padding: 0;
@@ -80,59 +38,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-}
-
-.day-view__card {
-  /* BL-052: 縁・背景・角丸・余白を tokens で統一する.
-   * BL-057: 3 段ゾーン構造のため縦並び + 子段は card 幅いっぱい. */
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--space-md);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  /* BL-057 D-001: chip と同じ角丸スケール (--radius-lg = 16px) に揃える. */
-  border-radius: var(--radius-lg);
-  padding: var(--space-md);
-}
-
-/*
- * BL-057 (task-card-zone-layout): タスクカードの 3 段ゾーン構造.
- *
- * - 上段 (.day-view__card__header): プロジェクト chip 配置.
- * - 中段 (.day-view__card__title): タスク名 + <PriorityStars /> (today のみ).
- * - 下段 (.day-view__card__actions): 削除 / 明日にする (今日にする) / 完了 /
- *   現在のタスクにする の各 button. justify-content: flex-end で右寄せ (D-004).
- *
- * shadow / transition / animation / :hover は意図的に持たない
- * (NFR-NO-SHADOW / NFR-NO-HOVER-TRANSITION).
- */
-.day-view__card__header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.day-view__card__title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-md);
-}
-
-.day-view__card__actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-sm);
-  flex-wrap: wrap;
-}
-
-.day-view__card--focus {
-  /* BL-052: 強調 variant. border-color / background は .day-view__card を継承する. */
-  border-width: 2px;
-  border-radius: var(--radius-lg);
-  padding: var(--space-lg);
 }
 
 .day-view__empty {
@@ -144,7 +49,7 @@
 /*
  * BL-056 (project-chip): プロジェクト名表示用の角丸カプセル.
  *
- * - タスクカード (.day-view__card) 内の <span className="project-chip"> と,
+ * - タスクカード (.task-card__header) 内の <span className="project-chip"> と,
  *   ProjectToggle (.project-toggle__button) の両方で共有する視覚言語.
  * - 値は BL-046 の既存トークンのみで構成 (NFR-NO-NEW-TOKENS).
  * - background は親カードの白を透過する (D-007).
