@@ -432,7 +432,7 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
                 // actions) を撤去し, 子要素を <li> 直下に並べる (today-view と同形).
                 // <span> の className (tomorrow-view__project / __name) も撤去 (P-003).
                 <li key={task.id} className="day-view__card">
-                  {project && <span>{project.name}</span>}
+                  {project && <span className="project-chip">{project.name}</span>}
                   <span>{task.name}</span>
                   <button type="button" onClick={() => handleDelete(task)}>
                     削除
