@@ -25,9 +25,14 @@
 }
 
 .day-view__form {
+  /* BL-054: 起票フォームを `.day-view__card` と同じ visual でカード化する. */
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
 }
 
 .day-view__list {

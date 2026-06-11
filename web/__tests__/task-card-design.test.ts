@@ -281,10 +281,11 @@ describe("タスクカードのデザイン統一 (BL-052 / task-card-design)", 
    *   Then  BL-051 完了時点と同じ宣言のままで, 本 BL での追記が無い
    */
   describe("AC-7: 他セレクタには visual 宣言が追加されていない", () => {
+    // BL-054 で .day-view__form にフォームカードの visual を意図的に追加したため
+    // OTHER_SELECTORS から除外する (form-card-design.test.ts 側で別途検証).
     const OTHER_SELECTORS = [
       ".day-view",
       ".day-view__header",
-      ".day-view__form",
       ".day-view__list",
       ".day-view__empty",
     ] as const;
