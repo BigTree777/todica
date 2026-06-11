@@ -87,5 +87,7 @@
   flex: 1;
   width: 100%;
   padding: var(--space-md);
+  /* BL-053: 固定ハンバーガーボタン (bottom ~36px) と h1 が重ならないよう上余白を確保. */
+  padding-top: calc(var(--space-md) + var(--space-xl));
   overflow: auto;
 }
