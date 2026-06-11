@@ -24,15 +24,17 @@ const API_BASE = "http://localhost:3000";
 const AUTH_HEADER = { Authorization: "Bearer dev-token" };
 
 /**
- * AppShell サイドバーから「現在のタスク」リンクで /focus に遷移する.
- * BL-036 で導入されたサイドバーランドマークを使う.
+ * AppShell のハンバーガーメニューから「現在のタスク」リンクで /focus に遷移する.
+ * BL-049 でサイドバーはハンバーガーボタン開閉式のオーバーレイメニューに変わったため,
+ * リンクを click する前にハンバーガーボタンを押してメニュー (`role="dialog"`) を
+ * 開く必要がある (閉状態の menu は viewport 外に隠れている).
  */
 async function gotoFocusViaSidebar(page: Page): Promise<void> {
   await page.goto("/today");
-  await page
-    .getByRole("navigation", { name: "サイドバーナビゲーション" })
-    .getByRole("link", { name: "現在のタスク" })
-    .click();
+  await page.getByRole("button", { name: "メニューを開く" }).click();
+  const menu = page.getByRole("dialog", { name: "ナビゲーションメニュー" });
+  await expect(menu).toBeVisible();
+  await menu.getByRole("link", { name: "現在のタスク" }).click();
   await expect(page).toHaveURL(/\/focus$/);
 }
 
