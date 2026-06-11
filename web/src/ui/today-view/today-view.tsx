@@ -49,7 +49,6 @@ import type {
 import { OptimisticLockError } from "../../repositories/task-repository.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
 import { PriorityStars } from "../priority-stars/priority-stars.js";
-import { ProjectCreateDialog } from "../project-create-dialog/project-create-dialog.js";
 import { ProjectToggle } from "../project-toggle/project-toggle.js";
 
 export interface TodayViewProps {
@@ -105,8 +104,6 @@ export function TodayView(props: TodayViewProps): JSX.Element {
   const [name, setName] = useState("");
   const [projectId, setProjectId] = useState("");
   const [priority, setPriority] = useState<Priority>("normal");
-  // BL-044: プロジェクト追加モーダルの開閉 state.
-  const [projectDialogOpen, setProjectDialogOpen] = useState(false);
 
   /** mutation 成功時に today / focus を再フェッチする */
   const invalidateAll = useCallback(() => {
@@ -417,9 +414,10 @@ export function TodayView(props: TodayViewProps): JSX.Element {
 
   return (
     <main>
-      {/* BL-044 / spec REQ-1: 見出しと同じヘッダ領域 (h1 直後, 起票フォームより前) に
-          「＋プロジェクトの追加」button を置く. 可視ラベル = アクセシブルネーム (WCAG 2.5.3).
-          BL-047 / REQ-1 / REQ-2: カウンタを header 内の h1 と追加ボタンの間に配置する. */}
+      {/* BL-050 / spec REQ-1: ヘッダ領域には <h1>今日</h1> と
+          「今日の完了タスク数」カウンタの 2 要素のみを配置する
+          (BL-044 で導入したインライン「＋プロジェクトの追加」button は撤去).
+          BL-047 / REQ-1 / REQ-2: カウンタは header 内に置く. */}
       <header className="today-view__header">
         <h1>今日</h1>
         {/* BL-008 / FR-040 / NFR-013: 今日の完了タスク数を画面上部に常時表示する.
@@ -429,9 +427,6 @@ export function TodayView(props: TodayViewProps): JSX.Element {
         <span className="today-view__completion-count" aria-label="今日の完了タスク数">
           今日の完了: {completionCount}
         </span>
-        <button type="button" onClick={() => setProjectDialogOpen(true)}>
-          ＋プロジェクトの追加
-        </button>
       </header>
 
       <form onSubmit={handleCreate} aria-label="タスク起票フォーム">
@@ -542,16 +537,6 @@ export function TodayView(props: TodayViewProps): JSX.Element {
           </li>
         ))}
       </ul>
-
-      {/* BL-044: プロジェクト追加モーダル. mutation はダイアログ側に閉じ,
-          today-view との結合は onCreated (起票フォームのトグルへの自動選択) の 1 点のみ
-          (plan D-003 / D-004). */}
-      <ProjectCreateDialog
-        repository={projectRepository}
-        open={projectDialogOpen}
-        onClose={() => setProjectDialogOpen(false)}
-        onCreated={(project) => setProjectId(project.id)}
-      />
 
       <ConflictDialog
         open={conflictDialog.dialogState.open}
