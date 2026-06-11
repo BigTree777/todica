@@ -49,8 +49,8 @@ import type {
 } from "../../repositories/task-repository.js";
 import { OptimisticLockError } from "../../repositories/task-repository.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
-import { PriorityStars } from "../priority-stars/priority-stars.js";
-import { ProjectToggle } from "../project-toggle/project-toggle.js";
+import { TaskCard } from "../task-card/task-card.js";
+import { TaskFormCard } from "../task-card/task-form-card.js";
 
 export interface TodayViewProps {
   repository: TaskRepository;
@@ -432,98 +432,46 @@ export function TodayView(props: TodayViewProps): JSX.Element {
       </header>
 
       {/* BL-006: 現在のタスク強調セクション (NFR-011 "大きく単独で表示").
-          BL-040 / AC-10: 旧 cycle ボタン + [優先度: ...] 文字表示を撤去し
-          <PriorityStars /> に置き換える.
-          BL-042: アクションは「削除」「明日にする」「完了」の 3 ボタンのみに削減
-          (編集 / 現在解除 を撤去, ラベルを「明日にする」に統一).
-          BL-051 / REQ-3 / D-002: 起票フォームより前 (= header 直後 / 2 段目) に配置.
-          BL-051 / REQ-3: section に共通カードクラス day-view__card と強調 variant
-          day-view__card--focus を付与. */}
+          BL-059 / REQ-4 / V-5: 旧 h2 見出しは撤去. landmark は section の aria-label で維持.
+          BL-059 / REQ-4: <TaskCard as="section" variant="focus" /> に置換 (focusedTask 用). */}
       {focusedTask &&
         (() => {
           const focusedProject = focusedTask.projectId
             ? (projects.find((p) => p.id === focusedTask.projectId) ?? null)
             : null;
           return (
-            <section aria-label="現在のタスク" className="day-view__card day-view__card--focus">
-              <h2>現在のタスク</h2>
-              {/* BL-057 / REQ-5-1: 3 段ゾーン構造 (header / title / actions). */}
-              <div className="day-view__card__header">
-                {focusedProject && <span className="project-chip">{focusedProject.name}</span>}
-              </div>
-              <div className="day-view__card__title">
-                <span>{focusedTask.name}</span>
-                <PriorityStars
-                  value={focusedTask.priority}
-                  onChange={(next) => handleSetPriority(focusedTask, next)}
-                  groupLabel={`${focusedTask.name} の優先度`}
-                  idPrefix={`task-${focusedTask.id}`}
-                />
-              </div>
-              <div className="day-view__card__actions">
-                <button type="button" onClick={() => handleDelete(focusedTask)}>
-                  削除
-                </button>
-                {/* BL-017 / FR-033: origin が "routine" でない場合のみ期限切替ボタンを表示.
-                BL-042: ラベルは「明日にする / 今日にする」に統一. */}
-                {focusedTask.origin !== "routine" && (
-                  <button type="button" onClick={() => handleToggleDueDate(focusedTask)}>
-                    {focusedTask.dueDate === "today" ? "明日にする" : "今日にする"}
-                  </button>
-                )}
-                <button type="button" onClick={() => handleComplete(focusedTask)}>
-                  完了
-                </button>
-              </div>
-            </section>
+            <TaskCard
+              as="section"
+              variant="focus"
+              aria-label="現在のタスク"
+              task={focusedTask}
+              project={focusedProject}
+              showPriority
+              showSetFocus={false}
+              actionSet="full"
+              dueDateMode="today"
+              onSetPriority={(next) => handleSetPriority(focusedTask, next)}
+              onDelete={() => handleDelete(focusedTask)}
+              onToggleDueDate={() => handleToggleDueDate(focusedTask)}
+              onComplete={() => handleComplete(focusedTask)}
+            />
           );
         })()}
 
-      <form onSubmit={handleCreate} aria-label="タスク起票フォーム" className="day-view__form">
-        {/* BL-058 / REQ-3 / REQ-5: 2D グリッド配置. ProjectToggle を grid-area: project にラップ. */}
-        <div className="day-view__form__project">
-          {/*
-            BL-041 / AC-1 / AC-2 / AC-3 / AC-4:
-            <select id="task-project"> を撤去し, <ProjectToggle /> に置き換える.
-            親 state (useState("")) との境界で "" ↔ null を変換する (plan D-004).
-          */}
-          <ProjectToggle
-            value={projectId === "" ? null : projectId}
-            onChange={(next) => setProjectId(next ?? "")}
-            projects={projects}
-            idPrefix="create"
-            groupLabel="プロジェクト"
-          />
-        </div>
-        {/* BL-058 / REQ-3 / REQ-4 / REQ-5: PriorityStars + ヘルプラベルを grid-area: priority にラップ.
-            BL-040 / AC-1: <select id="task-priority"> を撤去し, 星 UI に置き換える. */}
-        <div className="day-view__form__priority">
-          <span id="task-priority-label">優先度</span>
-          <PriorityStars
-            value={priority}
-            onChange={setPriority}
-            groupLabel="優先度"
-            idPrefix="create"
-          />
-          {/* BL-058 / REQ-4 / D-002 / P-003: PriorityStars 直下のヘルプラベル. */}
-          <span className="day-view__form__priority-hint">↑タップで選択</span>
-        </div>
-        {/* BL-058 / REQ-3 / REQ-5: タスク名 input を grid-area: name にラップ. */}
-        <div className="day-view__form__name">
-          <label htmlFor="task-name">タスク名</label>
-          <input
-            id="task-name"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-        </div>
-        {/* BL-058 / REQ-3 / D-005: 「追加」ボタンを grid-area: submit に. CSS で justify-self: end. */}
-        <button type="submit" className="day-view__form__submit">
-          追加
-        </button>
-      </form>
+      {/* BL-059 / REQ-4-4: 起票フォームを <TaskFormCard> に置換 (V-6 / V-7 反映). */}
+      <TaskFormCard
+        projects={projects}
+        projectId={projectId}
+        onProjectIdChange={setProjectId}
+        priority={priority}
+        onPriorityChange={setPriority}
+        name={name}
+        onNameChange={setName}
+        onSubmit={handleCreate}
+        idPrefix="create"
+        inputId="task-name"
+        formAriaLabel="タスク起票フォーム"
+      />
 
       <ul aria-label="タスク一覧" className="day-view__list">
         {otherTasks.map((task) => {
@@ -531,46 +479,22 @@ export function TodayView(props: TodayViewProps): JSX.Element {
             ? (projects.find((p) => p.id === task.projectId) ?? null)
             : null;
           return (
-            <li key={task.id} className="day-view__card">
-              {/* BL-057 / REQ-5-2: 3 段ゾーン構造 (header / title / actions). */}
-              <div className="day-view__card__header">
-                {project && <span className="project-chip">{project.name}</span>}
-              </div>
-              <div className="day-view__card__title">
-                <span>{task.name}</span>
-                {/* BL-040 / AC-5 / AC-7: 旧 cycle ボタン + [優先度: ...] 文字表示を撤去し
-                  <PriorityStars /> に置き換える. */}
-                <PriorityStars
-                  value={task.priority}
-                  onChange={(next) => handleSetPriority(task, next)}
-                  groupLabel={`${task.name} の優先度`}
-                  idPrefix={`task-${task.id}`}
-                />
-              </div>
-              <div className="day-view__card__actions">
-                {/* BL-043 / FR-012: 状態系コントロール「現在のタスクにする」.
-                  BL-057 / D-002: アクション段の先頭に配置 (DOM 順は既存実装維持).
-                  ネイティブ button のセマンティクスで Tab + Enter / Space に対応 (spec REQ-3). */}
-                <button type="button" onClick={() => handleSetFocus(task.id)}>
-                  現在のタスクにする
-                </button>
-                {/* BL-042: 各カードのアクションは「削除」「明日にする」「完了」の 3 つだけに削減
-                  (編集 / 現在に設定 を撤去, ラベルを「明日にする」に統一). */}
-                <button type="button" onClick={() => handleDelete(task)}>
-                  削除
-                </button>
-                {/* BL-017 / FR-033: origin が "routine" でない場合のみ期限切替ボタンを表示.
-                  BL-042: ラベルは「明日にする / 今日にする」に統一. */}
-                {task.origin !== "routine" && (
-                  <button type="button" onClick={() => handleToggleDueDate(task)}>
-                    {task.dueDate === "today" ? "明日にする" : "今日にする"}
-                  </button>
-                )}
-                <button type="button" onClick={() => handleComplete(task)}>
-                  完了
-                </button>
-              </div>
-            </li>
+            <TaskCard
+              key={task.id}
+              as="li"
+              variant="default"
+              task={task}
+              project={project}
+              showPriority
+              showSetFocus
+              actionSet="full"
+              dueDateMode="today"
+              onSetPriority={(next) => handleSetPriority(task, next)}
+              onSetFocus={() => handleSetFocus(task.id)}
+              onDelete={() => handleDelete(task)}
+              onToggleDueDate={() => handleToggleDueDate(task)}
+              onComplete={() => handleComplete(task)}
+            />
           );
         })}
       </ul>

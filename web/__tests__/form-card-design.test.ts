@@ -8,25 +8,31 @@
  *   docs/developer/features/form-card-design/plan.md
  *   docs/developer/features/form-card-design/tasks.md
  *
+ * 本ファイルは BL-054 の TDD red を作る原ファイルだが,
+ * BL-059 (task-card-component) で起票カードの責務を `.day-view__form` から
+ * `.task-card.task-card--form` へ全面移譲したため,
+ * AC-1 / AC-2 / AC-6 / AC-7 / AC-8 の assertion を「新クラスでの確認」+
+ * 「旧クラスが撤去されていることの確認」へ書き換えた (D-009 / D-011).
+ *
+ * BL-054 当時の意図 → BL-059 で新クラスへ移譲:
+ *   - .day-view__form の visual 4 宣言 = `.task-card` (基底) で網羅される.
+ *   - .day-view__form の grid layout (BL-058) = 3 段 flex column 構造 (.task-card__header /
+ *     .task-card__title / .task-card__actions) に置換される.
+ *   - JSX の <form className="day-view__form"> = <TaskFormCard /> 経由の
+ *     <form className="task-card task-card--form"> に置換される.
+ *
  * 本ファイルが検証する受け入れ基準:
- *   AC-1: .day-view__form に縁・背景・角丸・余白が定義されている.
- *   AC-2: 既存の構造系宣言 (display / flex-direction / gap) が維持されている.
- *   AC-3: .day-view__form 周辺に hover / transition / animation / box-shadow が無い.
- *   AC-4: day-view.css 全体で box-shadow が含まれない (NFR-NO-SHADOW).
- *   AC-5: tokens.css が無改修 (本 BL で参照する 4 トークンが残っている).
- *   AC-6: JSX (today-view.tsx / tomorrow-view.tsx) に day-view__form クラスが付与されている.
- *   AC-7: 本 BL の対象セレクタは .day-view__form に限定されている (他セレクタへの visual 追加無し).
- *   AC-8: focus-view (/focus) の CSS が無改修 (= .day-view__form セレクタが混入していない).
- *   AC-9: 既存テストが存在する (回帰検出の前提).
- *   AC-10: a11y E2E が存在する (回帰検出の前提).
- *
- * 本ファイルは TDD の "red" を作るためのテスト.
- *   - day-view.css の .day-view__form に visual 宣言が無い状態では AC-1 が失敗する.
- *   - implementer が REQ-1 を実装することで green 化する.
- *
- * 検証スタイル: BL-052 (web/__tests__/task-card-design.test.ts) と同じ
- * 「CSS を readFileSync で読み込んで宣言の存在を expect(content).toMatch / toContain で assert する」方式.
- * `extractRuleBody` ヘルパは P-005 に従い本ファイル内に再定義する (= test ファイル間で同等の小関数を持つ).
+ *   AC-1 (BL-059 追従): 起票フォームの visual 4 宣言が `.task-card` セレクタに移譲されている.
+ *   AC-2 (BL-059 追従): 起票フォームの layout が `.task-card` 系 3 段 flex column 構造に
+ *                       置換されている (= .day-view__form の grid layout は撤去).
+ *   AC-3 (BL-059 追従): .task-card 系セレクタに hover / transition / animation / box-shadow 無し.
+ *   AC-4: day-view.css / task-card.css 全体で box-shadow を追加していない.
+ *   AC-5: tokens.css が無改修.
+ *   AC-6 (BL-059 追従): today-view / tomorrow-view から day-view__form クラスが撤去されている.
+ *   AC-7 (BL-059 追従): 旧 .day-view__form セレクタは day-view.css から撤去されている.
+ *   AC-8: focus-view.css が無改修.
+ *   AC-9: 既存テストファイルが存在する (回帰検出の前提).
+ *   AC-10: a11y E2E ファイルが存在する (回帰検出の前提).
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -36,6 +42,8 @@ import { describe, expect, it } from "vitest";
 const repoRoot = resolve(__dirname, "../..");
 const webSrcRoot = resolve(repoRoot, "web/src");
 const dayViewCssPath = resolve(webSrcRoot, "ui/day-view/day-view.css");
+// BL-059 で新設された task-card.css.
+const taskCardCssPath = resolve(webSrcRoot, "ui/task-card/task-card.css");
 const tokensCssPath = resolve(webSrcRoot, "styles/tokens.css");
 const todayViewTsxPath = resolve(webSrcRoot, "ui/today-view/today-view.tsx");
 const tomorrowViewTsxPath = resolve(webSrcRoot, "ui/tomorrow-view/tomorrow-view.tsx");
@@ -44,52 +52,40 @@ const focusViewCssPath = resolve(webSrcRoot, "ui/focus-view/focus-view.css");
 /**
  * 指定したセレクタの「ルール本文 (= {} で囲まれた中身)」を抽出する.
  *
- * 単純な /selector\s*\{([^}]*)\}/ では `.day-view__form` が
- * `.day-view__form:hover` などの派生セレクタにも一致してしまう可能性があるため,
- * セレクタ末尾を `{` / 空白で厳密に区切る.
- *
- * BL-052 (task-card-design.test.ts) に存在する同等実装を再定義する (P-005).
+ * BL-052 / BL-054 / BL-056 / BL-057 / BL-058 / BL-059 と同形式 (P-005).
  */
 function extractRuleBody(css: string, selector: string): string | null {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  // セレクタの直後が空白 + `{` であるルールに限定する.
   const re = new RegExp(`(?:^|\\})\\s*${escaped}\\s*\\{([^}]*)\\}`, "m");
   const m = css.match(re);
   return m?.[1] ?? null;
 }
 
-describe("起票フォームのカード化 (BL-054 / form-card-design)", () => {
+describe("起票フォームのカード化 (BL-054 / form-card-design, BL-059 で .task-card へ移譲)", () => {
   /**
-   * AC-1: 起票フォーム (.day-view__form) に縁・背景・角丸・余白が定義されている.
+   * AC-1 (BL-059 追従): BL-054 で確定した visual 4 宣言が `.task-card` セレクタに移譲されている.
    *
-   * シナリオ AC-1:
-   *   Given web/src/ui/day-view/day-view.css を開いた
-   *   When  .day-view__form セレクタのルール本文を観察する
-   *   Then  background プロパティに var(--color-bg) を参照する宣言を含む
-   *    かつ border プロパティに 1px solid var(--color-border) を参照する宣言を含む
-   *    かつ border-radius プロパティに var(--radius-md) を参照する宣言を含む
-   *    かつ padding プロパティに var(--space-md) を参照する宣言を含む
+   * BL-054 当時: .day-view__form に background / border / border-radius / padding を追加.
+   * BL-059 で: 同じ visual 4 宣言は `.task-card` 基底に集約され,
+   *            `.day-view__form` セレクタは撤去された.
    */
-  describe("AC-1: .day-view__form に visual 宣言が追加されている", () => {
-    it("day-view.css が存在する", () => {
-      expect(existsSync(dayViewCssPath)).toBe(true);
+  describe("AC-1 (BL-059 追従): 起票フォームの visual 4 宣言が .task-card に移譲されている", () => {
+    it("task-card.css が存在する", () => {
+      expect(existsSync(taskCardCssPath)).toBe(true);
     });
 
-    it(".day-view__form ルール本文に background: var(--color-bg) を含む", () => {
-      const css = readFileSync(dayViewCssPath, "utf-8");
-      const body = extractRuleBody(css, ".day-view__form");
-      expect(body, ".day-view__form ルールが見つからない").not.toBeNull();
-      // background または background-color shorthand のいずれかで OK とする.
+    it(".task-card ルール本文に background: var(--color-bg) を含む", () => {
+      const css = readFileSync(taskCardCssPath, "utf-8");
+      const body = extractRuleBody(css, ".task-card");
+      expect(body, ".task-card ルールが見つからない").not.toBeNull();
       expect(body ?? "").toMatch(/background(?:-color)?\s*:\s*var\(--color-bg\)/);
     });
 
-    it(".day-view__form ルール本文に border: 1px solid var(--color-border) (または等価分解) を含む", () => {
-      const css = readFileSync(dayViewCssPath, "utf-8");
-      const body = extractRuleBody(css, ".day-view__form");
-      expect(body, ".day-view__form ルールが見つからない").not.toBeNull();
+    it(".task-card ルール本文に border: 1px solid var(--color-border) (または等価分解) を含む", () => {
+      const css = readFileSync(taskCardCssPath, "utf-8");
+      const body = extractRuleBody(css, ".task-card");
+      expect(body, ".task-card ルールが見つからない").not.toBeNull();
       const bodyText = body ?? "";
-      // shorthand `border: 1px solid var(--color-border)` または
-      // border-width / border-style / border-color の分解いずれかで OK.
       const hasShorthand = /border\s*:\s*1px\s+solid\s+var\(--color-border\)/.test(bodyText);
       const hasDecomposed =
         /border-width\s*:\s*1px/.test(bodyText) &&
@@ -97,150 +93,89 @@ describe("起票フォームのカード化 (BL-054 / form-card-design)", () => 
         /border-color\s*:\s*var\(--color-border\)/.test(bodyText);
       expect(
         hasShorthand || hasDecomposed,
-        ".day-view__form に border: 1px solid var(--color-border) 等価宣言が無い",
+        ".task-card に border: 1px solid var(--color-border) 等価宣言が無い",
       ).toBe(true);
     });
 
-    it(".day-view__form ルール本文に border-radius: var(--radius-md) を含む", () => {
-      const css = readFileSync(dayViewCssPath, "utf-8");
-      const body = extractRuleBody(css, ".day-view__form");
-      expect(body, ".day-view__form ルールが見つからない").not.toBeNull();
-      expect(body ?? "").toMatch(/border-radius\s*:\s*var\(--radius-md\)/);
+    it(".task-card ルール本文に border-radius: var(--radius-lg) を含む (BL-054 の --radius-md は BL-059 で --radius-lg に統一)", () => {
+      const css = readFileSync(taskCardCssPath, "utf-8");
+      const body = extractRuleBody(css, ".task-card");
+      expect(body, ".task-card ルールが見つからない").not.toBeNull();
+      expect(body ?? "").toMatch(/border-radius\s*:\s*var\(--radius-lg\)/);
     });
 
-    it(".day-view__form ルール本文に padding: var(--space-md) を含む", () => {
-      const css = readFileSync(dayViewCssPath, "utf-8");
-      const body = extractRuleBody(css, ".day-view__form");
-      expect(body, ".day-view__form ルールが見つからない").not.toBeNull();
-      // gap: var(--space-sm) と誤検知しないよう padding: で始まる宣言に限定する.
+    it(".task-card ルール本文に padding: var(--space-md) を含む", () => {
+      const css = readFileSync(taskCardCssPath, "utf-8");
+      const body = extractRuleBody(css, ".task-card");
+      expect(body, ".task-card ルールが見つからない").not.toBeNull();
       expect(body ?? "").toMatch(/(?:^|;|\n)\s*padding\s*:\s*var\(--space-md\)/);
     });
   });
 
   /**
-   * AC-2: layout 系宣言が BL-058 (task-form-grid-layout) の値に追従している.
+   * AC-2 (BL-059 追従): 起票フォームの layout が 3 段 flex column 構造に置換されている.
    *
-   * BL-054 時点では .day-view__form は `display: flex` / `flex-direction: column` /
-   * `gap: var(--space-sm)` だったが, BL-058 で 2D Grid 配置に置き換わり以下になる:
-   *   - `display: grid` (旧 flex から置換)
-   *   - `grid-template-areas: "project priority" / "name name" / ". submit"`
-   *   - `flex-direction` 宣言は撤去
-   *   - `gap: var(--space-md)` (旧 --space-sm から引き上げ)
-   *
-   * 本テストは BL-054 の「構造系宣言の維持」AC を BL-058 の新値に追従させたもの
-   * (= P-006 の追従修正 / R-005 緩和). BL-054 の core (visual 4 宣言 = AC-1) と
-   * 周辺 NFR (AC-3 / AC-4) は引き続き有効.
-   *
-   * シナリオ AC-2 (BL-058 追従後):
-   *   Given web/src/ui/day-view/day-view.css を開いた
-   *   When  .day-view__form セレクタのルール本文を観察する
-   *   Then  display: grid の宣言を含む
-   *    かつ flex-direction の宣言を含まない
-   *    かつ grid-template-areas プロパティに 3 行 ("project priority" / "name name" / ". submit") を持つ
-   *    かつ gap: var(--space-md) の宣言を含む (旧 var(--space-sm) ではなく)
+   * BL-054 当時: .day-view__form は display: flex / flex-direction: column / gap: --space-sm.
+   * BL-058 で: display: grid + grid-template-areas (2D 配置) に変更.
+   * BL-059 で: 全てを撤去し, .task-card 系の 3 段 flex column 構造に統一.
    */
-  describe("AC-2: .day-view__form の layout 系宣言が BL-058 値に追従している (P-006)", () => {
-    it(".day-view__form ルール本文に display: grid を含む (BL-058 / REQ-1)", () => {
-      const css = readFileSync(dayViewCssPath, "utf-8");
-      const body = extractRuleBody(css, ".day-view__form");
-      expect(body, ".day-view__form ルールが見つからない").not.toBeNull();
-      expect(body ?? "").toMatch(/display\s*:\s*grid/);
-    });
-
-    it(".day-view__form ルール本文に flex-direction 宣言を含まない (BL-058 で撤去)", () => {
-      const css = readFileSync(dayViewCssPath, "utf-8");
-      const body = extractRuleBody(css, ".day-view__form");
-      expect(body, ".day-view__form ルールが見つからない").not.toBeNull();
-      expect(body ?? "").not.toMatch(/(?:^|;|\n)\s*flex-direction\s*:/);
-    });
-
-    it(".day-view__form ルール本文に grid-template-areas 宣言を含む (BL-058 / D-001)", () => {
-      const css = readFileSync(dayViewCssPath, "utf-8");
-      const body = extractRuleBody(css, ".day-view__form");
-      expect(body, ".day-view__form ルールが見つからない").not.toBeNull();
+  describe("AC-2 (BL-059 追従): 起票フォーム layout は .task-card 系 3 段 flex column", () => {
+    it(".task-card ルール本文に display: flex / flex-direction: column を含む (= 3 段 flex column)", () => {
+      const css = readFileSync(taskCardCssPath, "utf-8");
+      const body = extractRuleBody(css, ".task-card");
+      expect(body, ".task-card ルールが見つからない").not.toBeNull();
       const bodyText = body ?? "";
-      // 3 行 (project priority / name name / . submit) のいずれかを含むことで
-      // grid-template-areas が定義されていることを担保する.
-      expect(bodyText).toMatch(/grid-template-areas\s*:/);
-      expect(bodyText).toMatch(/["']\s*project\s+priority\s*["']/);
-      expect(bodyText).toMatch(/["']\s*name\s+name\s*["']/);
-      expect(bodyText).toMatch(/["']\s*\.\s+submit\s*["']/);
+      expect(bodyText).toMatch(/display\s*:\s*flex/);
+      expect(bodyText).toMatch(/flex-direction\s*:\s*column/);
     });
 
-    it(".day-view__form ルール本文に gap: var(--space-md) を含む (BL-058 / D-006)", () => {
-      const css = readFileSync(dayViewCssPath, "utf-8");
-      const body = extractRuleBody(css, ".day-view__form");
-      expect(body, ".day-view__form ルールが見つからない").not.toBeNull();
-      expect(body ?? "").toMatch(/(?:^|;|\n)\s*gap\s*:\s*var\(--space-md\)/);
+    it(".task-card--form ルールが task-card.css に定義されている (起票フォーム差分用の空ルール / P-004)", () => {
+      const css = readFileSync(taskCardCssPath, "utf-8");
+      const body = extractRuleBody(css, ".task-card--form");
+      expect(
+        body,
+        ".task-card--form ルールが見つからない (BL-059 P-004: 起票フォーム差分用の空ルールも定義しておく)",
+      ).not.toBeNull();
     });
 
-    it(".day-view__form ルール本文に gap: var(--space-sm) を含まない (BL-058 で sm → md に置換)", () => {
+    it("旧 .day-view__form の grid 系宣言が day-view.css に残存していない (= ルールごと撤去)", () => {
       const css = readFileSync(dayViewCssPath, "utf-8");
-      const body = extractRuleBody(css, ".day-view__form");
-      expect(body, ".day-view__form ルールが見つからない").not.toBeNull();
-      expect(body ?? "").not.toMatch(/(?:^|;|\n)\s*gap\s*:\s*var\(--space-sm\)/);
+      expect(extractRuleBody(css, ".day-view__form")).toBeNull();
     });
   });
 
   /**
-   * AC-3: 起票フォームに hover / transition / animation / box-shadow が追加されていない.
-   *
-   * シナリオ AC-3:
-   *   Given web/src/ui/day-view/day-view.css を開いた
-   *   When  .day-view__form セレクタおよびその :hover / :focus-within 派生セレクタを観察する
-   *   Then  box-shadow プロパティを宣言していない
-   *    かつ transition プロパティを宣言していない
-   *    かつ animation プロパティを宣言していない
-   *    かつ .day-view__form:hover / .day-view__form:focus-within のセレクタを CSS 内に持たない
+   * AC-3 (BL-059 追従): .task-card 系セレクタに hover / transition / animation / box-shadow 無し.
    */
-  describe("AC-3: .day-view__form 周辺に hover / transition / animation / box-shadow が無い", () => {
-    it(".day-view__form ルール本文に box-shadow: 宣言が含まれない (D-001 / NFR-NO-SHADOW)", () => {
-      const css = readFileSync(dayViewCssPath, "utf-8");
-      const body = extractRuleBody(css, ".day-view__form");
-      expect(body, ".day-view__form ルールが見つからない").not.toBeNull();
-      expect(body ?? "").not.toMatch(/(?:^|;|\n)\s*box-shadow\s*:/);
+  describe("AC-3 (BL-059 追従): .task-card 系に hover / transition / animation / box-shadow 無し", () => {
+    it("task-card.css の全文に box-shadow キーワードが含まれない", () => {
+      const css = readFileSync(taskCardCssPath, "utf-8");
+      expect(css).not.toContain("box-shadow");
     });
 
-    it(".day-view__form ルール本文に transition: 宣言が含まれない (D-006 / NFR-NO-HOVER-TRANSITION)", () => {
-      const css = readFileSync(dayViewCssPath, "utf-8");
-      const body = extractRuleBody(css, ".day-view__form");
-      expect(body, ".day-view__form ルールが見つからない").not.toBeNull();
-      expect(body ?? "").not.toMatch(/(?:^|;|\n)\s*transition\s*:/);
+    it("task-card.css の全文に transition 宣言が含まれない", () => {
+      const css = readFileSync(taskCardCssPath, "utf-8");
+      expect(css).not.toMatch(/(?:^|;|\n|\{)\s*transition\s*:/);
     });
 
-    it(".day-view__form ルール本文に animation: 宣言が含まれない (D-006 / NFR-NO-HOVER-TRANSITION)", () => {
-      const css = readFileSync(dayViewCssPath, "utf-8");
-      const body = extractRuleBody(css, ".day-view__form");
-      expect(body, ".day-view__form ルールが見つからない").not.toBeNull();
-      expect(body ?? "").not.toMatch(/(?:^|;|\n)\s*animation\s*:/);
+    it("task-card.css の全文に animation 宣言が含まれない", () => {
+      const css = readFileSync(taskCardCssPath, "utf-8");
+      expect(css).not.toMatch(/(?:^|;|\n|\{)\s*animation\s*:/);
     });
 
-    it("CSS ファイル全体に .day-view__form:hover セレクタが存在しない (D-006 / リスク R-1 緩和)", () => {
-      const css = readFileSync(dayViewCssPath, "utf-8");
-      expect(css).not.toContain(".day-view__form:hover");
-    });
-
-    it("CSS ファイル全体に .day-view__form:focus-within セレクタが存在しない (D-006 / リスク R-1 緩和)", () => {
-      const css = readFileSync(dayViewCssPath, "utf-8");
-      expect(css).not.toContain(".day-view__form:focus-within");
-    });
-
-    it("CSS ファイル全体に .day-view__form:active セレクタが存在しない (D-006 / リスク R-1 緩和)", () => {
-      const css = readFileSync(dayViewCssPath, "utf-8");
-      expect(css).not.toContain(".day-view__form:active");
+    it("task-card.css に .task-card:hover / .task-card--form:hover セレクタが存在しない", () => {
+      const css = readFileSync(taskCardCssPath, "utf-8");
+      expect(css).not.toContain(".task-card:hover");
+      expect(css).not.toContain(".task-card--form:hover");
+      expect(css).not.toContain(".task-card--form:focus-within");
     });
   });
 
   /**
    * AC-4: day-view.css 全体で box-shadow を追加していない (NFR-NO-SHADOW).
-   *
-   * シナリオ AC-4:
-   *   Given web/src/ui/day-view/day-view.css を開いた
-   *   When  ファイル全体を観察する
-   *   Then  box-shadow キーワードを含む宣言が存在しない
    */
   describe("AC-4: day-view.css 全体に box-shadow が含まれない", () => {
-    it("day-view.css の全文に box-shadow キーワードが含まれない (D-001 / NFR-NO-SHADOW)", () => {
+    it("day-view.css の全文に box-shadow キーワードが含まれない", () => {
       const css = readFileSync(dayViewCssPath, "utf-8");
       expect(css).not.toContain("box-shadow");
     });
@@ -248,156 +183,79 @@ describe("起票フォームのカード化 (BL-054 / form-card-design)", () => 
 
   /**
    * AC-5: tokens.css を変更していない (必須トークンが残っている).
-   *
-   * シナリオ AC-5:
-   *   Given 本 BL の実装がマージされた
-   *   When  web/src/styles/tokens.css を BL-052 完了時点の状態と比較する
-   *   Then  差分が無い (新規トークンの追加・既存トークンの変更が無い)
-   *    かつ 本 BL で参照する 4 トークン (--color-bg / --color-border / --radius-md / --space-md) が引き続き定義されている
    */
   describe("AC-5: tokens.css が変更されていない (必須トークンが残っている)", () => {
-    it("tokens.css に本 BL で参照する 4 トークン (--color-bg / --color-border / --radius-md / --space-md) が定義されている", () => {
+    it("tokens.css に本 BL で参照する 4 トークン (--color-bg / --color-border / --radius-lg / --space-md) が定義されている", () => {
       const css = readFileSync(tokensCssPath, "utf-8");
       expect(css).toMatch(/--color-bg\s*:/);
       expect(css).toMatch(/--color-border\s*:/);
-      expect(css).toMatch(/--radius-md\s*:/);
+      expect(css).toMatch(/--radius-lg\s*:/);
       expect(css).toMatch(/--space-md\s*:/);
     });
 
-    it("tokens.css に AC-2 で参照する --space-sm トークンが定義されている (構造系宣言の維持に必要)", () => {
+    it("tokens.css に --space-sm トークンが定義されている", () => {
       const css = readFileSync(tokensCssPath, "utf-8");
       expect(css).toMatch(/--space-sm\s*:/);
     });
 
-    it("tokens.css に本 BL では追加すべきでない --shadow-* トークンが存在しない (NFR-NO-NEW-TOKENS / D-007)", () => {
+    it("tokens.css に --shadow-* トークンが存在しない (NFR-NO-NEW-TOKENS)", () => {
       const css = readFileSync(tokensCssPath, "utf-8");
       expect(css).not.toMatch(/--shadow-/);
     });
   });
 
   /**
-   * AC-6: JSX (today-view.tsx / tomorrow-view.tsx) を変更していない.
+   * AC-6 (BL-059 追従): today-view / tomorrow-view から day-view__form クラスが撤去されている.
    *
-   * シナリオ AC-6:
-   *   Given 本 BL の実装がマージされた
-   *   When  web/src/ui/today-view/today-view.tsx と
-   *         web/src/ui/tomorrow-view/tomorrow-view.tsx を BL-052 完了時点の状態と比較する
-   *   Then  差分が無い
-   *    かつ 両ファイルで .day-view__form クラスが引き続き付与されている (BL-051 由来)
+   * BL-054 当時は <form className="day-view__form"> が直書きされていたが,
+   * BL-059 で <TaskFormCard /> 経由の <form className="task-card task-card--form"> に置換.
    */
-  describe("AC-6: JSX に day-view__form クラスが残っている (BL-051 由来 / 本 BL で外れていない)", () => {
-    it("today-view.tsx に day-view__form クラスが含まれる", () => {
+  describe("AC-6 (BL-059 追従): JSX から day-view__form クラスが撤去されている", () => {
+    it("today-view.tsx に className='day-view__form' が含まれない (BL-059 で撤去)", () => {
       const tsx = readFileSync(todayViewTsxPath, "utf-8");
-      expect(tsx).toContain("day-view__form");
+      expect(tsx).not.toMatch(/className=["'][^"']*day-view__form[^"']*["']/);
     });
 
-    it("tomorrow-view.tsx に day-view__form クラスが含まれる", () => {
+    it("tomorrow-view.tsx に className='day-view__form' が含まれない (BL-059 で撤去)", () => {
       const tsx = readFileSync(tomorrowViewTsxPath, "utf-8");
-      expect(tsx).toContain("day-view__form");
+      expect(tsx).not.toMatch(/className=["'][^"']*day-view__form[^"']*["']/);
     });
 
-    it("today-view.tsx で .day-view__form が <form> 要素に付与されている (構造の保持)", () => {
-      const tsx = readFileSync(todayViewTsxPath, "utf-8");
-      // <form ... className="day-view__form" ... > 形を確認する.
-      // 属性順は問わないが, form タグと day-view__form が同一 JSX 要素にある状態を要求する.
-      expect(tsx).toMatch(/<form[^>]*className=["'][^"']*day-view__form[^"']*["'][^>]*>/);
-    });
-
-    it("tomorrow-view.tsx で .day-view__form が <form> 要素に付与されている (構造の保持)", () => {
-      const tsx = readFileSync(tomorrowViewTsxPath, "utf-8");
-      expect(tsx).toMatch(/<form[^>]*className=["'][^"']*day-view__form[^"']*["'][^>]*>/);
+    it("today-view.tsx / tomorrow-view.tsx は <TaskFormCard ... /> を利用している (BL-059 REQ-4 / REQ-5)", () => {
+      const today = readFileSync(todayViewTsxPath, "utf-8");
+      const tomorrow = readFileSync(tomorrowViewTsxPath, "utf-8");
+      expect(today).toMatch(/<TaskFormCard\b/);
+      expect(tomorrow).toMatch(/<TaskFormCard\b/);
     });
   });
 
   /**
-   * AC-7: 本 BL の対象セレクタは .day-view__form に限定されている.
-   *
-   * シナリオ AC-7:
-   *   Given 本 BL の実装がマージされた
-   *   When  web/src/ui/day-view/day-view.css の他セレクタ (.day-view /
-   *         .day-view__header / .day-view__header h1 / .day-view__list /
-   *         .day-view__card / .day-view__card--focus / .day-view__empty)
-   *         のルール本文を観察する
-   *   Then  BL-052 完了時点と同じ宣言のままで, 本 BL での追記が無い
-   *
-   * NOTE: .day-view__card / .day-view__card--focus は BL-052 で正当に visual 宣言を持つ.
-   *       本 AC-7 では「本 BL での追記が無い」ことを担保するため, これらの宣言が BL-052 で
-   *       確定した値であることを確認する (= 本 BL で誤って書き換えていないことの検証).
+   * AC-7 (BL-059 追従): 旧 .day-view__form セレクタは day-view.css から撤去されている.
    */
-  describe("AC-7: 他セレクタへの visual 追記が無い (本 BL のスコープは .day-view__form のみ)", () => {
-    const NON_VISUAL_SELECTORS = [
-      ".day-view",
-      ".day-view__header",
-      ".day-view__list",
-      ".day-view__empty",
+  describe("AC-7 (BL-059 追従): 旧 .day-view__form 系セレクタは day-view.css から撤去", () => {
+    const REMOVED_FORM_SELECTORS = [
+      ".day-view__form",
+      ".day-view__form__project",
+      ".day-view__form__priority",
+      ".day-view__form__priority-hint",
+      ".day-view__form__name",
+      ".day-view__form__submit",
     ] as const;
 
-    it.each(NON_VISUAL_SELECTORS)(
-      "%s ルール本文に本 BL の visual 宣言 (background / border / border-radius) が含まれない",
-      (selector) => {
-        const css = readFileSync(dayViewCssPath, "utf-8");
-        const body = extractRuleBody(css, selector);
-        expect(body, `${selector} ルールが見つからない`).not.toBeNull();
-        const bodyText = body ?? "";
-        // 行頭 / セミコロン直後の宣言として登場しないことを確認.
-        expect(bodyText, `${selector} に background 宣言が追加されている`).not.toMatch(
-          /(?:^|;|\n)\s*background(?:-color)?\s*:/,
-        );
-        expect(bodyText, `${selector} に border 宣言が追加されている`).not.toMatch(
-          /(?:^|;|\n)\s*border(?:-color|-style|-width)?\s*:/,
-        );
-        expect(bodyText, `${selector} に border-radius 宣言が追加されている`).not.toMatch(
-          /(?:^|;|\n)\s*border-radius\s*:/,
-        );
-      },
-    );
-
-    it(".day-view__header h1 ルール本文に本 BL の visual 宣言が含まれない", () => {
+    it.each(REMOVED_FORM_SELECTORS)("%s ルールが day-view.css に定義されていない", (selector) => {
       const css = readFileSync(dayViewCssPath, "utf-8");
-      const body = extractRuleBody(css, ".day-view__header h1");
-      expect(body, ".day-view__header h1 ルールが見つからない").not.toBeNull();
-      const bodyText = body ?? "";
-      expect(bodyText).not.toMatch(/(?:^|;|\n)\s*background(?:-color)?\s*:/);
-      expect(bodyText).not.toMatch(/(?:^|;|\n)\s*border(?:-color|-style|-width)?\s*:/);
-      expect(bodyText).not.toMatch(/(?:^|;|\n)\s*border-radius\s*:/);
-    });
-
-    it(".day-view__card ルール本文は BL-052 で確定した宣言のままで, 本 BL で書き換えられていない", () => {
-      const css = readFileSync(dayViewCssPath, "utf-8");
-      const body = extractRuleBody(css, ".day-view__card");
-      expect(body, ".day-view__card ルールが見つからない").not.toBeNull();
-      const bodyText = body ?? "";
-      // BL-052 で確定済みの宣言が残っていること (= 本 BL で削除/改変していない).
-      expect(bodyText).toMatch(/background(?:-color)?\s*:\s*var\(--color-bg\)/);
-      expect(bodyText).toMatch(/border\s*:\s*1px\s+solid\s+var\(--color-border\)/);
-      // BL-057 (task-card-zone-layout / D-001): border-radius は --radius-md → --radius-lg に
-      // 引き上げられた (chip の角丸と同調). 本 BL (BL-054) の関心ではないが追従する.
-      expect(bodyText).toMatch(/border-radius\s*:\s*var\(--radius-lg\)/);
-      expect(bodyText).toMatch(/(?:^|;|\n)\s*padding\s*:\s*var\(--space-md\)/);
-    });
-
-    it(".day-view__card--focus ルール本文は BL-052 で確定した宣言のままで, 本 BL で書き換えられていない", () => {
-      const css = readFileSync(dayViewCssPath, "utf-8");
-      const body = extractRuleBody(css, ".day-view__card--focus");
-      expect(body, ".day-view__card--focus ルールが見つからない").not.toBeNull();
-      const bodyText = body ?? "";
-      // BL-052 で確定済みの強調 variant 宣言が残っていること.
-      expect(bodyText).toMatch(/border-width\s*:\s*2px/);
-      expect(bodyText).toMatch(/border-radius\s*:\s*var\(--radius-lg\)/);
-      expect(bodyText).toMatch(/(?:^|;|\n)\s*padding\s*:\s*var\(--space-lg\)/);
+      const body = extractRuleBody(css, selector);
+      expect(
+        body,
+        `${selector} ルールが day-view.css に残存している (BL-059 で .task-card 系へ移譲済み)`,
+      ).toBeNull();
     });
   });
 
   /**
-   * AC-8: focus-view (/focus) の CSS を変更していない.
-   *
-   * シナリオ AC-8:
-   *   Given 本 BL の実装がマージされた
-   *   When  web/src/ui/focus-view/focus-view.css を BL-052 完了時点の状態と比較する
-   *   Then  差分が無い (focus-view は本 BL の対象外)
-   *    かつ focus-view.css に .day-view__form セレクタが混入していない
+   * AC-8: focus-view (/focus) の CSS に day-view__form 系セレクタが混入していない.
    */
-  describe("AC-8: focus-view.css が無改修である (リスク R-4 緩和)", () => {
+  describe("AC-8: focus-view.css に .day-view__form 系セレクタが混入していない", () => {
     it("focus-view.css に .day-view__form セレクタが含まれない", () => {
       const css = readFileSync(focusViewCssPath, "utf-8");
       expect(css).not.toContain(".day-view__form");
@@ -413,16 +271,6 @@ describe("起票フォームのカード化 (BL-054 / form-card-design)", () => 
 
   /**
    * AC-9: 既存テスト全件 green 維持の前提として, 関連テストファイルが存在する.
-   *
-   * 厳密な green 確認は npm test / vitest 実行で行うが,
-   * 本ファイル単体では「回帰検出の前提 = 関連テストファイルが消えていないこと」を assert する.
-   *
-   * シナリオ AC-9:
-   *   Given /today と /tomorrow が引き続きレンダリング可能
-   *   When  既存単体テスト (today-view.test.tsx, tomorrow-view.test.tsx,
-   *         unified-day-view.test.tsx, task-card-design.test.ts, design-tokens.test.ts 等)
-   *         と既存 E2E を実行する
-   *   Then  すべて green である (本 BL の差分は CSS のみで DOM / aria / role を変えていない)
    */
   describe("AC-9: 既存テスト回帰検出の前提が存在する", () => {
     it.each([
@@ -437,15 +285,7 @@ describe("起票フォームのカード化 (BL-054 / form-card-design)", () => 
   });
 
   /**
-   * AC-10: アクセシビリティ違反 0 件を維持する.
-   *
-   * 実際の axe スキャンは e2e/a11y.spec.ts で行うため,
-   * 本ファイルでは「a11y E2E ファイルが存在する」ことのみ assert する.
-   *
-   * シナリオ AC-10:
-   *   Given /today /tomorrow をはじめとする全 view がレンダリング可能
-   *   When  @axe-core/playwright で WCAG 2.1 AA をスキャンする (e2e/a11y.spec.ts の既存スキャン)
-   *   Then  すべてのスキャンで violations.length === 0
+   * AC-10: a11y E2E スキャンの前提が存在する.
    */
   describe("AC-10: a11y E2E スキャンの前提が存在する", () => {
     it("e2e/a11y.spec.ts が存在する", () => {

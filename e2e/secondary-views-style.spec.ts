@@ -133,18 +133,17 @@ test.describe("secondary-views-shell (BL-045) のスタイル統一", () => {
     }
   });
 
-  test("AC-4: 作成 / 設定フォームが角丸枠 (/tomorrow の起票フォームと同値) で表示される", async ({
+  test("AC-4: 作成 / 設定フォームが角丸枠 (--radius-md = 12px) で表示される (BL-059 追従)", async ({
     page,
   }) => {
-    // Given: /tomorrow の起票フォームの border-radius を期待値として記録する.
-    await page.goto("/tomorrow");
-    const tomorrowForm = page.getByRole("form", { name: "明日のタスク起票フォーム" });
-    await expect(tomorrowForm).toBeVisible();
-    const expectedRadius = (await computedStyle(tomorrowForm, ["border-radius"]))["border-radius"];
-    // サニティ: 参照基準が仕様の暫定値 12px であること (spec.md AC-4).
-    expect(expectedRadius).toBe("12px");
+    // BL-059 追従: 旧テストは「/tomorrow 起票フォームと同値 (= --radius-md = 12px)」を
+    // verify していたが, BL-059 で /tomorrow 起票は <TaskFormCard> (= .task-card 系) に
+    // 置換され, border-radius: var(--radius-lg) = 16px に変わった (D-001 系統間独立).
+    // 本テストは secondary-views (projects / routines / settings) フォーム同士が
+    // 引き続き --radius-md = 12px で揃っていることの確認に再設計する.
+    const expectedRadius = "12px";
 
-    // When / Then: 各フォームが border-radius 12px (= /tomorrow と同値) / border 1px solid.
+    // When / Then: 各フォームが border-radius 12px / border 1px solid.
     // settings はネイティブ専用セクションを除く境界時刻フォームのみ対象 (spec.md U-1).
     const forms = [
       { path: "/projects", formName: "プロジェクト作成フォーム" },

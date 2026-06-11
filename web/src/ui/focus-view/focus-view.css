@@ -1,7 +1,14 @@
 /**
  * focus-view CSS (BL-037).
- * BL-046: 暫定値をデザイントークンに置換済み。
- * D-005: __name の font-size: 28px はトークン体系外の固定値として残す。
+ *
+ * BL-059 で `.focus-view__card` / `.focus-view__project` / `.focus-view__name` /
+ * `.focus-view__actions` は撤去した. focus 単独大表示の役割は
+ * `<TaskCard variant="focus" />` (= `.task-card.task-card--focus`) に移譲済み.
+ *
+ * 維持セレクタ:
+ *   .focus-view       : ページ全体の枠 (BL-037).
+ *   .focus-view h1    : 「現在のタスク」見出し (D-007 / V-5 非対象).
+ *   .focus-view__empty: focusedTask が無いときの placeholder.
  */
 
 .focus-view {
@@ -15,43 +22,9 @@
   margin: 0 0 var(--space-md) 0;
 }
 
-.focus-view__card {
-  /* 画面の主要部分を占める大きな枠 (NFR-011 単独大表示). */
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  padding: var(--space-xl);
-  position: relative;
-}
-
-.focus-view__project {
-  font-size: var(--font-size-small);
-  color: var(--color-fg-subtle);
-  margin-bottom: var(--space-sm);
-}
-
-.focus-view__name {
-  /* D-005: 28px はデザイン上の固定値。トークン体系外として残す。 */
-  font-size: 28px;
-  text-align: center;
-  word-break: normal;
-  overflow-wrap: anywhere;
-}
-
 .focus-view__empty {
   font-size: var(--font-size-body);
   color: var(--color-fg-subtle);
-}
-
-.focus-view__actions {
-  position: absolute;
-  bottom: var(--space-md);
-  left: var(--space-md);
-  right: var(--space-md);
-  display: flex;
-  justify-content: space-between;
+  text-align: center;
+  padding: var(--space-lg) 0;
 }

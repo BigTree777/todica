@@ -92,8 +92,9 @@ test.describe("デザイントークン / CSS 基盤の整備 (BL-046) の視覚
 
     // When: /focus を開く.
     await page.goto("/focus");
-    // タスクカード枠（.focus-view__card）がレンダリングされるまで待機する.
-    const card = page.locator(".focus-view__card");
+    // BL-059 追従: .focus-view__card → .task-card.task-card--focus に置換 (P-008).
+    // フォーカスカード (.task-card--focus) がレンダリングされるまで待機する.
+    const card = page.locator(".task-card.task-card--focus");
     await expect(card).toBeVisible();
 
     // Then: computed style を取得し、仕様値と比較する.
@@ -113,14 +114,16 @@ test.describe("デザイントークン / CSS 基盤の整備 (BL-046) の視覚
 
     // --color-border: #ccc → rgb(204, 204, 204) であること.
     expect(style["border-top-color"], "__card の border-color").toBe("rgb(204, 204, 204)");
-    expect(style["border-top-width"], "__card の border 幅").toBe("1px");
+    // BL-059 V-1 追従: 強調 variant の border-width は 3px に変更 (旧: 1px 継承).
+    expect(style["border-top-width"], "__card の border 幅").toBe("3px");
     expect(style["border-top-style"], "__card の border スタイル").toBe("solid");
 
-    // --space-xl: 32px → padding が 32px であること.
-    expect(style["padding-top"], "__card の padding-top").toBe("32px");
-    expect(style["padding-right"], "__card の padding-right").toBe("32px");
-    expect(style["padding-bottom"], "__card の padding-bottom").toBe("32px");
-    expect(style["padding-left"], "__card の padding-left").toBe("32px");
+    // BL-059 V-1 追従: .task-card--focus は padding を上書きせず .task-card 基底
+    // (= --space-md: 16px) を継承する (旧: --space-xl: 32px).
+    expect(style["padding-top"], "__card の padding-top").toBe("16px");
+    expect(style["padding-right"], "__card の padding-right").toBe("16px");
+    expect(style["padding-bottom"], "__card の padding-bottom").toBe("16px");
+    expect(style["padding-left"], "__card の padding-left").toBe("16px");
 
     // 後片付け: 作成したタスクを削除する.
     const listRes = await request.get(`${API_BASE}/api/v1/tasks`, {
@@ -147,10 +150,11 @@ test.describe("デザイントークン / CSS 基盤の整備 (BL-046) の視覚
     // When: /focus を開く.
     await page.goto("/focus");
 
-    // Then: .focus-view__card が存在する.
-    await expect(page.locator(".focus-view__card")).toBeVisible();
+    // BL-059 追従: .focus-view__card → .task-card.task-card--focus (P-008).
+    // Then: .task-card--focus が存在する.
+    await expect(page.locator(".task-card.task-card--focus")).toBeVisible();
 
-    // かつ: タスク名テキストが表示されている.
-    await expect(page.locator(".focus-view__name")).toBeVisible();
+    // かつ: タスク名テキストが .task-card__title 内に表示されている (BL-059 / V-4 構造).
+    await expect(page.locator(".task-card.task-card--focus .task-card__title")).toBeVisible();
   });
 });

@@ -218,25 +218,14 @@ describe("デザイントークン / CSS 基盤の整備 (BL-046)", () => {
       );
     });
 
-    it("focus-view.css が --radius-lg を参照している（spec.md REQ-3 / plan.md 置換マッピング）", () => {
-      const raw = readFileSync(resolve(webSrcRoot, "ui/focus-view/focus-view.css"), "utf-8");
-      const content = stripCssComments(raw);
-      expect(content).toContain("var(--radius-lg)");
-    });
-
-    it("focus-view.css が --color-border を参照している（spec.md REQ-3）", () => {
-      const raw = readFileSync(resolve(webSrcRoot, "ui/focus-view/focus-view.css"), "utf-8");
-      const content = stripCssComments(raw);
-      expect(content).toContain("var(--color-border)");
-    });
-
-    it("focus-view.css が --space-xl を参照している（spec.md REQ-3）", () => {
-      const raw = readFileSync(resolve(webSrcRoot, "ui/focus-view/focus-view.css"), "utf-8");
-      const content = stripCssComments(raw);
-      expect(content).toContain("var(--space-xl)");
-    });
-
-    it("focus-view.css の __card に border-radius: 16px のハードコードが残っていない（置換済み確認）", () => {
+    // BL-059 追従: .focus-view__card / .focus-view__project / .focus-view__name /
+    //               .focus-view__actions を撤去したため,
+    //               旧 focus-view.css で参照していた --radius-lg / --color-border /
+    //               --space-xl の参照も自然に消える. これらは <TaskCard variant="focus" />
+    //               (= task-card.css) 側で参照され続けるため, BL-046 の意図
+    //               (= 旧暫定値からトークン参照に置換) は維持される.
+    //               16px ハードコードが残っていない不変性は引き続き維持する.
+    it("focus-view.css の __card に border-radius: 16px のハードコードが残っていない（BL-059 で撤去確認）", () => {
       const raw = readFileSync(resolve(webSrcRoot, "ui/focus-view/focus-view.css"), "utf-8");
       const content = stripCssComments(raw);
       // 置換後は var(--radius-lg) であり、16px のハードコードは消えるはず.
@@ -248,6 +237,18 @@ describe("デザイントークン / CSS 基盤の整備 (BL-046)", () => {
         hardcodedRadiusLine,
         "border-radius: 16px のハードコードが残っています",
       ).toBeUndefined();
+    });
+
+    it("task-card.css が --radius-lg を参照している（BL-059 / .focus-view__card から移譲）", () => {
+      const raw = readFileSync(resolve(webSrcRoot, "ui/task-card/task-card.css"), "utf-8");
+      const content = stripCssComments(raw);
+      expect(content).toContain("var(--radius-lg)");
+    });
+
+    it("task-card.css が --color-border を参照している（BL-059 / .focus-view__card から移譲）", () => {
+      const raw = readFileSync(resolve(webSrcRoot, "ui/task-card/task-card.css"), "utf-8");
+      const content = stripCssComments(raw);
+      expect(content).toContain("var(--color-border)");
     });
 
     it("priority-stars.css が --color-accent を参照している（spec.md REQ-3）", () => {

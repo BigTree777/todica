@@ -37,6 +37,7 @@ import type {
 } from "../../repositories/task-repository.js";
 import { OptimisticLockError } from "../../repositories/task-repository.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
+import { TaskCard } from "../task-card/task-card.js";
 import "./focus-view.css";
 
 export interface FocusViewProps {
@@ -227,24 +228,23 @@ export function FocusView(props: FocusViewProps): JSX.Element {
   return (
     <section aria-label="現在のタスク" className="focus-view">
       <h1>現在のタスク</h1>
-      <div className="focus-view__card">
-        {focusedTask ? (
-          <>
-            {project && <span className="focus-view__project">{project.name}</span>}
-            <div className="focus-view__name">{focusedTask.name}</div>
-            <div className="focus-view__actions">
-              <button type="button" onClick={handleDelete}>
-                削除
-              </button>
-              <button type="button" onClick={handleComplete}>
-                完了
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className="focus-view__empty">現在のタスクはありません</div>
-        )}
-      </div>
+      {/* BL-059 / REQ-6: focusedTask があれば <TaskCard variant="focus" actionSet="minimal" />.
+          無ければ「現在のタスクはありません」placeholder を維持 (D-007 / 空状態維持). */}
+      {focusedTask ? (
+        <TaskCard
+          as="div"
+          variant="focus"
+          task={focusedTask}
+          project={project}
+          showPriority={false}
+          showSetFocus={false}
+          actionSet="minimal"
+          onDelete={handleDelete}
+          onComplete={handleComplete}
+        />
+      ) : (
+        <div className="focus-view__empty">現在のタスクはありません</div>
+      )}
       <ConflictDialog
         open={conflictDialog.dialogState.open}
         localValue={conflictDialog.dialogState.localValue}
