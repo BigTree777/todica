@@ -246,11 +246,12 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
     await listRow(page, nameB).getByRole("button", { name: "現在のタスクにする" }).click();
     await expect(focusedRegion(page).getByText(nameB, { exact: true })).toBeVisible();
 
-    // サイドバーの「現在のタスク」リンクで /focus に遷移する (BL-036 / BL-037).
-    await page
-      .getByRole("navigation", { name: "サイドバーナビゲーション" })
-      .getByRole("link", { name: "現在のタスク" })
-      .click();
+    // BL-049 でサイドバーはハンバーガー開閉式のオーバーレイメニューに変わったため,
+    // メニューを開いてから「現在のタスク」リンクを click する.
+    await page.getByRole("button", { name: "メニューを開く" }).click();
+    const navMenu = page.getByRole("dialog", { name: "ナビゲーションメニュー" });
+    await expect(navMenu).toBeVisible();
+    await navMenu.getByRole("link", { name: "現在のタスク" }).click();
     await expect(page).toHaveURL(/\/focus$/);
 
     // focus-view に B が大表示される.
@@ -386,10 +387,9 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
     await createTask(request, { name: taskName, dueDate: "tomorrow" });
 
     await page.goto("/tomorrow");
-    const row = page
-      .getByRole("region", { name: "明日のタスク" })
-      .getByRole("listitem")
-      .filter({ hasText: taskName });
+    // BL-051 で旧 <section aria-label="明日のタスク"> ランドマークは <main> に統合された.
+    // tomorrow-view の listitem を取るには role=main にスコープすればよい.
+    const row = page.getByRole("main").getByRole("listitem").filter({ hasText: taskName });
     await expect(row).toBeVisible();
 
     // 画面全体に「現在のタスクにする」button が存在しない (spec REQ-5).

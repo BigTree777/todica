@@ -22,21 +22,30 @@ const API_BASE = "http://localhost:3000";
 const AUTH_HEADER = { Authorization: "Bearer dev-token" };
 
 /**
- * AppShell サイドバーから「明日のタスク」リンクで /tomorrow に遷移する.
- * BL-036 で導入されたサイドバーランドマークを使う.
+ * AppShell のハンバーガーメニューから「明日のタスク」リンクで /tomorrow に遷移する.
+ * BL-049 でサイドバーはハンバーガーボタン開閉式のオーバーレイメニューに変わったため,
+ * リンクを click する前にハンバーガーボタンを押してメニュー (`role="dialog"`) を
+ * 開く必要がある (閉状態の menu は viewport 外に隠れている).
  */
 async function gotoTomorrowViaSidebar(page: Page): Promise<void> {
   await page.goto("/today");
-  await page
-    .getByRole("navigation", { name: "サイドバーナビゲーション" })
-    .getByRole("link", { name: "明日のタスク" })
-    .click();
+  await page.getByRole("button", { name: "メニューを開く" }).click();
+  const menu = page.getByRole("dialog", { name: "ナビゲーションメニュー" });
+  await expect(menu).toBeVisible();
+  await menu.getByRole("link", { name: "明日のタスク" }).click();
   await expect(page).toHaveURL(/\/tomorrow$/);
 }
 
-/** tomorrow-view のランドマーク (REQ-1 で <section aria-label="明日のタスク"> を期待). */
+/**
+ * tomorrow-view のメインランドマーク.
+ *
+ * BL-051 で旧 `<section aria-label="明日のタスク">` ランドマークは `<main>` に
+ * 統合された (h1 が見出しとして十分なため aria-label は撤去). よって本ファイルでは
+ * `<main className="day-view">` (role=main) を tomorrow-view のスコープとして使う.
+ * `/tomorrow` 単独ページなので `main` ランドマークは 1 つだけ存在する想定.
+ */
 function tomorrowRegion(page: Page) {
-  return page.getByRole("region", { name: "明日のタスク" });
+  return page.getByRole("main");
 }
 
 /** today-view のランドマーク (今日ビュー側の確認用). */
@@ -89,11 +98,11 @@ test.describe("tomorrow-view (/tomorrow) のシナリオ", () => {
     // /tomorrow から消える.
     await expect(tomorrowRegion(page).getByText(taskName, { exact: true })).toHaveCount(0);
 
-    // サイドバーから /today に遷移する.
-    await page
-      .getByRole("navigation", { name: "サイドバーナビゲーション" })
-      .getByRole("link", { name: "今日のタスク" })
-      .click();
+    // ハンバーガーメニュー経由で /today に遷移する (BL-049 でメニューはオーバーレイ化).
+    await page.getByRole("button", { name: "メニューを開く" }).click();
+    const navMenu = page.getByRole("dialog", { name: "ナビゲーションメニュー" });
+    await expect(navMenu).toBeVisible();
+    await navMenu.getByRole("link", { name: "今日のタスク" }).click();
     await expect(page).toHaveURL(/\/today$/);
     await expect(todayHeading(page)).toBeVisible();
 
