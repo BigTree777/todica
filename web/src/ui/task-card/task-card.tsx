@@ -84,12 +84,14 @@ export function TaskCard(props: TaskCardProps): JSX.Element {
       <div className="task-card__header">
         {project && <span className="project-chip">{project.name}</span>}
         {showPriority && onSetPriority && (
-          <PriorityStars
-            value={task.priority}
-            onChange={onSetPriority}
-            groupLabel={`${task.name} の優先度`}
-            idPrefix={`task-${task.id}`}
-          />
+          <div className="task-card__header__priority">
+            <PriorityStars
+              value={task.priority}
+              onChange={onSetPriority}
+              groupLabel={`${task.name} の優先度`}
+              idPrefix={`task-${task.id}`}
+            />
+          </div>
         )}
       </div>
       <div className="task-card__title">
@@ -101,7 +103,7 @@ export function TaskCard(props: TaskCardProps): JSX.Element {
             現在のタスクにする
           </button>
         )}
-        <button type="button" onClick={onDelete}>
+        <button type="button" className="task-card__actions__delete" onClick={onDelete}>
           削除
         </button>
         {showDueDateBtn && onToggleDueDate && (
@@ -109,7 +111,7 @@ export function TaskCard(props: TaskCardProps): JSX.Element {
             {dueDateMode === "today" ? "明日にする" : "今日にする"}
           </button>
         )}
-        <button type="button" onClick={onComplete}>
+        <button type="button" className="task-card__actions__complete" onClick={onComplete}>
           完了
         </button>
       </div>
