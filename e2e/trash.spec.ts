@@ -8,7 +8,8 @@
 import { type Page, expect, test } from "@playwright/test";
 
 function taskRow(page: Page, taskName: string) {
-  return page.getByText(taskName, { exact: true }).first().locator("..");
+  // BL-057: タスクカードが 3 段ゾーン化されたため ancestor::li で <li> を取得.
+  return page.getByText(taskName, { exact: true }).first().locator("xpath=ancestor::li");
 }
 
 async function createAndDelete(page: Page, taskName: string): Promise<void> {

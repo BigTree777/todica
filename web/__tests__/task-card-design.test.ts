@@ -103,11 +103,13 @@ describe("タスクカードのデザイン統一 (BL-052 / task-card-design)", 
       ).toBe(true);
     });
 
-    it(".day-view__card ルール本文に border-radius: var(--radius-md) を含む", () => {
+    it(".day-view__card ルール本文に border-radius: var(--radius-lg) を含む", () => {
+      // BL-057 (task-card-zone-layout / D-001) で `.day-view__card` の角丸は
+      // --radius-md → --radius-lg に引き上げられた. chip と同じ角丸スケールに揃える.
       const css = readFileSync(dayViewCssPath, "utf-8");
       const body = extractRuleBody(css, ".day-view__card");
       expect(body, ".day-view__card ルールが見つからない").not.toBeNull();
-      expect(body ?? "").toMatch(/border-radius\s*:\s*var\(--radius-md\)/);
+      expect(body ?? "").toMatch(/border-radius\s*:\s*var\(--radius-lg\)/);
     });
 
     it(".day-view__card ルール本文に padding: var(--space-md) を含む", () => {
@@ -118,13 +120,19 @@ describe("タスクカードのデザイン統一 (BL-052 / task-card-design)", 
       expect(body ?? "").toMatch(/(?:^|;|\n)\s*padding\s*:\s*var\(--space-md\)/);
     });
 
-    it(".day-view__card ルール本文に既存の display: flex / align-items: center / gap: var(--space-md) が残っている (回帰防止)", () => {
+    it(".day-view__card ルール本文に既存の display: flex / align-items: stretch / gap: var(--space-md) が残っている (回帰防止)", () => {
+      // BL-057 (task-card-zone-layout / REQ-1 / P-002): 3 段ゾーン化のため
+      //   align-items: center → align-items: stretch に置換された.
+      //   (flex-direction: column への切替で「子の伸び幅 = card 幅いっぱい」を意図する.)
+      // display: flex / gap: var(--space-md) は維持される.
+      // flex-direction: column の assert は task-card-zone-layout.test.tsx 側で担う
+      // (本 BL-052 の関心は visual 不変性の維持).
       const css = readFileSync(dayViewCssPath, "utf-8");
       const body = extractRuleBody(css, ".day-view__card");
       expect(body, ".day-view__card ルールが見つからない").not.toBeNull();
       const bodyText = body ?? "";
       expect(bodyText).toMatch(/display\s*:\s*flex/);
-      expect(bodyText).toMatch(/align-items\s*:\s*center/);
+      expect(bodyText).toMatch(/align-items\s*:\s*stretch/);
       expect(bodyText).toMatch(/gap\s*:\s*var\(--space-md\)/);
     });
   });

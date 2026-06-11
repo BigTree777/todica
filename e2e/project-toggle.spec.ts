@@ -25,7 +25,8 @@ import { type Page, expect, test } from "@playwright/test";
 
 /** タスク名から「カード行」相当を取り出す helper. projects.spec.ts と同じ流儀. */
 function taskRow(page: Page, taskName: string) {
-  return page.getByText(taskName, { exact: true }).first().locator("..");
+  // BL-057: タスクカードが 3 段ゾーン化されたため ancestor::li で <li> を取得.
+  return page.getByText(taskName, { exact: true }).first().locator("xpath=ancestor::li");
 }
 
 /**

@@ -338,7 +338,9 @@ describe("起票フォームのカード化 (BL-054 / form-card-design)", () => 
       // BL-052 で確定済みの宣言が残っていること (= 本 BL で削除/改変していない).
       expect(bodyText).toMatch(/background(?:-color)?\s*:\s*var\(--color-bg\)/);
       expect(bodyText).toMatch(/border\s*:\s*1px\s+solid\s+var\(--color-border\)/);
-      expect(bodyText).toMatch(/border-radius\s*:\s*var\(--radius-md\)/);
+      // BL-057 (task-card-zone-layout / D-001): border-radius は --radius-md → --radius-lg に
+      // 引き上げられた (chip の角丸と同調). 本 BL (BL-054) の関心ではないが追従する.
+      expect(bodyText).toMatch(/border-radius\s*:\s*var\(--radius-lg\)/);
       expect(bodyText).toMatch(/(?:^|;|\n)\s*padding\s*:\s*var\(--space-md\)/);
     });
 
