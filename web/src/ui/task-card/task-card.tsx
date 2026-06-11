@@ -98,14 +98,14 @@ export function TaskCard(props: TaskCardProps): JSX.Element {
         <span>{task.name}</span>
       </div>
       <div className="task-card__actions">
+        <button type="button" className="task-card__actions__delete" onClick={onDelete}>
+          削除
+        </button>
         {showSetFocus && onSetFocus && (
           <button type="button" onClick={onSetFocus}>
             現在のタスクにする
           </button>
         )}
-        <button type="button" className="task-card__actions__delete" onClick={onDelete}>
-          削除
-        </button>
         {showDueDateBtn && onToggleDueDate && (
           <button type="button" onClick={onToggleDueDate}>
             {dueDateMode === "today" ? "明日にする" : "今日にする"}
