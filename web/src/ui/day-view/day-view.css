@@ -40,14 +40,21 @@
 }
 
 .day-view__card {
-  /* visual は BL-052. ここでは flex 構造のみ. */
+  /* BL-052: 縁・背景・角丸・余白を tokens で統一する. */
   display: flex;
   align-items: center;
   gap: var(--space-md);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
 }
 
 .day-view__card--focus {
-  /* 強調 variant のフックのみ. visual は BL-052. */
+  /* BL-052: 強調 variant. border-color / background は .day-view__card を継承する. */
+  border-width: 2px;
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
 }
 
 .day-view__empty {
