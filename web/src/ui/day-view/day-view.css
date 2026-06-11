@@ -67,3 +67,20 @@
   text-align: center;
   padding: var(--space-lg) 0;
 }
+
+/*
+ * BL-056 (project-chip): プロジェクト名表示用の角丸カプセル.
+ *
+ * - タスクカード (.day-view__card) 内の <span className="project-chip"> と,
+ *   ProjectToggle (.project-toggle__button) の両方で共有する視覚言語.
+ * - 値は BL-046 の既存トークンのみで構成 (NFR-NO-NEW-TOKENS).
+ * - background は親カードの白を透過する (D-007).
+ * - display は指定しない. <span> (inline) / <button> (inline-flex) の既定に任せる (D-008).
+ */
+.project-chip {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-size-small);
+  color: var(--color-fg);
+}

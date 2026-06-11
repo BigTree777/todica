@@ -107,7 +107,7 @@ export function ProjectToggle(props: ProjectToggleProps): JSX.Element {
         aria-label={ariaLabel}
         aria-describedby={liveId}
         data-current-id={value ?? ""}
-        className="project-toggle__button"
+        className="project-toggle__button project-chip"
         onClick={handleClick}
       >
         <span data-project-toggle-name className="project-toggle__name">
