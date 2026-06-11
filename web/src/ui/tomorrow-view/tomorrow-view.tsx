@@ -43,7 +43,7 @@ import { OptimisticLockError } from "../../repositories/task-repository.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
 import { PriorityStars } from "../priority-stars/priority-stars.js";
 import { ProjectToggle } from "../project-toggle/project-toggle.js";
-import "./tomorrow-view.css";
+import "../day-view/day-view.css";
 
 export interface TomorrowViewProps {
   repository: TaskRepository;
@@ -364,13 +364,18 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
   );
 
   return (
-    <section aria-label="明日のタスク" className="tomorrow-view">
-      <h1>明日のタスク</h1>
+    <main className="day-view">
+      {/* BL-051 / REQ-2 / D-006: <h1> を <header className="day-view__header"> でラップし
+          today-view と同じ 1 段目構造に揃える. 旧 <section aria-label="明日のタスク">
+          ランドマークは <main> に統合 (h1 が見出しとして十分なため aria-label は撤去). */}
+      <header className="day-view__header">
+        <h1>明日のタスク</h1>
+      </header>
 
       <form
         onSubmit={handleCreate}
         aria-label="明日のタスク起票フォーム"
-        className="tomorrow-view__form"
+        className="day-view__form"
       >
         <div>
           <label htmlFor="tomorrow-task-name">タスク名</label>
@@ -410,10 +415,11 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
       </form>
 
       {/* REQ-6: 空状態は <ul> の外に出し, listitem role と分離する.
-          (テストは tasks > 0 のときだけ listitem 数を assert する想定.) */}
-      {tasks.length === 0 && <p className="tomorrow-view__empty">明日のタスクはありません</p>}
+          (テストは tasks > 0 のときだけ listitem 数を assert する想定.)
+          BL-051 / REQ-6: className を共通 day-view__empty に統一. */}
+      {tasks.length === 0 && <p className="day-view__empty">明日のタスクはありません</p>}
 
-      <ul aria-label="明日のタスク一覧" className="tomorrow-view__list">
+      <ul aria-label="明日のタスク一覧" className="day-view__list">
         {tasks.length === 0
           ? null
           : tasks.map((task) => {
@@ -421,30 +427,27 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
                 ? (projects.find((p) => p.id === task.projectId) ?? null)
                 : null;
               return (
-                <li key={task.id} className="tomorrow-view__item">
-                  <div className="tomorrow-view__item-body">
-                    {project && <span className="tomorrow-view__project">{project.name}</span>}
-                    <span className="tomorrow-view__name">{task.name}</span>
-                    {/* BL-040 / plan D-004: [優先度: ...] 補助表示は撤去.
-                      tomorrow カードは「削除」「今日にする」のみ (BL-038 REQ-3) で,
-                      優先度 UI 自体を持たないため, ここでは何も描画しない. */}
-                  </div>
-                  <div className="tomorrow-view__actions">
-                    <button type="button" onClick={() => handleDelete(task)}>
-                      削除
-                    </button>
-                    {/* BL-042 REQ-2 / AC-8: routine 由来タスクは「今日にする」を非表示にする.
+                // BL-051 / REQ-5 / D-007: 旧 <li className="tomorrow-view__item"> を
+                // <li className="day-view__card"> に置換. 入れ子 <div> (item-body /
+                // actions) を撤去し, 子要素を <li> 直下に並べる (today-view と同形).
+                // <span> の className (tomorrow-view__project / __name) も撤去 (P-003).
+                <li key={task.id} className="day-view__card">
+                  {project && <span>{project.name}</span>}
+                  <span>{task.name}</span>
+                  <button type="button" onClick={() => handleDelete(task)}>
+                    削除
+                  </button>
+                  {/* BL-042 REQ-2 / AC-8: routine 由来タスクは「今日にする」を非表示にする.
                       routine は毎日自動生成されるため移送すると翌日に重複が出る. */}
-                    {task.origin !== "routine" && (
-                      <button type="button" onClick={() => handleMoveToToday(task)}>
-                        今日にする
-                      </button>
-                    )}
-                    {/* BL-042: 「完了」 button を追加 (today と対称な 3 ボタン化). */}
-                    <button type="button" onClick={() => handleComplete(task)}>
-                      完了
+                  {task.origin !== "routine" && (
+                    <button type="button" onClick={() => handleMoveToToday(task)}>
+                      今日にする
                     </button>
-                  </div>
+                  )}
+                  {/* BL-042: 「完了」 button を追加 (today と対称な 3 ボタン化). */}
+                  <button type="button" onClick={() => handleComplete(task)}>
+                    完了
+                  </button>
                 </li>
               );
             })}
@@ -457,6 +460,6 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
         onAcceptServer={conflictDialog.onAcceptServer}
         onRetryWithServer={conflictDialog.onRetryWithServer}
       />
-    </section>
+    </main>
   );
 }

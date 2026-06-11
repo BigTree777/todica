@@ -70,11 +70,11 @@ const REQUIRED_TOKENS = [
   "--color-focus-ring",
 ] as const;
 
-// spec.md REQ-3 で定めた置換対象 10 CSS ファイル.
+// spec.md REQ-3 で定めた置換対象 CSS ファイル.
+// 注: tomorrow-view.css は BL-051 で削除済みのため対象外.
 const TARGET_CSS_FILES = [
   "ui/app-shell/app-shell.css",
   "ui/focus-view/focus-view.css",
-  "ui/tomorrow-view/tomorrow-view.css",
   "ui/projects-view/projects-view.css",
   "ui/routines-view/routines-view.css",
   "ui/settings-view/settings-view.css",
