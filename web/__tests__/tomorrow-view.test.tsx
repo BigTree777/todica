@@ -457,12 +457,13 @@ describe("TomorrowView (BL-038 REQ-1 一覧表示)", () => {
 // ============================================================
 
 describe("TomorrowView (BL-038 REQ-2 起票フォーム)", () => {
-  it("シナリオ A: 起票フォームの入力要素は「タスク名」「プロジェクト (トグル)」「優先度 (星 3 つ)」「追加」の 4 要素のみ (期限 UI 無し)", async () => {
+  it("シナリオ A: 起票フォームの入力要素は「タスク名」「プロジェクト (<select>)」「優先度 (星 3 つ)」「追加」の 4 要素のみ (期限 UI 無し)", async () => {
     // 受け入れ基準 §「起票 (REQ-2)」 第 1 ケース +
     // BL-040 priority-star-ui AC-4: <select id="tomorrow-task-priority"> は撤去され,
     //   role="radiogroup" + 3 つの role="radio" (星 button) に置き換わる.
-    // BL-041 project-toggle-ui AC-5: <select id="tomorrow-task-project"> は撤去され,
-    //   トグルボタン (<ProjectToggle />) に置き換わる.
+    // BL-065 (project-toggle-removal): BL-041 トグル UI は撤去され,
+    //   <select id="tomorrow-create-project"> に戻された (旧 <select id="tomorrow-task-project">
+    //   ではなく TaskFormCard の idPrefix 命名規約に従う / D-003).
     const repo = makeMockRepository([]);
 
     renderWithQueryClient(
@@ -477,19 +478,23 @@ describe("TomorrowView (BL-038 REQ-2 起票フォーム)", () => {
     // 起票フォーム scope で検証する.
     const form = screen.getByRole("form", { name: /起票フォーム/ });
 
-    // 旧 select id は DOM 上に存在しない (BL-040 AC-4 / BL-041 AC-5).
+    // 旧 select id は DOM 上に存在しない (BL-040 AC-4 / BL-041 AC-5 / BL-065 D-003).
     expect(form.querySelector("#tomorrow-task-priority")).toBeNull();
     expect(form.querySelector("#tomorrow-task-project")).toBeNull();
-    // フォーム scope 内に <select> は存在しない (プロジェクトはトグル button, 優先度は radiogroup).
-    expect(form.querySelectorAll("select")).toHaveLength(0);
 
-    // BL-041: 「プロジェクト」はトグルボタン (1 つの <button>) で表現される.
-    const projectToggle = within(form).getByRole("button", {
-      name: /プロジェクト/,
-    });
-    expect(projectToggle.tagName).toBe("BUTTON");
-    // 初期表示は「（未分類）」.
-    expect(projectToggle.textContent ?? "").toMatch(/（未分類）/);
+    // BL-065: 「プロジェクト」は <select> + visually-hidden <label> で表現される.
+    // projects fetch の解決を待つため findByLabelText を使う (= <select> マウント完了を待つ).
+    const projectSelect = (await within(form).findByLabelText("プロジェクト")) as HTMLSelectElement;
+
+    // BL-065: 新しい <select id="tomorrow-create-project"> が存在する (TaskFormCard 命名).
+    expect(form.querySelector("#tomorrow-create-project")).not.toBeNull();
+    // フォーム scope 内の <select> はプロジェクト 1 つだけ (優先度は radiogroup).
+    expect(form.querySelectorAll("select")).toHaveLength(1);
+
+    expect(projectSelect.tagName).toBe("SELECT");
+    expect(projectSelect.id).toBe("tomorrow-create-project");
+    // 初期 value は "" (= プロジェクトなし / D-001).
+    expect(projectSelect.value).toBe("");
 
     // 優先度は星 UI (role=radiogroup + 3 つの role=radio) で表現される.
     const priorityGroup = within(form).getByRole("radiogroup");
@@ -539,12 +544,12 @@ describe("TomorrowView (BL-038 REQ-2 起票フォーム)", () => {
     expect(arg.dueDate).toBe("tomorrow");
   });
 
-  it('シナリオ BL-041 AC-5: 明日ビューでプロジェクトトグルを 1 回クリックして起票すると create.projectId === <projects[0].id> かつ dueDate === "tomorrow"', async () => {
-    // BL-041 spec.md AC-5:
+  it('シナリオ BL-065 (project-toggle-removal): 明日ビューで <select> で「仕事」を選んで起票すると create.projectId === <projects[0].id> かつ dueDate === "tomorrow"', async () => {
+    // BL-065 spec.md AC-3 / AC-9 (tomorrow-view 側):
     //   Given /tomorrow を開いた / プロジェクト「仕事」(id: PROJECT_ID_P1) が登録されている.
-    //   When  トグルを 1 回クリック (null → "仕事") + タスク名入力 + 追加.
-    //   Then  TaskRepository.create が projectId="p-1", dueDate="tomorrow" を含む引数で呼ばれる.
-    //         <select id="tomorrow-task-project"> は DOM に存在しない.
+    //   When  <select id="tomorrow-create-project"> で「仕事」を選び タスク名入力 + 追加.
+    //   Then  TaskRepository.create が projectId=PROJECT_ID_P1, dueDate="tomorrow" を含む引数で呼ばれる.
+    //         旧 <select id="tomorrow-task-project"> / 旧 トグル button は DOM に存在しない.
     const PROJECT_ID_P1 = "p1p1p1p1-p1p1-4p1p-8p1p-p1p1p1p1p1p1";
     const projectRepo = makeMockProjectRepository([
       {
@@ -564,24 +569,30 @@ describe("TomorrowView (BL-038 REQ-2 起票フォーム)", () => {
     const nameInput = await screen.findByLabelText(/タスク名/);
     await user.type(nameInput, "明日のタスク");
 
-    // 起票フォーム scope でトグルボタンを取得.
+    // 起票フォーム scope で <select> を取得.
     const form = screen.getByRole("form", { name: /起票フォーム/ });
 
-    // 旧 select は DOM に存在しない (AC-5 後半).
+    // 旧 select id は DOM に存在しない (BL-041 AC-5 / BL-065 D-003).
     expect(form.querySelector("#tomorrow-task-project")).toBeNull();
+    // BL-065 (project-toggle-removal): 旧トグル button も存在しない.
+    expect(within(form).queryByRole("button", { name: /プロジェクト/ })).toBeNull();
 
-    const toggleButton = await within(form).findByRole("button", {
-      name: /プロジェクト/,
+    // BL-065: findByLabelText("プロジェクト") で <select id="tomorrow-create-project"> を取得
+    // (projects fetch の解決を待つ).
+    const projectSelect = (await within(form).findByLabelText("プロジェクト")) as HTMLSelectElement;
+    expect(projectSelect.id).toBe("tomorrow-create-project");
+    // 選択肢が揃うのを待つ (先頭「プロジェクトなし」 + 「仕事」 = 2 件).
+    await waitFor(() => {
+      expect(projectSelect.querySelectorAll("option")).toHaveLength(2);
     });
-    // 1 周巡回: null → "仕事".
-    await user.click(toggleButton);
-    expect(toggleButton.textContent ?? "").toContain("仕事");
+    await user.selectOptions(projectSelect, PROJECT_ID_P1);
+    expect(projectSelect.value).toBe(PROJECT_ID_P1);
 
     // 追加.
     const submit = screen.getByRole("button", { name: /追加|起票|登録|送信/ });
     await user.click(submit);
 
-    // create() に projectId="p-1", dueDate="tomorrow" が渡っている (REQ-6 / D-004).
+    // create() に projectId=PROJECT_ID_P1, dueDate="tomorrow" が渡っている (REQ-3 / AC-9).
     expect(repo.createMock).toHaveBeenCalledTimes(1);
     const arg = repo.createMock.mock.calls[0]?.[0] as CreateTaskCommand;
     expect(arg.name).toBe("明日のタスク");
@@ -1093,11 +1104,12 @@ describe("TomorrowView (BL-038 REQ-6 空状態)", () => {
     // 空状態テキスト.
     expect(await screen.findByText("明日のタスクはありません")).toBeInTheDocument();
 
-    // 起票フォーム (タスク名 / プロジェクト (トグル button) / 優先度 (星 UI) / 追加ボタン) は表示されている.
+    // 起票フォーム (タスク名 / プロジェクト (<select>) / 優先度 (星 UI) / 追加ボタン) は表示されている.
     expect(screen.queryByLabelText(/タスク名/)).not.toBeNull();
-    // BL-041: プロジェクトはトグルボタンで表現される.
+    // BL-065 (project-toggle-removal): プロジェクトは <select> + visually-hidden <label> で表現される.
+    // projects fetch の解決を待つため findByLabelText を使う.
     const form = screen.getByRole("form", { name: /起票フォーム/ });
-    expect(within(form).queryByRole("button", { name: /プロジェクト/ })).not.toBeNull();
+    expect(await within(form).findByLabelText("プロジェクト")).not.toBeNull();
     // BL-040: 優先度は <label htmlFor="..."> の select ではなく role=radiogroup の星 UI で表現.
     expect(within(form).queryByRole("radiogroup")).not.toBeNull();
     expect(screen.queryByRole("button", { name: /追加|起票|登録|送信/ })).not.toBeNull();

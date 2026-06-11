@@ -72,6 +72,8 @@ const REQUIRED_TOKENS = [
 
 // spec.md REQ-3 で定めた置換対象 CSS ファイル.
 // 注: tomorrow-view.css は BL-051 で削除済みのため対象外.
+// 注: ui/project-toggle/project-toggle.css は BL-065 (project-toggle-removal) で
+//     ディレクトリごと撤去済みのため対象外.
 const TARGET_CSS_FILES = [
   "ui/app-shell/app-shell.css",
   "ui/focus-view/focus-view.css",
@@ -80,7 +82,6 @@ const TARGET_CSS_FILES = [
   "ui/settings-view/settings-view.css",
   "ui/trash-view/trash-view.css",
   "ui/priority-stars/priority-stars.css",
-  "ui/project-toggle/project-toggle.css",
   "ui/project-create-dialog/project-create-dialog.css",
 ] as const;
 
@@ -285,14 +286,8 @@ describe("デザイントークン / CSS 基盤の整備 (BL-046)", () => {
       expect(content).toContain("var(--color-border-subtle)");
     });
 
-    it("project-toggle.css が --color-fg を参照している（spec.md REQ-3）", () => {
-      const raw = readFileSync(
-        resolve(webSrcRoot, "ui/project-toggle/project-toggle.css"),
-        "utf-8",
-      );
-      const content = stripCssComments(raw);
-      expect(content).toContain("var(--color-fg)");
-    });
+    // BL-065 (project-toggle-removal): project-toggle.css は撤去済みのため
+    // 「project-toggle.css が --color-fg を参照している」it は削除した.
 
     it("project-create-dialog.css が --color-bg を参照している（spec.md REQ-3）", () => {
       const raw = readFileSync(

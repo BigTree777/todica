@@ -63,9 +63,10 @@
 
 /*
  * BL-063 REQ-3 / D-003:
- * 起票カードの ProjectToggle (= .project-toggle__button.project-chip) の font-size が
- * .project-toggle__button { font-size: 1rem } に負ける問題を specificity 強化で解消する.
- * (.project-chip 本体は無改修 / NFR-CHIP-PRESERVE.)
+ * TaskCard 表示側の `<span className="project-chip">` の font-size を, 親 (.task-card__header)
+ * 文脈で他のフォントサイズ宣言に負けないよう specificity を強化して上書きする.
+ * (.project-chip 本体は無改修 / NFR-CHIP-PRESERVE. BL-065 で起票カード側の
+ * ProjectToggle は撤去済み. 現在の起票カードは `<select>` を使う.)
  */
 .task-card__header .project-chip {
   font-size: var(--font-size-small);
@@ -130,8 +131,9 @@
 /*
  * BL-063 REQ-4 / D-004:
  * a11y 用に accessibleName を残しつつ視覚的に label を隠すユーティリティ.
- * project-toggle.css の [data-visually-hidden] と同等の効果. 本 BL のスコープ内では
- * <TaskFormCard> の <label htmlFor={inputId}>タスク名</label> でのみ使用する.
+ * <TaskFormCard> の <label htmlFor={inputId}>タスク名</label> や,
+ * 起票カードのプロジェクト `<select>` の <label> 等で使用する
+ * (BL-065 で起票カードは ProjectToggle ではなく `<select>` 構造になった).
  */
 .visually-hidden {
   position: absolute;

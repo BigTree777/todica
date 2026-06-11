@@ -1,5 +1,9 @@
 # 仕様: プロジェクト選択をトグル UI に変更 (起票フォーム) (project-toggle-ui)
 
+> ## 撤去済 (BL-065)
+>
+> 本仕様の実装 (起票カードのプロジェクト選択 ProjectToggle) は BL-065 (project-toggle-removal) で撤去され, `<select>` に戻されました. 詳細は `docs/developer/features/project-toggle-removal/spec.md` を参照.
+
 - 状態: ドラフト
 - 関連:
   - [`../../planning/backlog.md`](../../planning/backlog.md) BL-041

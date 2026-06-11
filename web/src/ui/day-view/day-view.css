@@ -49,11 +49,11 @@
 /*
  * BL-056 (project-chip): プロジェクト名表示用の角丸カプセル.
  *
- * - タスクカード (.task-card__header) 内の <span className="project-chip"> と,
- *   ProjectToggle (.project-toggle__button) の両方で共有する視覚言語.
+ * - タスクカード (.task-card__header) 内の <span className="project-chip"> に
+ *   適用する視覚言語 (現在は表示専用. BL-065 で ProjectToggle 撤去済).
  * - 値は BL-046 の既存トークンのみで構成 (NFR-NO-NEW-TOKENS).
  * - background は親カードの白を透過する (D-007).
- * - display は指定しない. <span> (inline) / <button> (inline-flex) の既定に任せる (D-008).
+ * - display は指定しない. <span> (inline) の既定に任せる (D-008).
  */
 .project-chip {
   border: 1px solid var(--color-border);
