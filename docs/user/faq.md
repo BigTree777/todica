@@ -6,7 +6,7 @@
 
 ### Q. タスクの期限を 3 日以降に設定できないのはなぜですか?
 
-A. Todica は「今日やる」ことに集中するための設計で、期限は **今日 / 明日のみ** に制限しています。先の予定を抱えると今に集中できなくなる、という思想によるものです。詳細は [プロジェクト概要](../developer/project.md) の設計原則を参照してください。
+A. Todica は「今日やる」ことに集中するための設計で、期限は **今日 / 明日のみ** に制限しています。先の予定を抱えると今に集中できなくなる、という思想によるものです。
 
 ### Q. 完了したタスクの履歴は見られますか?
 
@@ -32,7 +32,7 @@ A. クライアントに設定した認証トークンが、サーバの `AUTH_T
 
 ### Q. LAN 内の HTTP サーバに Android から接続できません
 
-A. Android アプリは既定で HTTPS 接続を要求します。LAN 内の HTTP サーバに接続するには、開発者向けの [`docs/developer/setup/android.md`](../developer/setup/android.md) の「HTTP ローカルサーバへの接続」を参照して `network_security_config.xml` を設定してください。
+A. Android アプリは既定で HTTPS 接続を要求します。本番では HTTPS（Let's Encrypt 等で TLS 終端）でサーバを公開してください。どうしても LAN 内で HTTP を使いたい場合は、Android アプリを自前ビルドして `network_security_config.xml` で cleartext を許可する必要があります（手順はリポジトリ内の Android セットアップ資料を参照）。
 
 ### Q. オフラインでも使えますか?
 
