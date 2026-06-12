@@ -8,7 +8,7 @@
               ┌─────────────────────────────────────────┐
               │  VPS / 自宅サーバ                       │
               │                                         │
- PC/スマホ ── HTTPS ── nginx / Caddy ──┬── 静的ファイル (web/dist)
+ PC/スマホ ── HTTPS ── nginx ──────────┬── 静的ファイル (web/dist)
  のブラウザ                            │
                                        └── reverse proxy ─→ Node プロセス (Hono)
                                                               │
@@ -60,29 +60,17 @@ sudo apt install -y build-essential python3 git
 sudo apt install -y sqlite3
 ```
 
-### 1-5. reverse proxy（nginx または Caddy のいずれか）
-
-**nginx を使う場合：**
+### 1-5. reverse proxy（nginx）
 
 ```bash
 sudo apt install -y nginx certbot python3-certbot-nginx
-```
-
-**Caddy を使う場合（自動 HTTPS）：**
-
-```bash
-sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
-sudo apt update
-sudo apt install -y caddy
 ```
 
 ### 1-6. ファイアウォール（ufw）
 
 ```bash
 sudo ufw allow OpenSSH
-sudo ufw allow 'Nginx Full'   # Caddy 利用時は `sudo ufw allow 80,443/tcp`
+sudo ufw allow 'Nginx Full'
 sudo ufw enable
 sudo ufw status
 ```
@@ -191,9 +179,9 @@ npm run build -w web
 
 同一ドメイン配信（後述の reverse proxy 構成）なら `VITE_API_BASE_URL=""` でよい。Web の JS は相対パスで `/api/v1/*` を叩く。
 
-## 6. HTTPS / reverse proxy で配信する
+## 6. HTTPS / nginx で配信する
 
-### nginx 設定例（同一ドメインで Web + API を配信）
+サーバ自体は HTTP で動作する。HTTPS は nginx で終端し、同一ドメインで Web 静的ファイルと API を配信する。
 
 `/etc/nginx/sites-available/todica`：
 
@@ -240,31 +228,6 @@ server {
 ```bash
 sudo ln -s /etc/nginx/sites-available/todica /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
-```
-
-### Caddy 設定例（自動 HTTPS）
-
-`/etc/caddy/Caddyfile`：
-
-```caddyfile
-todica.example.com {
-  encode gzip
-
-  @api path /api/* /healthz
-  handle @api {
-    reverse_proxy 127.0.0.1:3000
-  }
-
-  handle {
-    root * /opt/todica/web/dist
-    try_files {path} /index.html
-    file_server
-  }
-}
-```
-
-```bash
-sudo systemctl reload caddy
 ```
 
 ## 7. データのバックアップ
