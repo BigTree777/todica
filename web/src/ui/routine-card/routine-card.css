@@ -66,14 +66,11 @@
 }
 
 .routine-card__actions {
-  /* ボタン横並び. BL-070 以降は「削除」のみ. */
+  /* ボタン横並び. BL-070 以降は「削除」のみ.
+     誤タップ回避のため表示カード「削除」/ 起票カード「追加」とも右端配置. */
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-}
-
-.routine-card--form .routine-card__actions {
-  /* BL-072 D-007: 起票カードの「追加」 button は右端配置. */
   justify-content: flex-end;
 }
 

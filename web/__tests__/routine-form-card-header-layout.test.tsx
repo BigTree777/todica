@@ -698,7 +698,10 @@ describe("RoutineFormCard レイアウト刷新 (BL-072 / routine-form-card-head
    * user 希望 (起票カードでは「追加」を右端に置きたい / U-5 候補 b) に従う.
    * 表示カード (= 「削除」 button) の actions 段は基底のまま (= flex 自然順 = 左寄せ).
    */
-  describe("D-007: .routine-card--form .routine-card__actions に justify-content: flex-end の override が宣言される", () => {
+  // BL-074 で .routine-card__actions 基底に justify-content: flex-end を統合し
+  // .routine-card--form .routine-card__actions の override は撤去された.
+  // 起票・表示とも右端配置という挙動は基底ルールで担保される.
+  describe.skip("D-007: .routine-card--form .routine-card__actions に justify-content: flex-end の override が宣言される", () => {
     it(".routine-card--form .routine-card__actions ルールが存在する", () => {
       const css = readFileSync(routineCardCssPath, "utf-8");
       const body = extractRuleBody(css, ".routine-card--form .routine-card__actions");
