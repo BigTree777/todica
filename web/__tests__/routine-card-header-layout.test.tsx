@@ -522,13 +522,18 @@ describe("RoutineCard ヘッダレイアウト刷新 (BL-071 / routine-card-head
    *   Given <RoutineFormCard ... /> を render する
    *   When  DOM をクエリする
    *   Then  root 要素は <form class="routine-card routine-card--form"> のまま
-   *    かつ .routine-card__form-row--name と .routine-card__form-row--options の 2 段が存在する
    *    かつ name input + 「追加」 button + 曜日 7 checkbox + PriorityStars が全て描画される
    *
-   * 補足: 既存実装の row class 名が "routine-card__form-row--name" / "routine-card__form-row--options"
-   *   ではなく単に "routine-card__form-row" の場合は緩めて, 「.routine-card__form-row が 2 個」で代替する.
+   * 補足 (BL-072 / routine-form-card-header-layout 追従):
+   *   旧 BL-071 では「`.routine-card__form-row` が 2 個」を assert していたが,
+   *   BL-072 で起票カードを 4 段 (`.routine-card__header` / `__title` /
+   *   `__day-checkboxes` / `__actions`) に再編し `.routine-card__form-row` 系を完全撤去するため,
+   *   起票カードの「不変性」要求は本 BL で破棄する. 旧 assert の代替として
+   *   「主要要素 (name input / 追加 button / 曜日 7 checkbox / PriorityStars) が
+   *   引き続き描画される」までを保つ.
+   *   起票カードの新 DOM 構造の網羅 assert は `routine-form-card-header-layout.test.tsx` (BL-072) に集約.
    */
-  describe("AC-11: <RoutineFormCard> の DOM 構造が既存と変わらない (= 起票カードの不変性)", () => {
+  describe("AC-11: <RoutineFormCard> の DOM 構造 (= 主要要素が描画される)", () => {
     it("root は <form class='routine-card routine-card--form'> のまま", async () => {
       const { RoutineFormCard } = await importRoutineFormCard();
       const { container } = render(
@@ -549,28 +554,6 @@ describe("RoutineCard ヘッダレイアウト刷新 (BL-071 / routine-card-head
       expect(root?.tagName.toLowerCase()).toBe("form");
       expect(root?.classList.contains("routine-card")).toBe(true);
       expect(root?.classList.contains("routine-card--form")).toBe(true);
-    });
-
-    it(".routine-card__form-row 要素が 2 個 (2 段構成) 存在する", async () => {
-      const { RoutineFormCard } = await importRoutineFormCard();
-      const { container } = render(
-        <RoutineFormCard
-          name=""
-          onNameChange={() => {}}
-          daysOfWeek={[1]}
-          onToggleDay={() => {}}
-          defaultPriority="normal"
-          onDefaultPriorityChange={() => {}}
-          onSubmit={(e: React.FormEvent) => {
-            e.preventDefault();
-          }}
-        />,
-      );
-      const rows = container.querySelectorAll(".routine-card__form-row");
-      expect(
-        rows.length,
-        `.routine-card__form-row 要素が 2 個ではない (実際: ${rows.length}) (AC-11 違反)`,
-      ).toBe(2);
     });
 
     it("name input + 「追加」 button + 曜日 7 checkbox + PriorityStars が全て描画される", async () => {
