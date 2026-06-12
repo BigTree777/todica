@@ -25,11 +25,19 @@ export function AppShell(): JSX.Element {
   const [menuOpen, setMenuOpen] = useState(false);
   const hamburgerRef = useRef<HTMLButtonElement>(null);
   const firstLinkRef = useRef<HTMLAnchorElement>(null);
+  /**
+   * close 経路で「ハンバーガーへ focus を戻したい」リクエストを表すフラグ.
+   * BL-062 で menuOpen=true 中はハンバーガーが `display: none` (退避) のため,
+   * `setMenuOpen(false)` と同期で `focus()` しても DOM が非表示のまま focus が
+   * 当たらない. このフラグを立てておき, 再 render で `--hidden` が外れた直後の
+   * useEffect で focus を移すことで, 表示状態の要素に対する focus を保証する.
+   */
+  const focusHamburgerOnCloseRef = useRef(false);
 
   const closeMenu = useCallback(() => {
+    // 次の render で --hidden が外れた直後にハンバーガーへ focus を戻す (REQ-13 / BL-062 REQ-4).
+    focusHamburgerOnCloseRef.current = true;
     setMenuOpen(false);
-    // フォーカスをハンバーガーボタンに戻す (REQ-13)
-    hamburgerRef.current?.focus();
   }, []);
 
   const toggleMenu = () => {
@@ -41,9 +49,15 @@ export function AppShell(): JSX.Element {
   };
 
   // メニューが開いたとき最初のリンクにフォーカスを移動 (REQ-12)
+  // メニューが閉じたときに pending な focus 復帰リクエストがあればハンバーガーへ移す.
   useEffect(() => {
     if (menuOpen) {
       firstLinkRef.current?.focus();
+      return;
+    }
+    if (focusHamburgerOnCloseRef.current) {
+      focusHamburgerOnCloseRef.current = false;
+      hamburgerRef.current?.focus();
     }
   }, [menuOpen]);
 
@@ -63,11 +77,16 @@ export function AppShell(): JSX.Element {
 
   return (
     <div className="app-shell">
-      {/* ハンバーガーボタン: 常時表示 (REQ-1 / REQ-9 / REQ-10) */}
+      {/*
+        ハンバーガーボタン: DOM は常時残し focus 復帰先として有効性を保つ
+        (BL-049 REQ-13). menuOpen=true の間は state class
+        `app-shell__hamburger--hidden` を付与し CSS で `display: none` に
+        退避する (BL-062 REQ-1 / REQ-8 / D-002).
+      */}
       <button
         ref={hamburgerRef}
         type="button"
-        className="app-shell__hamburger"
+        className={`app-shell__hamburger${menuOpen ? " app-shell__hamburger--hidden" : ""}`}
         aria-label={menuOpen ? "メニューを閉じる" : "メニューを開く"}
         aria-expanded={menuOpen}
         onClick={toggleMenu}
@@ -95,6 +114,22 @@ export function AppShell(): JSX.Element {
         aria-modal={menuOpen ? "true" : undefined}
         aria-label={menuOpen ? "ナビゲーションメニュー" : "サイドバーナビゲーション"}
       >
+        {/*
+          メニュー内「閉じる」ボタン (BL-062 REQ-2 / REQ-5 / REQ-6 / REQ-7 / REQ-11 / D-003).
+          menuOpen=true の間だけ render し, menu パネル冒頭 (最初の子要素) に配置する.
+          click 時は既存 `closeMenu` を呼ぶ (D-004: focus 復帰込み).
+        */}
+        {menuOpen && (
+          <button
+            type="button"
+            className="app-shell__menu-close"
+            aria-label="メニューを閉じる"
+            onClick={closeMenu}
+          >
+            ×
+          </button>
+        )}
+
         {/* プライマリナビ (REQ-7): 現在のタスク / 今日のタスク / 明日のタスク */}
         <ul className="app-shell__nav-primary">
           <li>

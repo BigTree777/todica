@@ -91,3 +91,20 @@
   padding-top: calc(var(--space-md) + var(--space-xl));
   overflow: auto;
 }
+
+/* BL-062: メニュー開時はハンバーガーボタンを視覚的に退避 */
+.app-shell__hamburger--hidden {
+  display: none;
+}
+
+/* BL-062: メニュー内「閉じる」ボタン */
+.app-shell__menu-close {
+  align-self: flex-end;
+  background: none;
+  border: none;
+  font-size: var(--font-size-h2);
+  cursor: pointer;
+  padding: var(--space-xs);
+  color: var(--color-fg);
+  margin-bottom: var(--space-sm);
+}

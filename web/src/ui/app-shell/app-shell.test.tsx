@@ -316,10 +316,12 @@ describe("AppShell (BL-049 ハンバーガーナビゲーション)", () => {
     await user.click(hamburger);
 
     // ボタンの属性変化
-    expect(screen.getByRole("button", { name: "メニューを閉じる" })).toHaveAttribute(
-      "aria-expanded",
-      "true",
-    );
+    // BL-062 で menu 内にも aria-label="メニューを閉じる" の閉じるボタンが追加されるため,
+    // ハンバーガー本体は `.app-shell__hamburger` クラスで一意に取得する.
+    const hamburgerAfter = document.querySelector<HTMLButtonElement>("button.app-shell__hamburger");
+    expect(hamburgerAfter).not.toBeNull();
+    expect(hamburgerAfter).toHaveAttribute("aria-label", "メニューを閉じる");
+    expect(hamburgerAfter).toHaveAttribute("aria-expanded", "true");
     // メニューパネルが DOM に現れている
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     // 最初のリンク（現在のタスク）にフォーカスが移動している (REQ-12)
