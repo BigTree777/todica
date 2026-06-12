@@ -59,15 +59,6 @@ async function computedStyle(
   );
 }
 
-/** API 直叩きでプロジェクトを 1 件作成する. */
-async function seedProject(request: APIRequestContext, name: string): Promise<void> {
-  const res = await request.post(`${API_BASE}/api/v1/projects`, {
-    headers: { ...AUTH_HEADER, "Idempotency-Key": crypto.randomUUID() },
-    data: { id: crypto.randomUUID(), name },
-  });
-  expect(res.ok()).toBe(true);
-}
-
 /** API 直叩きでルーティンを 1 件作成する. */
 async function seedRoutine(request: APIRequestContext, name: string): Promise<void> {
   const res = await request.post(`${API_BASE}/api/v1/routines`, {
@@ -133,20 +124,21 @@ test.describe("secondary-views-shell (BL-045) のスタイル統一", () => {
     }
   });
 
-  test("AC-4: 作成 / 設定フォームが角丸枠 (--radius-md = 12px) で表示される (BL-059 追従)", async ({
+  test("AC-4: 作成 / 設定フォームが角丸枠 (--radius-md = 12px) で表示される (BL-059 / BL-060 追従)", async ({
     page,
   }) => {
     // BL-059 追従: 旧テストは「/tomorrow 起票フォームと同値 (= --radius-md = 12px)」を
     // verify していたが, BL-059 で /tomorrow 起票は <TaskFormCard> (= .task-card 系) に
     // 置換され, border-radius: var(--radius-lg) = 16px に変わった (D-001 系統間独立).
-    // 本テストは secondary-views (projects / routines / settings) フォーム同士が
-    // 引き続き --radius-md = 12px で揃っていることの確認に再設計する.
+    // BL-060 追従: 同様に /projects 作成フォームも <ProjectFormCard> (= .project-card 系) に
+    // 置換され, border-radius: var(--radius-lg) = 16px に変わった (D-001 系統間独立).
+    // 本テストは secondary-views フォーム同士が引き続き --radius-md = 12px で揃っている
+    // ことの確認に再設計する (現時点では routines / settings のみ対象).
     const expectedRadius = "12px";
 
     // When / Then: 各フォームが border-radius 12px / border 1px solid.
     // settings はネイティブ専用セクションを除く境界時刻フォームのみ対象 (spec.md U-1).
     const forms = [
-      { path: "/projects", formName: "プロジェクト作成フォーム" },
       { path: "/routines", formName: "ルーティン作成フォーム" },
       { path: "/settings", formName: "設定フォーム" },
     ] as const;
@@ -165,23 +157,24 @@ test.describe("secondary-views-shell (BL-045) のスタイル統一", () => {
     }
   });
 
-  test("AC-5: trash / routines / projects のリスト項目が角丸カードで表示される", async ({
+  test("AC-5: trash / routines のリスト項目が角丸カードで表示される (BL-060 追従)", async ({
     page,
     request,
   }) => {
+    // BL-060 追従: /projects の <li> は <ProjectCard> (= .project-card 系) に置換され,
+    // border-radius: var(--radius-lg) = 16px に変わった (D-001 系統間独立).
+    // 本テストは secondary-views リスト項目同士が引き続き --radius-md = 12px で
+    // 揃っていることの確認に再設計する (現時点では trash / routines のみ対象).
     // Given: 各 view に 1 件以上の項目を API 直叩きで用意する.
     const suffix = Date.now();
     const trashedName = `STYLEゴミ箱カード ${suffix}`;
     const routineName = `STYLEルーティンカード ${suffix}`;
-    const projectName = `STYLEプロジェクトカード ${suffix}`;
     await seedTrashedTask(request, trashedName);
     await seedRoutine(request, routineName);
-    await seedProject(request, projectName);
 
     const targets = [
       { path: "/trash", itemText: trashedName },
       { path: "/routines", itemText: routineName },
-      { path: "/projects", itemText: projectName },
     ] as const;
 
     for (const target of targets) {

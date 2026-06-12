@@ -102,7 +102,9 @@ test("2 タブ同時編集でプロジェクト名衝突時にも ConflictDialog
 
   // タブ A: 名称変更.
   const rowA = pageA.getByText(projectName, { exact: true }).first().locator("..");
-  await rowA.getByRole("button", { name: "名称変更" }).click();
+  // BL-060 (project-card-component): 表示モード button のラベルは「変更」に短縮された (D-005 / REQ-6).
+  // 編集 form 自体の aria-label「プロジェクト名称変更フォーム」は維持される.
+  await rowA.getByRole("button", { name: "変更" }).click();
   await pageA
     .getByRole("form", { name: "プロジェクト名称変更フォーム" })
     .locator("input")
@@ -115,7 +117,8 @@ test("2 タブ同時編集でプロジェクト名衝突時にも ConflictDialog
 
   // タブ B: 古い version で名称変更 → 412 → ProjectConflictError → ConflictError → Dialog.
   const rowB = pageB.getByText(projectName, { exact: true }).first().locator("..");
-  await rowB.getByRole("button", { name: "名称変更" }).click();
+  // BL-060 (project-card-component): 「名称変更」→「変更」短縮に追従.
+  await rowB.getByRole("button", { name: "変更" }).click();
   await pageB
     .getByRole("form", { name: "プロジェクト名称変更フォーム" })
     .locator("input")

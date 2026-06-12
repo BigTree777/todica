@@ -1,0 +1,93 @@
+/*
+ * BL-060 (project-card-component): ProjectCard / ProjectFormCard の専用 CSS.
+ *
+ * 仕様参照:
+ *   docs/developer/features/project-card-component/spec.md REQ-3 / AC-1 〜 AC-5 / AC-18
+ *   docs/developer/features/project-card-component/plan.md §「CSS (project-card.css)」
+ *
+ * 設計方針:
+ *   - 系統間で共有しない (task-card / routine-card は別 BL の別 CSS).
+ *   - shadow / hover / transition / animation は意図的に持たない
+ *     (NFR-NO-SHADOW / NFR-NO-HOVER-TRANSITION).
+ *   - .visually-hidden は task-card.css と同形だが系統独立のため再定義 (D-008).
+ */
+
+.project-card {
+  /* visual 4 宣言. */
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  /* 1 段 flex 横並び layout. */
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.project-card--form {
+  /* 本 BL 時点では .project-card と同じ. 将来差異が出たらここに. */
+}
+
+.project-card--editing {
+  /* 本 BL 時点では .project-card と同じ. 将来差異が出たらここに. */
+}
+
+.project-card__name {
+  /* V-4: 残り幅を占有し, 右の actions を右端へ押し出す. */
+  flex: 1;
+}
+
+.project-card__actions {
+  display: flex;
+  align-items: center;
+  /* V-5: DOM 順「変更 → 削除」がそのまま視覚順「左 → 右」になる. */
+  gap: var(--space-sm);
+}
+
+.project-card__actions__edit {
+  /* 本 BL 時点では空ルール. 将来 specificity 制御や色付け用の足場 (P-004). */
+}
+
+.project-card__actions__delete {
+  /* 本 BL 時点では空ルール. */
+}
+
+.project-card__form-inline {
+  /* 編集モードで <li> 内の form を 1 段 flex 横並びにする. */
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.project-card__input {
+  /* V-2: 残り幅を占有. */
+  flex: 1;
+}
+
+.project-card__input::placeholder {
+  /* V-2: placeholder を --color-fg-subtle (WCAG AA 7:1) で薄く描画. */
+  color: var(--color-fg-subtle);
+}
+
+.project-card__submit {
+  /* 本 BL 時点では空ルール. input と高さは line-height + padding で自然に揃う. */
+}
+
+/*
+ * visually-hidden ユーティリティ (D-008 / 9 宣言の標準パターン).
+ * BL-063 で task-card.css に追加された同名クラスと同形.
+ * 系統独立 (= ペア専用 CSS) のため再定義.
+ */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
