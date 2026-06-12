@@ -11,13 +11,29 @@
     "directory": "domain"
   },
   "type": "module",
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./task": "./src/task/index.ts",
-    "./clock": "./src/clock/index.ts",
-    "./project": "./src/project/index.ts",
-    "./routine": "./src/routine/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./task": {
+      "types": "./dist/task/index.d.ts",
+      "import": "./dist/task/index.js"
+    },
+    "./clock": {
+      "types": "./dist/clock/index.d.ts",
+      "import": "./dist/clock/index.js"
+    },
+    "./project": {
+      "types": "./dist/project/index.d.ts",
+      "import": "./dist/project/index.js"
+    },
+    "./routine": {
+      "types": "./dist/routine/index.d.ts",
+      "import": "./dist/routine/index.js"
+    }
   },
   "scripts": {
     "build": "tsc",
