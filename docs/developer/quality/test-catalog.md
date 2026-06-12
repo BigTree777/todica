@@ -97,3 +97,13 @@
 | `web/__tests__/oss-release-prep.test.ts` | 35 | LICENSE・README・CONTRIBUTING・package.json フィールド・依存ライセンス・秘密情報スキャン | BL-022 |
 | `web/__tests__/play-store-release.test.ts` | 36 | プライバシーポリシー・ストア掲載情報・データセーフティ・ポリシーチェックリスト | BL-023 |
 | `web/__tests__/v1-stabilization.test.ts` | 26 | 要件カバレッジ監査・テスト通過記録・リリースチェックリスト | BL-024 |
+
+---
+
+## 本番ビルド検証
+
+dev mode (`vite-node`) では検出できない, prod build artifact + Node ランタイムでの起動可否を検証する. 既存の `server/__tests__/integration/startup.test.ts` (dev mode の起動疎通) と対になる位置付け. **本セクションは検証の記述場所を確保するもので, テスト本体の実装は別タスクで行う**.
+
+| ファイル | 件数 | 保証内容 | 関連 BL |
+|---|---|---|---|
+| `__tests__/release/prod-startup.test.ts` (未実装) | 1 | domain + server を `tsc` build し, `node server/dist/src/main.js` で起動して `/healthz` が 200 を返す | 未採番 |
