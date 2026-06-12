@@ -20,6 +20,7 @@
     "./routine": "./src/routine/index.ts"
   },
   "scripts": {
+    "build": "tsc",
     "test": "vitest run"
   }
 }
