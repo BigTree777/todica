@@ -107,7 +107,9 @@ export function TaskFormCard(props: TaskFormCardProps): JSX.Element {
         />
       </div>
       <div className="task-card__actions">
-        <button type="submit">追加</button>
+        <button type="submit" className="button button--primary">
+          追加
+        </button>
       </div>
     </form>
   );

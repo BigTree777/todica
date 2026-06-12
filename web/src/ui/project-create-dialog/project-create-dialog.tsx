@@ -172,10 +172,14 @@ export function ProjectCreateDialog(props: ProjectCreateDialogProps): JSX.Elemen
           />
         </div>
         <div className="project-create-dialog__actions">
-          <button type="submit" disabled={createMutation.isPending}>
+          <button
+            type="submit"
+            className="button button--primary"
+            disabled={createMutation.isPending}
+          >
             追加
           </button>
-          <button type="button" onClick={onClose}>
+          <button type="button" className="button button--ghost" onClick={onClose}>
             キャンセル
           </button>
         </div>

@@ -150,7 +150,7 @@ export function TrashView(props: TrashViewProps): JSX.Element {
     <main className="trash-view">
       <header className="trash-view__header">
         <h1>ゴミ箱</h1>
-        <button type="button" onClick={handleEmpty}>
+        <button type="button" className="button button--danger" onClick={handleEmpty}>
           ゴミ箱を空にする
         </button>
       </header>
@@ -162,7 +162,11 @@ export function TrashView(props: TrashViewProps): JSX.Element {
           {tasks.map((task) => (
             <li key={task.id} className="trash-view__item">
               <span>{task.name}</span>
-              <button type="button" onClick={() => handleRestore(task)}>
+              <button
+                type="button"
+                className="button button--ghost"
+                onClick={() => handleRestore(task)}
+              >
                 復元
               </button>
             </li>

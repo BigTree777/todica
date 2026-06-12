@@ -118,20 +118,28 @@ export function TaskCard(props: TaskCardProps): JSX.Element {
         />
       </div>
       <div className="task-card__actions">
-        <button type="button" className="task-card__actions__delete" onClick={onDelete}>
+        <button
+          type="button"
+          className="button button--danger task-card__actions__delete"
+          onClick={onDelete}
+        >
           削除
         </button>
         {showSetFocus && onSetFocus && (
-          <button type="button" onClick={onSetFocus}>
+          <button type="button" className="button button--primary" onClick={onSetFocus}>
             現在のタスクにする
           </button>
         )}
         {showDueDateBtn && onToggleDueDate && (
-          <button type="button" onClick={onToggleDueDate}>
+          <button type="button" className="button button--primary" onClick={onToggleDueDate}>
             {dueDateMode === "today" ? "明日にする" : "今日にする"}
           </button>
         )}
-        <button type="button" className="task-card__actions__complete" onClick={onComplete}>
+        <button
+          type="button"
+          className="button button--primary task-card__actions__complete"
+          onClick={onComplete}
+        >
           完了
         </button>
       </div>

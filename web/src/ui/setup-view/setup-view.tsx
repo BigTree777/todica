@@ -75,12 +75,14 @@ export function SetupView(props: SetupViewProps): JSX.Element {
             onChange={(e) => setAuthToken(e.target.value)}
           />
         </div>
-        <button type="submit">接続する</button>
+        <button type="submit" className="button button--primary">
+          接続する
+        </button>
       </form>
 
       {onSelectLocal !== undefined && (
         <div>
-          <button type="button" onClick={onSelectLocal}>
+          <button type="button" className="button button--ghost" onClick={onSelectLocal}>
             ローカルモードで使う
           </button>
         </div>

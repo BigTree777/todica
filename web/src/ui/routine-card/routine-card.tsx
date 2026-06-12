@@ -116,7 +116,11 @@ export function RoutineCard(props: RoutineCardProps): JSX.Element {
         ))}
       </div>
       <div className="routine-card__actions">
-        <button type="button" className="routine-card__actions__delete" onClick={onDelete}>
+        <button
+          type="button"
+          className="button button--danger routine-card__actions__delete"
+          onClick={onDelete}
+        >
           削除
         </button>
       </div>

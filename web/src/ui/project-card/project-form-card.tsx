@@ -58,7 +58,7 @@ export function ProjectFormCard(props: ProjectFormCardProps): JSX.Element {
         onChange={(e) => onNameChange(e.target.value)}
         required
       />
-      <button type="submit" className="project-card__submit">
+      <button type="submit" className="button button--primary project-card__submit">
         追加
       </button>
     </form>

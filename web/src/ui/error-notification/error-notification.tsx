@@ -17,7 +17,12 @@ export function ErrorNotification(): JSX.Element | null {
   return (
     <div role="alert" aria-live="assertive" aria-label="通信エラー通知">
       <span>{message}</span>
-      <button type="button" onClick={dismissError} aria-label="通知を閉じる">
+      <button
+        type="button"
+        className="button button--ghost"
+        onClick={dismissError}
+        aria-label="通知を閉じる"
+      >
         ×
       </button>
     </div>

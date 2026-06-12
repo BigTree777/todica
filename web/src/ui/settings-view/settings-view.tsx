@@ -150,7 +150,9 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
             onChange={(e) => setInputValue(e.target.value)}
           />
         </div>
-        <button type="submit">保存</button>
+        <button type="submit" className="button button--primary">
+          保存
+        </button>
       </form>
 
       {onSaveServer !== undefined && (
@@ -181,7 +183,9 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
                 onChange={(e) => setAuthTokenValue(e.target.value)}
               />
             </div>
-            <button type="submit">変更を保存</button>
+            <button type="submit" className="button button--primary">
+              変更を保存
+            </button>
           </form>
         </section>
       )}
@@ -193,6 +197,7 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
           {onSwitchMode !== undefined && (
             <button
               type="button"
+              className="button button--ghost"
               onClick={() => {
                 if (window.confirm("現在のモードのデータが初期化されます。よろしいですか？")) {
                   void onSwitchMode();
