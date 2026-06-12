@@ -120,6 +120,7 @@ input + 追加 button 横並びを維持」) のため **2 段構造**
   - 採用根拠は plan D-002 で確定. 第一候補は「共用」(= override しない).
   - 「`.routine-card__header` 内で `space-between` により PriorityStars が右端に固定される」
     という挙動は表示カードと起票カードで同一になる.
+  - **BL-073 (routine-card-align-with-form) で関連変更**: BL-073 で表示カード `<RoutineCard>` も同じ 4 段構造に再編されたことで, 起票カードと表示カードの DOM 階層 (header / title / day-checkboxes / actions) と name input の段位置が完全対称になった (= 本 BL のゴール「表示と起票でレイアウト言語を揃える」が表示カード側からも達成された). 同時に `.routine-card__header { justify-content }` は基底で `flex-end` に変更され, 本 BL D-006 で導入した `.routine-card--form .routine-card__header { justify-content: flex-end }` の起票側 override は撤去される. 起票カードへの副作用は無い (= 視覚配置は変わらない / AC-7 / AC-23 維持). 詳細は [`../routine-card-align-with-form/spec.md`](../routine-card-align-with-form/spec.md).
 
 - **REQ-3**: name input が配置される `.routine-card__title` 段の computed font-size は
   `--font-size-h2` (= 20px) と一致する.

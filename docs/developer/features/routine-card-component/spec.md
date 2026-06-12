@@ -262,6 +262,7 @@ shadow / hover / transition / animation は **一切追加しない** (BL-059 / 
   - 優先度 select id default は `"routine-priority"` (既存 routines-view.tsx L294 互換 / D-004).
   - 優先度 label「優先度」は visually-hidden にせず, ユーザに見える形で残す (D-008-2). 曜日チェックボックス群と優先度 select の文脈区別を維持するため. **BL-068 (routine-card-edit-fields) で逆転**: 本決定は BL-068 で `<select>` から `<PriorityStars />` への置換と同時に「優先度」label 自体を撤去する形で逆転した. 詳細は `../routine-card-edit-fields/spec.md` (BL-068) REQ-6 / D-003 を参照.
   - **BL-072 (routine-form-card-header-layout) で関連変更**: `<RoutineFormCard>` の DOM が `.routine-card__form-row` / `--name` / `--options` の 2 段構造から, `.routine-card__header` (PriorityStars 単独) / `.routine-card__title` (name input) / `.routine-card__day-checkboxes` / `.routine-card__actions` (「追加」 button) の 4 段構造に再編される. `RoutineFormCardProps` の public API は無改修で, 親 view (`routines-view.tsx`) の呼び出しも変更されない. 詳細は [`../routine-form-card-header-layout/spec.md`](../routine-form-card-header-layout/spec.md).
+  - **BL-073 (routine-card-align-with-form) で関連変更**: 表示カード `<RoutineCard>` も BL-072 と同じ 4 段構造 (`.routine-card__header` / `.routine-card__title` / `.routine-card__day-checkboxes` / `.routine-card__actions`) に再編される. `RoutineCardProps` の public API は無改修で, 親 view (`routines-view.tsx`) の呼び出しも変更されない. 詳細は [`../routine-card-align-with-form/spec.md`](../routine-card-align-with-form/spec.md).
 
 - **REQ-3 (専用 CSS `routine-card.css` の新設)**
 

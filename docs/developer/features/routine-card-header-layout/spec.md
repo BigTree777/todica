@@ -41,6 +41,8 @@ user 評価により以下 2 点が指摘されている.
 
 ### 機能要件
 
+> **BL-073 (routine-card-align-with-form) で逆転**: REQ-1 〜 REQ-6 / AC-1 〜 AC-9 で確定した「表示カードは 3 段構造 / header 段に name input + PriorityStars 左右配置」の不変要求は BL-073 で逆転する. BL-073 では表示カード `<RoutineCard>` も 4 段構造 (`.routine-card__header` に PriorityStars 単独 / 新設 `.routine-card__title` 段に name input + visually-hidden label / `.routine-card__day-checkboxes` / `.routine-card__actions`) に再編し, BL-072 で起票カードに導入した 4 段構造と視覚言語を揃える (= name input の段位置一致). `.routine-card__header { justify-content }` は `space-between` から `flex-end` に基底化し, BL-072 で導入した起票側 override は撤去される. 詳細は [`../routine-card-align-with-form/spec.md`](../routine-card-align-with-form/spec.md).
+>
 - **REQ-1**: `<RoutineCard>` (表示時 / 非 `routine-card--form`) の DOM 階層は以下とする.
   ```
   <Tag className="routine-card">
