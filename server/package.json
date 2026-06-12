@@ -15,7 +15,7 @@
   "scripts": {
     "test": "vitest run",
     "build": "tsc",
-    "start": "node dist/src/main.js",
+    "start": "cd .. && node --env-file-if-exists=.env server/dist/src/main.js",
     "dev": "cd .. && node --env-file-if-exists=.env node_modules/vite-node/vite-node.mjs --watch server/src/main.ts"
   },
   "dependencies": {
