@@ -297,8 +297,8 @@ describe("FocusView (BL-037 REQ-1 表示: フォーカス対象あり)", () => {
       await screen.findByRole("heading", { name: "現在のタスク", level: 1 }),
     ).toBeInTheDocument();
 
-    // タスク名 "牛乳" が表示される.
-    expect(await screen.findByText("牛乳")).toBeInTheDocument();
+    // BL-070 追従: タスク名 "牛乳" は input value に表示される.
+    expect(await screen.findByDisplayValue("牛乳")).toBeInTheDocument();
 
     // プロジェクト名 "買い物" が副情報として表示される.
     expect(await screen.findByText("買い物")).toBeInTheDocument();
@@ -342,10 +342,11 @@ describe("FocusView (BL-037 REQ-1 表示: フォーカス対象あり)", () => {
       <FocusView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
 
+    // BL-070 追従: タスク名は input value に入る.
     // currentTaskId = B が優先されるため B (BBB) が表示される.
-    expect(await screen.findByText("BBB")).toBeInTheDocument();
+    expect(await screen.findByDisplayValue("BBB")).toBeInTheDocument();
     // A (AAA) は表示されない (focus-view は単独大表示).
-    expect(screen.queryByText("AAA")).toBeNull();
+    expect(screen.queryByDisplayValue("AAA")).toBeNull();
   });
 });
 
@@ -389,7 +390,7 @@ describe("FocusView (BL-037 REQ-4 アクション数の規約)", () => {
     );
 
     // タスク名が表示されるまで待つ.
-    await screen.findByText("牛乳");
+    await screen.findByDisplayValue("牛乳");
 
     // 「削除」「完了」が存在する.
     expect(screen.getByRole("button", { name: "削除" })).toBeInTheDocument();
@@ -425,7 +426,7 @@ describe("FocusView (BL-037 REQ-7 起票フォーム無し)", () => {
     renderWithQueryClient(
       <FocusView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
-    await screen.findByText("牛乳");
+    await screen.findByDisplayValue("牛乳");
 
     // 起票関連の入力要素 / ボタンが存在しないこと.
     expect(screen.queryByLabelText(/タスク名/)).toBeNull();
@@ -469,7 +470,7 @@ describe("FocusView (BL-037 REQ-5 完了操作)", () => {
     renderWithQueryClient(
       <FocusView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
-    await screen.findByText("牛乳");
+    await screen.findByDisplayValue("牛乳");
 
     const completeButton = screen.getByRole("button", { name: "完了" });
     await user.click(completeButton);
@@ -512,7 +513,7 @@ describe("FocusView (BL-037 REQ-5 完了操作)", () => {
     renderWithQueryClient(
       <FocusView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
-    await screen.findByText("AAA");
+    await screen.findByDisplayValue("AAA");
 
     const todayCallsBefore = repo.todayMock.mock.calls.length;
     const focusCallsBefore = repo.getFocusMock.mock.calls.length;
@@ -528,7 +529,7 @@ describe("FocusView (BL-037 REQ-5 完了操作)", () => {
     });
 
     // 次のタスク B (BBB) が表示される (自動解除 + 暗黙フォールバック).
-    expect(await screen.findByText("BBB")).toBeInTheDocument();
+    expect(await screen.findByDisplayValue("BBB")).toBeInTheDocument();
     expect(screen.queryByText("AAA")).toBeNull();
   });
 });
@@ -552,7 +553,7 @@ describe("FocusView (BL-037 REQ-6 削除操作)", () => {
     renderWithQueryClient(
       <FocusView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
-    await screen.findByText("牛乳");
+    await screen.findByDisplayValue("牛乳");
 
     await user.click(screen.getByRole("button", { name: "削除" }));
 
@@ -596,7 +597,7 @@ describe("FocusView (BL-037 REQ-6 削除操作)", () => {
     renderWithQueryClient(
       <FocusView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
-    await screen.findByText("AAA");
+    await screen.findByDisplayValue("AAA");
 
     const todayCallsBefore = repo.todayMock.mock.calls.length;
 
@@ -606,7 +607,7 @@ describe("FocusView (BL-037 REQ-6 削除操作)", () => {
       expect(repo.todayMock.mock.calls.length).toBeGreaterThan(todayCallsBefore);
     });
 
-    expect(await screen.findByText("BBB")).toBeInTheDocument();
+    expect(await screen.findByDisplayValue("BBB")).toBeInTheDocument();
     expect(screen.queryByText("AAA")).toBeNull();
   });
 });
@@ -641,7 +642,7 @@ describe("FocusView (BL-037 D-001 setFocus を呼ばない)", () => {
     renderWithQueryClient(
       <FocusView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
-    await screen.findByText("AAA");
+    await screen.findByDisplayValue("AAA");
 
     // 完了 → setFocus が呼ばれていない.
     await user.click(screen.getByRole("button", { name: "完了" }));
@@ -651,7 +652,7 @@ describe("FocusView (BL-037 D-001 setFocus を呼ばない)", () => {
     expect(repo.setFocusMock).not.toHaveBeenCalled();
 
     // 次のタスク (B) に切り替わってから削除 → setFocus は依然 0 回.
-    await screen.findByText("BBB");
+    await screen.findByDisplayValue("BBB");
     await user.click(screen.getByRole("button", { name: "削除" }));
     await waitFor(() => {
       expect(repo.deleteMock).toHaveBeenCalled();
@@ -683,7 +684,7 @@ describe("FocusView (BL-037 REQ-8 ConflictDialog)", () => {
     renderWithQueryClient(
       <FocusView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
-    await screen.findByText("牛乳");
+    await screen.findByDisplayValue("牛乳");
 
     await user.click(screen.getByRole("button", { name: "完了" }));
 
@@ -717,7 +718,7 @@ describe("FocusView (BL-037 REQ-8 ConflictDialog)", () => {
     renderWithQueryClient(
       <FocusView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
-    await screen.findByText("牛乳");
+    await screen.findByDisplayValue("牛乳");
 
     await user.click(screen.getByRole("button", { name: "削除" }));
 
@@ -747,7 +748,7 @@ describe("FocusView (BL-037 BL-034 通信エラー時の notifyError)", () => {
     renderWithQueryClient(
       <FocusView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
-    await screen.findByText("牛乳");
+    await screen.findByDisplayValue("牛乳");
 
     await user.click(screen.getByRole("button", { name: "完了" }));
 

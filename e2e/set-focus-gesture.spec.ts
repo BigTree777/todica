@@ -138,7 +138,11 @@ function taskList(page: Page) {
 
 /** タスク一覧内の, 指定タスク名を含むカード (listitem). */
 function listRow(page: Page, taskName: string) {
-  return taskList(page).getByRole("listitem").filter({ hasText: taskName });
+  // BL-070 追従: name は <input aria-label="{name} の名前"> の value に入る.
+  // hasText では matches しないため, 該当 aria-label の input を持つ listitem でフィルタする.
+  return taskList(page)
+    .getByRole("listitem")
+    .filter({ has: page.getByLabel(`${taskName} の名前`) });
 }
 
 /** 強調セクション (<section aria-label="現在のタスク">). /focus でも同名 region. */
@@ -220,7 +224,7 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
     expect(putRequest.headers()["if-match"]).toBe(String(focusBefore.version));
 
     // 再フェッチ後, 強調セクションに B が表示される.
-    await expect(focusedRegion(page).getByText(nameB, { exact: true })).toBeVisible();
+    await expect(focusedRegion(page).getByLabel(`${nameB} の名前`)).toBeVisible();
     // B は一覧から消える (D-008 重複表示禁止).
     await expect(listRow(page, nameB)).toHaveCount(0);
     // A は一覧側に表示される (元の強調対象は一覧に戻る).
@@ -244,7 +248,7 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
     await gotoToday(page);
     await expect(listRow(page, nameB)).toBeVisible();
     await listRow(page, nameB).getByRole("button", { name: "現在のタスクにする" }).click();
-    await expect(focusedRegion(page).getByText(nameB, { exact: true })).toBeVisible();
+    await expect(focusedRegion(page).getByLabel(`${nameB} の名前`)).toBeVisible();
 
     // BL-049 でサイドバーはハンバーガー開閉式のオーバーレイメニューに変わったため,
     // メニューを開いてから「現在のタスク」リンクを click する.
@@ -255,7 +259,7 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
     await expect(page).toHaveURL(/\/focus$/);
 
     // focus-view に B が大表示される.
-    await expect(focusedRegion(page).getByText(nameB, { exact: true })).toBeVisible();
+    await expect(focusedRegion(page).getByLabel(`${nameB} の名前`)).toBeVisible();
 
     // focus-view のアクションは「削除」「完了」の 2 ボタンのまま (BL-037 無改修 / spec REQ-6).
     await expect(focusedRegion(page).getByRole("button", { name: "削除" })).toBeVisible();
@@ -295,7 +299,12 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
         if (!el || el.tagName !== "BUTTON") return false;
         if ((el.textContent ?? "").trim() !== "現在のタスクにする") return false;
         // B のカード (listitem) 内の button であること.
-        return el.closest("li")?.textContent?.includes(targetName) ?? false;
+        // BL-070 追従: name は input value に入るため textContent で判定できない.
+        // closest li 内の input.value を観察する.
+        const li = el.closest("li");
+        if (!li) return false;
+        const nameInput = li.querySelector('input[type="text"]') as HTMLInputElement | null;
+        return nameInput?.value.includes(targetName) ?? false;
       }, nameB);
       if (reached) break;
     }
@@ -313,7 +322,7 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
     expect(putRequest.postDataJSON()).toEqual({ taskId: idB });
 
     // 強調セクションに B が表示される.
-    await expect(focusedRegion(page).getByText(nameB, { exact: true })).toBeVisible();
+    await expect(focusedRegion(page).getByLabel(`${nameB} の名前`)).toBeVisible();
   });
 
   test("AC-6: routine 由来タスクも focus に昇格できる", async ({ page, request }) => {
@@ -373,7 +382,7 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
 
     // R のカードの「現在のタスクにする」をクリック → 強調セクションに R が表示される.
     await listRow(page, routineName).getByRole("button", { name: "現在のタスクにする" }).click();
-    await expect(focusedRegion(page).getByText(routineName, { exact: true })).toBeVisible();
+    await expect(focusedRegion(page).getByLabel(`${routineName} の名前`)).toBeVisible();
 
     // サーバ正本でも R が currentTaskId になっている.
     await expect.poll(async () => (await getFocus(request)).currentTaskId).toBe(routineTask?.id);
@@ -389,7 +398,13 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
     await page.goto("/tomorrow");
     // BL-051 で旧 <section aria-label="明日のタスク"> ランドマークは <main> に統合された.
     // tomorrow-view の listitem を取るには role=main にスコープすればよい.
-    const row = page.getByRole("main").getByRole("listitem").filter({ hasText: taskName });
+    // BL-070 追従: name は input value のため hasText では matches しない. aria-label 一致で filter.
+    const row = page
+      .getByRole("main")
+      .getByRole("listitem")
+      .filter({
+        has: page.getByLabel(`${taskName} の名前`),
+      });
     await expect(row).toBeVisible();
 
     // 画面全体に「現在のタスクにする」button が存在しない (spec REQ-5).
@@ -416,7 +431,7 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
     await gotoToday(page);
     await expect(listRow(page, nameB)).toBeVisible();
     await listRow(page, nameB).getByRole("button", { name: "現在のタスクにする" }).click();
-    await expect(focusedRegion(page).getByText(nameB, { exact: true })).toBeVisible();
+    await expect(focusedRegion(page).getByLabel(`${nameB} の名前`)).toBeVisible();
 
     // /today に「現在解除」「現在に設定」(旧ラベル) の button は存在しない (spec REQ-4).
     await expect(page.getByRole("button", { name: "現在解除" })).toHaveCount(0);
@@ -424,13 +439,13 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
 
     // /focus にも存在しない.
     await page.goto("/focus");
-    await expect(focusedRegion(page).getByText(nameB, { exact: true })).toBeVisible();
+    await expect(focusedRegion(page).getByLabel(`${nameB} の名前`)).toBeVisible();
     await expect(page.getByRole("button", { name: "現在解除" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "現在に設定" })).toHaveCount(0);
 
     // /today に戻り, 強調セクションの B を「完了」する.
     await gotoToday(page);
-    await expect(focusedRegion(page).getByText(nameB, { exact: true })).toBeVisible();
+    await expect(focusedRegion(page).getByLabel(`${nameB} の名前`)).toBeVisible();
     await focusedRegion(page).getByRole("button", { name: "完了" }).click();
 
     // サーバ側で FocusSelection.currentTaskId が null に自動解除される (FR-013).
@@ -439,7 +454,7 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
     // 再フェッチ後, B は強調セクションから消え, 暗黙フォールバックにより
     // 並び先頭のタスクが強調セクションに表示される (他テストの残骸タスクが
     // 先頭になりうるため, 特定タスク名までは assert しない. focus-view.spec.ts の方針).
-    await expect(focusedRegion(page).getByText(nameB, { exact: true })).toHaveCount(0);
+    await expect(focusedRegion(page).getByLabel(`${nameB} の名前`)).toHaveCount(0);
     await expect(focusedRegion(page)).toBeVisible();
     void idB;
   });
@@ -489,7 +504,7 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
 
     // 最新 version で再度「現在のタスクにする」を実行すると成功する.
     await listRow(page, nameB).getByRole("button", { name: "現在のタスクにする" }).click();
-    await expect(focusedRegion(page).getByText(nameB, { exact: true })).toBeVisible();
+    await expect(focusedRegion(page).getByLabel(`${nameB} の名前`)).toBeVisible();
     await expect.poll(async () => (await getFocus(request)).currentTaskId).toBe(idB);
   });
 });

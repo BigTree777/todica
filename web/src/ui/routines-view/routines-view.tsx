@@ -64,10 +64,6 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
   const [newName, setNewName] = useState("");
   const [newDaysOfWeek, setNewDaysOfWeek] = useState<number[]>([1]); // デフォルト: 月曜
   const [newDefaultPriority, setNewDefaultPriority] = useState<Priority>("normal");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState("");
-  const [editingDaysOfWeek, setEditingDaysOfWeek] = useState<number[]>([]);
-  const [editingDefaultPriority, setEditingDefaultPriority] = useState<Priority>("normal");
 
   const invalidateRoutines = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ["routines"] });
@@ -236,45 +232,65 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
     });
   }, []);
 
-  const openEdit = useCallback((routine: WebRoutine) => {
-    setEditingId(routine.id);
-    setEditingName(routine.name);
-    setEditingDaysOfWeek(routine.daysOfWeek);
-    setEditingDefaultPriority(routine.defaultPriority);
-  }, []);
-
-  const cancelEdit = useCallback(() => {
-    setEditingId(null);
-    setEditingName("");
-    setEditingDaysOfWeek([]);
-    setEditingDefaultPriority("normal");
-  }, []);
-
-  const handleSaveEdit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!editingId) return;
-      const routine = routines.find((r) => r.id === editingId);
-      if (!routine) return;
-      if (editingDaysOfWeek.length === 0) return;
-      await updateMutation.mutateAsync({
-        id: editingId,
-        ifMatch: routine.version,
-        name: editingName,
-        daysOfWeek: editingDaysOfWeek,
-        defaultPriority: editingDefaultPriority,
-      });
-      cancelEdit();
+  // BL-070 REQ-9 / D-001 / D-002: name 編集は input blur 経由.
+  //   - 空文字 / 同値で短絡, それ以外で updateMutation.
+  // 失敗時の通知は onError で処理済み. mutateAsync の reject を try/catch で吸収して
+  // unhandled rejection を防ぐ.
+  const handleNameBlur = useCallback(
+    async (routine: WebRoutine, next: string) => {
+      if (next === "" || next === routine.name) return;
+      try {
+        await updateMutation.mutateAsync({
+          id: routine.id,
+          ifMatch: routine.version,
+          name: next,
+          daysOfWeek: routine.daysOfWeek,
+          defaultPriority: routine.defaultPriority,
+        });
+      } catch {
+        // onError で処理済み.
+      }
     },
-    [
-      editingId,
-      editingName,
-      editingDaysOfWeek,
-      editingDefaultPriority,
-      routines,
-      updateMutation,
-      cancelEdit,
-    ],
+    [updateMutation],
+  );
+
+  // BL-070 REQ-4: 曜日 click で即時 PATCH. daysOfWeek が 0 件になる場合は silent return
+  //   (BL-068 D-016 / spec の「曜日 0 件運用は維持」).
+  const handleDaysOfWeekChange = useCallback(
+    async (routine: WebRoutine, next: number[]) => {
+      if (next.length === 0) return;
+      try {
+        await updateMutation.mutateAsync({
+          id: routine.id,
+          ifMatch: routine.version,
+          name: routine.name,
+          daysOfWeek: next,
+          defaultPriority: routine.defaultPriority,
+        });
+      } catch {
+        // onError で処理済み.
+      }
+    },
+    [updateMutation],
+  );
+
+  // BL-070 REQ-4: PriorityStars click で即時 PATCH.
+  const handleDefaultPriorityChange = useCallback(
+    async (routine: WebRoutine, next: Priority) => {
+      if (next === routine.defaultPriority) return;
+      try {
+        await updateMutation.mutateAsync({
+          id: routine.id,
+          ifMatch: routine.version,
+          name: routine.name,
+          daysOfWeek: routine.daysOfWeek,
+          defaultPriority: next,
+        });
+      } catch {
+        // onError で処理済み.
+      }
+    },
+    [updateMutation],
   );
 
   const handleDelete = useCallback(
@@ -303,16 +319,9 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
           <RoutineCard
             key={routine.id}
             routine={routine}
-            isEditing={editingId === routine.id}
-            editingName={editingName}
-            onEditingNameChange={setEditingName}
-            editingDaysOfWeek={editingDaysOfWeek}
-            onEditingDaysOfWeekChange={setEditingDaysOfWeek}
-            editingDefaultPriority={editingDefaultPriority}
-            onEditingDefaultPriorityChange={setEditingDefaultPriority}
-            onStartEdit={() => openEdit(routine)}
-            onCancelEdit={cancelEdit}
-            onSaveEdit={handleSaveEdit}
+            onNameBlur={(next) => handleNameBlur(routine, next)}
+            onDaysOfWeekChange={(next) => handleDaysOfWeekChange(routine, next)}
+            onDefaultPriorityChange={(next) => handleDefaultPriorityChange(routine, next)}
             onDelete={() => handleDelete(routine)}
           />
         ))}

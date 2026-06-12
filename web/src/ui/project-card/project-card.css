@@ -29,36 +29,18 @@
   /* 本 BL 時点では .project-card と同じ. 将来差異が出たらここに. */
 }
 
-.project-card--editing {
-  /* 本 BL 時点では .project-card と同じ. 将来差異が出たらここに. */
-}
-
-.project-card__name {
-  /* V-4: 残り幅を占有し, 右の actions を右端へ押し出す. */
-  flex: 1;
-}
+/* BL-070 (inline-edit-all-cards): .project-card--editing modifier / .project-card__name span /
+   .project-card__actions__edit button / .project-card__form-inline form を撤去. */
 
 .project-card__actions {
   display: flex;
   align-items: center;
-  /* V-5: DOM 順「変更 → 削除」がそのまま視覚順「左 → 右」になる. */
+  /* BL-070: DOM 順「削除」のみがそのまま視覚順「右」になる. */
   gap: var(--space-sm);
-}
-
-.project-card__actions__edit {
-  /* 本 BL 時点では空ルール. 将来 specificity 制御や色付け用の足場 (P-004). */
 }
 
 .project-card__actions__delete {
   /* 本 BL 時点では空ルール. */
-}
-
-.project-card__form-inline {
-  /* 編集モードで <li> 内の form を 1 段 flex 横並びにする. */
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: var(--space-sm);
 }
 
 .project-card__input {

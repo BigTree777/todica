@@ -392,6 +392,29 @@ export function TodayView(props: TodayViewProps): JSX.Element {
     [updateMutation],
   );
 
+  // BL-070 REQ-9 / D-001 / D-002: name 編集は input blur 経由.
+  //   - 空文字 → 短絡 (元値復元 / D-002).
+  //   - 同値 → 短絡 (PATCH 抑制 / D-001).
+  //   - 実値変更時のみ updateMutation を呼ぶ.
+  // 失敗時の通知は onError で処理済み. mutateAsync の reject を try/catch で吸収して
+  // unhandled rejection を防ぐ.
+  const handleNameBlur = useCallback(
+    async (task: Task, next: string) => {
+      if (next === "" || next === task.name) return;
+      const cmd: UpdateTaskCommand = {
+        id: task.id,
+        ifMatch: task.version,
+        patch: { name: next },
+      };
+      try {
+        await updateMutation.mutateAsync(cmd);
+      } catch {
+        // onError で処理済み.
+      }
+    },
+    [updateMutation],
+  );
+
   // BL-043 / FR-012: 一覧カードの「現在のタスクにする」.
   //   - FocusSelection 未ロード中は no-op (spec REQ-2. 旧 BL-006 実装の踏襲).
   //   - 解除用の null 引数経路は実装しない (spec REQ-4 / plan D-003).
@@ -450,6 +473,7 @@ export function TodayView(props: TodayViewProps): JSX.Element {
               showSetFocus={false}
               actionSet="full"
               dueDateMode="today"
+              onNameBlur={(next) => handleNameBlur(focusedTask, next)}
               onSetPriority={(next) => handleSetPriority(focusedTask, next)}
               onDelete={() => handleDelete(focusedTask)}
               onToggleDueDate={() => handleToggleDueDate(focusedTask)}
@@ -489,6 +513,7 @@ export function TodayView(props: TodayViewProps): JSX.Element {
               showSetFocus
               actionSet="full"
               dueDateMode="today"
+              onNameBlur={(next) => handleNameBlur(task, next)}
               onSetPriority={(next) => handleSetPriority(task, next)}
               onSetFocus={() => handleSetFocus(task.id)}
               onDelete={() => handleDelete(task)}

@@ -141,9 +141,9 @@ describe("ProjectsView (BL-016 プロジェクト管理 UI)", () => {
     // list() が 1 回呼ばれる
     expect(repo.listMock).toHaveBeenCalledTimes(1);
 
-    // プロジェクト名が表示される
-    expect(await screen.findByText("仕事")).toBeInTheDocument();
-    expect(await screen.findByText("個人")).toBeInTheDocument();
+    // BL-070: プロジェクト名は input value に入る. findByDisplayValue で取得.
+    expect(await screen.findByDisplayValue("仕事")).toBeInTheDocument();
+    expect(await screen.findByDisplayValue("個人")).toBeInTheDocument();
   });
 
   /**
@@ -198,8 +198,8 @@ describe("ProjectsView (BL-016 プロジェクト管理 UI)", () => {
     expect(arg.name).toBe("趣味");
     expect(typeof arg.id).toBe("string");
 
-    // 一覧が再取得され「趣味」が表示される
-    expect(await screen.findByText("趣味")).toBeInTheDocument();
+    // BL-070: 一覧が再取得され「趣味」が input value に表示される.
+    expect(await screen.findByDisplayValue("趣味")).toBeInTheDocument();
   });
 
   // ----------------------------------------------------------
@@ -207,44 +207,41 @@ describe("ProjectsView (BL-016 プロジェクト管理 UI)", () => {
   // ----------------------------------------------------------
 
   /**
-   * シナリオ: プロジェクトの名称を変更できる
+   * シナリオ: プロジェクトの名称を変更できる (BL-070 追従後 = input blur 経路)
    *   Given プロジェクト「仕事」が一覧に表示されている
-   *   When  「仕事」の名称変更ボタンを押し、「仕事2」と入力して保存する
+   *   When  「仕事」の入力欄を「仕事2」に書き換えて blur する
    *   Then  repository.update() が { id, ifMatch: version, name: "仕事2" } で呼ばれる
    *   And   一覧の表示が「仕事2」に更新される
+   *
+   * BL-070 (inline-edit-all-cards) 追従:
+   *   旧 BL-060 は「『変更』 button click → 編集モード → 保存 button click」フロー.
+   *   BL-070 で「編集モード」概念ごと撤去 (REQ-2 / G-2). 「変更」「保存」 button は撤去.
+   *   代わりに「name input の blur で onNameBlur → updateMutation」フローへ逆転 (G-4 / REQ-5).
    */
-  it("シナリオ: 名称変更ボタンを押して名前を変更して保存すると repository.update() が呼ばれ一覧が更新される", async () => {
+  it("シナリオ: input の値を変更し blur すると repository.update() が呼ばれ一覧が更新される (BL-070)", async () => {
     const P1 = makeProject({ id: PROJECT_ID_1, name: "仕事", version: 1 });
     const repo = makeMockRepository([P1]);
     const user = userEvent.setup();
 
     renderWithQueryClient(<ProjectsView repository={repo} />);
 
-    // プロジェクト名が表示されるまで待つ
-    await screen.findByText("仕事");
-
-    // 名称変更ボタンをクリック (BL-060 で「名称変更」ラベルを「変更」に短縮 / D-005 / REQ-6).
-    const editButton = await screen.findByRole("button", { name: /^変更$|^名称変更$|^編集$/ });
-    await user.click(editButton);
-
-    // 名称入力欄に新しい名前を入力
-    const editInput = await screen.findByDisplayValue("仕事");
+    // BL-070: 表示モードに常時 input が表示される.
+    const editInput = (await screen.findByDisplayValue("仕事")) as HTMLInputElement;
     await user.clear(editInput);
     await user.type(editInput, "仕事2");
+    // blur で onNameBlur が発火 → updateMutation.
+    editInput.blur();
 
-    // 保存ボタンをクリック
-    const saveButton = screen.getByRole("button", { name: /保存|更新/ });
-    await user.click(saveButton);
-
-    // update() が正しい引数で呼ばれる
+    // update() が正しい引数で呼ばれる.
+    await screen.findByDisplayValue("仕事2");
     expect(repo.updateMock).toHaveBeenCalledTimes(1);
     const arg = repo.updateMock.mock.calls[0]?.[0] as { id: string; ifMatch: number; name: string };
     expect(arg.id).toBe(PROJECT_ID_1);
     expect(arg.ifMatch).toBe(1); // P1.version
     expect(arg.name).toBe("仕事2");
 
-    // 一覧が更新されて「仕事2」が表示される
-    expect(await screen.findByText("仕事2")).toBeInTheDocument();
+    // 一覧が更新されて「仕事2」が input value に表示される.
+    expect(await screen.findByDisplayValue("仕事2")).toBeInTheDocument();
   });
 
   // ----------------------------------------------------------
@@ -265,8 +262,8 @@ describe("ProjectsView (BL-016 プロジェクト管理 UI)", () => {
 
     renderWithQueryClient(<ProjectsView repository={repo} />);
 
-    // プロジェクト名が表示されるまで待つ
-    await screen.findByText("仕事");
+    // BL-070: プロジェクト名は input value に入る. findByDisplayValue で待つ.
+    await screen.findByDisplayValue("仕事");
 
     // 削除ボタンをクリック
     const deleteButton = await screen.findByRole("button", { name: /削除/ });
@@ -278,7 +275,7 @@ describe("ProjectsView (BL-016 プロジェクト管理 UI)", () => {
     expect(arg.id).toBe(PROJECT_ID_1);
     expect(arg.ifMatch).toBe(3); // P1.version
 
-    // 一覧から「仕事」が消える
-    expect(screen.queryByText("仕事")).toBeNull();
+    // BL-070: 一覧から「仕事」が消える (input value としても無くなる).
+    expect(screen.queryByDisplayValue("仕事")).toBeNull();
   });
 });

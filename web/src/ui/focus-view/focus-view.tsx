@@ -34,6 +34,7 @@ import type {
   DeleteTaskCommand,
   FocusSelection,
   TaskRepository,
+  UpdateTaskCommand,
 } from "../../repositories/task-repository.js";
 import { OptimisticLockError } from "../../repositories/task-repository.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
@@ -165,6 +166,48 @@ export function FocusView(props: FocusViewProps): JSX.Element {
     networkMode: "offlineFirst",
   });
 
+  // BL-070 REQ-9: focus-view でも name 編集経路を提供. 既存 complete/delete と同形.
+  const updateMutation = useMutation({
+    mutationFn: async (cmd: UpdateTaskCommand) => {
+      const idempotencyKey = generateId();
+      void safeEnqueue({
+        url: `${baseUrl}/api/v1/tasks/${cmd.id}`,
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+          "Idempotency-Key": idempotencyKey,
+          "If-Match": String(cmd.ifMatch),
+        },
+        body: JSON.stringify(cmd.patch),
+        idempotencyKey,
+      });
+      if (!navigator.onLine) {
+        return undefined;
+      }
+      try {
+        const result = await repository.update(cmd);
+        void safeDequeueByKey(idempotencyKey);
+        return result;
+      } catch (error) {
+        if (error instanceof OptimisticLockError) {
+          const entry = await findEntryByKey(idempotencyKey);
+          if (entry) throw new ConflictError(entry, error.currentTask ?? {});
+        }
+        throw error;
+      }
+    },
+    onSuccess: invalidateAll,
+    onError: (error) => {
+      if (error instanceof ConflictError) {
+        conflictDialog.openDialog(error.entry, error.serverValue);
+        return;
+      }
+      notifyError("通信に失敗しました");
+    },
+    networkMode: "offlineFirst",
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (cmd: DeleteTaskCommand) => {
       const idempotencyKey = generateId();
@@ -216,6 +259,27 @@ export function FocusView(props: FocusViewProps): JSX.Element {
     completeMutation.mutate(cmd);
   }, [focusedTask, completeMutation]);
 
+  // BL-070 REQ-9 / D-001 / D-002: name 編集は input blur 経由.
+  // 失敗時の通知は onError で処理済み. mutateAsync の reject を try/catch で吸収して
+  // unhandled rejection を防ぐ.
+  const handleNameBlur = useCallback(
+    async (next: string) => {
+      if (!focusedTask) return;
+      if (next === "" || next === focusedTask.name) return;
+      const cmd: UpdateTaskCommand = {
+        id: focusedTask.id,
+        ifMatch: focusedTask.version,
+        patch: { name: next },
+      };
+      try {
+        await updateMutation.mutateAsync(cmd);
+      } catch {
+        // onError で処理済み.
+      }
+    },
+    [focusedTask, updateMutation],
+  );
+
   const handleDelete = useCallback(() => {
     if (!focusedTask) return;
     const cmd: DeleteTaskCommand = {
@@ -239,6 +303,7 @@ export function FocusView(props: FocusViewProps): JSX.Element {
           showPriority={false}
           showSetFocus={false}
           actionSet="minimal"
+          onNameBlur={handleNameBlur}
           onDelete={handleDelete}
           onComplete={handleComplete}
         />

@@ -10,21 +10,17 @@
  * (c) 401 / ネットワークエラー時の UI 反応は UI 設計判断 (toast / banner / 静かな refetch)
  *     を要するため別 BL に切り出し済み.
  */
-import { type Page, expect, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 const API_BASE = "http://localhost:3000";
 const AUTH_HEADER = { Authorization: "Bearer dev-token" };
 
-function taskRow(page: Page, taskName: string) {
-  return page.getByText(taskName, { exact: true }).first().locator("..");
-}
-
-// BL-042 (task-card-actions) でカード上の「編集」 button と編集フォームを撤去したため,
-// task の名称編集に依存する本 E2E は実行不能になる. ConflictDialog 経路自体は単体テスト
-// (today-view.test.tsx / tomorrow-view.test.tsx) で BL-042 後も green を保っており,
-// project / 完了 操作経由の ConflictDialog テストは引き続き green.
-// 編集 UI の代替経路 (タスク編集ダイアログの再導入 / 仮称 BL-048) で skip 解除し新 UI に追随予定.
-test.skip("2 タブ同時編集で後勝ち側に ConflictDialog が表示される (BL-031 a) (BL-042 で UI 撤去 / 後続 BL で復活予定)", async ({
+// BL-070 (inline-edit-all-cards) 追従 (spec AC-25):
+//   BL-042 で撤去された task の「編集」 button → 編集フォーム経路は, BL-070 のインライン
+//   input (fill → blur で PATCH /api/v1/tasks/:id { name }) で復活した.
+//   タスク名は <input aria-label="{name} の名前"> に表示されるため getByLabel で取得し,
+//   blur 経路に書き換えて skip を解除する.
+test("2 タブ同時編集で後勝ち側に ConflictDialog が表示される (BL-031 a / BL-070 blur 経路)", async ({
   browser,
   request,
 }) => {
@@ -44,33 +40,29 @@ test.skip("2 タブ同時編集で後勝ち側に ConflictDialog が表示され
 
   await Promise.all([pageA.goto("/"), pageB.goto("/")]);
   await Promise.all([
-    expect(pageA.getByText(taskName, { exact: true })).toBeVisible(),
-    expect(pageB.getByText(taskName, { exact: true })).toBeVisible(),
+    expect(pageA.getByLabel(`${taskName} の名前`).first()).toBeVisible(),
+    expect(pageB.getByLabel(`${taskName} の名前`).first()).toBeVisible(),
   ]);
 
-  // タブ A: 編集して保存 → server 側 version が 1 → 2 に上がる.
-  await taskRow(pageA, taskName).getByRole("button", { name: "編集" }).click();
-  await pageA
-    .getByRole("form", { name: "タスク編集フォーム" })
-    .getByLabel("名称")
-    .fill(`${taskName} (A 編集)`);
-  await pageA
-    .getByRole("form", { name: "タスク編集フォーム" })
-    .getByRole("button", { name: "保存" })
-    .click();
-  await expect(pageA.getByText(`${taskName} (A 編集)`)).toBeVisible();
+  // タブ A: input fill → blur で PATCH → server 側 version が 1 → 2 に上がる.
+  // PATCH 200 の response を待ってから B 側の操作に進む (= A の保存完了を確定させる).
+  const inputA = pageA.getByLabel(`${taskName} の名前`).first();
+  const patchA = pageA.waitForResponse(
+    (res) =>
+      res.url().includes(`/api/v1/tasks/${taskId}`) &&
+      res.request().method() === "PATCH" &&
+      res.status() === 200,
+  );
+  await inputA.fill(`${taskName} (A 編集)`);
+  await inputA.blur();
+  await patchA;
 
-  // タブ B: refetch していないので version 1 のまま. 編集を試みると 412 が返り
-  // OptimisticLockError → ConflictError 変換経由で ConflictDialog が開くはず.
-  await taskRow(pageB, taskName).getByRole("button", { name: "編集" }).click();
-  await pageB
-    .getByRole("form", { name: "タスク編集フォーム" })
-    .getByLabel("名称")
-    .fill(`${taskName} (B 編集)`);
-  await pageB
-    .getByRole("form", { name: "タスク編集フォーム" })
-    .getByRole("button", { name: "保存" })
-    .click();
+  // タブ B: refetch していないので version 1 のまま. input fill → blur で PATCH を試みると
+  // 412 が返り OptimisticLockError → ConflictError 変換経由で ConflictDialog が開くはず.
+  // (B の aria-label は refetch 前なので元の taskName のまま取得できる.)
+  const inputB = pageB.getByLabel(`${taskName} の名前`).first();
+  await inputB.fill(`${taskName} (B 編集)`);
+  await inputB.blur();
 
   await expect(pageB.getByRole("dialog", { name: "変更が衝突しました" })).toBeVisible();
 
@@ -78,7 +70,12 @@ test.skip("2 タブ同時編集で後勝ち側に ConflictDialog が表示され
   await ctxB.close();
 });
 
-test("2 タブ同時編集でプロジェクト名衝突時にも ConflictDialog が表示される (BL-033)", async ({
+// BL-070 (inline-edit-all-cards) 追従 (spec AC-25):
+//   旧経路: getByRole("button", { name: "変更" }).click() → 編集 form の input.fill → 「保存」 click.
+//   新経路: ProjectCard は表示モードに常時 input を持ち, fill → blur で PATCH が飛ぶ.
+//   プロジェクト名は input.value に入るため, locator は `.project-card input[value="..."]` で
+//   取得する (projects.spec.ts と同じイディオム / Playwright に getByDisplayValue は無い).
+test("2 タブ同時編集でプロジェクト名衝突時にも ConflictDialog が表示される (BL-033 / BL-070 blur 経路)", async ({
   browser,
   request,
 }) => {
@@ -96,37 +93,29 @@ test("2 タブ同時編集でプロジェクト名衝突時にも ConflictDialog
 
   await Promise.all([pageA.goto("/projects"), pageB.goto("/projects")]);
   await Promise.all([
-    expect(pageA.getByText(projectName, { exact: true })).toBeVisible(),
-    expect(pageB.getByText(projectName, { exact: true })).toBeVisible(),
+    expect(pageA.locator(`.project-card input[value="${projectName}"]`)).toBeVisible(),
+    expect(pageB.locator(`.project-card input[value="${projectName}"]`)).toBeVisible(),
   ]);
 
-  // タブ A: 名称変更.
-  const rowA = pageA.getByText(projectName, { exact: true }).first().locator("..");
-  // BL-060 (project-card-component): 表示モード button のラベルは「変更」に短縮された (D-005 / REQ-6).
-  // 編集 form 自体の aria-label「プロジェクト名称変更フォーム」は維持される.
-  await rowA.getByRole("button", { name: "変更" }).click();
-  await pageA
-    .getByRole("form", { name: "プロジェクト名称変更フォーム" })
-    .locator("input")
-    .fill(`${projectName} (A 編集)`);
-  await pageA
-    .getByRole("form", { name: "プロジェクト名称変更フォーム" })
-    .getByRole("button", { name: "保存" })
-    .click();
-  await expect(pageA.getByText(`${projectName} (A 編集)`)).toBeVisible();
+  // タブ A: input fill → blur で PATCH → server 側 version が 1 → 2 に上がる.
+  // PATCH 200 の response を待ってから B 側の操作に進む (= A の保存完了を確定させる).
+  const inputA = pageA.locator(`.project-card input[value="${projectName}"]`).first();
+  const patchA = pageA.waitForResponse(
+    (res) =>
+      res.url().includes(`/api/v1/projects/${projectId}`) &&
+      res.request().method() === "PATCH" &&
+      res.status() === 200,
+  );
+  await inputA.fill(`${projectName} (A 編集)`);
+  await inputA.blur();
+  await patchA;
 
-  // タブ B: 古い version で名称変更 → 412 → ProjectConflictError → ConflictError → Dialog.
-  const rowB = pageB.getByText(projectName, { exact: true }).first().locator("..");
-  // BL-060 (project-card-component): 「名称変更」→「変更」短縮に追従.
-  await rowB.getByRole("button", { name: "変更" }).click();
-  await pageB
-    .getByRole("form", { name: "プロジェクト名称変更フォーム" })
-    .locator("input")
-    .fill(`${projectName} (B 編集)`);
-  await pageB
-    .getByRole("form", { name: "プロジェクト名称変更フォーム" })
-    .getByRole("button", { name: "保存" })
-    .click();
+  // タブ B: refetch していないので version 1 のまま. input fill → blur で PATCH を試みると
+  // 412 が返り ProjectConflictError → ConflictError 変換経由で ConflictDialog が開くはず.
+  // (B の input[value] 属性は refetch 前なので元の projectName のまま取得できる.)
+  const inputB = pageB.locator(`.project-card input[value="${projectName}"]`).first();
+  await inputB.fill(`${projectName} (B 編集)`);
+  await inputB.blur();
 
   await expect(pageB.getByRole("dialog", { name: "変更が衝突しました" })).toBeVisible();
 
@@ -158,10 +147,10 @@ test("401 が返るとエラー通知バナーが表示される (BL-034)", asyn
   await expect(page.getByText("通信に失敗しました")).toBeVisible();
 });
 
-// BL-042 でカード上の「編集」 button を撤去したため, task 名称編集に依存する本 E2E も
-// 実行不能になる. オフライン flush 自体は他 mutation (今日にする / 削除 / 完了) で動作する
-// ため offline-flush.spec.ts の他シナリオで間接的にカバー. BL-048 (タスク編集ダイアログ再導入) で復活予定.
-test.skip("オフラインで編集した PATCH がオンライン復帰で flush され server に反映される (BL-031 b) (BL-042 で UI 撤去 / 後続 BL で復活予定)", async ({
+// BL-070 (inline-edit-all-cards) 追従 (spec AC-25): BL-042 で撤去された編集フォーム経路は
+// BL-070 のインライン input (fill → blur で PATCH) で復活した. blur 経路に書き換えて
+// skip を解除する. オフライン flush 経路 (IndexedDB queue → online 復帰 → flush) は従来どおり.
+test("オフラインで編集した PATCH がオンライン復帰で flush され server に反映される (BL-031 b / BL-070 blur 経路)", async ({
   page,
   context,
   request,
@@ -177,16 +166,14 @@ test.skip("オフラインで編集した PATCH がオンライン復帰で flus
 
   // ブラウザで開いて task を表示.
   await page.goto("/");
-  await expect(page.getByText(originalName, { exact: true })).toBeVisible();
+  const nameInput = page.getByLabel(`${originalName} の名前`).first();
+  await expect(nameInput).toBeVisible();
 
-  // オフライン中に編集 → IndexedDB queue に PATCH が積まれる (実 fetch は飛ばない).
+  // オフライン中に input fill → blur で編集 → IndexedDB queue に PATCH が積まれる
+  // (実 fetch は飛ばない).
   await context.setOffline(true);
-  await taskRow(page, originalName).getByRole("button", { name: "編集" }).click();
-  await page.getByRole("form", { name: "タスク編集フォーム" }).getByLabel("名称").fill(updatedName);
-  await page
-    .getByRole("form", { name: "タスク編集フォーム" })
-    .getByRole("button", { name: "保存" })
-    .click();
+  await nameInput.fill(updatedName);
+  await nameInput.blur();
 
   // オフライン中は server 側は変わらない.
   const offlineCheck = await request.get(`${API_BASE}/api/v1/tasks?trashed=false`, {

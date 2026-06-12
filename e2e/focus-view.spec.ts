@@ -78,8 +78,9 @@ test.describe("focus-view (/focus) のシナリオ", () => {
     // 見出し <h1>現在のタスク</h1> が描画されている (placeholder と新実装で共通の文言).
     await expect(page.getByRole("heading", { name: "現在のタスク", level: 1 })).toBeVisible();
 
-    // 「現在のタスク」ランドマーク内にタスク名が表示されている (= 大表示の枠の中).
-    await expect(focusRegion(page).getByText(taskName, { exact: true })).toBeVisible();
+    // BL-070 (inline-edit-all-cards) 追従: タスク名は <input value={name}> として描画される.
+    // 「現在のタスク」ランドマーク内にタスク名 input が表示されている (= 大表示の枠の中).
+    await expect(focusRegion(page).getByLabel(`${taskName} の名前`)).toHaveValue(taskName);
 
     // 下部に「削除」「完了」の 2 ボタンが置かれている (REQ-4).
     await expect(focusRegion(page).getByRole("button", { name: "完了" })).toBeVisible();
@@ -128,14 +129,14 @@ test.describe("focus-view (/focus) のシナリオ", () => {
 
     await gotoFocusViaSidebar(page);
 
-    // current タスク名が大表示されていることを確認.
-    await expect(focusRegion(page).getByText(currentName, { exact: true })).toBeVisible();
+    // BL-070 追従: current タスク名は input value に表示される.
+    await expect(focusRegion(page).getByLabel(`${currentName} の名前`)).toHaveValue(currentName);
 
     // 「完了」を押す.
     await focusRegion(page).getByRole("button", { name: "完了" }).click();
 
-    // current タスク名が focus 枠から消える.
-    await expect(focusRegion(page).getByText(currentName, { exact: true })).toHaveCount(0);
+    // BL-070 追従: current タスク名が focus 枠から消える (= 同じ aria-label の input が存在しない).
+    await expect(focusRegion(page).getByLabel(`${currentName} の名前`)).toHaveCount(0);
 
     // 注: ファイル冒頭コメントの方針に従い「次のタスクが繰り上がる」具体的タスク名
     // までは assert しない. 既存テストの残骸タスクが priority=highest で残っていると
@@ -207,14 +208,14 @@ test.describe("focus-view (/focus) のシナリオ", () => {
 
     await gotoFocusViaSidebar(page);
 
-    // current が大表示されている.
-    await expect(focusRegion(page).getByText(currentName, { exact: true })).toBeVisible();
+    // BL-070 追従: current が input value として大表示されている.
+    await expect(focusRegion(page).getByLabel(`${currentName} の名前`)).toHaveValue(currentName);
 
     // 「削除」を押す.
     await focusRegion(page).getByRole("button", { name: "削除" }).click();
 
-    // current が focus 枠から消える.
-    await expect(focusRegion(page).getByText(currentName, { exact: true })).toHaveCount(0);
+    // BL-070 追従: current が focus 枠から消える.
+    await expect(focusRegion(page).getByLabel(`${currentName} の名前`)).toHaveCount(0);
 
     // 注: ファイル冒頭コメントの方針に従い「次のタスクが繰り上がる」具体的タスク名
     // までは assert しない. 既存テストの残骸タスクが priority=highest で残っていると

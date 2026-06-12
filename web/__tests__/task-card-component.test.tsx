@@ -638,6 +638,7 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
           showSetFocus={false}
           actionSet="full"
           dueDateMode="today"
+          onNameBlur={() => {}}
           onSetPriority={() => {}}
           onDelete={() => {}}
           onToggleDueDate={() => {}}
@@ -667,8 +668,10 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
         "header 段に role=radiogroup (= PriorityStars) が無い (V-3 違反)",
       ).not.toBeNull();
 
-      // title にタスク名.
-      expect(title?.textContent ?? "").toContain("牛乳");
+      // BL-070 追従: title にタスク名 input が常時表示される (旧 BL-059 の <span> から逆転).
+      const nameInput = title?.querySelector('input[type="text"]') as HTMLInputElement | null;
+      expect(nameInput, "title 段に name input が無い (BL-070 REQ-1 違反)").not.toBeNull();
+      expect(nameInput?.value).toBe("牛乳");
 
       // actions に 3 ボタン (manual origin / dueDateMode=today なので「明日にする」).
       const actionBtns = Array.from(actions?.querySelectorAll("button") ?? []).map(
@@ -1510,7 +1513,8 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
         <FocusView repository={repo} projectRepository={projectRepo} />,
       );
 
-      await screen.findByText("牛乳");
+      // BL-070: タスク名は input.value で常時表示される.
+      await screen.findByDisplayValue("牛乳");
 
       const actions = container.querySelector(".task-card__actions");
       expect(
@@ -1592,8 +1596,9 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
       const projectRepo = makeMockProjectRepository([]);
       renderWithQueryClient(<TodayView repository={repo} projectRepository={projectRepo} />);
 
-      const node = await screen.findByText("通常タスク");
-      const card = node.closest("li");
+      // BL-070: タスク名は input.value で常時表示.
+      const input = await screen.findByDisplayValue("通常タスク");
+      const card = input.closest("li");
       expect(card, "「通常タスク」を含む <li> が見つからない").not.toBeNull();
       expect(card?.classList.contains("task-card")).toBe(true);
       expect(card?.querySelector(".task-card__header")).not.toBeNull();
@@ -1607,8 +1612,9 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
       const projectRepo = makeMockProjectRepository([]);
       renderWithQueryClient(<TomorrowView repository={repo} projectRepository={projectRepo} />);
 
-      const node = await screen.findByText("明日タスク");
-      const card = node.closest("li");
+      // BL-070: タスク名は input.value で常時表示.
+      const input = await screen.findByDisplayValue("明日タスク");
+      const card = input.closest("li");
       expect(card, "「明日タスク」を含む <li> が見つからない").not.toBeNull();
       expect(card?.classList.contains("task-card")).toBe(true);
       expect(card?.querySelector(".task-card__header")).not.toBeNull();
@@ -1639,8 +1645,8 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
       expect(focusSection.tagName.toLowerCase()).toBe("section");
       expect(focusSection.classList.contains("task-card")).toBe(true);
       expect(focusSection.classList.contains("task-card--focus")).toBe(true);
-      // タスク名 + 3 段ゾーンを含む.
-      expect(within(focusSection).getByText("フォーカスタスク")).toBeDefined();
+      // BL-070: タスク名は input.value で常時表示.
+      expect(within(focusSection).getByDisplayValue("フォーカスタスク")).toBeDefined();
       expect(focusSection.querySelector(".task-card__header")).not.toBeNull();
       expect(focusSection.querySelector(".task-card__title")).not.toBeNull();
       expect(focusSection.querySelector(".task-card__actions")).not.toBeNull();

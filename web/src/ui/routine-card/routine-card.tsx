@@ -1,29 +1,27 @@
 /**
- * `<RoutineCard>` (BL-061 / routine-card-component).
- *
- * BL-068 (routine-card-edit-fields) 更新:
- *   - 編集モード DOM に曜日選択 UI (7 個の checkbox) を追加 (REQ-2 / G-3 / G-4).
- *   - props に `editingDaysOfWeek: number[]` / `onEditingDaysOfWeekChange: (next: number[]) => void` を追加.
- *   - DOM 順は `label → input → div.routine-card__day-checkboxes → 保存 → キャンセル` (D-005).
+ * `<RoutineCard>` (BL-061 / routine-card-component / BL-070 で編集モード概念撤去).
  *
  * 仕様参照:
  *   docs/developer/features/routine-card-component/spec.md REQ-1.
- *   docs/developer/features/routine-card-component/plan.md §「<RoutineCard> API」.
- *   docs/developer/features/routine-card-edit-fields/spec.md REQ-2 / REQ-5 / D-005 / D-006.
+ *   docs/developer/features/routine-card-edit-fields/spec.md REQ-2.
+ *   docs/developer/features/inline-edit-all-cards/spec.md REQ-3 / G-3.
  *
  * 役割:
- *   - routines-view の各ルーティン行 (表示モード / 編集モード) を描画する単一の
- *     presentational コンポーネント.
- *   - props 駆動で「表示モード (= name + 曜日表示 + 変更 / 削除)」と
- *     「編集モード (= inline form)」を切替.
+ *   - routines-view の各ルーティン行を描画する単一の presentational コンポーネント.
+ *   - 表示モードのみ. 編集モード概念 (旧 `is`+`Editing` prop / 旧 `editing`+`Name` 系 prop /
+ *     旧 `editing`+`DaysOfWeek` / 旧 `editing`+`DefaultPriority`) は BL-070 で撤去
+ *     (=「変更」「保存」「キャンセル」 button をすべて廃止).
+ *   - 名前は常時 input で編集可能, blur で `onNameBlur(next)` を親に通知.
+ *   - 曜日 (7 checkbox) / 優先度 (PriorityStars) は click 即時に親 handler を呼ぶ (REQ-4 / D-012 案 e).
  *
  * 重要な決定:
- *   - D-002: `as` prop で root tag を `<li>` / `<div>` から選択.
- *   - D-003: isEditing で表示 / 編集を 1 コンポーネント内で切替.
- *   - D-005: 編集 form の aria-label は「ルーティン名称変更フォーム」を維持.
- *   - D-006: 表示モードの button に `routine-card__actions__edit` / `__delete` を付与.
- *   - D-009: 左ブロックは名前 + 曜日の縦並び (`.routine-card__main`).
- *   - G-8 / REQ-6: 「名称変更」 button のラベル文字列は「変更」に短縮.
+ *   - D-002 (BL-061): `as` prop で root tag を `<li>` / `<div>` から選択.
+ *   - BL-070 D-001: 同値 blur の抑制は親 view に置く.
+ *   - BL-070 D-002 / P-001 (iii): 空文字 blur の元値復元は blur ハンドラ内で
+ *     `e.currentTarget.value = routine.name` を同期的に書き戻して実現 (uncontrolled input).
+ *     key (entity.id + entity.name) はサーバ正本値変化時の再マウント同期用.
+ *   - BL-070 D-009: input id は `routine-name-{routine.id}` で起票側 `routine-name` と衝突回避.
+ *   - BL-070 P-003: PriorityStars idPrefix は `routine-{routine.id}` で起票側 `routine-create` と衝突回避.
  */
 import type { Priority } from "@todica/domain/task";
 import type { WebRoutine } from "../../repositories/routine-repository.js";
@@ -36,26 +34,12 @@ const DAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"];
 export interface RoutineCardProps {
   /** 表示対象ルーティン. */
   routine: WebRoutine;
-  /** 編集モードか. true なら inline 編集 form を描画する. */
-  isEditing: boolean;
-  /** isEditing=true のときの input value (親が state を持つ). */
-  editingName: string;
-  /** 編集モードの input change ハンドラ. */
-  onEditingNameChange: (next: string) => void;
-  /** 編集モードの daysOfWeek (親が state を持つ) (BL-068 G-4). */
-  editingDaysOfWeek: number[];
-  /** 編集モードの曜日 toggle ハンドラ (次の配列を受け取る / BL-068 D-006). */
-  onEditingDaysOfWeekChange: (next: number[]) => void;
-  /** 編集モードの defaultPriority (親が state を持つ) (BL-069 G-2). */
-  editingDefaultPriority: Priority;
-  /** 編集モードの優先度変更ハンドラ (BL-069 G-2 / D-006). */
-  onEditingDefaultPriorityChange: (next: Priority) => void;
-  /** 「変更」 button のクリックハンドラ. */
-  onStartEdit: () => void;
-  /** 「キャンセル」 button のクリックハンドラ. */
-  onCancelEdit: () => void;
-  /** 編集 form の submit ハンドラ. */
-  onSaveEdit: (e: React.FormEvent) => void;
+  /** name input の blur ハンドラ. BL-070 REQ-3 で追加 (必須). */
+  onNameBlur: (next: string) => void;
+  /** 曜日 checkbox の変更ハンドラ (即時 PATCH 経路 / REQ-4). */
+  onDaysOfWeekChange: (next: number[]) => void;
+  /** 優先度変更ハンドラ (即時 PATCH 経路 / REQ-4). */
+  onDefaultPriorityChange: (next: Priority) => void;
   /** 「削除」 button のクリックハンドラ. */
   onDelete: () => void;
   /** ラッパ要素のタグ (D-002). default: "li". */
@@ -65,89 +49,66 @@ export interface RoutineCardProps {
 export function RoutineCard(props: RoutineCardProps): JSX.Element {
   const {
     routine,
-    isEditing,
-    editingName,
-    onEditingNameChange,
-    editingDaysOfWeek,
-    onEditingDaysOfWeekChange,
-    editingDefaultPriority,
-    onEditingDefaultPriorityChange,
-    onStartEdit,
-    onCancelEdit,
-    onSaveEdit,
+    onNameBlur,
+    onDaysOfWeekChange,
+    onDefaultPriorityChange,
     onDelete,
     as = "li",
   } = props;
 
-  // D-012: as prop に応じて root tag を切替. li / div は HTMLAttributes 互換.
+  // D-012 (BL-061): as prop に応じて root tag を切替.
   const Tag = as as "li";
-  const className = `routine-card${isEditing ? " routine-card--editing" : ""}`;
-  const editInputId = `routine-edit-${routine.id}`;
-
-  if (isEditing) {
-    return (
-      <Tag className={className}>
-        <form
-          onSubmit={onSaveEdit}
-          aria-label="ルーティン名称変更フォーム"
-          className="routine-card__form-inline"
-        >
-          <label htmlFor={editInputId} className="visually-hidden">
-            ルーティン名
-          </label>
-          <input
-            id={editInputId}
-            type="text"
-            className="routine-card__input"
-            value={editingName}
-            placeholder="ルーティン名"
-            onChange={(e) => onEditingNameChange(e.target.value)}
-            required
-          />
-          <div className="routine-card__day-checkboxes" role="group" aria-label="曜日">
-            {DAY_LABELS.map((label, day) => (
-              <label key={day}>
-                <input
-                  type="checkbox"
-                  checked={editingDaysOfWeek.includes(day)}
-                  onChange={() => {
-                    const next = editingDaysOfWeek.includes(day)
-                      ? editingDaysOfWeek.filter((d) => d !== day)
-                      : [...editingDaysOfWeek, day].sort((a, b) => a - b);
-                    onEditingDaysOfWeekChange(next);
-                  }}
-                />
-                {label}
-              </label>
-            ))}
-          </div>
-          <PriorityStars
-            value={editingDefaultPriority}
-            onChange={onEditingDefaultPriorityChange}
-            groupLabel="優先度"
-            idPrefix="routine-edit"
-          />
-          <button type="submit">保存</button>
-          <button type="button" onClick={onCancelEdit}>
-            キャンセル
-          </button>
-        </form>
-      </Tag>
-    );
-  }
-
-  const daysLabel = routine.daysOfWeek.map((d) => DAY_LABELS[d]).join("・");
+  const inputId = `routine-name-${routine.id}`;
 
   return (
-    <Tag className={className}>
+    <Tag className="routine-card">
       <div className="routine-card__main">
-        <span className="routine-card__name">{routine.name}</span>
-        <span className="routine-card__days-label">{daysLabel}</span>
+        <label htmlFor={inputId} className="visually-hidden">
+          ルーティン名
+        </label>
+        {/* BL-070 REQ-3: 表示時に常時 input を描画. P-001 (iii): uncontrolled + key で再マウントを制御.
+            空文字 blur (D-002) は親が PATCH を短絡し state も key も変わらないため,
+            カード側で DOM 値を正本値 (routine.name) に書き戻して表示を復元する. */}
+        <input
+          key={`routine-name-${routine.id}-${routine.name}`}
+          id={inputId}
+          type="text"
+          className="routine-card__input"
+          defaultValue={routine.name}
+          placeholder="ルーティン名"
+          onBlur={(e) => {
+            const next = e.currentTarget.value;
+            if (next === "") {
+              e.currentTarget.value = routine.name;
+            }
+            onNameBlur(next); // D-001: カードは常に blur 値を流す (空文字も含む)
+          }}
+        />
+        <div className="routine-card__day-checkboxes" role="group" aria-label="曜日">
+          {DAY_LABELS.map((label, day) => (
+            <label key={day}>
+              <input
+                type="checkbox"
+                checked={routine.daysOfWeek.includes(day)}
+                onChange={() => {
+                  const next = routine.daysOfWeek.includes(day)
+                    ? routine.daysOfWeek.filter((d) => d !== day)
+                    : [...routine.daysOfWeek, day].sort((a, b) => a - b);
+                  onDaysOfWeekChange(next);
+                }}
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+        <PriorityStars
+          value={routine.defaultPriority}
+          onChange={onDefaultPriorityChange}
+          groupLabel={`${routine.name} の優先度`}
+          idPrefix={`routine-${routine.id}`}
+        />
       </div>
       <div className="routine-card__actions">
-        <button type="button" className="routine-card__actions__edit" onClick={onStartEdit}>
-          変更
-        </button>
         <button type="button" className="routine-card__actions__delete" onClick={onDelete}>
           削除
         </button>

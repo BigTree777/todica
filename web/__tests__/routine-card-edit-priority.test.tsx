@@ -210,7 +210,22 @@ function renderWithQueryClient(ui: ReactNode): ReturnType<typeof render> {
 // describe ブロック
 // ============================================================
 
-describe("ルーティン編集モードでの優先度変更 (BL-069 / routine-card-edit-priority)", () => {
+/**
+ * BL-070 (inline-edit-all-cards) 追従:
+ *   本ファイルは「編集モード」 (= isEditing=true) を前提とした AC を網羅していた.
+ *   BL-070 で「編集モード」概念自体を撤去 (REQ-3 / G-3 / D-013).
+ *   isEditing prop / editing* 系 prop / 「変更」「保存」「キャンセル」 button は全撤去.
+ *   常時 input + 7 曜日 checkbox + PriorityStars + 「削除」 button のみとなる.
+ *   このため BL-069 の AC は本 BL で履行されなくなった (= 部分的に逆転).
+ *
+ *   新流儀での「PriorityStars click → 即時 onDefaultPriorityChange」の検証は
+ *   web/__tests__/inline-edit-all-cards.test.tsx の AC-9 / AC-19 で網羅されている.
+ *
+ *   本 describe ブロック全体を skip し, BL-069 の編集モード関連 AC を停止する.
+ *   BL-070 spec § D-005 で BL-069 spec への注釈は不要と決定されているため,
+ *   本ファイル上部のこの注意書きで履行履歴を担保する.
+ */
+describe.skip("ルーティン編集モードでの優先度変更 (BL-069 / routine-card-edit-priority) [BL-070 で編集モード撤去のため停止]", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

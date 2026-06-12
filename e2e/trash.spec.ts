@@ -9,7 +9,8 @@ import { type Page, expect, test } from "@playwright/test";
 
 function taskRow(page: Page, taskName: string) {
   // BL-057: タスクカードが 3 段ゾーン化されたため ancestor::li で <li> を取得.
-  return page.getByText(taskName, { exact: true }).first().locator("xpath=ancestor::li");
+  // BL-070 (inline-edit-all-cards) 追従: タスク名は <input aria-label="{name} の名前">.
+  return page.getByLabel(`${taskName} の名前`).first().locator("xpath=ancestor::li");
 }
 
 async function createAndDelete(page: Page, taskName: string): Promise<void> {
@@ -17,7 +18,8 @@ async function createAndDelete(page: Page, taskName: string): Promise<void> {
   await page.getByLabel("タスク名").fill(taskName);
   await page.getByRole("button", { name: "追加", exact: true }).click();
   await taskRow(page, taskName).getByRole("button", { name: "削除" }).click();
-  await expect(page.getByText(taskName, { exact: true })).toHaveCount(0);
+  // BL-070 追従: タスク名は input value に入る. aria-label でカウントを確認.
+  await expect(page.getByLabel(`${taskName} の名前`)).toHaveCount(0);
 }
 
 test.describe("ゴミ箱", () => {

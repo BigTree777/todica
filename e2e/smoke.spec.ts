@@ -21,5 +21,8 @@ test("タスクを追加すると今日の一覧に表示される", async ({ pa
   await page.getByLabel("タスク名").fill(taskName);
   await page.getByRole("button", { name: "追加", exact: true }).click();
 
-  await expect(page.getByText(taskName)).toBeVisible();
+  // BL-070 (inline-edit-all-cards) 追従:
+  //   タスク名は <span> ではなく <input aria-label="{name} の名前" value="{name}"> として描画される.
+  //   起票直後の表示 input を aria-label から取り, value が name と一致することを確認する.
+  await expect(page.getByLabel(`${taskName} の名前`)).toHaveValue(taskName);
 });

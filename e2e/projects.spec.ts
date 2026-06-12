@@ -13,7 +13,15 @@
 import { type Page, expect, test } from "@playwright/test";
 
 function taskRow(page: Page, taskName: string) {
-  return page.getByText(taskName, { exact: true }).first().locator("..");
+  // BL-070 追従: タスク名は <input aria-label="{name} の名前"> の value に入る.
+  // input から最寄りのタスクカード要素を遡る.
+  // 注意: 強調表示中 (focused task) の TaskCard は <li> ではなく <section> (region) で
+  // 描画されるため, DB が空の単独実行で作成タスクが focused になるケースも許容するよう
+  // li / section の両方を ancestor 対象にする.
+  return page
+    .getByLabel(`${taskName} の名前`)
+    .first()
+    .locator("xpath=ancestor::*[self::li or self::section][1]");
 }
 
 /**
@@ -35,9 +43,18 @@ test("プロジェクトを削除すると紐付いていたタスクは残る (
 
   // 1. プロジェクト作成
   await page.goto("/projects");
-  await page.getByLabel("プロジェクト名").fill(projectName);
+  // BL-070 (inline-edit-all-cards) 追従:
+  //   表示モードに常時 input + visually-hidden label "プロジェクト名" が追加されるため,
+  //   page.getByLabel("プロジェクト名") は複数マッチで strict violation になる可能性がある.
+  //   起票 form は <form aria-label="プロジェクト作成フォーム"> でスコープを絞る.
+  await page
+    .getByRole("form", { name: "プロジェクト作成フォーム" })
+    .getByLabel("プロジェクト名")
+    .fill(projectName);
   await page.getByRole("button", { name: "追加", exact: true }).click();
-  await expect(page.getByText(projectName, { exact: true })).toBeVisible();
+  // BL-070 追従: プロジェクト名は表示モードの input.value で表示される.
+  // Playwright には getByDisplayValue が無いため input[value="..."] で取得する.
+  await expect(page.locator(`.project-card input[value="${projectName}"]`)).toBeVisible();
 
   // 2. タスクに紐付けて起票
   //    BL-065 (project-toggle-removal): <select> から「目的のプロジェクト」を直接選ぶ.
@@ -57,9 +74,14 @@ test("プロジェクトを削除すると紐付いていたタスクは残る (
 
   // 3. プロジェクト削除
   await page.goto("/projects");
-  const projectRow = page.getByText(projectName, { exact: true }).first().locator("..");
+  // BL-070 追従: プロジェクト名は input.value で表示される.
+  // Playwright には getByDisplayValue が無いため input[value="..."] で取得する.
+  const projectRow = page
+    .locator(`.project-card input[value="${projectName}"]`)
+    .first()
+    .locator("xpath=ancestor::li[1]");
   await projectRow.getByRole("button", { name: "削除" }).click();
-  await expect(page.getByText(projectName, { exact: true })).toHaveCount(0);
+  await expect(page.locator(`.project-card input[value="${projectName}"]`)).toHaveCount(0);
 
   // 4. タスクは依然として今日ビューに残っている
   await page.goto("/today");

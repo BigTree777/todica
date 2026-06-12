@@ -31,49 +31,27 @@
   align-items: stretch;
 }
 
-.routine-card--editing {
-  /* 本 BL 時点では空ルール. 将来差異用足場 (P-004). */
-}
+/* BL-070 (inline-edit-all-cards): .routine-card--editing modifier /
+   .routine-card__name span / .routine-card__days-label span /
+   .routine-card__actions__edit button / .routine-card__form-inline form を撤去. */
 
 .routine-card__main {
-  /* V-4 / V-5: 左ブロック. flex: 1 で残り幅を占有し, 名前 + 曜日を縦並び. */
+  /* 左ブロック. flex: 1 で残り幅を占有し, 名前 + 曜日 + 優先度を縦並び. */
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
 }
 
-.routine-card__name {
-  /* 本 BL 時点では空ルール. 将来 font-weight / font-size 等の差異用足場 (P-004). */
-}
-
-.routine-card__days-label {
-  /* V-5: 小さい字 + 薄色. */
-  font-size: var(--font-size-small);
-  color: var(--color-fg-subtle);
-}
-
 .routine-card__actions {
-  /* V-6: ボタン横並び. DOM 順「変更 → 削除」がそのまま視覚順「左 → 右」. */
+  /* ボタン横並び. BL-070 以降は「削除」のみ. */
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-}
-
-.routine-card__actions__edit {
-  /* 本 BL 時点では空ルール (P-004). */
 }
 
 .routine-card__actions__delete {
   /* 本 BL 時点では空ルール (P-004). */
-}
-
-.routine-card__form-inline {
-  /* 編集モードで <li> 内の form を 1 段 flex 横並びにする. */
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: var(--space-sm);
 }
 
 .routine-card__form-row {
