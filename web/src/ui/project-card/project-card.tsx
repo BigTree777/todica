@@ -66,7 +66,11 @@ export function ProjectCard(props: ProjectCardProps): JSX.Element {
         }}
       />
       <div className="project-card__actions">
-        <button type="button" className="project-card__actions__delete" onClick={onDelete}>
+        <button
+          type="button"
+          className="button button--danger project-card__actions__delete"
+          onClick={onDelete}
+        >
           削除
         </button>
       </div>

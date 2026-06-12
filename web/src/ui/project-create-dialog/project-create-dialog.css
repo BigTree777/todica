@@ -33,11 +33,10 @@
 
 .project-create-dialog button {
   /* WCAG 2.5.5: タップターゲットを最小 44px 確保 (button 系の共通慣行). */
+  /* padding / focus-visible は .button 系 (web/src/styles/button.css) に集約 (BL-067 / I-16 / D-002). */
   min-height: 44px;
-  padding: 0.5rem 0.75rem;
 }
 
-.project-create-dialog button:focus-visible,
 .project-create-dialog input:focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;

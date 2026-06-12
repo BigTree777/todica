@@ -21,6 +21,7 @@
  *   - LocalResetUsecase.runIfNeeded() を起動時に実行する.
  */
 import "./styles/tokens.css";
+import "./styles/button.css";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";

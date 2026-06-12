@@ -115,7 +115,7 @@ export function RoutineFormCard(props: RoutineFormCardProps): JSX.Element {
         ))}
       </div>
       <div className="routine-card__actions">
-        <button type="submit" className="routine-card__submit">
+        <button type="submit" className="button button--primary routine-card__submit">
           追加
         </button>
       </div>

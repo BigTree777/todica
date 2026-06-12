@@ -53,10 +53,10 @@ export function ConflictDialog(props: ConflictDialogProps): JSX.Element | null {
       </section>
 
       <div>
-        <button type="button" onClick={onAcceptServer}>
+        <button type="button" className="button button--primary" onClick={onAcceptServer}>
           サーバの値を採用
         </button>
-        <button type="button" onClick={onRetryWithServer}>
+        <button type="button" className="button button--ghost" onClick={onRetryWithServer}>
           クライアントの値で再送
         </button>
       </div>

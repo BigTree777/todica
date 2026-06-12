@@ -55,10 +55,14 @@ export function PwaUpdateBanner(): JSX.Element | null {
   return (
     <div role="alert" aria-live="polite">
       <span>アップデートがあります。再読み込みしますか？</span>
-      <button type="button" onClick={handleReload}>
+      <button type="button" className="button button--primary" onClick={handleReload}>
         再読み込み
       </button>
-      <button type="button" onClick={() => setShowUpdateBanner(false)}>
+      <button
+        type="button"
+        className="button button--ghost"
+        onClick={() => setShowUpdateBanner(false)}
+      >
         閉じる
       </button>
     </div>

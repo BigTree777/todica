@@ -1,0 +1,60 @@
+/*
+ * 共通ボタンスタイル (BL-067 / common-button-style).
+ *
+ * - 基底 .button + 派生 --primary / --danger / --ghost.
+ * - shadow / hover background / transition / animation は意図的に持たない
+ *   (NFR-NO-SHADOW / NFR-NO-HOVER-TRANSITION).
+ * - 値は tokens.css の既存トークンから引く (= 新規トークン追加なし).
+ *
+ * 対象外 (= .button を付与しない):
+ *   - .priority-stars__star (radiogroup の★/☆)
+ *   - .app-shell__hamburger / .app-shell__menu-close (グローバルメニュー icon-only)
+ *
+ * 既存配置制御 className (例: .task-card__actions__delete の margin-right: auto)
+ * とは併記関係で共存する.
+ */
+
+.button {
+  /* visual 基底. UA スタイルを意図的に上書きする. */
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-xs) var(--space-md);
+  font: inherit;
+  cursor: pointer;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  /* display は明示しない (= UA 既定の inline-block のまま) → auto-margin パターン非干渉. */
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.button--primary {
+  background: var(--color-accent);
+  color: var(--color-bg);
+  border-color: var(--color-accent);
+}
+
+.button--danger {
+  /* tokens.css に赤系トークンが無い (D-003). 既存トークンの組合せで「危険」を表現する.
+     border + 文字色を --color-accent に寄せて視覚的に強調. background は --color-bg を維持. */
+  background: var(--color-bg);
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.button--ghost {
+  background: transparent;
+  color: var(--color-fg);
+  border-color: var(--color-border);
+}
