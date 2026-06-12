@@ -15,6 +15,7 @@ export default defineConfig({
       "server/**/*.test.ts",
       "web/**/*.test.ts",
       "web/**/*.test.tsx",
+      "__tests__/**/*.test.ts",
     ],
     environmentMatchGlobs: [
       ["web/**/*.test.tsx", "jsdom"],
