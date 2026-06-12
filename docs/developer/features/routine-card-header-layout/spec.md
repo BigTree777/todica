@@ -80,6 +80,7 @@ user 評価により以下 2 点が指摘されている.
     これは「表示と起票で input サイズを統一して統一感を出す」という user 確認済みの意図であり,
     本 BL の非ゴール「起票カードの体裁を壊さない」の例外として明示する.
     したがって「起票カード input フォントサイズの維持」は本 BL の非ゴールに **含めない**.
+  - **BL-072 (routine-form-card-header-layout) で逆転**: REQ-7 の「起票カード DOM 構造の不変要求」および AC-11 の「2 段構成維持」は BL-072 で逆転する. BL-072 では `<RoutineFormCard>` も `.routine-card__header` / `.routine-card__title` / `.routine-card__day-checkboxes` / `.routine-card__actions` の 4 段構造に再編し, 表示カード (本 BL の 3 段) と視覚言語を揃える. 詳細は [`../routine-form-card-header-layout/spec.md`](../routine-form-card-header-layout/spec.md).
 - **REQ-8**: 既存挙動を回帰させない.
   - **BL-070 blur 書き戻し**: 空文字 blur で `e.currentTarget.value = routine.name` を同期書き戻す動作を維持.
   - **BL-070 同値 blur 短絡**: 親 view の `handleNameBlur` で空文字 / 同値 PATCH を抑止する経路を維持.
@@ -195,6 +196,7 @@ user 評価により以下 2 点が指摘されている.
   Then  root 要素は `<form class="routine-card routine-card--form">` のまま
         かつ `.routine-card__form-row--name` と `.routine-card__form-row--options` の 2 段が存在する
         かつ name input + 「追加」 button + 曜日 7 checkbox + PriorityStars が全て描画される
+  Note: BL-072 (routine-form-card-header-layout) で本不変要求は逆転. BL-072 後は `.routine-card__header` / `.routine-card__title` / `.routine-card__day-checkboxes` / `.routine-card__actions` の 4 段構造になる. 詳細は `../routine-form-card-header-layout/spec.md`.
 ```
 
 ### 既存挙動の回帰防止

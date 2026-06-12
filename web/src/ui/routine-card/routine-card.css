@@ -38,13 +38,33 @@
 
 .routine-card__header {
   /* BL-071 REQ-4: name input を左 / PriorityStars を右に分ける.
-     TaskCard .task-card__header と同じイディオム. */
+     TaskCard .task-card__header と同じイディオム.
+     BL-072 D-002: 起票カードでも本ルールを共用する (`.routine-card--form`
+     側で `justify-content` のみ override する / D-006). */
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-sm);
   /* BL-071 REQ-6 / D-002: input に font: inherit を当てて継承させるため
      header 段に font-size を置く. TaskCard V-4 / V-7 と同じ. */
+  font-size: var(--font-size-h2);
+}
+
+.routine-card--form .routine-card__header {
+  /* BL-072 D-006: 起票カードでは header に PriorityStars 単独しか並ばない.
+     `justify-content: space-between` は単独要素時に flex-start (左寄せ) 相当に
+     振る舞う仕様のため, override で右端固定にする. */
+  justify-content: flex-end;
+}
+
+.routine-card__title {
+  /* BL-072 D-003: 起票カードに新設. TaskFormCard の `.task-card__title` と
+     同名同役割. name input のフォントを親 (= title 段) から継承させる
+     (input 側で font: inherit を当てる).
+     jsdom 対応で input 側にも `font-size: var(--font-size-h2)` を二重宣言する
+     (= BL-071 D-002 と同じ折衷形). */
+  display: flex;
+  align-items: center;
   font-size: var(--font-size-h2);
 }
 
@@ -55,17 +75,17 @@
   gap: var(--space-sm);
 }
 
+.routine-card--form .routine-card__actions {
+  /* BL-072 D-007: 起票カードの「追加」 button は右端配置. */
+  justify-content: flex-end;
+}
+
 .routine-card__actions__delete {
   /* 本 BL 時点では空ルール (P-004). */
 }
 
-.routine-card__form-row {
-  /* V-1: 起票フォームの各 row は flex 横並び. */
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: var(--space-sm);
-}
+/* BL-072 D-004: `.routine-card__form-row` 系セレクタは新 4 段構造で使われない
+   ため完全撤去 (= dead-rule 化防止). */
 
 .routine-card__day-checkboxes {
   /* V-1: 曜日チェックボックス群は wrap 横並び. */

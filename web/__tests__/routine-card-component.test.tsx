@@ -855,22 +855,28 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
   });
 
   // ----------------------------------------------------------
-  // AC-11: <RoutineFormCard> が 2 段構成の作成フォームを描画する
+  // AC-11: <RoutineFormCard> が作成フォームを描画する (主要要素)
   // ----------------------------------------------------------
   /**
    * シナリオ AC-11:
    *   Given <RoutineFormCard name="" daysOfWeek={[1]} defaultPriority="normal" ... /> を render
    *   When  出力 DOM を観察する
    *   Then  ルートは <form aria-label="ルーティン作成フォーム" class="routine-card routine-card--form">
-   *    かつ form 直下に 2 つの .routine-card__form-row 要素が存在する
-   *    かつ 1 段目 row 内に visually-hidden label + input + 「追加」 submit button
-   *    かつ 2 段目 row 内に .routine-card__day-checkboxes (内に 7 個の checkbox) + div[role="radiogroup"] (PriorityStars)
+   *    かつ visually-hidden label + <input id="routine-name"> + 「追加」 submit button が存在する
+   *    かつ .routine-card__day-checkboxes (内に 7 個の checkbox) + div[role="radiogroup"] (PriorityStars) が存在する
    *    かつ getByLabelText("ルーティン名") で name input が取得可能
    *
    *   BL-068 (routine-card-edit-fields) 追従: 旧 <select id="routine-priority"> 系 assert を
    *   <PriorityStars /> (= div[role="radiogroup"]) の存在 assert に逆転 (R-001 / P-005).
+   *   BL-072 (routine-form-card-header-layout) 追従:
+   *     旧 BL-061 では「`.routine-card__form-row` が 2 個」を assert していたが,
+   *     BL-072 で起票カードを 4 段 (`.routine-card__header` / `__title` /
+   *     `__day-checkboxes` / `__actions`) に再編し `.routine-card__form-row` 系を完全撤去するため,
+   *     「2 段構成」 assert と「1 段目に input + submit が同居 / 2 段目に曜日 + PriorityStars が同居」
+   *     系 assert は廃止. 代替として「主要要素が描画される」までを保つ.
+   *     起票カードの新 DOM 構造の網羅 assert は `routine-form-card-header-layout.test.tsx` (BL-072) に集約.
    */
-  describe("AC-11: <RoutineFormCard> が 2 段構成の作成フォームを描画する", () => {
+  describe("AC-11: <RoutineFormCard> が作成フォームを描画する (主要要素)", () => {
     it("ルートは <form class='routine-card routine-card--form' aria-label='ルーティン作成フォーム'>", async () => {
       const { RoutineFormCard } = await importRoutineFormCard();
       const { container } = render(
@@ -894,7 +900,7 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
       expect(root?.getAttribute("aria-label")).toBe("ルーティン作成フォーム");
     });
 
-    it("form 直下に 2 つの .routine-card__form-row 要素が存在する (2 段構成)", async () => {
+    it("visually-hidden な <label htmlFor='routine-name'>ルーティン名</label> + <input id='routine-name'> + 「追加」 submit button が form 内に存在する", async () => {
       const { RoutineFormCard } = await importRoutineFormCard();
       const { container } = render(
         <RoutineFormCard
@@ -909,45 +915,21 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           }}
         />,
       );
-      const rows = container.querySelectorAll(".routine-card__form-row");
-      expect(rows.length, ".routine-card__form-row 要素が 2 個ではない").toBe(2);
-    });
-
-    it("1 段目 row 内に visually-hidden な <label htmlFor='routine-name'>ルーティン名</label> + <input id='routine-name'> + 「追加」 submit button が存在する", async () => {
-      const { RoutineFormCard } = await importRoutineFormCard();
-      const { container } = render(
-        <RoutineFormCard
-          name=""
-          onNameChange={() => {}}
-          daysOfWeek={[1]}
-          onToggleDay={() => {}}
-          defaultPriority="normal"
-          onDefaultPriorityChange={() => {}}
-          onSubmit={(e: React.FormEvent) => {
-            e.preventDefault();
-          }}
-        />,
-      );
-      const rows = container.querySelectorAll(".routine-card__form-row");
-      const firstRow = rows[0];
-      expect(firstRow, "1 段目 row が見つからない").toBeDefined();
-      const label = firstRow?.querySelector("label");
-      const input = firstRow?.querySelector("input");
-      expect(label, "1 段目 row に label が無い").not.toBeNull();
-      expect(input, "1 段目 row に input が無い").not.toBeNull();
+      const label = container.querySelector("label[for='routine-name']") as HTMLLabelElement | null;
+      const input = container.querySelector("input#routine-name") as HTMLInputElement | null;
+      expect(label, "form 内に label[for='routine-name'] が無い").not.toBeNull();
+      expect(input, "form 内に input#routine-name が無い").not.toBeNull();
       expect(label?.classList.contains("visually-hidden")).toBe(true);
-      expect(label?.getAttribute("for")).toBe("routine-name");
       expect(label?.textContent ?? "").toContain("ルーティン名");
-      expect(input?.getAttribute("id")).toBe("routine-name");
       expect(input?.getAttribute("type")).toBe("text");
       // 「追加」 submit button.
-      const buttons = Array.from(firstRow?.querySelectorAll("button") ?? []);
+      const buttons = Array.from(container.querySelectorAll("button"));
       const submit = buttons.find((b) => (b.textContent ?? "").trim() === "追加");
-      expect(submit, "1 段目 row に「追加」 submit button が無い").toBeDefined();
+      expect(submit, "form 内に「追加」 submit button が無い").toBeDefined();
       expect(submit?.getAttribute("type")).toBe("submit");
     });
 
-    it("2 段目 row 内に .routine-card__day-checkboxes が存在し 7 個の checkbox <input> を含む", async () => {
+    it(".routine-card__day-checkboxes が存在し 7 個の checkbox <input> を含む", async () => {
       const { RoutineFormCard } = await importRoutineFormCard();
       const { container } = render(
         <RoutineFormCard
@@ -962,18 +944,15 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           }}
         />,
       );
-      const rows = container.querySelectorAll(".routine-card__form-row");
-      const secondRow = rows[1];
-      expect(secondRow, "2 段目 row が見つからない").toBeDefined();
-      const dayCheckboxes = secondRow?.querySelector(".routine-card__day-checkboxes");
-      expect(dayCheckboxes, "2 段目 row に .routine-card__day-checkboxes が無い").not.toBeNull();
+      const dayCheckboxes = container.querySelector(".routine-card__day-checkboxes");
+      expect(dayCheckboxes, "form 内に .routine-card__day-checkboxes が無い").not.toBeNull();
       const checkboxes = Array.from(
         dayCheckboxes?.querySelectorAll("input[type='checkbox']") ?? [],
       );
       expect(checkboxes.length, "曜日 checkbox が 7 個ではない").toBe(7);
     });
 
-    it("2 段目 row 内に div[role='radiogroup'] (PriorityStars) が存在し 3 個の星 button (role='radio') を含む (BL-068 で <select> から逆転)", async () => {
+    it("div[role='radiogroup'] (PriorityStars) が存在し 3 個の星 button (role='radio') を含む (BL-068 で <select> から逆転)", async () => {
       const { RoutineFormCard } = await importRoutineFormCard();
       const { container } = render(
         <RoutineFormCard
@@ -988,22 +967,19 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           }}
         />,
       );
-      const rows = container.querySelectorAll(".routine-card__form-row");
-      const secondRow = rows[1];
-      expect(secondRow, "2 段目 row が見つからない").toBeDefined();
       // BL-068: 旧 <select id="routine-priority"> 系 assert を <PriorityStars /> 存在 assert に逆転.
-      const radiogroup = secondRow?.querySelector("div[role='radiogroup']");
+      const radiogroup = container.querySelector("div[role='radiogroup']");
       expect(
         radiogroup,
-        "2 段目 row に <PriorityStars /> (= div[role='radiogroup']) が無い (BL-068 REQ-1 違反)",
+        "form 内に <PriorityStars /> (= div[role='radiogroup']) が無い (BL-068 REQ-1 違反)",
       ).not.toBeNull();
       const stars = Array.from(radiogroup?.querySelectorAll("button[role='radio']") ?? []);
       expect(stars.length, "PriorityStars の星 button が 3 個ではない").toBe(3);
       // 旧 <select id="routine-priority"> が残存していないこと.
-      const select = secondRow?.querySelector("select#routine-priority");
+      const select = container.querySelector("select#routine-priority");
       expect(
         select,
-        "2 段目 row に <select id='routine-priority'> が残っている (BL-068 REQ-1 違反)",
+        "form 内に <select id='routine-priority'> が残っている (BL-068 REQ-1 違反)",
       ).toBeNull();
     });
 
