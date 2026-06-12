@@ -1,0 +1,131 @@
+/*
+ * BL-061 (routine-card-component): RoutineCard / RoutineFormCard の専用 CSS.
+ *
+ * 仕様参照:
+ *   docs/developer/features/routine-card-component/spec.md REQ-3 / AC-1 〜 AC-8 / AC-22
+ *   docs/developer/features/routine-card-component/plan.md §「CSS (routine-card.css)」
+ *
+ * 設計方針:
+ *   - 系統間で共有しない (task-card / project-card は別 BL の別 CSS).
+ *   - shadow / hover / transition / animation は意図的に持たない
+ *     (NFR-NO-SHADOW / NFR-NO-HOVER-TRANSITION).
+ *   - .visually-hidden は task-card.css / project-card.css と同形だが系統独立のため再定義 (D-008).
+ */
+
+.routine-card {
+  /* visual 4 宣言. */
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  /* 1 段 flex 横並び layout. */
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.routine-card--form {
+  /* V-1: 2 段構成 (縦並び) に override. */
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.routine-card--editing {
+  /* 本 BL 時点では空ルール. 将来差異用足場 (P-004). */
+}
+
+.routine-card__main {
+  /* V-4 / V-5: 左ブロック. flex: 1 で残り幅を占有し, 名前 + 曜日を縦並び. */
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.routine-card__name {
+  /* 本 BL 時点では空ルール. 将来 font-weight / font-size 等の差異用足場 (P-004). */
+}
+
+.routine-card__days-label {
+  /* V-5: 小さい字 + 薄色. */
+  font-size: var(--font-size-small);
+  color: var(--color-fg-subtle);
+}
+
+.routine-card__actions {
+  /* V-6: ボタン横並び. DOM 順「変更 → 削除」がそのまま視覚順「左 → 右」. */
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.routine-card__actions__edit {
+  /* 本 BL 時点では空ルール (P-004). */
+}
+
+.routine-card__actions__delete {
+  /* 本 BL 時点では空ルール (P-004). */
+}
+
+.routine-card__form-inline {
+  /* 編集モードで <li> 内の form を 1 段 flex 横並びにする. */
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.routine-card__form-row {
+  /* V-1: 起票フォームの各 row は flex 横並び. */
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.routine-card__day-checkboxes {
+  /* V-1: 曜日チェックボックス群は wrap 横並び. */
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.routine-card__priority-row {
+  /* 本 BL 時点では空ルール (P-004). */
+}
+
+.routine-card__input {
+  /* V-2: 残り幅を占有. */
+  flex: 1;
+}
+
+.routine-card__input::placeholder {
+  /* V-2: placeholder を --color-fg-subtle (WCAG AA 7:1) で薄く描画. */
+  color: var(--color-fg-subtle);
+}
+
+.routine-card__select {
+  /* 本 BL 時点では空ルール (P-004). */
+}
+
+.routine-card__submit {
+  /* 本 BL 時点では空ルール (P-004). */
+}
+
+/*
+ * visually-hidden ユーティリティ (D-008 / 9 宣言の標準パターン).
+ * task-card.css / project-card.css と同形.
+ * 系統独立 (= ペア専用 CSS) のため再定義.
+ */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

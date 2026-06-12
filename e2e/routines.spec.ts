@@ -17,7 +17,9 @@ test.describe("ルーティン", () => {
     await page.goto("/routines");
     const routineName = `R作成 ${Date.now()}`;
 
-    await page.getByLabel("名前").fill(routineName);
+    // BL-061 (routine-card-component) 追従: name input の label を「名前」→「ルーティン名」に変更
+    // (= placeholder と一致させ, visually-hidden 化したときも文脈が明確になる NFR-NAME-LABEL-CHANGE).
+    await page.getByLabel("ルーティン名").fill(routineName);
     // 月曜・火曜にチェック (任意の選択).
     await page.getByLabel("月", { exact: true }).check();
     await page.getByLabel("火", { exact: true }).check();
@@ -30,12 +32,20 @@ test.describe("ルーティン", () => {
     await page.goto("/routines");
     const routineName = `R削除 ${Date.now()}`;
 
-    await page.getByLabel("名前").fill(routineName);
+    // BL-061 (routine-card-component) 追従: 「名前」→「ルーティン名」.
+    await page.getByLabel("ルーティン名").fill(routineName);
     await page.getByLabel("月", { exact: true }).check();
     await page.getByRole("button", { name: "追加" }).click();
     await expect(page.getByText(routineName, { exact: true })).toBeVisible();
 
-    const routineRow = page.getByText(routineName, { exact: true }).first().locator("..");
+    // BL-061 (routine-card-component) 追従: ルーティン名は `.routine-card__main` 内の
+    // `<span>` に置かれるようになり, `locator("..")` だけでは `<li class="routine-card">`
+    // までたどり着けない. `xpath=ancestor::li` で `<li>` 全体を取得して
+    // 「削除」 button を探す.
+    const routineRow = page
+      .getByText(routineName, { exact: true })
+      .first()
+      .locator("xpath=ancestor::li[1]");
     await routineRow.getByRole("button", { name: "削除" }).click();
 
     await expect(page.getByText(routineName, { exact: true })).toHaveCount(0);

@@ -23,6 +23,8 @@ import { ConflictError, dequeue, enqueue, getAll, mapConflict } from "../../offl
 import type { WebRoutine, WebRoutineRepository } from "../../repositories/routine-repository.js";
 import { RoutineConflictError } from "../../repositories/routine-repository.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
+import { RoutineCard } from "../routine-card/routine-card.js";
+import { RoutineFormCard } from "../routine-card/routine-form-card.js";
 
 /** UUID v4 風の文字列を生成する. crypto.randomUUID が無い jsdom 環境向けのフォールバック. */
 function generateId(): string {
@@ -32,8 +34,6 @@ function generateId(): string {
   const hex = (n: number) => Array.from({ length: n }, () => random(16).toString(16)).join("");
   return `${hex(8)}-${hex(4)}-4${hex(3)}-8${hex(3)}-${hex(12)}`;
 }
-
-const DAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"];
 
 export interface RoutinesViewProps {
   repository: WebRoutineRepository;
@@ -260,77 +260,29 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
     <main className="routines-view">
       <h1>ルーティン</h1>
 
-      <form
+      <RoutineFormCard
+        name={newName}
+        onNameChange={setNewName}
+        daysOfWeek={newDaysOfWeek}
+        onToggleDay={toggleDay}
+        defaultPriority={newDefaultPriority}
+        onDefaultPriorityChange={setNewDefaultPriority}
         onSubmit={handleCreate}
-        aria-label="ルーティン作成フォーム"
-        className="routines-view__form"
-      >
-        <div>
-          <label htmlFor="routine-name">名前</label>
-          <input
-            id="routine-name"
-            type="text"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            required
-          />
-        </div>
-        <div>
-          {DAY_LABELS.map((label, day) => (
-            <label key={day}>
-              <input
-                type="checkbox"
-                checked={newDaysOfWeek.includes(day)}
-                onChange={() => toggleDay(day)}
-              />
-              {label}
-            </label>
-          ))}
-        </div>
-        <div>
-          <label htmlFor="routine-priority">優先度</label>
-          <select
-            id="routine-priority"
-            value={newDefaultPriority}
-            onChange={(e) => setNewDefaultPriority(e.target.value)}
-          >
-            <option value="highest">最優先</option>
-            <option value="normal">普通</option>
-            <option value="later">後回し</option>
-          </select>
-        </div>
-        <button type="submit">追加</button>
-      </form>
+      />
 
       <ul className="routines-view__list">
         {routines.map((routine) => (
-          <li key={routine.id} className="routines-view__item">
-            {editingId === routine.id ? (
-              <form onSubmit={handleSaveEdit} aria-label="ルーティン名称変更フォーム">
-                <input
-                  type="text"
-                  value={editingName}
-                  onChange={(e) => setEditingName(e.target.value)}
-                  required
-                />
-                <button type="submit">保存</button>
-                <button type="button" onClick={cancelEdit}>
-                  キャンセル
-                </button>
-              </form>
-            ) : (
-              <>
-                <span>{routine.name}</span>
-                <span>{routine.daysOfWeek.map((d) => DAY_LABELS[d]).join("・")}</span>
-                <button type="button" onClick={() => openEdit(routine)}>
-                  名称変更
-                </button>
-                <button type="button" onClick={() => handleDelete(routine)}>
-                  削除
-                </button>
-              </>
-            )}
-          </li>
+          <RoutineCard
+            key={routine.id}
+            routine={routine}
+            isEditing={editingId === routine.id}
+            editingName={editingName}
+            onEditingNameChange={setEditingName}
+            onStartEdit={() => openEdit(routine)}
+            onCancelEdit={cancelEdit}
+            onSaveEdit={handleSaveEdit}
+            onDelete={() => handleDelete(routine)}
+          />
         ))}
       </ul>
 
