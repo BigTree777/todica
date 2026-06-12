@@ -171,6 +171,7 @@ function makeMockRepository(initial: WebRoutine[] = []): WebRoutineRepository & 
       ifMatch: number;
       name?: string;
       daysOfWeek?: number[];
+      defaultPriority?: "highest" | "normal" | "later";
     }): Promise<WebRoutine> => {
       const idx = state.findIndex((r) => r.id === cmd.id);
       if (idx < 0) throw new Error("routine not found");
@@ -178,6 +179,7 @@ function makeMockRepository(initial: WebRoutine[] = []): WebRoutineRepository & 
         ...state[idx]!,
         ...(cmd.name !== undefined ? { name: cmd.name } : {}),
         ...(cmd.daysOfWeek !== undefined ? { daysOfWeek: cmd.daysOfWeek } : {}),
+        ...(cmd.defaultPriority !== undefined ? { defaultPriority: cmd.defaultPriority } : {}),
         version: state[idx]!.version + 1,
         updatedAt: NOW,
       };
@@ -469,6 +471,8 @@ describe("ルーティンの優先度 UI 統一 + 編集モードでの曜日変
           onEditingNameChange={() => {}}
           editingDaysOfWeek={[1]}
           onEditingDaysOfWeekChange={() => {}}
+          editingDefaultPriority="normal"
+          onEditingDefaultPriorityChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -497,6 +501,8 @@ describe("ルーティンの優先度 UI 統一 + 編集モードでの曜日変
           onEditingNameChange={() => {}}
           editingDaysOfWeek={[1]}
           onEditingDaysOfWeekChange={() => {}}
+          editingDefaultPriority="normal"
+          onEditingDefaultPriorityChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -523,6 +529,8 @@ describe("ルーティンの優先度 UI 統一 + 編集モードでの曜日変
           onEditingNameChange={() => {}}
           editingDaysOfWeek={[1]}
           onEditingDaysOfWeekChange={() => {}}
+          editingDefaultPriority="normal"
+          onEditingDefaultPriorityChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -556,6 +564,8 @@ describe("ルーティンの優先度 UI 統一 + 編集モードでの曜日変
           onEditingNameChange={() => {}}
           editingDaysOfWeek={[1]}
           onEditingDaysOfWeekChange={() => {}}
+          editingDefaultPriority="normal"
+          onEditingDefaultPriorityChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -596,6 +606,8 @@ describe("ルーティンの優先度 UI 統一 + 編集モードでの曜日変
           onEditingNameChange={() => {}}
           editingDaysOfWeek={[1]}
           onEditingDaysOfWeekChange={onEditingDaysOfWeekChange}
+          editingDefaultPriority="normal"
+          onEditingDefaultPriorityChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -627,6 +639,8 @@ describe("ルーティンの優先度 UI 統一 + 編集モードでの曜日変
           onEditingNameChange={() => {}}
           editingDaysOfWeek={[1]}
           onEditingDaysOfWeekChange={onEditingDaysOfWeekChange}
+          editingDefaultPriority="normal"
+          onEditingDefaultPriorityChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -658,6 +672,8 @@ describe("ルーティンの優先度 UI 統一 + 編集モードでの曜日変
           onEditingNameChange={() => {}}
           editingDaysOfWeek={[2]}
           onEditingDaysOfWeekChange={onEditingDaysOfWeekChange}
+          editingDefaultPriority="normal"
+          onEditingDefaultPriorityChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -678,17 +694,24 @@ describe("ルーティンの優先度 UI 統一 + 編集モードでの曜日変
   });
 
   /**
-   * シナリオ AC-11: <RoutineCard> の DOM 順は input → 曜日 → 保存 → キャンセル である (D-005).
-   *   Given <RoutineCard isEditing={true} editingDaysOfWeek={[1]} ... /> を render する
+   * シナリオ AC-11: <RoutineCard> の DOM 順は input → 曜日 → 優先度 → 保存 → キャンセル である.
+   *   Given <RoutineCard isEditing={true} editingDaysOfWeek={[1]} editingDefaultPriority="normal"
+   *     ... /> を render する
    *   When  編集 form 内の direct children を DOM 順に観察する
    *   Then  最初の child は label.visually-hidden (htmlFor=input) である
    *    かつ 2 番目の child は input である
    *    かつ 3 番目の child は div.routine-card__day-checkboxes である
-   *    かつ 4 番目の child は button[type="submit"] (保存) である
-   *    かつ 5 番目の child は button[type="button"] (キャンセル) である
+   *    かつ 4 番目の child は div[role="radiogroup"] (PriorityStars) である (BL-069 D-001)
+   *    かつ 5 番目の child は button[type="submit"] (保存) である
+   *    かつ 6 番目の child は button[type="button"] (キャンセル) である
+   *
+   *   BL-069 (routine-card-edit-priority) 追従: 旧 BL-068 D-005 の DOM 順
+   *   `label → input → div.day-checkboxes → 保存 → キャンセル` に
+   *   「優先度 (PriorityStars / div[role='radiogroup'])」を曜日の直後 / 保存の直前に挿入する
+   *   形へ拡張する (BL-069 D-001).
    */
-  describe("AC-11: <RoutineCard> の DOM 順は input → 曜日 → 保存 → キャンセル である (D-005)", () => {
-    it("編集 form 内の direct children が [label, input, div.day-checkboxes, button-submit, button-cancel] の順", async () => {
+  describe("AC-11: <RoutineCard> の DOM 順は input → 曜日 → 優先度 → 保存 → キャンセル である (BL-069 D-001)", () => {
+    it("編集 form 内の direct children が [label, input, div.day-checkboxes, div.radiogroup, button-submit, button-cancel] の順", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine({ daysOfWeek: [1] });
       const { container } = render(
@@ -699,6 +722,8 @@ describe("ルーティンの優先度 UI 統一 + 編集モードでの曜日変
           onEditingNameChange={() => {}}
           editingDaysOfWeek={[1]}
           onEditingDaysOfWeekChange={() => {}}
+          editingDefaultPriority="normal"
+          onEditingDefaultPriorityChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -710,14 +735,19 @@ describe("ルーティンの優先度 UI 統一 + 編集モードでの曜日変
       const form = container.querySelector("form");
       expect(form, "編集モードの form が見つからない").not.toBeNull();
       const children = Array.from(form?.children ?? []) as HTMLElement[];
-      // 順: label (visually-hidden) → input → div.routine-card__day-checkboxes → button[type=submit] → button[type=button]
-      expect(children.length, "form の direct children が 5 個ではない").toBeGreaterThanOrEqual(5);
+      // 順: label (visually-hidden) → input → div.routine-card__day-checkboxes →
+      //     div[role='radiogroup'] (PriorityStars) → button[type=submit] → button[type=button]
+      expect(
+        children.length,
+        "form の direct children が 6 個ではない (BL-069 D-001 違反)",
+      ).toBeGreaterThanOrEqual(6);
 
       const c0 = children[0]!;
       const c1 = children[1]!;
       const c2 = children[2]!;
       const c3 = children[3]!;
       const c4 = children[4]!;
+      const c5 = children[5]!;
 
       expect(c0.tagName.toLowerCase(), "1 番目の child が label ではない").toBe("label");
       expect(c0.classList.contains("visually-hidden")).toBe(true);
@@ -727,10 +757,16 @@ describe("ルーティンの優先度 UI 統一 + 編集モードでの曜日変
         c2.classList.contains("routine-card__day-checkboxes"),
         "3 番目の child の class に routine-card__day-checkboxes が無い",
       ).toBe(true);
-      expect(c3.tagName.toLowerCase(), "4 番目の child が button ではない").toBe("button");
-      expect(c3.getAttribute("type")).toBe("submit");
+      // BL-069 D-001: 4 番目に PriorityStars (= div[role='radiogroup']) が挿入される.
+      expect(c3.tagName.toLowerCase(), "4 番目の child が div ではない").toBe("div");
+      expect(
+        c3.getAttribute("role"),
+        "4 番目の child の role が radiogroup ではない (BL-069 D-001 違反)",
+      ).toBe("radiogroup");
       expect(c4.tagName.toLowerCase(), "5 番目の child が button ではない").toBe("button");
-      expect(c4.getAttribute("type")).toBe("button");
+      expect(c4.getAttribute("type")).toBe("submit");
+      expect(c5.tagName.toLowerCase(), "6 番目の child が button ではない").toBe("button");
+      expect(c5.getAttribute("type")).toBe("button");
     });
   });
 
@@ -861,6 +897,24 @@ describe("ルーティンの優先度 UI 統一 + 編集モードでの曜日変
         src,
         "onEditingDaysOfWeekChange: (next: number[]) => void 宣言が無い (G-4 違反)",
       ).toMatch(/onEditingDaysOfWeekChange\s*:\s*\(\s*next\s*:\s*number\[\]\s*\)\s*=>\s*void/);
+    });
+
+    // BL-069 (routine-card-edit-priority) 追従: RoutineCardProps に
+    // `editingDefaultPriority: Priority` / `onEditingDefaultPriorityChange: (next: Priority) => void`
+    // が追加されたことを宣言 grep で確認する.
+    it("routine-card.tsx に editingDefaultPriority: Priority の宣言を含む (BL-069 G-2)", () => {
+      const src = readFileSync(routineCardTsxPath, "utf-8");
+      expect(src, "editingDefaultPriority: Priority 宣言が無い (BL-069 G-2 違反)").toMatch(
+        /editingDefaultPriority\s*:\s*Priority\b/,
+      );
+    });
+
+    it("routine-card.tsx に onEditingDefaultPriorityChange: (next: Priority) => void の宣言を含む (BL-069 G-2)", () => {
+      const src = readFileSync(routineCardTsxPath, "utf-8");
+      expect(
+        src,
+        "onEditingDefaultPriorityChange: (next: Priority) => void 宣言が無い (BL-069 G-2 違反)",
+      ).toMatch(/onEditingDefaultPriorityChange\s*:\s*\(\s*next\s*:\s*Priority\s*\)\s*=>\s*void/);
     });
 
     const existingProps = [
@@ -1105,11 +1159,14 @@ describe("ルーティンの優先度 UI 統一 + 編集モードでの曜日変
         ifMatch: number;
         name: string;
         daysOfWeek: number[];
+        defaultPriority: "highest" | "normal" | "later";
       };
       expect(arg.id).toBe(routine.id);
       expect(arg.ifMatch).toBe(1);
       expect(arg.name).toBe("A");
       expect(arg.daysOfWeek).toEqual([1, 2]);
+      // BL-069 追従: defaultPriority も PATCH に乗る (= openEdit で初期化された値).
+      expect(arg.defaultPriority).toBe("normal");
     });
   });
 
@@ -1146,9 +1203,12 @@ describe("ルーティンの優先度 UI 統一 + 編集モードでの曜日変
         ifMatch: number;
         name: string;
         daysOfWeek: number[];
+        defaultPriority: "highest" | "normal" | "later";
       };
       expect(arg.name).toBe("B");
       expect(arg.daysOfWeek).toEqual([1]);
+      // BL-069 追従: defaultPriority も PATCH に乗る (= openEdit で初期化された値 normal).
+      expect(arg.defaultPriority).toBe("normal");
     });
   });
 

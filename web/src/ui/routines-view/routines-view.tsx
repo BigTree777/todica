@@ -67,6 +67,7 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [editingDaysOfWeek, setEditingDaysOfWeek] = useState<number[]>([]);
+  const [editingDefaultPriority, setEditingDefaultPriority] = useState<Priority>("normal");
 
   const invalidateRoutines = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ["routines"] });
@@ -133,6 +134,7 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
       ifMatch: number;
       name: string;
       daysOfWeek: number[];
+      defaultPriority: Priority;
     }) => {
       const idempotencyKey = generateId();
       void safeEnqueue({
@@ -144,7 +146,11 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
           "Idempotency-Key": idempotencyKey,
           "If-Match": String(cmd.ifMatch),
         },
-        body: JSON.stringify({ name: cmd.name, daysOfWeek: cmd.daysOfWeek }),
+        body: JSON.stringify({
+          name: cmd.name,
+          daysOfWeek: cmd.daysOfWeek,
+          defaultPriority: cmd.defaultPriority,
+        }),
         idempotencyKey,
       });
       if (!navigator.onLine) return undefined;
@@ -234,12 +240,14 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
     setEditingId(routine.id);
     setEditingName(routine.name);
     setEditingDaysOfWeek(routine.daysOfWeek);
+    setEditingDefaultPriority(routine.defaultPriority);
   }, []);
 
   const cancelEdit = useCallback(() => {
     setEditingId(null);
     setEditingName("");
     setEditingDaysOfWeek([]);
+    setEditingDefaultPriority("normal");
   }, []);
 
   const handleSaveEdit = useCallback(
@@ -254,10 +262,19 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
         ifMatch: routine.version,
         name: editingName,
         daysOfWeek: editingDaysOfWeek,
+        defaultPriority: editingDefaultPriority,
       });
       cancelEdit();
     },
-    [editingId, editingName, editingDaysOfWeek, routines, updateMutation, cancelEdit],
+    [
+      editingId,
+      editingName,
+      editingDaysOfWeek,
+      editingDefaultPriority,
+      routines,
+      updateMutation,
+      cancelEdit,
+    ],
   );
 
   const handleDelete = useCallback(
@@ -291,6 +308,8 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
             onEditingNameChange={setEditingName}
             editingDaysOfWeek={editingDaysOfWeek}
             onEditingDaysOfWeekChange={setEditingDaysOfWeek}
+            editingDefaultPriority={editingDefaultPriority}
+            onEditingDefaultPriorityChange={setEditingDefaultPriority}
             onStartEdit={() => openEdit(routine)}
             onCancelEdit={cancelEdit}
             onSaveEdit={handleSaveEdit}

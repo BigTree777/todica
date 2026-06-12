@@ -507,6 +507,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           onEditingNameChange={() => {}}
           editingDaysOfWeek={[1]}
           onEditingDaysOfWeekChange={() => {}}
+          editingDefaultPriority="normal"
+          onEditingDefaultPriorityChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -534,6 +536,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           onEditingNameChange={() => {}}
           editingDaysOfWeek={[1]}
           onEditingDaysOfWeekChange={() => {}}
+          editingDefaultPriority="normal"
+          onEditingDefaultPriorityChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -557,6 +561,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           onEditingNameChange={() => {}}
           editingDaysOfWeek={[1]}
           onEditingDaysOfWeekChange={() => {}}
+          editingDefaultPriority="normal"
+          onEditingDefaultPriorityChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -581,6 +587,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           onEditingNameChange={() => {}}
           editingDaysOfWeek={[1]}
           onEditingDaysOfWeekChange={() => {}}
+          editingDefaultPriority="normal"
+          onEditingDefaultPriorityChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -609,6 +617,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           onEditingNameChange={() => {}}
           editingDaysOfWeek={[1]}
           onEditingDaysOfWeekChange={() => {}}
+          editingDefaultPriority="normal"
+          onEditingDefaultPriorityChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -639,6 +649,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           onEditingNameChange={() => {}}
           editingDaysOfWeek={[1]}
           onEditingDaysOfWeekChange={() => {}}
+          editingDefaultPriority="normal"
+          onEditingDefaultPriorityChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -673,6 +685,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           onEditingNameChange={() => {}}
           editingDaysOfWeek={[1]}
           onEditingDaysOfWeekChange={() => {}}
+          editingDefaultPriority="normal"
+          onEditingDefaultPriorityChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -698,6 +712,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           onEditingNameChange={() => {}}
           editingDaysOfWeek={[1]}
           onEditingDaysOfWeekChange={() => {}}
+          editingDefaultPriority="normal"
+          onEditingDefaultPriorityChange={() => {}}
           onStartEdit={onStartEdit}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -726,6 +742,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           onEditingNameChange={() => {}}
           editingDaysOfWeek={[1]}
           onEditingDaysOfWeekChange={() => {}}
+          editingDefaultPriority="normal"
+          onEditingDefaultPriorityChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -775,6 +793,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           onEditingNameChange={() => {}}
           editingDaysOfWeek={[1]}
           onEditingDaysOfWeekChange={() => {}}
+          editingDefaultPriority="normal"
+          onEditingDefaultPriorityChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -801,6 +821,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           onEditingNameChange={() => {}}
           editingDaysOfWeek={[1]}
           onEditingDaysOfWeekChange={() => {}}
+          editingDefaultPriority="normal"
+          onEditingDefaultPriorityChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -825,6 +847,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           onEditingNameChange={() => {}}
           editingDaysOfWeek={[1]}
           onEditingDaysOfWeekChange={() => {}}
+          editingDefaultPriority="normal"
+          onEditingDefaultPriorityChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -859,6 +883,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           onEditingNameChange={() => {}}
           editingDaysOfWeek={[1]}
           onEditingDaysOfWeekChange={() => {}}
+          editingDefaultPriority="normal"
+          onEditingDefaultPriorityChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -889,6 +915,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           onEditingNameChange={() => {}}
           editingDaysOfWeek={[1]}
           onEditingDaysOfWeekChange={() => {}}
+          editingDefaultPriority="normal"
+          onEditingDefaultPriorityChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -912,6 +940,41 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
       expect(checkboxes.length, "編集モードの曜日 checkbox が 7 個ではない").toBe(7);
     });
 
+    it("編集モードの form 内に <PriorityStars /> (= div[role='radiogroup']) が存在する (BL-069 REQ-1)", async () => {
+      // BL-069 (routine-card-edit-priority) 追従: 編集モードに <PriorityStars /> が追加された.
+      // 旧 BL-061 / BL-068 の DOM assert は radiogroup の存在を要求しなかったが,
+      // 本 BL-069 で「優先度変更も編集モードで可能」と決まったため radiogroup 存在 assert を追加する.
+      const { RoutineCard } = await importRoutineCard();
+      const routine = makeRoutine();
+      const { container } = render(
+        <RoutineCard
+          routine={routine}
+          isEditing={true}
+          editingName="朝の運動"
+          onEditingNameChange={() => {}}
+          editingDaysOfWeek={[1]}
+          onEditingDaysOfWeekChange={() => {}}
+          editingDefaultPriority="normal"
+          onEditingDefaultPriorityChange={() => {}}
+          onStartEdit={() => {}}
+          onCancelEdit={() => {}}
+          onSaveEdit={(e: React.FormEvent) => {
+            e.preventDefault();
+          }}
+          onDelete={() => {}}
+        />,
+      );
+      const form = container.querySelector("form");
+      expect(form, "編集モードの form が見つからない").not.toBeNull();
+      const radiogroup = form?.querySelector("div[role='radiogroup']");
+      expect(
+        radiogroup,
+        "編集モードの form に <PriorityStars /> (= div[role='radiogroup']) が無い (BL-069 REQ-1 違反)",
+      ).not.toBeNull();
+      const stars = Array.from(radiogroup?.querySelectorAll("button[role='radio']") ?? []);
+      expect(stars.length, "PriorityStars の星 button が 3 個ではない").toBe(3);
+    });
+
     it("編集モードでは「変更」「削除」 button が出ない (表示モードと排他)", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine();
@@ -923,6 +986,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           onEditingNameChange={() => {}}
           editingDaysOfWeek={[1]}
           onEditingDaysOfWeekChange={() => {}}
+          editingDefaultPriority="normal"
+          onEditingDefaultPriorityChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -952,6 +1017,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           onEditingNameChange={() => {}}
           editingDaysOfWeek={[1]}
           onEditingDaysOfWeekChange={() => {}}
+          editingDefaultPriority="normal"
+          onEditingDefaultPriorityChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={onSaveEdit}
@@ -1213,6 +1280,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           onEditingNameChange={() => {}}
           editingDaysOfWeek={[1]}
           onEditingDaysOfWeekChange={() => {}}
+          editingDefaultPriority="normal"
+          onEditingDefaultPriorityChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -1718,6 +1787,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           onEditingNameChange={() => {}}
           editingDaysOfWeek={[1]}
           onEditingDaysOfWeekChange={() => {}}
+          editingDefaultPriority="normal"
+          onEditingDefaultPriorityChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {

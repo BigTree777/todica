@@ -25,7 +25,9 @@
  *   - D-009: 左ブロックは名前 + 曜日の縦並び (`.routine-card__main`).
  *   - G-8 / REQ-6: 「名称変更」 button のラベル文字列は「変更」に短縮.
  */
+import type { Priority } from "@todica/domain/task";
 import type { WebRoutine } from "../../repositories/routine-repository.js";
+import { PriorityStars } from "../priority-stars/priority-stars.js";
 import "./routine-card.css";
 
 /** 曜日 0 (日) 〜 6 (土) の表示ラベル. */
@@ -44,6 +46,10 @@ export interface RoutineCardProps {
   editingDaysOfWeek: number[];
   /** 編集モードの曜日 toggle ハンドラ (次の配列を受け取る / BL-068 D-006). */
   onEditingDaysOfWeekChange: (next: number[]) => void;
+  /** 編集モードの defaultPriority (親が state を持つ) (BL-069 G-2). */
+  editingDefaultPriority: Priority;
+  /** 編集モードの優先度変更ハンドラ (BL-069 G-2 / D-006). */
+  onEditingDefaultPriorityChange: (next: Priority) => void;
   /** 「変更」 button のクリックハンドラ. */
   onStartEdit: () => void;
   /** 「キャンセル」 button のクリックハンドラ. */
@@ -64,6 +70,8 @@ export function RoutineCard(props: RoutineCardProps): JSX.Element {
     onEditingNameChange,
     editingDaysOfWeek,
     onEditingDaysOfWeekChange,
+    editingDefaultPriority,
+    onEditingDefaultPriorityChange,
     onStartEdit,
     onCancelEdit,
     onSaveEdit,
@@ -113,6 +121,12 @@ export function RoutineCard(props: RoutineCardProps): JSX.Element {
               </label>
             ))}
           </div>
+          <PriorityStars
+            value={editingDefaultPriority}
+            onChange={onEditingDefaultPriorityChange}
+            groupLabel="優先度"
+            idPrefix="routine-edit"
+          />
           <button type="submit">保存</button>
           <button type="button" onClick={onCancelEdit}>
             キャンセル
