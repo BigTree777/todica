@@ -121,8 +121,12 @@ describe("BL-049 AC-2: ハンバーガークリックでメニューを開く (R
     await user.click(getOpenButton());
 
     // ボタンの aria-label / aria-expanded が変化している.
-    const closeButton = screen.getByRole("button", { name: "メニューを閉じる" });
-    expect(closeButton).toHaveAttribute("aria-expanded", "true");
+    // BL-062 で menu 内にも aria-label="メニューを閉じる" の閉じるボタンが追加されるため,
+    // ハンバーガー本体は `.app-shell__hamburger` クラスで一意に取得する.
+    const hamburger = document.querySelector<HTMLButtonElement>("button.app-shell__hamburger");
+    expect(hamburger).not.toBeNull();
+    expect(hamburger).toHaveAttribute("aria-label", "メニューを閉じる");
+    expect(hamburger).toHaveAttribute("aria-expanded", "true");
 
     // メニューパネルが dialog として取得できる.
     const dialog = screen.getByRole("dialog", { name: "ナビゲーションメニュー" });

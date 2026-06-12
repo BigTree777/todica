@@ -74,9 +74,13 @@ test.describe("BL-049 ハンバーガーナビゲーション", () => {
 
     await openMenu(page);
 
-    const closeButton = page.getByRole("button", { name: "メニューを閉じる" });
-    await expect(closeButton).toBeVisible();
-    await expect(closeButton).toHaveAttribute("aria-expanded", "true");
+    // BL-062 で menu 内にも aria-label="メニューを閉じる" の閉じるボタンが追加される.
+    // また BL-062 で menu 開時のハンバーガーは display: none で視覚的に退避する.
+    // ハンバーガー本体は `.app-shell__hamburger` クラスで一意に取得し,
+    // 属性 (aria-label / aria-expanded) を assert する.
+    const hamburger = page.locator("button.app-shell__hamburger");
+    await expect(hamburger).toHaveAttribute("aria-label", "メニューを閉じる");
+    await expect(hamburger).toHaveAttribute("aria-expanded", "true");
   });
 
   // ----------------------------------------------------------
