@@ -375,14 +375,19 @@ describe("TomorrowView (BL-038 REQ-1 一覧表示)", () => {
     // 並びは B (highest) → A (normal) → D (later).
     const items = await screen.findAllByRole("listitem");
     expect(items).toHaveLength(3);
-    expect(items[0]?.textContent ?? "").toContain("BBB");
-    expect(items[1]?.textContent ?? "").toContain("AAA");
-    expect(items[2]?.textContent ?? "").toContain("DDD");
+    // BL-070 追従: name は input value に入るため textContent には現れない.
+    // 各 <li> 内の input value を観察する.
+    const inputValues = items.map(
+      (li) => (li.querySelector('input[type="text"]') as HTMLInputElement | null)?.value ?? "",
+    );
+    expect(inputValues[0]).toContain("BBB");
+    expect(inputValues[1]).toContain("AAA");
+    expect(inputValues[2]).toContain("DDD");
 
-    // 今日のタスク (CCC) は出ない.
-    expect(screen.queryByText("CCC")).toBeNull();
+    // 今日のタスク (CCC) は出ない (input value としても).
+    expect(screen.queryByDisplayValue("CCC")).toBeNull();
     // ゴミ箱の tomorrow タスク (EEE) も出ない.
-    expect(screen.queryByText("EEE")).toBeNull();
+    expect(screen.queryByDisplayValue("EEE")).toBeNull();
   });
 
   it('シナリオ B: TomorrowView は repository.list({ dueDate: "tomorrow" }) を呼ぶ', async () => {
@@ -397,7 +402,7 @@ describe("TomorrowView (BL-038 REQ-1 一覧表示)", () => {
     );
 
     // 描画完了を待つ.
-    await screen.findByText("x");
+    await screen.findByDisplayValue("x");
 
     // list() が dueDate=tomorrow 引数付きで呼ばれている.
     expect(repo.listMock).toHaveBeenCalled();
@@ -445,10 +450,14 @@ describe("TomorrowView (BL-038 REQ-1 一覧表示)", () => {
 
     const items = await screen.findAllByRole("listitem");
     expect(items).toHaveLength(3);
+    // BL-070 追従: name は input value に入るため textContent には現れない.
+    const inputValues = items.map(
+      (li) => (li.querySelector('input[type="text"]') as HTMLInputElement | null)?.value ?? "",
+    );
     // mock が返した順 = A → B → C のまま表示される.
-    expect(items[0]?.textContent ?? "").toContain("AAA");
-    expect(items[1]?.textContent ?? "").toContain("BBB");
-    expect(items[2]?.textContent ?? "").toContain("CCC");
+    expect(inputValues[0]).toContain("AAA");
+    expect(inputValues[1]).toContain("BBB");
+    expect(inputValues[2]).toContain("CCC");
   });
 });
 
@@ -653,7 +662,7 @@ describe("TomorrowView (BL-038 REQ-2 起票フォーム)", () => {
     });
 
     // 一覧に「明日の買い物」が現れる.
-    expect(await screen.findByText("明日の買い物")).toBeInTheDocument();
+    expect(await screen.findByDisplayValue("明日の買い物")).toBeInTheDocument();
   });
 });
 
@@ -723,7 +732,7 @@ describe("TomorrowView (BL-038 REQ-4 「今日にする」)", () => {
       <TomorrowView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
 
-    await screen.findByText("AAA");
+    await screen.findByDisplayValue("AAA");
     const items = screen.getAllByRole("listitem");
     const card = items[0]!;
 
@@ -757,7 +766,7 @@ describe("TomorrowView (BL-038 REQ-4 「今日にする」)", () => {
       <TomorrowView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
 
-    expect(await screen.findByText("MOVE-ME")).toBeInTheDocument();
+    expect(await screen.findByDisplayValue("MOVE-ME")).toBeInTheDocument();
 
     const items = screen.getAllByRole("listitem");
     const moveButton = within(items[0]!).getByRole("button", {
@@ -768,7 +777,7 @@ describe("TomorrowView (BL-038 REQ-4 「今日にする」)", () => {
     // 一覧から消える (mock updateMock が dueDate を today にし, 次回 list({ dueDate: "tomorrow" })
     // は MOVE-ME を返さなくなる).
     await waitFor(() => {
-      expect(screen.queryByText("MOVE-ME")).toBeNull();
+      expect(screen.queryByDisplayValue("MOVE-ME")).toBeNull();
     });
   });
 
@@ -790,7 +799,7 @@ describe("TomorrowView (BL-038 REQ-4 「今日にする」)", () => {
       <TomorrowView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
 
-    await screen.findByText("AAA");
+    await screen.findByDisplayValue("AAA");
     const listCallsBefore = repo.listMock.mock.calls.length;
 
     const items = screen.getAllByRole("listitem");
@@ -832,7 +841,7 @@ describe("TomorrowView (BL-038 REQ-5 削除操作)", () => {
       <TomorrowView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
 
-    await screen.findByText("AAA");
+    await screen.findByDisplayValue("AAA");
     const items = screen.getAllByRole("listitem");
     const card = items[0]!;
 
@@ -863,7 +872,7 @@ describe("TomorrowView (BL-038 REQ-5 削除操作)", () => {
       <TomorrowView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
 
-    expect(await screen.findByText("DEL-ME")).toBeInTheDocument();
+    expect(await screen.findByDisplayValue("DEL-ME")).toBeInTheDocument();
 
     const items = screen.getAllByRole("listitem");
     const deleteButton = within(items[0]!).getByRole("button", {
@@ -872,7 +881,7 @@ describe("TomorrowView (BL-038 REQ-5 削除操作)", () => {
     await user.click(deleteButton);
 
     await waitFor(() => {
-      expect(screen.queryByText("DEL-ME")).toBeNull();
+      expect(screen.queryByDisplayValue("DEL-ME")).toBeNull();
     });
   });
 });
@@ -927,7 +936,7 @@ describe("TomorrowView (BL-042 REQ-2 「完了」 button)", () => {
       <TomorrowView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
 
-    await screen.findByText("AAA");
+    await screen.findByDisplayValue("AAA");
     const items = screen.getAllByRole("listitem");
     const card = items[0]!;
     const completeButton = within(card).getByRole("button", { name: "完了" });
@@ -975,7 +984,7 @@ describe("TomorrowView (BL-042 REQ-2 「完了」 button)", () => {
       <TomorrowView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
 
-    expect(await screen.findByText("COMPLETE-ME")).toBeInTheDocument();
+    expect(await screen.findByDisplayValue("COMPLETE-ME")).toBeInTheDocument();
     const listCallsBefore = repo.listMock.mock.calls.length;
     const todayCallsBefore = repo.todayMock.mock.calls.length;
 
@@ -988,7 +997,7 @@ describe("TomorrowView (BL-042 REQ-2 「完了」 button)", () => {
     // 一覧から COMPLETE-ME が消える (mock の completeMock が trashedAt をセットし,
     // 次回 list({ dueDate: "tomorrow" }) は COMPLETE-ME を返さなくなる).
     await waitFor(() => {
-      expect(screen.queryByText("COMPLETE-ME")).toBeNull();
+      expect(screen.queryByDisplayValue("COMPLETE-ME")).toBeNull();
     });
 
     // ["tomorrow"] invalidate: list の累積呼出回数が増えている.
@@ -1033,7 +1042,7 @@ describe("TomorrowView (BL-042 REQ-2 「完了」 button)", () => {
       <TomorrowView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
 
-    await screen.findByText("AAA");
+    await screen.findByDisplayValue("AAA");
     const items = screen.getAllByRole("listitem");
     const completeButton = within(items[0]!).getByRole("button", {
       name: "完了",
@@ -1070,7 +1079,7 @@ describe("TomorrowView (BL-042 REQ-2 「完了」 button)", () => {
       <TomorrowView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
 
-    await screen.findByText("AAA");
+    await screen.findByDisplayValue("AAA");
     const items = screen.getAllByRole("listitem");
     const completeButton = within(items[0]!).getByRole("button", {
       name: "完了",
@@ -1150,7 +1159,7 @@ describe("TomorrowView (BL-038 REQ-7 ConflictDialog)", () => {
       <TomorrowView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
 
-    await screen.findByText("AAA");
+    await screen.findByDisplayValue("AAA");
     const items = screen.getAllByRole("listitem");
     const moveButton = within(items[0]!).getByRole("button", {
       name: /今日にする/,
@@ -1193,7 +1202,7 @@ describe("TomorrowView (BL-038 REQ-7 ConflictDialog)", () => {
       <TomorrowView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
 
-    await screen.findByText("AAA");
+    await screen.findByDisplayValue("AAA");
     const items = screen.getAllByRole("listitem");
     const deleteButton = within(items[0]!).getByRole("button", {
       name: /削除/,
@@ -1232,7 +1241,7 @@ describe("TomorrowView (BL-038 REQ-7 / BL-034 通信エラー)", () => {
       <TomorrowView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
 
-    await screen.findByText("AAA");
+    await screen.findByDisplayValue("AAA");
     const items = screen.getAllByRole("listitem");
     const moveButton = within(items[0]!).getByRole("button", {
       name: /今日にする/,
@@ -1268,7 +1277,7 @@ describe("TomorrowView (BL-038 REQ-7 / BL-034 通信エラー)", () => {
       <TomorrowView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
 
-    await screen.findByText("AAA");
+    await screen.findByDisplayValue("AAA");
     const items = screen.getAllByRole("listitem");
     const deleteButton = within(items[0]!).getByRole("button", {
       name: /削除/,
@@ -1333,7 +1342,7 @@ describe("TomorrowView (BL-042 routine 由来タスクの扱い)", () => {
     );
 
     // routine 由来でも描画される (BL-038 維持).
-    expect(await screen.findByText("ROUTINE-TOMORROW")).toBeInTheDocument();
+    expect(await screen.findByDisplayValue("ROUTINE-TOMORROW")).toBeInTheDocument();
 
     // 「削除」は origin に関わらず存在.
     const items = screen.getAllByRole("listitem");

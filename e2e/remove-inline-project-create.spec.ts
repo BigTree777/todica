@@ -201,8 +201,8 @@ test.describe("remove-inline-project-create (BL-050) のシナリオ", () => {
     expect(postRequest.postDataJSON()).toMatchObject({ name: projectName });
     expect(postRequest.headers()["idempotency-key"]).toBeTruthy();
 
-    // /projects の一覧に表示される.
-    await expect(page.getByText(projectName, { exact: true })).toBeVisible();
+    // BL-070 追従: プロジェクト名は <input value={name}> に入る.
+    await expect(page.locator(`.project-card input[value="${projectName}"]`)).toBeVisible();
 
     // サーバ正本にも反映.
     const projects = await listProjects(request);
@@ -230,7 +230,8 @@ test.describe("remove-inline-project-create (BL-050) のシナリオ", () => {
     const createForm = page.getByRole("form", { name: "プロジェクト作成フォーム" });
     await createForm.getByLabel("プロジェクト名").fill(projectName);
     await createForm.getByRole("button", { name: "追加" }).click();
-    await expect(page.getByText(projectName, { exact: true })).toBeVisible();
+    // BL-070 追従: プロジェクト名は <input value={name}> に入る.
+    await expect(page.locator(`.project-card input[value="${projectName}"]`)).toBeVisible();
 
     // ハンバーガー → /today に戻る.
     await page.getByRole("button", { name: "メニューを開く" }).click();

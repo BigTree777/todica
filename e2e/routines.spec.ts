@@ -19,13 +19,27 @@ test.describe("ルーティン", () => {
 
     // BL-061 (routine-card-component) 追従: name input の label を「名前」→「ルーティン名」に変更
     // (= placeholder と一致させ, visually-hidden 化したときも文脈が明確になる NFR-NAME-LABEL-CHANGE).
-    await page.getByLabel("ルーティン名").fill(routineName);
+    // BL-070 追従: 表示モードに同名 visually-hidden label が追加されるため form でスコープを絞る.
+    await page
+      .getByRole("form", { name: "ルーティン作成フォーム" })
+      .getByLabel("ルーティン名")
+      .fill(routineName);
     // 月曜・火曜にチェック (任意の選択).
-    await page.getByLabel("月", { exact: true }).check();
-    await page.getByLabel("火", { exact: true }).check();
+    // BL-070 追従: 表示モードにも曜日 checkbox が常時表示されるため
+    // form scope 内の checkbox を明示的に取得する.
+    await page
+      .getByRole("form", { name: "ルーティン作成フォーム" })
+      .getByLabel("月", { exact: true })
+      .check();
+    await page
+      .getByRole("form", { name: "ルーティン作成フォーム" })
+      .getByLabel("火", { exact: true })
+      .check();
     await page.getByRole("button", { name: "追加" }).click();
 
-    await expect(page.getByText(routineName, { exact: true })).toBeVisible();
+    // BL-070 (inline-edit-all-cards) 追従: ルーティン名は input.value で表示される.
+    // Playwright には getByDisplayValue が無いため input[value="..."] で取得する.
+    await expect(page.locator(`.routine-card input[value="${routineName}"]`)).toBeVisible();
   });
 
   test("ルーティンを削除すると一覧から消える", async ({ page }) => {
@@ -33,21 +47,36 @@ test.describe("ルーティン", () => {
     const routineName = `R削除 ${Date.now()}`;
 
     // BL-061 (routine-card-component) 追従: 「名前」→「ルーティン名」.
-    await page.getByLabel("ルーティン名").fill(routineName);
-    await page.getByLabel("月", { exact: true }).check();
+    // BL-070 追従: 表示モードに同名 visually-hidden label が追加されるため form でスコープを絞る.
+    await page
+      .getByRole("form", { name: "ルーティン作成フォーム" })
+      .getByLabel("ルーティン名")
+      .fill(routineName);
+    // BL-070 追従: 表示モードにも曜日 checkbox が常時表示されるため
+    // form scope 内の checkbox を明示的に取得する.
+    await page
+      .getByRole("form", { name: "ルーティン作成フォーム" })
+      .getByLabel("月", { exact: true })
+      .check();
     await page.getByRole("button", { name: "追加" }).click();
-    await expect(page.getByText(routineName, { exact: true })).toBeVisible();
+    // BL-070 追従: routine 名は input.value で表示される.
+    // Playwright には getByDisplayValue が無いため input[value="..."] で取得する.
+    await expect(page.locator(`.routine-card input[value="${routineName}"]`)).toBeVisible();
 
     // BL-061 (routine-card-component) 追従: ルーティン名は `.routine-card__main` 内の
     // `<span>` に置かれるようになり, `locator("..")` だけでは `<li class="routine-card">`
     // までたどり着けない. `xpath=ancestor::li` で `<li>` 全体を取得して
     // 「削除」 button を探す.
+    //
+    // BL-070 (inline-edit-all-cards) 追従:
+    //   表示モードの `<span>` は `<input value={...}>` に置換される.
+    //   Playwright には getByDisplayValue が無いため input[value="..."] + ancestor::li で取得する.
     const routineRow = page
-      .getByText(routineName, { exact: true })
+      .locator(`.routine-card input[value="${routineName}"]`)
       .first()
       .locator("xpath=ancestor::li[1]");
     await routineRow.getByRole("button", { name: "削除" }).click();
 
-    await expect(page.getByText(routineName, { exact: true })).toHaveCount(0);
+    await expect(page.locator(`.routine-card input[value="${routineName}"]`)).toHaveCount(0);
   });
 });

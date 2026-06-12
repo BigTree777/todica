@@ -161,9 +161,9 @@ describe("RoutinesView (BL-017 ルーティン管理 UI)", () => {
     // list() が 1 回呼ばれる
     expect(repo.listMock).toHaveBeenCalledTimes(1);
 
-    // ルーティン名が表示される
-    expect(await screen.findByText("朝の運動")).toBeInTheDocument();
-    expect(await screen.findByText("夜の読書")).toBeInTheDocument();
+    // BL-070: ルーティン名は input value に入る. findByDisplayValue で取得.
+    expect(await screen.findByDisplayValue("朝の運動")).toBeInTheDocument();
+    expect(await screen.findByDisplayValue("夜の読書")).toBeInTheDocument();
   });
 
   /**
@@ -226,8 +226,8 @@ describe("RoutinesView (BL-017 ルーティン管理 UI)", () => {
     expect(Array.isArray(arg.daysOfWeek)).toBe(true);
     expect(arg.daysOfWeek.length).toBeGreaterThan(0);
 
-    // 一覧が再取得され「夕方の散歩」が表示される
-    expect(await screen.findByText("夕方の散歩")).toBeInTheDocument();
+    // BL-070: 一覧が再取得され「夕方の散歩」が input value に表示される.
+    expect(await screen.findByDisplayValue("夕方の散歩")).toBeInTheDocument();
   });
 
   // ----------------------------------------------------------
@@ -236,36 +236,33 @@ describe("RoutinesView (BL-017 ルーティン管理 UI)", () => {
   // ----------------------------------------------------------
 
   /**
-   * シナリオ: ルーティンの名称を変更できる
+   * シナリオ: ルーティンの名称を変更できる (BL-070 追従後 = input blur 経路)
    *   Given ルーティン「朝の運動」が一覧に表示されている
-   *   When  「朝の運動」の編集ボタンを押し、「夜の運動」と入力して保存する
+   *   When  「朝の運動」の入力欄を「夜の運動」に書き換えて blur する
    *   Then  repository.update() が { id, ifMatch: version, name: "夜の運動" } で呼ばれる
    *   And   一覧の表示が「夜の運動」に更新される
+   *
+   * BL-070 (inline-edit-all-cards) 追従:
+   *   旧 BL-061 / BL-068 / BL-069 は「『変更』 button click → 編集モード → 保存 button click」フロー.
+   *   BL-070 で「編集モード」概念ごと撤去 (REQ-3 / G-3). 「変更」「保存」 button は撤去.
+   *   代わりに「name input の blur で onNameBlur → updateMutation」フローへ逆転 (G-4 / REQ-5).
    */
-  it("シナリオ: 名称変更ボタンを押して名前を変更して保存すると repository.update() が呼ばれ一覧が更新される", async () => {
+  it("シナリオ: input の値を変更し blur すると repository.update() が呼ばれ一覧が更新される (BL-070)", async () => {
     const R1 = makeRoutine({ id: ROUTINE_ID_1, name: "朝の運動", version: 1 });
     const repo = makeMockRepository([R1]);
     const user = userEvent.setup();
 
     renderWithQueryClient(<RoutinesView repository={repo} />);
 
-    // ルーティン名が表示されるまで待つ
-    await screen.findByText("朝の運動");
-
-    // 編集ボタンをクリック
-    const editButton = await screen.findByRole("button", { name: /名称変更|編集|変更/ });
-    await user.click(editButton);
-
-    // 名称入力欄に新しい名前を入力
-    const editInput = await screen.findByDisplayValue("朝の運動");
+    // BL-070: 表示モードに常時 input が表示される.
+    const editInput = (await screen.findByDisplayValue("朝の運動")) as HTMLInputElement;
     await user.clear(editInput);
     await user.type(editInput, "夜の運動");
+    // blur で onNameBlur が発火 → updateMutation.
+    editInput.blur();
 
-    // 保存ボタンをクリック
-    const saveButton = screen.getByRole("button", { name: /保存|更新/ });
-    await user.click(saveButton);
-
-    // update() が正しい引数で呼ばれる
+    // update() が正しい引数で呼ばれる.
+    await screen.findByDisplayValue("夜の運動");
     expect(repo.updateMock).toHaveBeenCalledTimes(1);
     const arg = repo.updateMock.mock.calls[0]?.[0] as {
       id: string;
@@ -276,8 +273,8 @@ describe("RoutinesView (BL-017 ルーティン管理 UI)", () => {
     expect(arg.ifMatch).toBe(1); // R1.version
     expect(arg.name).toBe("夜の運動");
 
-    // 一覧が更新されて「夜の運動」が表示される
-    expect(await screen.findByText("夜の運動")).toBeInTheDocument();
+    // 一覧が更新されて「夜の運動」が input value に表示される.
+    expect(await screen.findByDisplayValue("夜の運動")).toBeInTheDocument();
   });
 
   // ----------------------------------------------------------
@@ -299,8 +296,8 @@ describe("RoutinesView (BL-017 ルーティン管理 UI)", () => {
 
     renderWithQueryClient(<RoutinesView repository={repo} />);
 
-    // ルーティン名が表示されるまで待つ
-    await screen.findByText("朝の運動");
+    // BL-070: ルーティン名は input value に入る. findByDisplayValue で待つ.
+    await screen.findByDisplayValue("朝の運動");
 
     // 削除ボタンをクリック
     const deleteButton = await screen.findByRole("button", { name: /削除/ });
@@ -312,7 +309,7 @@ describe("RoutinesView (BL-017 ルーティン管理 UI)", () => {
     expect(arg.id).toBe(ROUTINE_ID_1);
     expect(arg.ifMatch).toBe(3); // R1.version
 
-    // 一覧から「朝の運動」が消える
-    expect(screen.queryByText("朝の運動")).toBeNull();
+    // BL-070: 一覧から「朝の運動」が消える (input value としても無くなる).
+    expect(screen.queryByDisplayValue("朝の運動")).toBeNull();
   });
 });

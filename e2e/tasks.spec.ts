@@ -9,9 +9,10 @@
  * 各テストは固有のタスク名 (Date.now() suffix) で起票し, 他テストと衝突しない.
  *
  * 当該タスクが唯一の today タスクの場合, `focusedId = currentTaskId ?? nextTaskId`
- * のフォールバックで「現在のタスク」セクション側に入る (today-view.tsx:399). したがって
+ * のフォールバックで「現在のタスク」セクション側に入る (today-view.tsx). したがって
  * `タスク一覧` 固定の locator はテスト順や DB 状態に依存して壊れる. 本ファイルの helper
- * `taskRow` は両セクション共通で動くよう, タスク名 span の親要素 (li or div) を取る.
+ * `taskRow` は両セクション共通で動くよう, タスク名 input からカード本体
+ * (class="task-card" の li または section) を遡って取る.
  */
 import { type Page, expect, test } from "@playwright/test";
 
@@ -20,10 +21,18 @@ import { type Page, expect, test } from "@playwright/test";
  * - 「タスク一覧」配下の `<li>` か, 「現在のタスク」配下の `<div>` を拾う.
  */
 function taskRow(page: Page, taskName: string) {
-  // BL-057: タスクカードが 3 段ゾーン化されタスク名 span の直接の親が
-  // <div className="day-view__card__title"> になったため, ancestor::li で
-  // タスクカード本体 (<li>) を取得する.
-  return page.getByText(taskName, { exact: true }).first().locator("xpath=ancestor::li");
+  // BL-070 (inline-edit-all-cards) 追従: タスク名は <input aria-label="{name} の名前">
+  // に置換された. aria-label で input を取得し, カード本体 (class="task-card" を持つ
+  // <li> または「現在のタスク」セクションの <section>) まで遡る.
+  // ancestor::li 固定だと focus 側 (<section>) に入ったタスクで解決できないため,
+  // class token 一致 (" task-card " を含む) で両 variant 共通にする.
+  // (contains(@class, "task-card") だと内側の task-card__title 等も誤マッチするので不可.)
+  return page
+    .getByLabel(`${taskName} の名前`)
+    .first()
+    .locator(
+      'xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " task-card ")][1]',
+    );
 }
 
 async function createTask(page: Page, taskName: string): Promise<void> {
@@ -78,14 +87,15 @@ test.describe("タスク基本操作", () => {
     // BL-042: ラベルは「明日へ」→「明日にする」に統一.
     await taskRow(page, taskName).getByRole("button", { name: "明日にする" }).click();
 
-    await expect(page.getByText(taskName, { exact: true })).toHaveCount(0);
+    // BL-070 追従: タスク名は input value に表示される. aria-label でカウントを確認.
+    await expect(page.getByLabel(`${taskName} の名前`)).toHaveCount(0);
   });
 
-  // BL-042 (task-card-actions) でカード上の「編集」 button を撤去したため,
-  // 本 E2E は実行不能になる. 名称編集の代替 UI (カードタップ → ダイアログ起動など) は
-  // 別 BL (タスク編集ダイアログの再導入 / 仮称 BL-048) で再導入予定であり,
-  // その時点で skip を解除し新 UI のフローに追随させる.
-  test.skip("タスクを編集すると名前が一覧に反映される (BL-042 で UI 撤去 / 後続 BL で復活予定)", async ({
+  // BL-042 (task-card-actions) でカード上の「編集」 button と編集フォームを撤去したため
+  // 一時 skip していたが, BL-070 (inline-edit-all-cards) でタスク名がインライン input
+  // (fill → blur で PATCH /api/v1/tasks/:id { name }) になり名称編集経路が復活したため,
+  // blur 経路に書き換えて skip を解除する (spec AC-25).
+  test("タスク名 input を編集して blur すると新しい名前が一覧に反映される (BL-070 blur 経路)", async ({
     page,
   }) => {
     await page.goto("/");
@@ -93,14 +103,17 @@ test.describe("タスク基本操作", () => {
     const newName = `編集後 ${Date.now() + 1}`;
     await createTask(page, originalName);
 
-    await taskRow(page, originalName).getByRole("button", { name: "編集" }).click();
+    // タスク名は <input aria-label="{name} の名前"> に表示される.
+    const nameInput = page.getByLabel(`${originalName} の名前`).first();
+    await expect(nameInput).toBeVisible();
 
-    const editForm = page.getByRole("form", { name: "タスク編集フォーム" });
-    await editForm.getByLabel("名称").fill(newName);
-    await editForm.getByRole("button", { name: "保存" }).click();
+    // fill → blur で PATCH が飛ぶ.
+    await nameInput.fill(newName);
+    await nameInput.blur();
 
-    await expect(page.getByText(newName, { exact: true })).toBeVisible();
-    await expect(page.getByText(originalName, { exact: true })).toHaveCount(0);
+    // refetch 後, input は新しい name で再マウントされ aria-label も更新される.
+    await expect(page.getByLabel(`${newName} の名前`).first()).toBeVisible();
+    await expect(page.getByLabel(`${originalName} の名前`)).toHaveCount(0);
   });
 
   test("タスクを削除すると一覧から消える (ゴミ箱に移動)", async ({ page }) => {
@@ -111,6 +124,7 @@ test.describe("タスク基本操作", () => {
     await expect(taskRow(page, taskName)).toBeVisible();
     await taskRow(page, taskName).getByRole("button", { name: "削除" }).click();
 
-    await expect(page.getByText(taskName, { exact: true })).toHaveCount(0);
+    // BL-070 追従: タスク名は input value に表示される. aria-label でカウントを確認.
+    await expect(page.getByLabel(`${taskName} の名前`)).toHaveCount(0);
   });
 });

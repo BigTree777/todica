@@ -1034,7 +1034,9 @@ describe("TaskCard / TaskFormCard 実機遺漏の一括 hotfix (BL-063 / task-ca
         <FocusView repository={repo} projectRepository={projectRepo} />,
       );
 
-      await screen.findByText("牛乳");
+      // BL-070 追従: <span>{name}</span> は input value に置換されたため
+      // findByText ではなく findByDisplayValue で待つ.
+      await screen.findByDisplayValue("牛乳");
 
       const actions = container.querySelector(".task-card__actions");
       expect(actions, "focus-view の .task-card__actions が見つからない").not.toBeNull();

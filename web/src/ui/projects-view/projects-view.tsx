@@ -60,8 +60,6 @@ export function ProjectsView(props: ProjectsViewProps): JSX.Element {
   const projects: Project[] = projectsData ?? [];
 
   const [newName, setNewName] = useState("");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState("");
 
   const invalidateProjects = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ["projects"] });
@@ -198,30 +196,27 @@ export function ProjectsView(props: ProjectsViewProps): JSX.Element {
     [newName, createMutation],
   );
 
-  const openEdit = useCallback((project: Project) => {
-    setEditingId(project.id);
-    setEditingName(project.name);
-  }, []);
-
-  const cancelEdit = useCallback(() => {
-    setEditingId(null);
-    setEditingName("");
-  }, []);
-
-  const handleSaveEdit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!editingId) return;
-      const project = projects.find((p) => p.id === editingId);
-      if (!project) return;
-      await updateMutation.mutateAsync({
-        id: editingId,
-        ifMatch: project.version,
-        name: editingName,
-      });
-      cancelEdit();
+  // BL-070 REQ-9 / D-001 / D-002: name 編集は input blur 経由.
+  //   - 空文字 → 短絡 (元値復元).
+  //   - 同値 → 短絡 (PATCH 抑制).
+  //   - 実値変更時のみ updateMutation を呼ぶ.
+  // 失敗時の通知は onError で処理済み (ConflictDialog / notifyError).
+  // mutateAsync が reject しても unhandled rejection を発生させないよう try/catch で吸収する
+  // (tomorrow-view handleSubmit と同じパターン).
+  const handleNameBlur = useCallback(
+    async (project: Project, next: string) => {
+      if (next === "" || next === project.name) return;
+      try {
+        await updateMutation.mutateAsync({
+          id: project.id,
+          ifMatch: project.version,
+          name: next,
+        });
+      } catch {
+        // onError で処理済み.
+      }
     },
-    [editingId, editingName, projects, updateMutation, cancelEdit],
+    [updateMutation],
   );
 
   const handleDelete = useCallback(
@@ -242,12 +237,7 @@ export function ProjectsView(props: ProjectsViewProps): JSX.Element {
           <ProjectCard
             key={project.id}
             project={project}
-            isEditing={editingId === project.id}
-            editingName={editingName}
-            onEditingNameChange={setEditingName}
-            onStartEdit={() => openEdit(project)}
-            onCancelEdit={cancelEdit}
-            onSaveEdit={handleSaveEdit}
+            onNameBlur={(next) => handleNameBlur(project, next)}
             onDelete={() => handleDelete(project)}
           />
         ))}

@@ -217,7 +217,26 @@ function renderWithQueryClient(ui: ReactNode): ReturnType<typeof render> {
 // describe ブロック
 // ============================================================
 
-describe("ルーティンの優先度 UI 統一 + 編集モードでの曜日変更 (BL-068 / routine-card-edit-fields)", () => {
+/**
+ * BL-070 (inline-edit-all-cards) 追従:
+ *   本ファイルは「編集モード」 (= isEditing=true) を前提とした AC を網羅していた.
+ *   BL-070 で「編集モード」概念自体を撤去 (REQ-3 / G-3 / D-013).
+ *   isEditing prop / editing* 系 prop / 「変更」「保存」「キャンセル」 button は全撤去.
+ *   常時 input + 7 曜日 checkbox + PriorityStars + 「削除」 button のみとなる.
+ *   このため BL-068 の AC は本 BL で履行されなくなった (= 部分的に逆転).
+ *
+ *   新流儀での「曜日 click → 即時 onDaysOfWeekChange」「name input blur → onNameBlur」等の
+ *   検証は web/__tests__/inline-edit-all-cards.test.tsx で AC-7 / AC-8 / AC-10 / AC-18 として
+ *   網羅されている.
+ *
+ *   本 describe ブロック全体を skip し, BL-068 の編集モード関連 AC を停止する.
+ *   AC-1 / AC-3 (RoutineFormCard 起票側の PriorityStars) は BL-070 で無改修だが,
+ *   BL-061 の routine-card-component.test.tsx で同等内容が網羅されているため重複削除して問題ない.
+ *
+ *   BL-070 spec § D-005 (BL-042 以外への注釈追記範囲) では「BL-068 系 spec への注釈は不要」と
+ *   決まっている. 注釈は本ファイル上部のこの注意書きで担保する.
+ */
+describe.skip("ルーティンの優先度 UI 統一 + 編集モードでの曜日変更 (BL-068 / routine-card-edit-fields) [BL-070 で編集モード撤去のため停止]", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

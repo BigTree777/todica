@@ -54,8 +54,8 @@ test.describe("BL-039 今日ビュー起票フォームのスコープ", () => {
     await page.getByLabel("タスク名").fill(taskName);
     await page.getByRole("button", { name: "追加", exact: true }).click();
 
-    // UI 上に起票したタスクが現れる (= 今日ビューに反映 = dueDate=today で作成された).
-    await expect(page.getByText(taskName, { exact: true }).first()).toBeVisible();
+    // BL-070 追従: タスク名は <input aria-label="{name} の名前" value={name}> として表示される.
+    await expect(page.getByLabel(`${taskName} の名前`).first()).toHaveValue(taskName);
 
     // サーバ側でも dueDate=today で永続化されていることを確認する.
     const response = await request.get(`${API_BASE}/api/v1/tasks?dueDate=today`, {

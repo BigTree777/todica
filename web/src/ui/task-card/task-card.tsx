@@ -48,6 +48,8 @@ export interface TaskCardProps {
   onToggleDueDate?: () => void;
   /** 「完了」 button のハンドラ. */
   onComplete: () => void;
+  /** BL-070 (inline-edit-all-cards) REQ-1: タスク名 input の blur ハンドラ. 必須. */
+  onNameBlur: (next: string) => void;
   /** ラッパ要素のタグ (D-004). default: "li". */
   as?: "li" | "section" | "div";
   /** section variant 用の aria-label. */
@@ -68,6 +70,7 @@ export function TaskCard(props: TaskCardProps): JSX.Element {
     onDelete,
     onToggleDueDate,
     onComplete,
+    onNameBlur,
     as = "li",
     "aria-label": ariaLabel,
   } = props;
@@ -95,7 +98,24 @@ export function TaskCard(props: TaskCardProps): JSX.Element {
         )}
       </div>
       <div className="task-card__title">
-        <span>{task.name}</span>
+        {/* BL-070 REQ-1: <span>{task.name}</span> を input に置換し name の常時編集を可能にする.
+            P-001 (iii): uncontrolled (defaultValue + key) で親 state は持たない.
+            key に task.name を含めることで, サーバ正本値が変わったとき input を再マウントして表示を更新する.
+            空文字 blur (D-002) は親が PATCH を短絡し state も key も変わらないため,
+            カード側で DOM 値を正本値 (task.name) に書き戻して表示を復元する. */}
+        <input
+          key={`task-name-${task.id}-${task.name}`}
+          type="text"
+          defaultValue={task.name}
+          onBlur={(e) => {
+            const next = e.currentTarget.value;
+            if (next === "") {
+              e.currentTarget.value = task.name;
+            }
+            onNameBlur(next); // D-001: カードは常に blur 値を流す (空文字も含む)
+          }}
+          aria-label={`${task.name} の名前`}
+        />
       </div>
       <div className="task-card__actions">
         <button type="button" className="task-card__actions__delete" onClick={onDelete}>

@@ -25,6 +25,6 @@ test("Tab + 入力 + Enter だけでタスクを追加できる", async ({ page 
   // form の input で Enter は submit に等しい. マウスクリックを一切使わない.
   await page.keyboard.press("Enter");
 
-  // 一覧に出現する.
-  await expect(page.getByText(taskName, { exact: true })).toBeVisible();
+  // BL-070 追従: タスク名は <input aria-label="{name} の名前" value={name}> として表示される.
+  await expect(page.getByLabel(`${taskName} の名前`)).toHaveValue(taskName);
 });

@@ -62,16 +62,24 @@ test.describe("tomorrow-view (/tomorrow) のシナリオ", () => {
 
     // 起票フォームの入力欄 (タスク名) があり, 期限 UI は無い (REQ-2).
     const taskName = `TOMORROW起票 ${Date.now()}`;
-    const nameInput = page.getByLabel(/タスク名/);
+    // BL-070 追従: 表示モードにも aria-label="{name} の名前" の input が並ぶため
+    // /タスク名/ 全 page match だと strict 違反 + 表示 input を拾ってしまう.
+    // 起票 form scope に絞る.
+    const createForm = page.getByRole("form", {
+      name: /タスク起票フォーム|明日のタスク起票フォーム/,
+    });
+    const nameInput = createForm.getByLabel(/タスク名/);
     await expect(nameInput).toBeVisible();
-    // 期限 UI は無いことの確認 (label / combobox いずれも).
-    await expect(page.getByLabel(/期限/)).toHaveCount(0);
+    // 期限 UI は無いことの確認 (label / combobox いずれも). 同じく form scope.
+    // BL-070 で task name input の aria-label が「{name} の名前」になり,
+    // 既存タスク名に「期限」を含むと page 全体だと match してしまう (例: 期限切替テスト).
+    await expect(createForm.getByLabel(/期限/)).toHaveCount(0);
 
     await nameInput.fill(taskName);
     await page.getByRole("button", { name: /追加|起票|登録|送信/ }).click();
 
-    // 起票したタスク名が tomorrow-view 内に表示される.
-    await expect(tomorrowRegion(page).getByText(taskName, { exact: true })).toBeVisible();
+    // BL-070 追従: タスク名は <input aria-label="{name} の名前" value={name}> として表示される.
+    await expect(tomorrowRegion(page).getByLabel(`${taskName} の名前`)).toHaveValue(taskName);
   });
 
   test("シナリオ Q (REQ-4): 「今日にする」で /tomorrow から消えて /today に現れる", async ({
@@ -88,15 +96,21 @@ test.describe("tomorrow-view (/tomorrow) のシナリオ", () => {
 
     await gotoTomorrowViaSidebar(page);
 
-    // /tomorrow に表示されていることを確認.
-    await expect(tomorrowRegion(page).getByText(taskName, { exact: true })).toBeVisible();
+    // BL-070 追従: タスク名は input value に入る.
+    await expect(tomorrowRegion(page).getByLabel(`${taskName} の名前`)).toHaveValue(taskName);
 
     // 該当タスク行内の「今日にする」をクリック.
-    const taskRow = tomorrowRegion(page).getByRole("listitem").filter({ hasText: taskName });
+    // BL-070 追従: name は input value のため hasText では matches しない.
+    // aria-label 一致の input を持つ <li> でフィルタする.
+    const taskRow = tomorrowRegion(page)
+      .getByRole("listitem")
+      .filter({
+        has: page.getByLabel(`${taskName} の名前`),
+      });
     await taskRow.getByRole("button", { name: /今日にする/ }).click();
 
     // /tomorrow から消える.
-    await expect(tomorrowRegion(page).getByText(taskName, { exact: true })).toHaveCount(0);
+    await expect(tomorrowRegion(page).getByLabel(`${taskName} の名前`)).toHaveCount(0);
 
     // ハンバーガーメニュー経由で /today に遷移する (BL-049 でメニューはオーバーレイ化).
     await page.getByRole("button", { name: "メニューを開く" }).click();
@@ -106,8 +120,8 @@ test.describe("tomorrow-view (/tomorrow) のシナリオ", () => {
     await expect(page).toHaveURL(/\/today$/);
     await expect(todayHeading(page)).toBeVisible();
 
-    // /today にタスク名が出ている.
-    await expect(page.getByText(taskName, { exact: true })).toBeVisible();
+    // BL-070 追従: /today にタスク名が input value として出ている.
+    await expect(page.getByLabel(`${taskName} の名前`)).toHaveValue(taskName);
 
     // サーバ side: dueDate=today になっている (= サーバ側で正しく移送されている).
     const after = await request.get(`${API_BASE}/api/v1/tasks?dueDate=today`, {
@@ -135,15 +149,20 @@ test.describe("tomorrow-view (/tomorrow) のシナリオ", () => {
 
     await gotoTomorrowViaSidebar(page);
 
-    // 表示されていることを確認.
-    await expect(tomorrowRegion(page).getByText(taskName, { exact: true })).toBeVisible();
+    // BL-070 追従: タスク名は input value に入る.
+    await expect(tomorrowRegion(page).getByLabel(`${taskName} の名前`)).toHaveValue(taskName);
 
     // 「削除」をクリック.
-    const taskRow = tomorrowRegion(page).getByRole("listitem").filter({ hasText: taskName });
+    // BL-070 追従: name は input value のため hasText では matches しない.
+    const taskRow = tomorrowRegion(page)
+      .getByRole("listitem")
+      .filter({
+        has: page.getByLabel(`${taskName} の名前`),
+      });
     await taskRow.getByRole("button", { name: /削除/ }).click();
 
     // /tomorrow から消える.
-    await expect(tomorrowRegion(page).getByText(taskName, { exact: true })).toHaveCount(0);
+    await expect(tomorrowRegion(page).getByLabel(`${taskName} の名前`)).toHaveCount(0);
 
     // サーバ side: trashedReason = "deleted" でゴミ箱送りされている.
     const trashed = await request.get(`${API_BASE}/api/v1/tasks?trashed=true`, {

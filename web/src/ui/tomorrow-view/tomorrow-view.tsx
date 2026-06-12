@@ -351,6 +351,26 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
     [deleteMutation],
   );
 
+  // BL-070 REQ-9 / D-001 / D-002: name 編集は input blur 経由.
+  // 失敗時の通知は onError で処理済み. mutateAsync の reject を try/catch で吸収して
+  // unhandled rejection を防ぐ.
+  const handleNameBlur = useCallback(
+    async (task: Task, next: string) => {
+      if (next === "" || next === task.name) return;
+      const cmd: UpdateTaskCommand = {
+        id: task.id,
+        ifMatch: task.version,
+        patch: { name: next },
+      };
+      try {
+        await updateMutation.mutateAsync(cmd);
+      } catch {
+        // onError で処理済み.
+      }
+    },
+    [updateMutation],
+  );
+
   // BL-042: 「完了」クリックで complete API を呼ぶ.
   const handleComplete = useCallback(
     (task: Task) => {
@@ -414,6 +434,7 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
                   showSetFocus={false}
                   actionSet="full"
                   dueDateMode="tomorrow"
+                  onNameBlur={(next) => handleNameBlur(task, next)}
                   onDelete={() => handleDelete(task)}
                   onToggleDueDate={() => handleMoveToToday(task)}
                   onComplete={() => handleComplete(task)}
