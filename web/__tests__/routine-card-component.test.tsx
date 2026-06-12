@@ -211,7 +211,11 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
       expect(body ?? "").toMatch(/display\s*:\s*flex/);
     });
 
-    it(".routine-card ルール本文に flex-direction: row を含む (または flex-direction を持たない既定値)", () => {
+    // BL-071 (routine-card-header-layout) で .routine-card 基底は 3 段の縦並び
+    // (flex-direction: column / gap: var(--space-md) / align-items 既定値) に組み替わった.
+    // 旧 BL-061 の「1 段横並び (row / center / sm)」前提の 3 it は BL-071 で stale となるため skip.
+    // 新基底の同等 assert は web/__tests__/routine-card-header-layout.test.tsx AC-4 が担う.
+    it.skip(".routine-card ルール本文に flex-direction: row を含む (または flex-direction を持たない既定値) (BL-071 で column に変更)", () => {
       const css = readFileSync(routineCardCssPath, "utf-8");
       const body = extractRuleBody(css, ".routine-card");
       expect(body, ".routine-card ルールが見つからない").not.toBeNull();
@@ -230,14 +234,14 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
       ).toBe(true);
     });
 
-    it(".routine-card ルール本文に align-items: center を含む", () => {
+    it.skip(".routine-card ルール本文に align-items: center を含む (BL-071 で 3 段縦並びのため撤去)", () => {
       const css = readFileSync(routineCardCssPath, "utf-8");
       const body = extractRuleBody(css, ".routine-card");
       expect(body, ".routine-card ルールが見つからない").not.toBeNull();
       expect(body ?? "").toMatch(/align-items\s*:\s*center/);
     });
 
-    it(".routine-card ルール本文に gap: var(--space-sm) を含む", () => {
+    it.skip(".routine-card ルール本文に gap: var(--space-sm) を含む (BL-071 で gap: var(--space-md) に変更)", () => {
       const css = readFileSync(routineCardCssPath, "utf-8");
       const body = extractRuleBody(css, ".routine-card");
       expect(body, ".routine-card ルールが見つからない").not.toBeNull();
@@ -282,7 +286,9 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
    *    かつ display: flex の宣言を含む
    *    かつ flex-direction: column の宣言を含む
    */
-  describe("AC-3: .routine-card__main が左ブロックの flex 占有と縦並びを持つ (V-4 / V-5)", () => {
+  // BL-071 (routine-card-header-layout) D-006 で .routine-card__main ラッパは完全撤去された.
+  // CSS ルールセット自体も撤去されたため, 本 describe は skip する.
+  describe.skip("AC-3: .routine-card__main が左ブロックの flex 占有と縦並びを持つ (V-4 / V-5) (BL-071 で撤去)", () => {
     it(".routine-card__main ルール本文に flex: 1 (または flex-grow: 1) を含む", () => {
       const css = readFileSync(routineCardCssPath, "utf-8");
       const body = extractRuleBody(css, ".routine-card__main");
@@ -531,7 +537,10 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
       ).toBe(false);
     });
 
-    it(".routine-card__main が .routine-card 内に存在する (BL-070 でも左ブロック構造は維持)", async () => {
+    // BL-071 (routine-card-header-layout) D-006 で .routine-card__main ラッパは完全撤去された.
+    // 代わりに .routine-card__header / .routine-card__day-checkboxes / .routine-card__actions の
+    // 3 段構造が .routine-card 直下に並ぶ (BL-071 routine-card-header-layout.test.tsx AC-3 で検証).
+    it.skip(".routine-card__main が .routine-card 内に存在する (BL-070 でも左ブロック構造は維持) (BL-071 で撤去)", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine();
       const { container } = render(

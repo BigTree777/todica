@@ -231,6 +231,7 @@ user 要求: **「編集は常に可能にしたい. これはすべてのカー
   - 編集 form (`<form aria-label="ルーティン名称変更フォーム">`) / 「保存」「キャンセル」 button は撤去.
   - `.routine-card--editing` / `.routine-card__form-inline` modifier も撤去.
   - 曜日 read-only 表示用の `.routine-card__days-label` は撤去 (= checkbox が常時表示でその役割を兼ねる).
+  - **BL-071 (routine-card-header-layout) で変更**: 上記 DOM スニペットの `.routine-card__main` ラッパは BL-071 で撤去された. 後継構造は `.routine-card` 直下に `.routine-card__header` (name input + PriorityStars 左右配置) / `.routine-card__day-checkboxes` / `.routine-card__actions` の 3 段. 本 BL の prop / handler (`onNameBlur` / `onDaysOfWeekChange` / `onDefaultPriorityChange`) は無改修で BL-071 に引き継がれる. 詳細は [`../routine-card-header-layout/spec.md`](../routine-card-header-layout/spec.md).
   - PriorityStars の `idPrefix` は `routine-${routine.id}` で 1 ルーティン 1 prefix とし起票側 (`routine-create`) との衝突を回避.
 
 - **REQ-4 (即時 PATCH のフィールド)**

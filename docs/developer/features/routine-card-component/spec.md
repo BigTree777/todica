@@ -787,6 +787,7 @@ shadow / hover / transition / animation は **一切追加しない** (BL-059 / 
     - (i) `[名前 (上) → 曜日 (下)] の 2 行縦並び` (= `.routine-card__main { flex-direction: column }`)
     - (ii) `[名前] [曜日] [変更] [削除] の 1 段横並び`
   - 採用: (i). 理由: 曜日が増えると横幅を圧迫しやすく, TaskCard (BL-059) で採用された「主情報 + 補助情報を縦に重ねる」パターンと整合. user 要求の「ルーティンは曜日表示など属性が多いので段組み調整可」とも合致.
+  - **BL-071 (routine-card-header-layout) で変更**: `.routine-card__main` ラッパを撤去し, `.routine-card` 直下に `.routine-card__header` (name input + PriorityStars 左右配置) / `.routine-card__day-checkboxes` / `.routine-card__actions` の 3 段構造に再編した. TaskCard と同じ視覚イディオムに揃えるため. 詳細は [`../routine-card-header-layout/spec.md`](../routine-card-header-layout/spec.md).
 
 - **D-009-2 (旧 CSS セレクタ撤去の範囲)**:
   - `routines-view.css` から撤去: `.routines-view__form` / `.routines-view__item` / `.routines-view__days` / `.routines-view__days-label` / `.routines-view__actions` の 5 セレクタ.
