@@ -62,9 +62,20 @@ export function RoutineCard(props: RoutineCardProps): JSX.Element {
 
   return (
     <Tag className="routine-card">
-      {/* BL-071 REQ-1 / REQ-2 / REQ-4: TaskCard と同じ 3 段ゾーン構造.
-          header 段に name input + PriorityStars を space-between で左右配置する. */}
+      {/* BL-073 REQ-1 / REQ-2 / D-001 / D-002: 4 段ゾーン構造 (起票カードと同イディオム).
+          header 段は PriorityStars 単独で右端固定 (左空 / D-002).
+          right alignment は基底 `.routine-card__header { justify-content: flex-end }` で実現. */}
       <div className="routine-card__header">
+        <PriorityStars
+          value={routine.defaultPriority}
+          onChange={onDefaultPriorityChange}
+          groupLabel={`${routine.name} の優先度`}
+          idPrefix={`routine-${routine.id}`}
+        />
+      </div>
+      {/* BL-073 REQ-1 / REQ-3 / D-003: title 段に visually-hidden label + name input.
+          `.routine-card__title` セレクタは BL-072 で起票カードに新設したものを表示カードでも共用. */}
+      <div className="routine-card__title">
         <label htmlFor={inputId} className="visually-hidden">
           ルーティン名
         </label>
@@ -85,12 +96,6 @@ export function RoutineCard(props: RoutineCardProps): JSX.Element {
             }
             onNameBlur(next); // D-001: カードは常に blur 値を流す (空文字も含む)
           }}
-        />
-        <PriorityStars
-          value={routine.defaultPriority}
-          onChange={onDefaultPriorityChange}
-          groupLabel={`${routine.name} の優先度`}
-          idPrefix={`routine-${routine.id}`}
         />
       </div>
       <div className="routine-card__day-checkboxes" role="group" aria-label="曜日">

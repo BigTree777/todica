@@ -37,24 +37,21 @@
 /* BL-071 D-006: .routine-card__main ラッパは完全撤去. */
 
 .routine-card__header {
-  /* BL-071 REQ-4: name input を左 / PriorityStars を右に分ける.
-     TaskCard .task-card__header と同じイディオム.
-     BL-072 D-002: 起票カードでも本ルールを共用する (`.routine-card--form`
-     側で `justify-content` のみ override する / D-006). */
+  /* BL-073 D-001 / D-008: 表示・起票で共用. header 直下子は PriorityStars 単独で,
+     右端固定する (= `justify-content: flex-end`).
+     旧 `space-between` (BL-071) は表示カードに name input + PriorityStars を左右配置する
+     ためのものだったが, BL-073 で name input は `.routine-card__title` 段に移動したため
+     表示カードでも header は PriorityStars 単独になり, 起票カードと同じ右端配置で揃う.
+     起票カード側 override (BL-072 D-006) は基底に統合され撤去 (= D-001 (a)). */
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: var(--space-sm);
   /* BL-071 REQ-6 / D-002: input に font: inherit を当てて継承させるため
-     header 段に font-size を置く. TaskCard V-4 / V-7 と同じ. */
+     header 段に font-size を置く. TaskCard V-4 / V-7 と同じ.
+     BL-073 D-004: 本 BL 後 `.routine-card__header` 直下に input は無いが,
+     起票カードと共用しているため宣言は維持 (= dead-rule 化するが副作用なし). */
   font-size: var(--font-size-h2);
-}
-
-.routine-card--form .routine-card__header {
-  /* BL-072 D-006: 起票カードでは header に PriorityStars 単独しか並ばない.
-     `justify-content: space-between` は単独要素時に flex-start (左寄せ) 相当に
-     振る舞う仕様のため, override で右端固定にする. */
-  justify-content: flex-end;
 }
 
 .routine-card__title {

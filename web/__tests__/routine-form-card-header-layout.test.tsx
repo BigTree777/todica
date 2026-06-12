@@ -623,7 +623,11 @@ describe("RoutineFormCard レイアウト刷新 (BL-072 / routine-form-card-head
       expect(body ?? "").toMatch(/align-items\s*:\s*center/);
     });
 
-    it(".routine-card__header に justify-content: space-between を含む (= BL-071 維持)", () => {
+    // BL-073 (routine-card-align-with-form / D-001) で
+    // `.routine-card__header { justify-content: space-between }` を
+    // `justify-content: flex-end` に変更. 起票カード側 override も撤去して共用化.
+    // 旧「space-between 維持」 it は本 BL で逆転するため skip にする.
+    it.skip(".routine-card__header に justify-content: space-between を含む (= BL-071 維持) (BL-073 で flex-end に逆転)", () => {
       const css = readFileSync(routineCardCssPath, "utf-8");
       const body = extractRuleBody(css, ".routine-card__header");
       expect(
@@ -657,7 +661,11 @@ describe("RoutineFormCard レイアウト刷新 (BL-072 / routine-form-card-head
    * 起票カードでは PriorityStars 単独. space-between は単独要素時に「flex-start (左寄せ)」
    * 相当に振る舞うため, override で右端固定にする (plan D-006).
    */
-  describe("D-006: .routine-card--form .routine-card__header に justify-content: flex-end の override が宣言される", () => {
+  // BL-073 (routine-card-align-with-form / D-001 (a)) で基底 `.routine-card__header` が
+  // `flex-end` 化したため `.routine-card--form .routine-card__header` override は完全撤去.
+  // 旧 BL-072 D-006 の override 存在要求は本 BL で逆転するため skip にする.
+  // 起票カードの header 視覚配置 (= 右端固定) は AC-25 (routine-card-align-with-form.test.tsx) で担保する.
+  describe.skip("D-006: .routine-card--form .routine-card__header に justify-content: flex-end の override が宣言される (BL-073 で override 撤去)", () => {
     it(".routine-card--form .routine-card__header ルールが存在する", () => {
       const css = readFileSync(routineCardCssPath, "utf-8");
       const body = extractRuleBody(css, ".routine-card--form .routine-card__header");
@@ -824,7 +832,10 @@ describe("RoutineFormCard レイアウト刷新 (BL-072 / routine-form-card-head
    *   Then  .routine-card 直下に __header / __day-checkboxes / __actions の 3 要素のみが並ぶ
    *    かつ header 直下に label + input + PriorityStars (radiogroup) の 3 要素が並ぶ
    */
-  describe("AC-11: 表示カード <RoutineCard> の DOM 構造 (BL-071 の 3 段) が無改修", () => {
+  // BL-073 で表示カードは 4 段化 (header / title / day-checkboxes / actions).
+  // 旧 BL-072 AC-11 の「3 段維持」「header に label + input + radiogroup」要求は本 BL で逆転.
+  // 表示カード新構造の網羅 assert は `routine-card-align-with-form.test.tsx` (BL-073) に集約.
+  describe.skip("AC-11: 表示カード <RoutineCard> の DOM 構造 (BL-071 の 3 段) が無改修 (BL-073 で 4 段化)", () => {
     it(".routine-card 直下の子が 3 個 (header / day-checkboxes / actions)", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine();

@@ -134,7 +134,12 @@ describe("RoutineCard ヘッダレイアウト刷新 (BL-071 / routine-card-head
    *         両方が含まれる
    *    かつ name input は曜日 checkbox 群 (.routine-card__day-checkboxes) と同じ親に属さない
    */
-  describe("AC-1: name input と PriorityStars が同一の .routine-card__header 直下に並ぶ", () => {
+  // BL-073 (routine-card-align-with-form) で表示カードを 4 段化:
+  //   - header 段: PriorityStars 単独
+  //   - title 段 (新設): visually-hidden label + name input
+  // 旧 BL-071 では「header 直下に input + radiogroup」を要求していたが本 BL で逆転.
+  // 新構造の網羅 assert は `routine-card-align-with-form.test.tsx` (BL-073) に集約.
+  describe.skip("AC-1: name input と PriorityStars が同一の .routine-card__header 直下に並ぶ (BL-073 で逆転 / header は PriorityStars 単独)", () => {
     it(".routine-card__header 要素が存在する", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine();
@@ -247,7 +252,9 @@ describe("RoutineCard ヘッダレイアウト刷新 (BL-071 / routine-card-head
    *   Then  順に .routine-card__header / .routine-card__day-checkboxes / .routine-card__actions の
    *         3 要素のみが存在する
    */
-  describe("AC-3: .routine-card 直下に 3 段 (header / day-checkboxes / actions) のみが並ぶ", () => {
+  // BL-073: 表示カードは 4 段化 (header / title / day-checkboxes / actions).
+  // 旧 BL-071 の 3 段 (header / day-checkboxes / actions) 前提は逆転.
+  describe.skip("AC-3: .routine-card 直下に 3 段 (header / day-checkboxes / actions) のみが並ぶ (BL-073 で 4 段化)", () => {
     it(".routine-card の直下の子要素が 3 個ある", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine();
@@ -341,7 +348,13 @@ describe("RoutineCard ヘッダレイアウト刷新 (BL-071 / routine-card-head
    *   When  .routine-card__header ルールセットを参照する
    *   Then  display: flex / align-items: center / justify-content: space-between が宣言されている
    */
-  describe("AC-5: .routine-card__header は space-between で左右配置される", () => {
+  // BL-073 (routine-card-align-with-form / D-001) で
+  // `.routine-card__header { justify-content: space-between }` を
+  // `justify-content: flex-end` に変更し,
+  // `.routine-card--form .routine-card__header { justify-content: flex-end }` override を撤去.
+  // display: flex / align-items: center は維持される (= 残 2 it は green を維持).
+  // 旧「space-between」 it は本 BL で逆転するため skip にする.
+  describe("AC-5: .routine-card__header は space-between で左右配置される (BL-073 で flex-end に逆転 / 該当 it のみ skip)", () => {
     it(".routine-card__header ルール本文に display: flex を含む", () => {
       const css = readFileSync(routineCardCssPath, "utf-8");
       const body = extractRuleBody(css, ".routine-card__header");
@@ -356,7 +369,8 @@ describe("RoutineCard ヘッダレイアウト刷新 (BL-071 / routine-card-head
       expect(body ?? "").toMatch(/align-items\s*:\s*center/);
     });
 
-    it(".routine-card__header ルール本文に justify-content: space-between を含む", () => {
+    // BL-073 D-001 で space-between → flex-end に逆転.
+    it.skip(".routine-card__header ルール本文に justify-content: space-between を含む (BL-073 で flex-end に逆転)", () => {
       const css = readFileSync(routineCardCssPath, "utf-8");
       const body = extractRuleBody(css, ".routine-card__header");
       expect(body, ".routine-card__header ルールが見つからない (AC-5 / REQ-4 違反)").not.toBeNull();
@@ -889,7 +903,9 @@ describe("RoutineCard ヘッダレイアウト刷新 (BL-071 / routine-card-head
    *   When  .routine-card__header の直下の子要素を順に取得する
    *   Then  visually-hidden label → input → PriorityStars の順で並ぶ
    */
-  describe("AC-19: header 内で input が PriorityStars より前に並ぶ", () => {
+  // BL-073: 表示カードでは header に PriorityStars 単独. name input は title 段に移動.
+  // 旧 BL-071 の「header 内に label → input → radiogroup の順で並ぶ」 assert は逆転.
+  describe.skip("AC-19: header 内で input が PriorityStars より前に並ぶ (BL-073 で header は PriorityStars 単独)", () => {
     it(".routine-card__header の直下の子は label → input → radiogroup の順で並ぶ", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine({ id: "r1" });
