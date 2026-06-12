@@ -62,7 +62,9 @@ export function RoutineCard(props: RoutineCardProps): JSX.Element {
 
   return (
     <Tag className="routine-card">
-      <div className="routine-card__main">
+      {/* BL-071 REQ-1 / REQ-2 / REQ-4: TaskCard と同じ 3 段ゾーン構造.
+          header 段に name input + PriorityStars を space-between で左右配置する. */}
+      <div className="routine-card__header">
         <label htmlFor={inputId} className="visually-hidden">
           ルーティン名
         </label>
@@ -84,29 +86,29 @@ export function RoutineCard(props: RoutineCardProps): JSX.Element {
             onNameBlur(next); // D-001: カードは常に blur 値を流す (空文字も含む)
           }}
         />
-        <div className="routine-card__day-checkboxes" role="group" aria-label="曜日">
-          {DAY_LABELS.map((label, day) => (
-            <label key={day}>
-              <input
-                type="checkbox"
-                checked={routine.daysOfWeek.includes(day)}
-                onChange={() => {
-                  const next = routine.daysOfWeek.includes(day)
-                    ? routine.daysOfWeek.filter((d) => d !== day)
-                    : [...routine.daysOfWeek, day].sort((a, b) => a - b);
-                  onDaysOfWeekChange(next);
-                }}
-              />
-              {label}
-            </label>
-          ))}
-        </div>
         <PriorityStars
           value={routine.defaultPriority}
           onChange={onDefaultPriorityChange}
           groupLabel={`${routine.name} の優先度`}
           idPrefix={`routine-${routine.id}`}
         />
+      </div>
+      <div className="routine-card__day-checkboxes" role="group" aria-label="曜日">
+        {DAY_LABELS.map((label, day) => (
+          <label key={day}>
+            <input
+              type="checkbox"
+              checked={routine.daysOfWeek.includes(day)}
+              onChange={() => {
+                const next = routine.daysOfWeek.includes(day)
+                  ? routine.daysOfWeek.filter((d) => d !== day)
+                  : [...routine.daysOfWeek, day].sort((a, b) => a - b);
+                onDaysOfWeekChange(next);
+              }}
+            />
+            {label}
+          </label>
+        ))}
       </div>
       <div className="routine-card__actions">
         <button type="button" className="routine-card__actions__delete" onClick={onDelete}>
