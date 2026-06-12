@@ -22,6 +22,8 @@ import { ConflictError, dequeue, enqueue, getAll, mapConflict } from "../../offl
 import type { Project, ProjectRepository } from "../../repositories/project-repository.js";
 import { ProjectConflictError } from "../../repositories/project-repository.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
+import { ProjectCard } from "../project-card/project-card.js";
+import { ProjectFormCard } from "../project-card/project-form-card.js";
 
 /** UUID v4 風の文字列を生成する. crypto.randomUUID が無い jsdom 環境向けのフォールバック. */
 function generateId(): string {
@@ -233,52 +235,21 @@ export function ProjectsView(props: ProjectsViewProps): JSX.Element {
     <main className="projects-view">
       <h1>プロジェクト</h1>
 
-      <form
-        onSubmit={handleCreate}
-        aria-label="プロジェクト作成フォーム"
-        className="projects-view__form"
-      >
-        <div>
-          <label htmlFor="project-name">プロジェクト名</label>
-          <input
-            id="project-name"
-            type="text"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            required
-          />
-        </div>
-        <button type="submit">追加</button>
-      </form>
+      <ProjectFormCard name={newName} onNameChange={setNewName} onSubmit={handleCreate} />
 
       <ul className="projects-view__list">
         {projects.map((project) => (
-          <li key={project.id} className="projects-view__item">
-            {editingId === project.id ? (
-              <form onSubmit={handleSaveEdit} aria-label="プロジェクト名称変更フォーム">
-                <input
-                  type="text"
-                  value={editingName}
-                  onChange={(e) => setEditingName(e.target.value)}
-                  required
-                />
-                <button type="submit">保存</button>
-                <button type="button" onClick={cancelEdit}>
-                  キャンセル
-                </button>
-              </form>
-            ) : (
-              <>
-                <span>{project.name}</span>
-                <button type="button" onClick={() => openEdit(project)}>
-                  名称変更
-                </button>
-                <button type="button" onClick={() => handleDelete(project)}>
-                  削除
-                </button>
-              </>
-            )}
-          </li>
+          <ProjectCard
+            key={project.id}
+            project={project}
+            isEditing={editingId === project.id}
+            editingName={editingName}
+            onEditingNameChange={setEditingName}
+            onStartEdit={() => openEdit(project)}
+            onCancelEdit={cancelEdit}
+            onSaveEdit={handleSaveEdit}
+            onDelete={() => handleDelete(project)}
+          />
         ))}
       </ul>
 

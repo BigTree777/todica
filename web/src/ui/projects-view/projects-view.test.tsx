@@ -223,8 +223,8 @@ describe("ProjectsView (BL-016 プロジェクト管理 UI)", () => {
     // プロジェクト名が表示されるまで待つ
     await screen.findByText("仕事");
 
-    // 名称変更ボタンをクリック
-    const editButton = await screen.findByRole("button", { name: /名称変更|編集|変更/ });
+    // 名称変更ボタンをクリック (BL-060 で「名称変更」ラベルを「変更」に短縮 / D-005 / REQ-6).
+    const editButton = await screen.findByRole("button", { name: /^変更$|^名称変更$|^編集$/ });
     await user.click(editButton);
 
     // 名称入力欄に新しい名前を入力

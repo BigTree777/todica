@@ -1,6 +1,9 @@
 /**
- * projects-view CSS (BL-045).
- * BL-046: 暫定値をデザイントークンに置換済み。
+ * projects-view CSS (BL-045 / BL-060).
+ * BL-046: 暫定値をデザイントークンに置換済み.
+ * BL-060 (project-card-component): .projects-view__form / __item / __actions を
+ * .project-card 系へ移譲したため撤去 (REQ-5 / D-009).
+ * .projects-view / h1 / __list / __empty は維持 (NFR-PRESERVE-SHELL).
  */
 
 .projects-view {
@@ -14,15 +17,6 @@
   margin: 0 0 var(--space-md) 0;
 }
 
-.projects-view__form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-md);
-}
-
 .projects-view__list {
   list-style: none;
   padding: 0;
@@ -30,22 +24,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-}
-
-.projects-view__item {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-md);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.projects-view__actions {
-  display: flex;
-  gap: var(--space-sm);
-  margin-left: auto;
 }
 
 .projects-view__empty {
