@@ -505,6 +505,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           isEditing={false}
           editingName=""
           onEditingNameChange={() => {}}
+          editingDaysOfWeek={[1]}
+          onEditingDaysOfWeekChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -530,6 +532,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           isEditing={false}
           editingName=""
           onEditingNameChange={() => {}}
+          editingDaysOfWeek={[1]}
+          onEditingDaysOfWeekChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -551,6 +555,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           isEditing={false}
           editingName=""
           onEditingNameChange={() => {}}
+          editingDaysOfWeek={[1]}
+          onEditingDaysOfWeekChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -573,6 +579,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           isEditing={false}
           editingName=""
           onEditingNameChange={() => {}}
+          editingDaysOfWeek={[1]}
+          onEditingDaysOfWeekChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -599,6 +607,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           isEditing={false}
           editingName=""
           onEditingNameChange={() => {}}
+          editingDaysOfWeek={[1]}
+          onEditingDaysOfWeekChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -627,6 +637,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           isEditing={false}
           editingName=""
           onEditingNameChange={() => {}}
+          editingDaysOfWeek={[1]}
+          onEditingDaysOfWeekChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -659,6 +671,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           isEditing={false}
           editingName=""
           onEditingNameChange={() => {}}
+          editingDaysOfWeek={[1]}
+          onEditingDaysOfWeekChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -682,6 +696,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           isEditing={false}
           editingName=""
           onEditingNameChange={() => {}}
+          editingDaysOfWeek={[1]}
+          onEditingDaysOfWeekChange={() => {}}
           onStartEdit={onStartEdit}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -708,6 +724,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           isEditing={false}
           editingName=""
           onEditingNameChange={() => {}}
+          editingDaysOfWeek={[1]}
+          onEditingDaysOfWeekChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -736,8 +754,14 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
    *    かつ ルート内に <form aria-label="ルーティン名称変更フォーム"> が存在する
    *    かつ form 内に visually-hidden な <label class="visually-hidden">ルーティン名</label> + <input>
    *    かつ input の id と label の htmlFor が一致する
+   *    かつ form 内に div.routine-card__day-checkboxes (BL-068 で追加 / REQ-2)
    *    かつ form 内に <button type="submit">保存</button>
    *    かつ form 内に <button type="button">キャンセル</button>
+   *
+   *   BL-068 (routine-card-edit-fields) 追従: 編集モード form の DOM 構造に
+   *   `.routine-card__day-checkboxes` (7 個の曜日 checkbox) を追加.
+   *   旧 BL-061 では編集モードに曜日 UI が無いことを前提にしていたが,
+   *   本 BL で曜日 UI 存在検証へ逆転する (R-001 / P-005).
    */
   describe("AC-10: <RoutineCard isEditing=true> が編集モードの DOM を出す", () => {
     it("ルート要素は <li class='routine-card routine-card--editing'> である", async () => {
@@ -749,6 +773,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           isEditing={true}
           editingName="朝の運動"
           onEditingNameChange={() => {}}
+          editingDaysOfWeek={[1]}
+          onEditingDaysOfWeekChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -773,6 +799,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           isEditing={true}
           editingName="朝の運動"
           onEditingNameChange={() => {}}
+          editingDaysOfWeek={[1]}
+          onEditingDaysOfWeekChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -795,6 +823,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           isEditing={true}
           editingName="朝の運動"
           onEditingNameChange={() => {}}
+          editingDaysOfWeek={[1]}
+          onEditingDaysOfWeekChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -827,6 +857,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           isEditing={true}
           editingName="朝の運動"
           onEditingNameChange={() => {}}
+          editingDaysOfWeek={[1]}
+          onEditingDaysOfWeekChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -846,6 +878,40 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
       expect(cancel?.getAttribute("type")).toBe("button");
     });
 
+    it("編集モードの form 内に .routine-card__day-checkboxes (7 個の曜日 checkbox) が存在する (BL-068 REQ-2)", async () => {
+      const { RoutineCard } = await importRoutineCard();
+      const routine = makeRoutine();
+      const { container } = render(
+        <RoutineCard
+          routine={routine}
+          isEditing={true}
+          editingName="朝の運動"
+          onEditingNameChange={() => {}}
+          editingDaysOfWeek={[1]}
+          onEditingDaysOfWeekChange={() => {}}
+          onStartEdit={() => {}}
+          onCancelEdit={() => {}}
+          onSaveEdit={(e: React.FormEvent) => {
+            e.preventDefault();
+          }}
+          onDelete={() => {}}
+        />,
+      );
+      const form = container.querySelector("form");
+      expect(form, "編集モードの form が見つからない").not.toBeNull();
+      const dayCheckboxes = form?.querySelector(".routine-card__day-checkboxes");
+      expect(
+        dayCheckboxes,
+        "編集モードの form に .routine-card__day-checkboxes が無い (BL-068 REQ-2 違反)",
+      ).not.toBeNull();
+      expect(dayCheckboxes?.getAttribute("role")).toBe("group");
+      expect(dayCheckboxes?.getAttribute("aria-label")).toBe("曜日");
+      const checkboxes = Array.from(
+        dayCheckboxes?.querySelectorAll("input[type='checkbox']") ?? [],
+      );
+      expect(checkboxes.length, "編集モードの曜日 checkbox が 7 個ではない").toBe(7);
+    });
+
     it("編集モードでは「変更」「削除」 button が出ない (表示モードと排他)", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine();
@@ -855,6 +921,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           isEditing={true}
           editingName="朝の運動"
           onEditingNameChange={() => {}}
+          editingDaysOfWeek={[1]}
+          onEditingDaysOfWeekChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -882,6 +950,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           isEditing={true}
           editingName="朝の運動"
           onEditingNameChange={() => {}}
+          editingDaysOfWeek={[1]}
+          onEditingDaysOfWeekChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={onSaveEdit}
@@ -905,8 +975,11 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
    *   Then  ルートは <form aria-label="ルーティン作成フォーム" class="routine-card routine-card--form">
    *    かつ form 直下に 2 つの .routine-card__form-row 要素が存在する
    *    かつ 1 段目 row 内に visually-hidden label + input + 「追加」 submit button
-   *    かつ 2 段目 row 内に .routine-card__day-checkboxes (内に 7 個の checkbox) + select#routine-priority
+   *    かつ 2 段目 row 内に .routine-card__day-checkboxes (内に 7 個の checkbox) + div[role="radiogroup"] (PriorityStars)
    *    かつ getByLabelText("ルーティン名") で name input が取得可能
+   *
+   *   BL-068 (routine-card-edit-fields) 追従: 旧 <select id="routine-priority"> 系 assert を
+   *   <PriorityStars /> (= div[role="radiogroup"]) の存在 assert に逆転 (R-001 / P-005).
    */
   describe("AC-11: <RoutineFormCard> が 2 段構成の作成フォームを描画する", () => {
     it("ルートは <form class='routine-card routine-card--form' aria-label='ルーティン作成フォーム'>", async () => {
@@ -1011,7 +1084,7 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
       expect(checkboxes.length, "曜日 checkbox が 7 個ではない").toBe(7);
     });
 
-    it("2 段目 row 内に <select id='routine-priority'> が存在し option 3 個 (highest / normal / later) を含む", async () => {
+    it("2 段目 row 内に div[role='radiogroup'] (PriorityStars) が存在し 3 個の星 button (role='radio') を含む (BL-068 で <select> から逆転)", async () => {
       const { RoutineFormCard } = await importRoutineFormCard();
       const { container } = render(
         <RoutineFormCard
@@ -1029,15 +1102,20 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
       const rows = container.querySelectorAll(".routine-card__form-row");
       const secondRow = rows[1];
       expect(secondRow, "2 段目 row が見つからない").toBeDefined();
-      const select = secondRow?.querySelector("select");
-      expect(select, "2 段目 row に <select> が無い").not.toBeNull();
-      expect(select?.getAttribute("id")).toBe("routine-priority");
-      const optionValues = Array.from(select?.querySelectorAll("option") ?? []).map((o) =>
-        o.getAttribute("value"),
-      );
-      expect(optionValues).toContain("highest");
-      expect(optionValues).toContain("normal");
-      expect(optionValues).toContain("later");
+      // BL-068: 旧 <select id="routine-priority"> 系 assert を <PriorityStars /> 存在 assert に逆転.
+      const radiogroup = secondRow?.querySelector("div[role='radiogroup']");
+      expect(
+        radiogroup,
+        "2 段目 row に <PriorityStars /> (= div[role='radiogroup']) が無い (BL-068 REQ-1 違反)",
+      ).not.toBeNull();
+      const stars = Array.from(radiogroup?.querySelectorAll("button[role='radio']") ?? []);
+      expect(stars.length, "PriorityStars の星 button が 3 個ではない").toBe(3);
+      // 旧 <select id="routine-priority"> が残存していないこと.
+      const select = secondRow?.querySelector("select#routine-priority");
+      expect(
+        select,
+        "2 段目 row に <select id='routine-priority'> が残っている (BL-068 REQ-1 違反)",
+      ).toBeNull();
     });
 
     it('getByLabelText("ルーティン名") で name input が取得可能 (NFR-NAME-LABEL-CHANGE)', async () => {
@@ -1133,6 +1211,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           isEditing={false}
           editingName=""
           onEditingNameChange={() => {}}
+          editingDaysOfWeek={[1]}
+          onEditingDaysOfWeekChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {
@@ -1532,7 +1612,7 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
       expect(nameLabel?.textContent ?? "").toContain("ルーティン名");
     });
 
-    it('<RoutineFormCard> の <label htmlFor="routine-priority">優先度</label> と <select id="routine-priority"> が共存し, 優先度 label は可視 (D-008-2)', async () => {
+    it('<RoutineFormCard> の優先度 UI は <PriorityStars /> (radiogroup) で実現され, <label htmlFor="routine-priority"> と <select id="routine-priority"> は撤去されている (BL-068 で D-008-2 を逆転)', async () => {
       const { RoutineFormCard } = await importRoutineFormCard();
       const { container } = render(
         <RoutineFormCard
@@ -1547,16 +1627,27 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           }}
         />,
       );
+      // BL-068 (routine-card-edit-fields) で D-008-2 を逆転.
+      // 旧: 「優先度 label を可視のまま残す」を assert
+      // 新: 「優先度 label 自体を撤去し, <PriorityStars /> の groupLabel で a11y を担保」を assert
       const priorityLabel = container.querySelector("label[for='routine-priority']");
       const prioritySelect = container.querySelector("select#routine-priority");
-      expect(priorityLabel, "優先度 label が無い").not.toBeNull();
-      expect(prioritySelect, "優先度 select が無い").not.toBeNull();
-      expect(priorityLabel?.textContent ?? "").toContain("優先度");
-      // 優先度 label は可視 (= visually-hidden ではない).
       expect(
-        priorityLabel?.classList.contains("visually-hidden"),
-        "優先度 label が visually-hidden になっている (D-008-2 違反)",
-      ).toBe(false);
+        priorityLabel,
+        "<label htmlFor='routine-priority'> が残っている (BL-068 REQ-6 / D-003 違反)",
+      ).toBeNull();
+      expect(
+        prioritySelect,
+        "<select id='routine-priority'> が残っている (BL-068 REQ-1 違反)",
+      ).toBeNull();
+      // <PriorityStars /> radiogroup の aria-label に「優先度」が含まれることで a11y を担保 (BL-040 REQ-4).
+      const radiogroup = container.querySelector("div[role='radiogroup']");
+      expect(radiogroup, "<PriorityStars /> radiogroup が無い").not.toBeNull();
+      const ariaLabel = radiogroup?.getAttribute("aria-label") ?? "";
+      expect(
+        ariaLabel,
+        "radiogroup の aria-label に「優先度」が含まれていない (BL-068 D-003 / BL-040 REQ-4 違反)",
+      ).toContain("優先度");
     });
 
     it("7 個の曜日 label (日〜土) と checkbox の関連付けが維持されている", async () => {
@@ -1625,6 +1716,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           isEditing={true}
           editingName="朝の運動"
           onEditingNameChange={() => {}}
+          editingDaysOfWeek={[1]}
+          onEditingDaysOfWeekChange={() => {}}
           onStartEdit={() => {}}
           onCancelEdit={() => {}}
           onSaveEdit={(e: React.FormEvent) => {

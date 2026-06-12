@@ -260,7 +260,7 @@ shadow / hover / transition / animation は **一切追加しない** (BL-059 / 
   - `<form>` の `aria-label` default は `"ルーティン作成フォーム"` (既存 `e2e/secondary-views-style.spec.ts` L142 互換).
   - name input id default は `"routine-name"` (既存 testid 互換 / D-004).
   - 優先度 select id default は `"routine-priority"` (既存 routines-view.tsx L294 互換 / D-004).
-  - 優先度 label「優先度」は visually-hidden にせず, ユーザに見える形で残す (D-008-2). 曜日チェックボックス群と優先度 select の文脈区別を維持するため.
+  - 優先度 label「優先度」は visually-hidden にせず, ユーザに見える形で残す (D-008-2). 曜日チェックボックス群と優先度 select の文脈区別を維持するため. **BL-068 (routine-card-edit-fields) で逆転**: 本決定は BL-068 で `<select>` から `<PriorityStars />` への置換と同時に「優先度」label 自体を撤去する形で逆転した. 詳細は `../routine-card-edit-fields/spec.md` (BL-068) REQ-6 / D-003 を参照.
 
 - **REQ-3 (専用 CSS `routine-card.css` の新設)**
 
@@ -780,6 +780,7 @@ shadow / hover / transition / animation は **一切追加しない** (BL-059 / 
 
 - **D-008-2 (優先度 label を visually-hidden にしない)**:
   - 優先度 select の label「優先度」は visually-hidden にせず, ユーザに見える形で残す. 理由: 曜日チェックボックス群と優先度 select が同じ row に並ぶため, 視覚的に「これが何の選択か」を示すラベルが必要. ProjectFormCard では入力欄が 1 つだったため visually-hidden で済んだが, RoutineFormCard は複数選択肢があるため可視ラベルを維持する.
+  - **BL-068 (routine-card-edit-fields) で逆転**: 本決定は BL-068 で逆転し, `<PriorityStars />` 化と同時に「優先度」label 自体を撤去した. a11y は `<PriorityStars groupLabel="優先度">` の radiogroup aria-label (「優先度: ○○」) で担保する. 詳細は [`../routine-card-edit-fields/spec.md`](../routine-card-edit-fields/spec.md) REQ-6 / D-003 を参照.
 
 - **D-009 (RoutineCard 左ブロックの構造 / 名前 + 曜日の縦並び)**:
   - 候補:

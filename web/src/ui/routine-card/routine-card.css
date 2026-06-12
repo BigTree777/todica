@@ -91,10 +91,6 @@
   gap: var(--space-sm);
 }
 
-.routine-card__priority-row {
-  /* 本 BL 時点では空ルール (P-004). */
-}
-
 .routine-card__input {
   /* V-2: 残り幅を占有. */
   flex: 1;
@@ -103,10 +99,6 @@
 .routine-card__input::placeholder {
   /* V-2: placeholder を --color-fg-subtle (WCAG AA 7:1) で薄く描画. */
   color: var(--color-fg-subtle);
-}
-
-.routine-card__select {
-  /* 本 BL 時点では空ルール (P-004). */
 }
 
 .routine-card__submit {

@@ -17,6 +17,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
  */
 import { useCallback, useState } from "react";
 import "./routines-view.css";
+import type { Priority } from "@todica/domain/task";
 import { notifyError } from "../../error-notification.js";
 import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
 import { ConflictError, dequeue, enqueue, getAll, mapConflict } from "../../offline-queue.js";
@@ -62,9 +63,10 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
 
   const [newName, setNewName] = useState("");
   const [newDaysOfWeek, setNewDaysOfWeek] = useState<number[]>([1]); // デフォルト: 月曜
-  const [newDefaultPriority, setNewDefaultPriority] = useState<string>("normal");
+  const [newDefaultPriority, setNewDefaultPriority] = useState<Priority>("normal");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [editingDaysOfWeek, setEditingDaysOfWeek] = useState<number[]>([]);
 
   const invalidateRoutines = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ["routines"] });
@@ -126,7 +128,12 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (cmd: { id: string; ifMatch: number; name: string }) => {
+    mutationFn: async (cmd: {
+      id: string;
+      ifMatch: number;
+      name: string;
+      daysOfWeek: number[];
+    }) => {
       const idempotencyKey = generateId();
       void safeEnqueue({
         url: `${baseUrl}/api/v1/routines/${cmd.id}`,
@@ -137,7 +144,7 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
           "Idempotency-Key": idempotencyKey,
           "If-Match": String(cmd.ifMatch),
         },
-        body: JSON.stringify({ name: cmd.name }),
+        body: JSON.stringify({ name: cmd.name, daysOfWeek: cmd.daysOfWeek }),
         idempotencyKey,
       });
       if (!navigator.onLine) return undefined;
@@ -226,11 +233,13 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
   const openEdit = useCallback((routine: WebRoutine) => {
     setEditingId(routine.id);
     setEditingName(routine.name);
+    setEditingDaysOfWeek(routine.daysOfWeek);
   }, []);
 
   const cancelEdit = useCallback(() => {
     setEditingId(null);
     setEditingName("");
+    setEditingDaysOfWeek([]);
   }, []);
 
   const handleSaveEdit = useCallback(
@@ -239,14 +248,16 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
       if (!editingId) return;
       const routine = routines.find((r) => r.id === editingId);
       if (!routine) return;
+      if (editingDaysOfWeek.length === 0) return;
       await updateMutation.mutateAsync({
         id: editingId,
         ifMatch: routine.version,
         name: editingName,
+        daysOfWeek: editingDaysOfWeek,
       });
       cancelEdit();
     },
-    [editingId, editingName, routines, updateMutation, cancelEdit],
+    [editingId, editingName, editingDaysOfWeek, routines, updateMutation, cancelEdit],
   );
 
   const handleDelete = useCallback(
@@ -278,6 +289,8 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
             isEditing={editingId === routine.id}
             editingName={editingName}
             onEditingNameChange={setEditingName}
+            editingDaysOfWeek={editingDaysOfWeek}
+            onEditingDaysOfWeekChange={setEditingDaysOfWeek}
             onStartEdit={() => openEdit(routine)}
             onCancelEdit={cancelEdit}
             onSaveEdit={handleSaveEdit}

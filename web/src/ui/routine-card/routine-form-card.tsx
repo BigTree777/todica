@@ -1,24 +1,28 @@
 /**
  * `<RoutineFormCard>` (BL-061 / routine-card-component).
  *
+ * BL-068 (routine-card-edit-fields) 更新:
+ *   - 優先度 UI を `<select>` から `<PriorityStars />` (BL-040) に置換 (REQ-1 / D-003).
+ *   - `defaultPriority` prop 型を `string` → `Priority` に変更 (G-2).
+ *   - `priorityId?` prop を撤去 (D-002).
+ *   - `.routine-card__priority-row` ラッパおよび「優先度」label を完全撤去.
+ *     a11y は `<PriorityStars groupLabel="優先度">` の radiogroup aria-label で担保 (REQ-6 / D-003).
+ *
  * 仕様参照:
  *   docs/developer/features/routine-card-component/spec.md REQ-2.
  *   docs/developer/features/routine-card-component/plan.md §「<RoutineFormCard> API」.
+ *   docs/developer/features/routine-card-edit-fields/spec.md REQ-1 / REQ-6 / D-002 / D-003.
  *
  * 役割:
  *   - routines-view の作成フォームを置換する単一の起票カード.
  *   - root 要素は `<form className="routine-card routine-card--form">`.
  *   - 2 段構成 (V-1):
  *     - 1 段目: visually-hidden label + name input + 「追加」 submit button.
- *     - 2 段目: 曜日チェックボックス群 (7 個) + 優先度 select.
+ *     - 2 段目: 曜日チェックボックス群 (7 個) + 優先度 PriorityStars.
  *   - input には placeholder「ルーティン名」を `--color-fg-subtle` で薄く描画 (V-2).
- *
- * 重要な決定:
- *   - D-004: input id default = "routine-name", select id default = "routine-priority".
- *   - D-008: name label テキストは「ルーティン名」(NFR-NAME-LABEL-CHANGE).
- *   - D-008-2: 優先度 label は visually-hidden にせず可視のまま残す.
- *   - NFR-FORM-ARIA-LABEL-PRESERVE: aria-label default = "ルーティン作成フォーム".
  */
+import type { Priority } from "@todica/domain/task";
+import { PriorityStars } from "../priority-stars/priority-stars.js";
 import "./routine-card.css";
 
 /** 曜日 0 (日) 〜 6 (土) の表示ラベル. */
@@ -33,16 +37,14 @@ export interface RoutineFormCardProps {
   daysOfWeek: number[];
   /** 曜日 checkbox の toggle ハンドラ. */
   onToggleDay: (day: number) => void;
-  /** 現在の優先度. */
-  defaultPriority: string;
-  /** 優先度 select の change ハンドラ. */
-  onDefaultPriorityChange: (next: string) => void;
+  /** 現在の優先度 (BL-068 G-2). */
+  defaultPriority: Priority;
+  /** 優先度変更ハンドラ (BL-068 G-2). */
+  onDefaultPriorityChange: (next: Priority) => void;
   /** form の submit ハンドラ. */
   onSubmit: (e: React.FormEvent) => void;
   /** name input id (D-004 / default: "routine-name"). */
   inputId?: string;
-  /** 優先度 select id (D-004 / default: "routine-priority"). */
-  priorityId?: string;
   /** form の aria-label (default: "ルーティン作成フォーム"). */
   formAriaLabel?: string;
 }
@@ -57,7 +59,6 @@ export function RoutineFormCard(props: RoutineFormCardProps): JSX.Element {
     onDefaultPriorityChange,
     onSubmit,
     inputId = "routine-name",
-    priorityId = "routine-priority",
     formAriaLabel = "ルーティン作成フォーム",
   } = props;
 
@@ -97,19 +98,12 @@ export function RoutineFormCard(props: RoutineFormCardProps): JSX.Element {
             </label>
           ))}
         </div>
-        <div className="routine-card__priority-row">
-          <label htmlFor={priorityId}>優先度</label>
-          <select
-            id={priorityId}
-            className="routine-card__select"
-            value={defaultPriority}
-            onChange={(e) => onDefaultPriorityChange(e.target.value)}
-          >
-            <option value="highest">最優先</option>
-            <option value="normal">普通</option>
-            <option value="later">後回し</option>
-          </select>
-        </div>
+        <PriorityStars
+          value={defaultPriority}
+          onChange={onDefaultPriorityChange}
+          groupLabel="優先度"
+          idPrefix="routine-create"
+        />
       </div>
     </form>
   );

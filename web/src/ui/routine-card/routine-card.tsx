@@ -1,9 +1,15 @@
 /**
  * `<RoutineCard>` (BL-061 / routine-card-component).
  *
+ * BL-068 (routine-card-edit-fields) 更新:
+ *   - 編集モード DOM に曜日選択 UI (7 個の checkbox) を追加 (REQ-2 / G-3 / G-4).
+ *   - props に `editingDaysOfWeek: number[]` / `onEditingDaysOfWeekChange: (next: number[]) => void` を追加.
+ *   - DOM 順は `label → input → div.routine-card__day-checkboxes → 保存 → キャンセル` (D-005).
+ *
  * 仕様参照:
  *   docs/developer/features/routine-card-component/spec.md REQ-1.
  *   docs/developer/features/routine-card-component/plan.md §「<RoutineCard> API」.
+ *   docs/developer/features/routine-card-edit-fields/spec.md REQ-2 / REQ-5 / D-005 / D-006.
  *
  * 役割:
  *   - routines-view の各ルーティン行 (表示モード / 編集モード) を描画する単一の
@@ -34,6 +40,10 @@ export interface RoutineCardProps {
   editingName: string;
   /** 編集モードの input change ハンドラ. */
   onEditingNameChange: (next: string) => void;
+  /** 編集モードの daysOfWeek (親が state を持つ) (BL-068 G-4). */
+  editingDaysOfWeek: number[];
+  /** 編集モードの曜日 toggle ハンドラ (次の配列を受け取る / BL-068 D-006). */
+  onEditingDaysOfWeekChange: (next: number[]) => void;
   /** 「変更」 button のクリックハンドラ. */
   onStartEdit: () => void;
   /** 「キャンセル」 button のクリックハンドラ. */
@@ -52,6 +62,8 @@ export function RoutineCard(props: RoutineCardProps): JSX.Element {
     isEditing,
     editingName,
     onEditingNameChange,
+    editingDaysOfWeek,
+    onEditingDaysOfWeekChange,
     onStartEdit,
     onCancelEdit,
     onSaveEdit,
@@ -84,6 +96,23 @@ export function RoutineCard(props: RoutineCardProps): JSX.Element {
             onChange={(e) => onEditingNameChange(e.target.value)}
             required
           />
+          <div className="routine-card__day-checkboxes" role="group" aria-label="曜日">
+            {DAY_LABELS.map((label, day) => (
+              <label key={day}>
+                <input
+                  type="checkbox"
+                  checked={editingDaysOfWeek.includes(day)}
+                  onChange={() => {
+                    const next = editingDaysOfWeek.includes(day)
+                      ? editingDaysOfWeek.filter((d) => d !== day)
+                      : [...editingDaysOfWeek, day].sort((a, b) => a - b);
+                    onEditingDaysOfWeekChange(next);
+                  }}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
           <button type="submit">保存</button>
           <button type="button" onClick={onCancelEdit}>
             キャンセル
