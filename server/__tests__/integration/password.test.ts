@@ -1,14 +1,17 @@
-import type { FakeClock } from "@todica/domain/clock";
+import { FakeClock } from "@todica/domain/clock";
 /**
- * 結合テスト: POST /api/v1/password (パスワード変更).
+ * 結合テスト: POST /api/v1/password (パスワード変更 + 初期設定モード).
  *
  * 受け入れ基準の出典:
  *   - docs/developer/features/password-change/spec.md §「受け入れ基準」
  *     AC-2 / AC-3 / AC-6 / AC-10 / AC-11 / AC-12
  *   - docs/developer/features/password-change/plan.md §「処理フロー — パスワード変更」/ D-3 / D-4
+ *   - docs/developer/features/initial-password-setup/spec.md §「受け入れ基準」AC-5 / AC-6
+ *   - docs/developer/features/initial-password-setup/plan.md §「サーバ — `app.ts` (`POST /api/v1/password` の 2 モード分岐)」
  *
  * 観点:
- *   1. AC-11: Authorization 無しのリクエストは authMiddleware が 401 を返す.
+ *   1. AC-11: Authorization 無しのリクエストは authMiddleware が 401 を返す
+ *             (= DB に password_hash が存在する通常モードで).
  *             DB の app_password.password_hash は変わらない.
  *   2. AC-2: 認証済み + 正しい現在 PW + 新 PW で 200 を返し,
  *            DB の app_password.password_hash が新 PW を bcrypt.compare で検証可能なハッシュに更新される.
@@ -22,17 +25,33 @@ import type { FakeClock } from "@todica/domain/clock";
  *   6. AC-10 (in-process E2E): パスワード変更 → 旧 token での /today が 401 →
  *                              新 PW で /login → 200 + 新 token → /today が 200.
  *   7. 新 PW が空文字なら 400 (NFR-PWD-1: 平文を永続化しないとはいえ, 空文字を許容する意味はない).
+ *   8. AC-5 (initial-password-setup): DB が空のとき, Authorization なし + currentPassword 不要 +
+ *      { newPassword } で 200 + { token, expiresAt } を返し, app_password に hash を保存,
+ *      sessions に token を INSERT する (auto-login).
+ *   9. AC-5 補足: 初期設定モードで currentPassword が来ても無視する (= 200).
+ *  10. AC-5 補足: 初期設定モードで newPassword が空文字 / 欠落 / 型不正で 400.
+ *  11. AC-6 (initial-password-setup): DB に既存 hash があるとき Authorization なしの
+ *      初期設定モード相当リクエスト ({ newPassword: ... }) は通常モードに落ち, 401 を返す.
  *
- * 現状: `POST /api/v1/password` ハンドラは未実装. 全件 red になる想定.
+ * 現状: `POST /api/v1/password` ハンドラ + 初期設定モード分岐は未実装. 全件 red になる想定.
  */
 import bcrypt from "bcrypt";
 import type { Hono } from "hono";
 import { beforeEach, describe, expect, it } from "vitest";
-import type {
+import { createApp } from "../../src/app.js";
+import {
+  InMemoryCounterRepository,
+  InMemoryFocusRepository,
+  InMemoryIdempotencyStore,
+  InMemoryProjectRepository,
+  InMemoryRoutineRepository,
+  InMemorySettingsRepository,
+  InMemoryTaskRepository,
+} from "../helpers/in-memory-repositories.js";
+import {
   InMemoryPasswordRepository,
   InMemorySessionRepository,
-} from "../helpers/login-for-test.js";
-import {
+  TEST_INITIAL_TIME,
   TEST_PASSWORD,
   authHeadersForToken,
   buildAuthTestApp,
@@ -296,6 +315,213 @@ describe("POST /api/v1/password — body バリデーション (AC-12)", () => {
       body: "{not-json",
     });
     expect(res.status).toBe(400);
+  });
+});
+
+// ============================================================
+// 初期設定モード (initial-password-setup AC-5 / AC-6)
+//
+// DB の app_password が空のとき POST /api/v1/password は:
+//   - Authorization 不要 (authMiddleware 素通し)
+//   - currentPassword 不要 (受理しても無視)
+//   - newPassword から bcrypt hash を生成して app_password に保存
+//   - auto-login token を発行 / sessions に INSERT / 200 + { token, expiresAt } を返す
+//
+// DB に既存 hash がある状態では従来仕様 (Bearer + currentPassword 必須) に戻る.
+// ============================================================
+
+describe("POST /api/v1/password — 初期設定モード (initial-password-setup AC-5)", () => {
+  /** DB が空 (= app_password 未 seed) の状態でアプリを構築する. */
+  function buildUninitializedApp() {
+    const taskRepository = new InMemoryTaskRepository();
+    const projectRepository = new InMemoryProjectRepository();
+    const idempotencyStore = new InMemoryIdempotencyStore();
+    const focusRepository = new InMemoryFocusRepository();
+    const counterRepository = new InMemoryCounterRepository();
+    const settingsRepository = new InMemorySettingsRepository();
+    const routineRepository = new InMemoryRoutineRepository();
+    const sessionRepository = new InMemorySessionRepository();
+    const clockUninit = new FakeClock(TEST_INITIAL_TIME);
+    // initialHash 省略 = app_password 空.
+    const passwordRepository = new InMemoryPasswordRepository();
+
+    const appUninit = createApp({
+      taskRepository,
+      projectRepository,
+      idempotencyStore,
+      focusRepository,
+      counterRepository,
+      settingsRepository,
+      routineRepository,
+      sessionRepository,
+      clock: clockUninit,
+      passwordRepository,
+    });
+
+    return {
+      app: appUninit,
+      passwordRepository,
+      sessionRepository,
+      clock: clockUninit,
+    };
+  }
+
+  it("AC-5: DB 空 + Authorization なし + { newPassword: 'P0' } で 200 + { token, expiresAt } を返す", async () => {
+    const { app: uninitApp, passwordRepository, sessionRepository } = buildUninitializedApp();
+    expect(await passwordRepository.getHash()).toBeNull();
+    expect(sessionRepository.count()).toBe(0);
+
+    const res = await uninitApp.request("/api/v1/password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newPassword: "P0" }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { token?: unknown; expiresAt?: unknown };
+    expect(typeof body.token).toBe("string");
+    // token は crypto.randomBytes(32).toString("hex") = 64 文字 16 進数.
+    expect(body.token as string).toMatch(/^[0-9a-f]{64}$/i);
+    expect(typeof body.expiresAt).toBe("number");
+  });
+
+  it("AC-5: 成功時に app_password に hash が保存され, bcrypt.compare で newPassword を検証できる", async () => {
+    const { app: uninitApp, passwordRepository } = buildUninitializedApp();
+
+    const res = await uninitApp.request("/api/v1/password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newPassword: "P0" }),
+    });
+    expect(res.status).toBe(200);
+
+    const hash = await passwordRepository.getHash();
+    expect(hash).not.toBeNull();
+    expect(typeof hash).toBe("string");
+    // 平文を保存していないこと.
+    expect(hash).not.toBe("P0");
+    expect(await bcrypt.compare("P0", hash as string)).toBe(true);
+  });
+
+  it("AC-5: 成功時にレスポンスの token が sessions テーブルに 1 行 INSERT される", async () => {
+    const { app: uninitApp, sessionRepository, clock } = buildUninitializedApp();
+
+    const res = await uninitApp.request("/api/v1/password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newPassword: "P0" }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { token: string; expiresAt: number };
+
+    expect(sessionRepository.count()).toBe(1);
+    const stored = sessionRepository.get(body.token);
+    expect(stored).not.toBeUndefined();
+    expect(stored?.expiresAt).toBe(body.expiresAt);
+    // expiresAt = clock.now() + 30 日.
+    const nowMs = new Date(clock.now()).getTime();
+    expect(body.expiresAt).toBe(nowMs + 30 * 24 * 60 * 60 * 1000);
+  });
+
+  it("AC-5 補足: 初期設定モードで currentPassword が来ても無視され 200 を返す", async () => {
+    const { app: uninitApp, passwordRepository } = buildUninitializedApp();
+
+    const res = await uninitApp.request("/api/v1/password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      // currentPassword が来ても DB が空なので無視されて 200.
+      body: JSON.stringify({ currentPassword: "ignored", newPassword: "P0" }),
+    });
+    expect(res.status).toBe(200);
+    expect(await passwordRepository.getHash()).not.toBeNull();
+  });
+
+  it("AC-5 補足: 初期設定モードで newPassword が空文字なら 400 INVALID_REQUEST_BODY", async () => {
+    const { app: uninitApp, passwordRepository, sessionRepository } = buildUninitializedApp();
+
+    const res = await uninitApp.request("/api/v1/password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newPassword: "" }),
+    });
+    expect(res.status).toBe(400);
+    // DB は不変 / sessions も増えない.
+    expect(await passwordRepository.getHash()).toBeNull();
+    expect(sessionRepository.count()).toBe(0);
+  });
+
+  it("AC-5 補足: 初期設定モードで newPassword が欠落なら 400 INVALID_REQUEST_BODY", async () => {
+    const { app: uninitApp, passwordRepository } = buildUninitializedApp();
+
+    const res = await uninitApp.request("/api/v1/password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+    expect(await passwordRepository.getHash()).toBeNull();
+  });
+
+  it("AC-5 補足: 初期設定モードで newPassword が非文字列 (number) なら 400", async () => {
+    const { app: uninitApp, passwordRepository } = buildUninitializedApp();
+
+    const res = await uninitApp.request("/api/v1/password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newPassword: 123 }),
+    });
+    expect(res.status).toBe(400);
+    expect(await passwordRepository.getHash()).toBeNull();
+  });
+
+  it("AC-5 補足: 初期設定モードで body が JSON として不正なら 400", async () => {
+    const { app: uninitApp, passwordRepository } = buildUninitializedApp();
+
+    const res = await uninitApp.request("/api/v1/password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{not-json",
+    });
+    expect(res.status).toBe(400);
+    expect(await passwordRepository.getHash()).toBeNull();
+  });
+
+  it("AC-5 補足: 初期設定モード成功直後にもう一度同じリクエストを叩くと, 通常モードに切り替わって 401 を返す", async () => {
+    const { app: uninitApp } = buildUninitializedApp();
+
+    const first = await uninitApp.request("/api/v1/password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newPassword: "P0" }),
+    });
+    expect(first.status).toBe(200);
+
+    // この時点で DB に hash が入った状態. 認証なしで叩くと 401.
+    const second = await uninitApp.request("/api/v1/password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newPassword: "P1" }),
+    });
+    expect(second.status).toBe(401);
+  });
+});
+
+describe("POST /api/v1/password — 通常モードで初期設定相当 body (initial-password-setup AC-6)", () => {
+  it("DB あり + Authorization なし + { newPassword: 'P1' } (currentPassword 無し) で 401 を返し DB は不変", async () => {
+    // 既存 buildAuthTestApp は app_password に hash を 1 件 seed 済み (= 通常モード).
+    const built = buildAuthTestApp();
+    const before = await built.passwordRepository.getHash();
+
+    const res = await built.app.request("/api/v1/password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newPassword: "P1" }),
+    });
+
+    // 認証必須 (= 401). 409 INITIAL_SETUP_DONE で返す設計でも互換とするが,
+    // plan.md/spec.md の通常モード仕様は 401 を想定するため 401 を期待する.
+    expect(res.status).toBe(401);
+    expect(await built.passwordRepository.getHash()).toBe(before);
   });
 });
 
