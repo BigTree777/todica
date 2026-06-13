@@ -153,6 +153,12 @@ export const sessions = sqliteTable("sessions", {
   createdAt: integer("created_at").notNull(),
 });
 
+export const appPassword = sqliteTable("app_password", {
+  id: text("id").primaryKey().notNull(),
+  passwordHash: text("password_hash").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
 /** schema 全体を Drizzle に渡すためのオブジェクト. */
 export const schema = {
   tasks,
@@ -163,4 +169,5 @@ export const schema = {
   settings,
   routines,
   sessions,
+  appPassword,
 };

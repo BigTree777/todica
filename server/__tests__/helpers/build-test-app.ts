@@ -2,8 +2,7 @@
  * 結合テスト用の App ビルダー.
  *
  * - createApp() に in-memory 依存性を注入する.
- * - `passwordHash` + `sessionRepository` を deps として渡す.
- *   既存 47 ファイル超の integration テストとの互換のため, ビルド時に
+ * - ビルド時に
  *   sessionRepository に "test-token" を有効 session として seed しておく.
  *   既存テストの `authHeaders()` ( `Authorization: Bearer test-token` ) はそのまま動く.
  * - FakeClock を初期時刻 "2026-06-07T09:00:00.000Z" で渡す.
@@ -20,7 +19,7 @@ import {
   InMemorySettingsRepository,
   InMemoryTaskRepository,
 } from "./in-memory-repositories.js";
-import { InMemorySessionRepository } from "./login-for-test.js";
+import { InMemoryPasswordRepository, InMemorySessionRepository } from "./login-for-test.js";
 
 export const TEST_AUTH_TOKEN = "test-token";
 export const TEST_INITIAL_TIME = "2026-06-07T09:00:00.000Z";
@@ -55,6 +54,8 @@ export function buildTestApp(
     createdAt: nowMs,
   });
 
+  const passwordRepository = new InMemoryPasswordRepository(TEST_PASSWORD_HASH, nowMs);
+
   const app = createApp({
     taskRepository,
     projectRepository,
@@ -65,7 +66,7 @@ export function buildTestApp(
     routineRepository,
     sessionRepository,
     clock,
-    passwordHash: TEST_PASSWORD_HASH,
+    passwordRepository,
   });
 
   return {

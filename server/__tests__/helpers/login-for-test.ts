@@ -7,7 +7,7 @@
  *
  * 設計:
  *   - bcrypt cost factor 4 で予めパスワードハッシュを生成 (plan D-18, 高速化のため).
- *   - createApp() に `passwordHash` + `sessionRepository` を注入したテストアプリを作る.
+ *   - createApp() に `passwordRepository` + `sessionRepository` を注入したテストアプリを作る.
  *   - そのアプリに対して `POST /api/v1/login { password }` を発行し token を取り出す.
  *
  * 使い方 (Step 8 で 47 ファイル超を一括書き換える際の典型例):
@@ -22,19 +22,13 @@
  * const headers = authHeadersForToken(token);
  * ```
  *
- * 既存 `build-test-app.ts` (`buildTestApp` / `authHeaders`) との関係:
- *   - **本 BL の Step 2 では既存ファイルには手を入れない**.
- *   - 既存 47 ファイル超の integration テストは Step 2 完了時点では一斉に red になる
- *     (createApp の `authToken` 廃止 → sessions lookup 切替に伴う).
- *   - Step 8 で本ヘルパ + 新しい assertion を経由する形に一斉書き換える.
- *
- * 現状: 本ヘルパが参照する `createApp` の `passwordHash` / `sessionRepository` 受け口,
- *       `DrizzleSessionRepository`, および /api/v1/login ハンドラは未実装. red になる.
+ * 既存 `build-test-app.ts` (`buildTestApp` / `authHeaders`) と同じ in-memory 依存を使う.
  */
 import { FakeClock } from "@todica/domain/clock";
 import bcrypt from "bcrypt";
 import type { Hono } from "hono";
 import { createApp } from "../../src/app.js";
+import type { PasswordRepository } from "../../src/data/password-repository.js";
 import type { SessionRepository } from "../../src/data/session-repository.js";
 import {
   InMemoryCounterRepository,
@@ -86,6 +80,14 @@ export class InMemorySessionRepository implements SessionRepository {
     this.store.delete(token);
   }
 
+  /**
+   * password-change AC-6: sessions テーブルの全行を削除する.
+   * パスワード変更成功時に呼び出され, 全端末を一括失効させる.
+   */
+  async deleteAll(): Promise<void> {
+    this.store.clear();
+  }
+
   /** テスト用: 期限切れトークンを直接 seed するためのフック (AC-4 検証で使用). */
   seed(input: { token: string; expiresAt: number; createdAt: number }): void {
     this.store.set(input.token, { ...input });
@@ -100,6 +102,44 @@ export class InMemorySessionRepository implements SessionRepository {
   get(token: string): { token: string; expiresAt: number; createdAt: number } | undefined {
     const row = this.store.get(token);
     return row ? { ...row } : undefined;
+  }
+}
+
+/**
+ * In-memory 実装の `PasswordRepository`.
+ *
+ * 用途:
+ *   - password-change feature の統合テストで `createApp` に注入する.
+ *   - `getHash()` / `setHash(hash, updatedAt)` の振る舞いを Drizzle 実装と揃える (upsert).
+ *
+ * docs/developer/features/password-change/plan.md D-7:
+ *   サーバ単体テストでは `APP_PASSWORD_HASH` env を使わず, `InMemoryPasswordRepository`
+ *   を直接注入する.
+ */
+export class InMemoryPasswordRepository implements PasswordRepository {
+  private current: { hash: string; updatedAt: number } | null;
+
+  constructor(initialHash?: string, initialUpdatedAt = 0) {
+    this.current =
+      initialHash !== undefined ? { hash: initialHash, updatedAt: initialUpdatedAt } : null;
+  }
+
+  async getHash(): Promise<string | null> {
+    return this.current?.hash ?? null;
+  }
+
+  async setHash(hash: string, updatedAt: number): Promise<void> {
+    this.current = { hash, updatedAt };
+  }
+
+  /** テスト用: 行を直接 seed するためのフック. */
+  seed(hash: string, updatedAt: number): void {
+    this.current = { hash, updatedAt };
+  }
+
+  /** テスト用: 現在の hash + updatedAt を覗く. */
+  peek(): { hash: string; updatedAt: number } | null {
+    return this.current ? { ...this.current } : null;
   }
 }
 
@@ -119,19 +159,13 @@ export interface BuildAuthTestAppResult {
   settingsRepository: InMemorySettingsRepository;
   routineRepository: InMemoryRoutineRepository;
   sessionRepository: InMemorySessionRepository;
+  passwordRepository: InMemoryPasswordRepository;
   clock: FakeClock;
   /** plan D-18: テスト固定パスワード. /login の payload に使う. */
   password: string;
-  /** plan D-18: bcrypt cost 4 のハッシュ. createApp に注入されている値. */
-  passwordHash: string;
 }
 
-/**
- * テストアプリビルダー (auth 経路を含む).
- *
- * - `createApp` に `passwordHash` + `sessionRepository` を渡す.
- * - 旧 `authToken` フィールドは渡さない (Step 2 で AppDeps から削除予定).
- */
+/** テストアプリビルダー (auth 経路を含む). */
 export function buildAuthTestApp(options: BuildAuthTestAppOptions = {}): BuildAuthTestAppResult {
   const password = options.password ?? TEST_PASSWORD;
   const passwordHash =
@@ -146,10 +180,10 @@ export function buildAuthTestApp(options: BuildAuthTestAppOptions = {}): BuildAu
   const routineRepository = new InMemoryRoutineRepository();
   const sessionRepository = new InMemorySessionRepository();
   const clock = new FakeClock(options.initialTime ?? TEST_INITIAL_TIME);
+  const nowMs = new Date(clock.now()).getTime();
 
-  // NOTE: `createApp` の AppDeps は Step 2 で `authToken` 撤去 + `passwordHash` /
-  //       `sessionRepository` 追加に変更される. ここでは新しい形を期待して渡す.
-  //       実装が追い付くまではコンパイルエラー (= red) になる.
+  const passwordRepository = new InMemoryPasswordRepository(passwordHash, nowMs);
+
   const app = createApp({
     taskRepository,
     projectRepository,
@@ -160,8 +194,8 @@ export function buildAuthTestApp(options: BuildAuthTestAppOptions = {}): BuildAu
     routineRepository,
     sessionRepository,
     clock,
-    passwordHash,
-  } as Parameters<typeof createApp>[0]);
+    passwordRepository,
+  });
 
   return {
     app,
@@ -173,9 +207,9 @@ export function buildAuthTestApp(options: BuildAuthTestAppOptions = {}): BuildAu
     settingsRepository,
     routineRepository,
     sessionRepository,
+    passwordRepository,
     clock,
     password,
-    passwordHash,
   };
 }
 

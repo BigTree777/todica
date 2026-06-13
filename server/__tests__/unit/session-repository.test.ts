@@ -147,4 +147,33 @@ describe("DrizzleSessionRepository", () => {
     // /logout の二重実行 / 既に削除済みの token に対する冪等性を担保する.
     await expect(repo.deleteByToken("nonexistent-token")).resolves.toBeUndefined();
   });
+
+  it("deleteAll() で sessions テーブルの全行が削除される (password-change AC-6 基盤)", async () => {
+    // docs/developer/features/password-change/spec.md AC-6:
+    //   パスワード変更成功時に sessions テーブルの全行を削除して全端末を失効させる.
+    await repo.create({
+      token: TOKEN_A,
+      expiresAt: NOW + THIRTY_DAYS_MS,
+      createdAt: NOW,
+    });
+    await repo.create({
+      token: TOKEN_B,
+      expiresAt: NOW + THIRTY_DAYS_MS,
+      createdAt: NOW,
+    });
+
+    // 削除前: 両方とも有効.
+    expect(await repo.findValidByToken(TOKEN_A, NOW)).not.toBeNull();
+    expect(await repo.findValidByToken(TOKEN_B, NOW)).not.toBeNull();
+
+    await repo.deleteAll();
+
+    // 削除後: いずれも null.
+    expect(await repo.findValidByToken(TOKEN_A, NOW)).toBeNull();
+    expect(await repo.findValidByToken(TOKEN_B, NOW)).toBeNull();
+  });
+
+  it("deleteAll() は空テーブルに対しても throw しない (冪等 no-op)", async () => {
+    await expect(repo.deleteAll()).resolves.toBeUndefined();
+  });
 });

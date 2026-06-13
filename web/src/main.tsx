@@ -38,6 +38,7 @@ import {
   login as loginRequest,
   logout as logoutRequest,
 } from "./auth/login-client.js";
+import { changePassword as changePasswordRequest } from "./auth/password-client.js";
 import { useSyncQueue } from "./hooks/use-sync-queue.js";
 import { queryClient } from "./query-client.js";
 import { HttpProjectRepository } from "./repositories/project-repository.js";
@@ -80,7 +81,7 @@ interface Repositories {
   routine: WebRoutineRepository;
 }
 
-function buildHttpRepos(baseUrl: string): Repositories {
+export function buildHttpRepos(baseUrl: string): Repositories {
   return {
     task: new HttpTaskRepository(baseUrl),
     settings: new HttpSettingsRepository(baseUrl),
@@ -90,7 +91,7 @@ function buildHttpRepos(baseUrl: string): Repositories {
   };
 }
 
-interface AppConfig {
+export interface AppConfig {
   mode: AppMode;
   baseUrl: string;
   authToken: string;
@@ -98,13 +99,13 @@ interface AppConfig {
   needsSetup: boolean;
 }
 
-interface AppProps {
+export interface AppProps {
   config: AppConfig;
   repos: Repositories;
   authStorage: AuthStorage;
 }
 
-function App({ config, repos: initialRepos, authStorage }: AppProps) {
+export function App({ config, repos: initialRepos, authStorage }: AppProps) {
   // WQ-005 / WQ-006: Service Worker / online イベントによるキュー同期
   useSyncQueue();
 
@@ -158,6 +159,19 @@ function App({ config, repos: initialRepos, authStorage }: AppProps) {
     if (token) {
       await logoutRequest(baseUrl, token);
     }
+    await authStorage.clearToken();
+    setToken(null);
+    setAuthToken("");
+  };
+
+  const handleChangePassword = async (currentPassword: string, newPassword: string) => {
+    if (!token) {
+      throw new Error("Authentication token is missing");
+    }
+    await changePasswordRequest(baseUrl, token, currentPassword, newPassword);
+  };
+
+  const handlePasswordChanged = async () => {
     await authStorage.clearToken();
     setToken(null);
     setAuthToken("");
@@ -351,6 +365,10 @@ function App({ config, repos: initialRepos, authStorage }: AppProps) {
                       }
                     : undefined
                 }
+                onChangePassword={
+                  currentMode === "server" && token ? handleChangePassword : undefined
+                }
+                onPasswordChanged={handlePasswordChanged}
               />
             }
           />
@@ -465,4 +483,6 @@ async function init() {
   );
 }
 
-void init();
+if (document.getElementById("root")) {
+  void init();
+}
