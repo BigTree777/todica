@@ -4,13 +4,10 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 /**
  * Web クライアント単体テスト: 境界時刻の設定 SettingsView (BL-009 / FR-041 / FR-042).
- * サーバ接続設定セクション追加テスト (BL-019 / AC-AND-005) も含む.
  *
  * 受け入れ基準の出典:
  *   - docs/developer/features/settings-day-boundary/spec.md
  *     §「Web クライアント SettingsView」と 1:1 対応するシナリオを扱う.
- *   - docs/developer/features/android-server-mode/spec.md
- *     §「AC-AND-005: SettingsView のサーバ設定変更」と 1:1 対応するシナリオを扱う.
  *
  * 注意: 本ファイルは TDD の "red" を作るためのテスト.
  *       SettingsView コンポーネントはまだ存在しないため,
@@ -31,13 +28,11 @@ import type { ReactNode } from "react";
  *   - dayBoundaryTime: string
  *   - ifMatch: number
  *
- * BL-019 で拡張される SettingsView の Props（サーバ接続設定追加後）:
- *   interface SettingsViewProps {
- *     repository: SettingsRepository;
- *     serverUrl?: string;
- *     authToken?: string;
- *     onSaveServer?: (serverUrl: string, authToken: string) => void;
- *   }
+ * BL-075: BL-019 で追加された「サーバ接続設定」セクション (serverUrl / authToken /
+ *         onSaveServer props) は BL-074 (アプリ内パスワードログイン導入) で dead path と
+ *         なり、本 BL で SettingsView から完全削除された。対応するテスト
+ *         (describe "SettingsView サーバ接続設定セクション (BL-019 AC-AND-005)") も
+ *         本ファイルから削除済み。
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PatchConflictError } from "../src/repositories/settings-repository.js";
@@ -231,120 +226,6 @@ describe("SettingsView (BL-009 境界時刻の設定)", () => {
 
     // 412 時は getSettings() の追加呼び出しはしない（初回のみ = 1 回）(D-004).
     expect(repo.getSettingsMock).toHaveBeenCalledTimes(1);
-  });
-});
-
-// ============================================================
-// SettingsView サーバ接続設定セクション (BL-019 / AC-AND-005)
-// ============================================================
-
-/**
- * AC-AND-005 のテストで使う SettingsView の拡張 Props.
- *
- * BL-019 で SettingsView は以下の Props を追加で受け取るようになる:
- *   - serverUrl?:     string   — 現在設定されているサーバ URL
- *   - authToken?:     string   — 現在設定されている認証トークン
- *   - onSaveServer?:  (serverUrl: string, authToken: string) => void
- *                              — 「変更を保存」クリック時のコールバック
- *
- * 既存の `repository` Props はそのまま存在する（既存テストへの影響なし）.
- *
- * 注意: 本テストブロックは TDD の "red" を作るためのテスト.
- *       BL-019 の実装が完了するまで失敗する想定.
- */
-
-describe("SettingsView サーバ接続設定セクション (BL-019 AC-AND-005)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  // ----------------------------------------------------------
-  // シナリオ: serverUrl と authToken の Props が渡された場合、対応するフィールドに値が表示される
-  // spec.md §AC-AND-005:
-  //   Given SettingsView の「サーバ接続設定」セクションが表示されている
-  //   When  serverUrl="https://example.com" と authToken="secret-token" が Props として渡される
-  //   Then  サーバ URL フィールドに "https://example.com" が表示される
-  //   And   認証トークンフィールドに "secret-token" が表示される
-  // ----------------------------------------------------------
-  it("AC-AND-005: serverUrl と authToken の Props が渡された場合、対応するフィールドに値が表示される", async () => {
-    const repo = makeMockRepository({ dayBoundaryTime: "04:00" });
-    const onSaveServer = vi.fn();
-
-    renderWithQueryClient(
-      <SettingsView
-        repository={repo}
-        serverUrl="https://example.com"
-        authToken="secret-token"
-        onSaveServer={onSaveServer}
-      />,
-    );
-
-    // サーバ URL フィールドに渡した値が表示される
-    const serverUrlInput = await screen.findByLabelText(/サーバ\s*URL/);
-    expect(serverUrlInput).toHaveValue("https://example.com");
-
-    // 認証トークンフィールドに渡した値が表示される
-    const authTokenInput = screen.getByLabelText(/認証\s*トークン/);
-    expect(authTokenInput).toHaveValue("secret-token");
-  });
-
-  // ----------------------------------------------------------
-  // シナリオ: 「変更を保存」ボタンクリックで onSaveServer(serverUrl, authToken) が呼ばれる
-  // spec.md §AC-AND-005:
-  //   Given SettingsView の「サーバ接続設定」セクションが表示されている
-  //   When  サーバ URL と認証トークンを編集して保存する
-  //   Then  新しい値が Preferences に保存される
-  //   And   次回の API リクエストから新しいサーバ URL と認証トークンが使用される
-  //   （Vitest でテスト可能な範囲: onSaveServer コールバックが正しい引数で呼ばれること）
-  // ----------------------------------------------------------
-  it("AC-AND-005: サーバ URL と認証トークンを編集して「変更を保存」をクリックすると onSaveServer(serverUrl, authToken) が呼ばれる", async () => {
-    const repo = makeMockRepository({ dayBoundaryTime: "04:00" });
-    const onSaveServer = vi.fn();
-    const user = userEvent.setup();
-
-    renderWithQueryClient(
-      <SettingsView
-        repository={repo}
-        serverUrl="https://old.example.com"
-        authToken="old-token"
-        onSaveServer={onSaveServer}
-      />,
-    );
-
-    // 初期表示を待つ（既存の dayBoundaryTime セクションが表示されるまで）
-    await screen.findByText(/04:00/);
-
-    // サーバ URL を新しい値に変更する
-    const serverUrlInput = screen.getByLabelText(/サーバ\s*URL/);
-    await user.clear(serverUrlInput);
-    await user.type(serverUrlInput, "https://new.example.com");
-
-    // 認証トークンを新しい値に変更する
-    const authTokenInput = screen.getByLabelText(/認証\s*トークン/);
-    await user.clear(authTokenInput);
-    await user.type(authTokenInput, "new-token");
-
-    // 「変更を保存」ボタンをクリックする
-    const saveServerButton = screen.getByRole("button", { name: /変更を保存/ });
-    await user.click(saveServerButton);
-
-    // onSaveServer が新しい値で呼ばれる
-    expect(onSaveServer).toHaveBeenCalledTimes(1);
-    expect(onSaveServer).toHaveBeenCalledWith("https://new.example.com", "new-token");
-  });
-
-  // ----------------------------------------------------------
-  // シナリオ: serverUrl/authToken/onSaveServer が渡されない場合、既存の BL-009 動作に影響しない
-  // spec.md §NFR-AND-001: web/ の既存テスト（Vitest）はすべて green を維持する.
-  // ----------------------------------------------------------
-  it("AC-AND-005: serverUrl/authToken/onSaveServer Props が省略された場合でも dayBoundaryTime の表示は正常に動作する", async () => {
-    const repo = makeMockRepository({ dayBoundaryTime: "04:00" });
-
-    // 既存 Props のみ渡す（サーバ接続設定 Props なし）
-    renderWithQueryClient(<SettingsView repository={repo} />);
-
-    // BL-009 の基本動作: dayBoundaryTime が表示される
-    expect(await screen.findByText(/04:00/)).toBeInTheDocument();
   });
 });
 

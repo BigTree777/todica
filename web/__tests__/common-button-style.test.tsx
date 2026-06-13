@@ -18,12 +18,13 @@
  *          → describe "AC-2".
  *   AC-3 : main.tsx から "./styles/button.css" が import され, tokens.css 直後に位置する (D-011).
  *          → describe "AC-3".
- *   AC-4 : 対象 button (= D-008 で挙げた 24 button) 全てが className に "button" を含む.
+ *   AC-4 : 対象 button (= D-008 で挙げた 24 button、BL-075 で 1 件削除のため実態 23 button)
+ *          全てが className に "button" を含む.
  *          → describe "AC-4-X" (X = TaskCard / TaskFormCard / ProjectCard / ... の各 view).
  *   AC-5 : 削除系 button が --danger variant を持つ (4 件: TaskCard 削除 / ProjectCard 削除 /
  *          RoutineCard 削除 / TrashView ゴミ箱を空にする).
  *          → describe "AC-5".
- *   AC-6 : 主要 action button が --primary variant を持つ (12 件).
+ *   AC-6 : 主要 action button が --primary variant を持つ (12 件、BL-075 で 1 件削除のため実態 11 件).
  *          → describe "AC-6".
  *   AC-7 : 補助 / キャンセル button が --ghost variant を持つ (8 件).
  *          → describe "AC-7".
@@ -516,7 +517,7 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
   // PwaUpdateBanner / ErrorNotification / ConflictDialog) は QueryClient / BrowserRouter 依存
   // のため readFileSync で tsx 内 button タグの className を assert.
   // ============================================================
-  describe('AC-4: 対象 button 全てが className に "button" を含む (D-008 / 24 件)', () => {
+  describe('AC-4: 対象 button 全てが className に "button" を含む (D-008 / 24 件、BL-075 で 1 件削除のため実態 23 件)', () => {
     // ----------------------------------------------------------
     // AC-4-TaskCard: 4 button (削除 / 現在のタスクにする / 明日にする / 完了)
     // ----------------------------------------------------------
@@ -707,7 +708,8 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
     });
 
     // ----------------------------------------------------------
-    // AC-4-SettingsView: 3 button (保存 / 変更を保存 / mode 切替) → ソース直読み
+    // AC-4-SettingsView: 2 button (保存 / mode 切替) → ソース直読み
+    // (BL-075: BL-019 由来の「変更を保存」 button は dead path として削除済み)
     // ----------------------------------------------------------
     describe('AC-4-SettingsView: settings-view.tsx 内 button のソースに className="button ..." を含む', () => {
       it('settings-view.tsx の「保存」 button が className に "button" を含む', () => {
@@ -717,16 +719,6 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
         expect(
           (cn ?? "").split(/\s+/).includes("button"),
           `settings-view.tsx の「保存」 button に "button" className が無い (現値: "${cn}")`,
-        ).toBe(true);
-      });
-
-      it('settings-view.tsx の「変更を保存」 button が className に "button" を含む', () => {
-        const src = readFileSync(TARGET_TSX_FILES.settingsView, "utf-8");
-        const cn = findButtonClassNameByLabel(src, "変更を保存");
-        expect(cn, "settings-view.tsx の「変更を保存」 button が見つからない").not.toBeNull();
-        expect(
-          (cn ?? "").split(/\s+/).includes("button"),
-          `settings-view.tsx の「変更を保存」 button に "button" className が無い (現値: "${cn}")`,
         ).toBe(true);
       });
 
@@ -956,26 +948,27 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
   });
 
   // ============================================================
-  // AC-6: 主要 action button が --primary variant を持つ (D-008 / 12 件)
+  // AC-6: 主要 action button が --primary variant を持つ (D-008 / 12 件、BL-075 で 1 件削除のため実態 11 件)
   // ============================================================
   /**
    * シナリオ AC-6 (spec.md AC-6 / D-008 / REQ-4):
-   *   Given 影響範囲表で variant=--primary と確定された 12 button を render / readFileSync する
+   *   Given 影響範囲表で variant=--primary と確定された 12 button (BL-075 で 1 件削除のため実態 11)
+   *         を render / readFileSync する
    *   When  className を確認する
    *   Then  全 button に "button button--primary" を含む
    *
-   *   D-008 確定の 12 件:
+   *   D-008 確定の 12 件 (BL-075 で「変更を保存」削除のため実態 11 件):
    *     TaskCard       : 現在のタスクにする / 明日にする(または今日にする) / 完了
    *     TaskFormCard   : 追加
    *     ProjectFormCard: 追加
    *     RoutineFormCard: 追加
-   *     SettingsView   : 保存 / 変更を保存
+   *     SettingsView   : 保存 (BL-075: 「変更を保存」は dead path として削除済み)
    *     SetupView      : 接続する
    *     PwaUpdateBanner: 再読み込み
    *     ProjectCreateDialog: 追加
    *     ConflictDialog : サーバの値を採用
    */
-  describe("AC-6: 主要 action button が --primary variant を持つ (D-008 / 12 件)", () => {
+  describe("AC-6: 主要 action button が --primary variant を持つ (D-008 / 12 件、BL-075 で 1 件削除のため実態 11 件)", () => {
     it("TaskCard の「現在のタスクにする」「明日にする」「完了」 button が全て --primary を持つ", async () => {
       const { TaskCard } = await importTaskCard();
       const { container } = render(
@@ -1075,9 +1068,11 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
       ).toBe(true);
     });
 
-    it("SettingsView の「保存」「変更を保存」 button が --primary を持つ (ソース直読み)", () => {
+    it("SettingsView の「保存」 button が --primary を持つ (ソース直読み)", () => {
+      // BL-075: BL-019 由来の「変更を保存」 button は dead path として削除済みのため
+      // 本テストの対象から外す.
       const src = readFileSync(TARGET_TSX_FILES.settingsView, "utf-8");
-      const labels = ["保存", "変更を保存"] as const;
+      const labels = ["保存"] as const;
       for (const label of labels) {
         const cn = findButtonClassNameByLabel(src, label);
         expect(cn, `settings-view.tsx の「${label}」 button が見つからない`).not.toBeNull();
