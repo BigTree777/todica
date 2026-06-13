@@ -35,6 +35,8 @@ tags:
     description: 今日の完了数（FR-040）
   - name: settings
     description: 設定（FR-042）
+  - name: authentication
+    description: ログインパスワードとセッション
   - name: reset
     description: リセット処理（FR-043, NFR-020, 保守用）
 
@@ -492,6 +494,41 @@ paths:
                 properties:
                   settings:
                     $ref: "#/components/schemas/Settings"
+
+  # ========== Authentication ==========
+  /password:
+    summary: ログインパスワード変更
+    post:
+      tags: [authentication]
+      summary: 現在のパスワードを確認して新しいパスワードへ変更する
+      description: |
+        成功時は bcrypt ハッシュを DB に保存し、既存セッションをすべて削除する。
+        同じ値への変更も受理し、新しい salt で再ハッシュする。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword:
+                  type: string
+                  minLength: 1
+                newPassword:
+                  type: string
+                  minLength: 1
+      responses:
+        "200":
+          description: パスワード変更成功
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "500": { $ref: "#/components/responses/InternalServerError" }
 
   # ========== Reset ==========
   /reset:

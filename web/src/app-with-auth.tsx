@@ -8,15 +8,11 @@
  *
  * children は任意の React node. main.tsx から既存ルート (`<Routes>...</Routes>`) を渡す.
  */
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useState } from "react";
 import { type AuthStorage, WebAuthStorage } from "./auth/auth-storage.js";
 import { AUTH_EXPIRED_EVENT, setAuthStorage } from "./auth/authed-fetch.js";
 import { InvalidPasswordError, NetworkError, login as loginRequest } from "./auth/login-client.js";
-import { changePassword } from "./auth/password-client.js";
-import { HttpSettingsRepository } from "./repositories/settings-repository.js";
 import { LoginView } from "./ui/login-view/login-view.js";
-import { SettingsView } from "./ui/settings-view/settings-view.js";
 
 void NetworkError; // keep export reachable for type narrowing in callers
 
@@ -33,7 +29,6 @@ export function AppWithAuth({ storage, baseUrl, children }: AppWithAuthProps): J
   const [authStorage] = useState<AuthStorage>(() => storage ?? new WebAuthStorage());
   const [token, setToken] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
-  const [queryClient] = useState(() => new QueryClient());
 
   // 起動時に token を取得.
   useEffect(() => {
@@ -88,23 +83,6 @@ export function AppWithAuth({ storage, baseUrl, children }: AppWithAuthProps): J
           setToken(result.token);
         }}
       />
-    );
-  }
-
-  if (children === undefined && window.location.pathname === "/settings") {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <SettingsView
-          repository={new HttpSettingsRepository(baseUrl ?? "")}
-          onChangePassword={(currentPassword, newPassword) =>
-            changePassword(baseUrl ?? "", token, currentPassword, newPassword)
-          }
-          onPasswordChanged={async () => {
-            await authStorage.clearToken();
-            setToken(null);
-          }}
-        />
-      </QueryClientProvider>
     );
   }
 

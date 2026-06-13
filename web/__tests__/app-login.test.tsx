@@ -13,6 +13,7 @@
  *
  * 現状: `web/src/auth/auth-storage.ts` / `App` の token 分岐は未実装. red.
  */
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -24,6 +25,7 @@ import { beforeEach, describe, expect, it } from "vitest";
  */
 import { AppWithAuth } from "../src/app-with-auth.js";
 import { WebAuthStorage } from "../src/auth/auth-storage.js";
+import { App, buildHttpRepos } from "../src/main.js";
 
 beforeEach(() => {
   localStorage.clear();
@@ -125,7 +127,7 @@ describe("AppWithAuth — クリーンアップ", () => {
 //   - docs/developer/features/password-change/plan.md §「Web クライアント設計」`web/src/main.tsx` の `App`
 //
 // 観点:
-//   1. SettingsView から onPasswordChanged が呼ばれると, AppWithAuth は
+//   1. SettingsView から onPasswordChanged が呼ばれると, App は
 //      auth-storage の token を破棄し, server モードかつ token=null の条件で
 //      LoginView を表示する.
 //   2. localStorage の token が消えていること.
@@ -136,16 +138,13 @@ describe("AppWithAuth — クリーンアップ", () => {
 //   - main.tsx 側が password-client.changePassword(baseUrl, token, current, next) を
 //     呼んで resolve したあと, onPasswordChanged を経由して LoginView に遷移する想定.
 //
-// 現状: SettingsView の changePassword Props 配線および
-//       AppWithAuth の onPasswordChanged 後処理は未実装. red になる.
 // ============================================================
 
-describe("AppWithAuth — パスワード変更成功時の LoginView 遷移 (password-change AC-7)", () => {
+describe("App — パスワード変更成功時の LoginView 遷移 (password-change AC-7)", () => {
   it("SettingsView 内 onPasswordChanged が呼ばれると LoginView に強制遷移し localStorage の token が破棄される", async () => {
     const storage = new WebAuthStorage();
     await storage.setToken("valid-session-token");
 
-    // /settings を起動 URL とする (LoginView 経由を避け SettingsView を直接マウント).
     window.history.replaceState({}, "", "/settings");
 
     // パスワード変更フォームを submit するため,
@@ -157,20 +156,49 @@ describe("AppWithAuth — パスワード変更成功時の LoginView 遷移 (pa
       if (url.endsWith("/api/v1/password")) {
         return new Response(null, { status: 200 });
       }
-      // 他の fetch は通さない (テスト中の余計な API 呼出は無視).
-      return new Response(JSON.stringify({}), { status: 200 });
+      if (url.endsWith("/api/v1/settings")) {
+        return new Response(
+          JSON.stringify({
+            settings: {
+              id: "singleton",
+              dayBoundaryTime: "04:00",
+              dayBoundaryTimezone: "Asia/Tokyo",
+              version: 1,
+              updatedAt: "2026-06-13T00:00:00.000Z",
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      return new Response(JSON.stringify({}), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
     }) as typeof window.fetch;
 
     try {
       const user = (await import("@testing-library/user-event")).default.setup();
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+      });
       render(
-        <BrowserRouter>
-          <AppWithAuth />
-        </BrowserRouter>,
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            <App
+              config={{
+                mode: "server",
+                baseUrl: "",
+                authToken: "valid-session-token",
+                isNative: false,
+                needsSetup: false,
+              }}
+              repos={buildHttpRepos("")}
+              authStorage={storage}
+            />
+          </BrowserRouter>
+        </QueryClientProvider>,
       );
 
-      // SettingsView 上のパスワード変更フォームを操作する.
-      // implementer の結線完了まではフォームが描画されないため red になる.
       const current = await screen.findByLabelText(/現在のパスワード/);
       const next = await screen.findByLabelText(/^新しいパスワード$/);
       const confirm = await screen.findByLabelText(/新しいパスワード\s*\(?確認\)?/);

@@ -81,7 +81,7 @@ interface Repositories {
   routine: WebRoutineRepository;
 }
 
-function buildHttpRepos(baseUrl: string): Repositories {
+export function buildHttpRepos(baseUrl: string): Repositories {
   return {
     task: new HttpTaskRepository(baseUrl),
     settings: new HttpSettingsRepository(baseUrl),
@@ -91,7 +91,7 @@ function buildHttpRepos(baseUrl: string): Repositories {
   };
 }
 
-interface AppConfig {
+export interface AppConfig {
   mode: AppMode;
   baseUrl: string;
   authToken: string;
@@ -99,13 +99,13 @@ interface AppConfig {
   needsSetup: boolean;
 }
 
-interface AppProps {
+export interface AppProps {
   config: AppConfig;
   repos: Repositories;
   authStorage: AuthStorage;
 }
 
-function App({ config, repos: initialRepos, authStorage }: AppProps) {
+export function App({ config, repos: initialRepos, authStorage }: AppProps) {
   // WQ-005 / WQ-006: Service Worker / online イベントによるキュー同期
   useSyncQueue();
 
@@ -483,4 +483,6 @@ async function init() {
   );
 }
 
-void init();
+if (document.getElementById("root")) {
+  void init();
+}

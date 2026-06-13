@@ -396,7 +396,7 @@ describe("SettingsView ログアウト (BL-074 AC-5)", () => {
 //   - docs/developer/features/password-change/plan.md §「Web クライアント設計」/ NFR-PWD-3
 //
 // 観点:
-//   1. AC-1: changePassword Props が渡されている場合,
+//   1. AC-1: onChangePassword Props が渡されている場合,
 //      `<section aria-label="パスワード変更">` と 3 入力 + 「変更する」ボタンが描画される.
 //      各 input は type="password" + 適切な autocomplete 属性を持つ.
 //   2. AC-5: 必須項目 (3 入力のいずれか) が空のとき changePassword は呼ばれない.
@@ -406,7 +406,7 @@ describe("SettingsView ログアウト (BL-074 AC-5)", () => {
 //   5. AC-7: changePassword が resolve すると onPasswordChanged が呼ばれる.
 //   6. AC-3 (UI 側): changePassword が InvalidPasswordError で reject すると
 //            role="alert" にエラーメッセージが表示され onPasswordChanged は呼ばれない.
-//   7. changePassword Props が渡されていないとき (= local モード相当) は
+//   7. onChangePassword Props が渡されていないとき (= local モード相当) は
 //      パスワード変更セクションが表示されない (NFR-PWD-2 範囲外).
 // ============================================================
 
@@ -418,7 +418,7 @@ describe("SettingsView パスワード変更セクション (password-change AC-
   // ----------------------------------------------------------
   // AC-1: 「パスワード変更」セクションが描画される
   // ----------------------------------------------------------
-  it("AC-1: changePassword Props がある場合、aria-label='パスワード変更' のセクションが表示される", async () => {
+  it("AC-1: onChangePassword Props がある場合、aria-label='パスワード変更' のセクションが表示される", async () => {
     const repo = makeMockRepository({ dayBoundaryTime: "04:00" });
     const changePassword = vi.fn().mockResolvedValue(undefined);
     const onPasswordChanged = vi.fn();
@@ -426,7 +426,7 @@ describe("SettingsView パスワード変更セクション (password-change AC-
     renderWithQueryClient(
       <SettingsView
         repository={repo}
-        changePassword={changePassword}
+        onChangePassword={changePassword}
         onPasswordChanged={onPasswordChanged}
       />,
     );
@@ -446,7 +446,7 @@ describe("SettingsView パスワード変更セクション (password-change AC-
     renderWithQueryClient(
       <SettingsView
         repository={repo}
-        changePassword={changePassword}
+        onChangePassword={changePassword}
         onPasswordChanged={onPasswordChanged}
       />,
     );
@@ -484,7 +484,7 @@ describe("SettingsView パスワード変更セクション (password-change AC-
     renderWithQueryClient(
       <SettingsView
         repository={repo}
-        changePassword={changePassword}
+        onChangePassword={changePassword}
         onPasswordChanged={onPasswordChanged}
       />,
     );
@@ -516,7 +516,7 @@ describe("SettingsView パスワード変更セクション (password-change AC-
     renderWithQueryClient(
       <SettingsView
         repository={repo}
-        changePassword={changePassword}
+        onChangePassword={changePassword}
         onPasswordChanged={onPasswordChanged}
       />,
     );
@@ -556,7 +556,7 @@ describe("SettingsView パスワード変更セクション (password-change AC-
     renderWithQueryClient(
       <SettingsView
         repository={repo}
-        changePassword={changePassword}
+        onChangePassword={changePassword}
         onPasswordChanged={onPasswordChanged}
       />,
     );
@@ -592,7 +592,7 @@ describe("SettingsView パスワード変更セクション (password-change AC-
     renderWithQueryClient(
       <SettingsView
         repository={repo}
-        changePassword={changePassword}
+        onChangePassword={changePassword}
         onPasswordChanged={onPasswordChanged}
       />,
     );
@@ -628,7 +628,7 @@ describe("SettingsView パスワード変更セクション (password-change AC-
     renderWithQueryClient(
       <SettingsView
         repository={repo}
-        changePassword={changePassword}
+        onChangePassword={changePassword}
         onPasswordChanged={onPasswordChanged}
       />,
     );
@@ -653,10 +653,10 @@ describe("SettingsView パスワード変更セクション (password-change AC-
   });
 
   // ----------------------------------------------------------
-  // 非 AC: changePassword Props が無いときセクションは出ない
+  // 非 AC: onChangePassword Props が無いときセクションは出ない
   // (local モード / NFR-PWD-2 範囲外 / spec §「スコープ境界」)
   // ----------------------------------------------------------
-  it("changePassword Props が省略された場合はパスワード変更セクションが表示されない", async () => {
+  it("onChangePassword Props が省略された場合はパスワード変更セクションが表示されない", async () => {
     const repo = makeMockRepository({ dayBoundaryTime: "04:00" });
 
     renderWithQueryClient(<SettingsView repository={repo} />);

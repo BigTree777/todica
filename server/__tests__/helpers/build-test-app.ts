@@ -2,8 +2,7 @@
  * 結合テスト用の App ビルダー.
  *
  * - createApp() に in-memory 依存性を注入する.
- * - `passwordHash` + `sessionRepository` を deps として渡す.
- *   既存 47 ファイル超の integration テストとの互換のため, ビルド時に
+ * - ビルド時に
  *   sessionRepository に "test-token" を有効 session として seed しておく.
  *   既存テストの `authHeaders()` ( `Authorization: Bearer test-token` ) はそのまま動く.
  * - FakeClock を初期時刻 "2026-06-07T09:00:00.000Z" で渡す.
@@ -55,11 +54,6 @@ export function buildTestApp(
     createdAt: nowMs,
   });
 
-  // password-change D-6 / D-7:
-  //   AppDeps は最終的に `passwordHash: string` 撤去 → `passwordRepository` に置換されるが,
-  //   既存 47 ファイル超の integration テスト群を一括赤化させないため, 移行期間中は両方を渡す.
-  //   既存テストは passwordHash 経由で動き続け, password-change 実装が
-  //   passwordRepository 経路に切り替えたら自動で新経路を使う.
   const passwordRepository = new InMemoryPasswordRepository(TEST_PASSWORD_HASH, nowMs);
 
   const app = createApp({
@@ -72,9 +66,8 @@ export function buildTestApp(
     routineRepository,
     sessionRepository,
     clock,
-    passwordHash: TEST_PASSWORD_HASH,
     passwordRepository,
-  } as Parameters<typeof createApp>[0]);
+  });
 
   return {
     app,

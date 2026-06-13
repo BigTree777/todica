@@ -252,14 +252,13 @@ export function createApp(deps: AppDeps): Hono {
       typeof currentPassword !== "string" ||
       currentPassword.length === 0 ||
       typeof newPassword !== "string" ||
-      newPassword.length === 0 ||
-      currentPassword === newPassword
+      newPassword.length === 0
     ) {
       return errorJson(
         c,
         400,
         "INVALID_REQUEST_BODY",
-        "currentPassword and newPassword must be different non-empty strings",
+        "currentPassword and newPassword must be non-empty strings",
       );
     }
 
@@ -272,8 +271,9 @@ export function createApp(deps: AppDeps): Hono {
         return errorJson(c, 401, "INVALID_PASSWORD", "password is incorrect");
       }
 
+      // 個人運用前提のため、200ms 以内のブロッキングを許容して同期 hash を使う.
       const newHash = bcrypt.hashSync(newPassword, 12);
-      await deps.passwordRepository.setHash(newHash, Date.now());
+      await deps.passwordRepository.setHash(newHash, new Date(deps.clock.now()).getTime());
       await deps.sessionRepository.deleteAll();
       return c.json({}, 200);
     } catch {

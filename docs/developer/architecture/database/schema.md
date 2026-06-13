@@ -156,6 +156,22 @@ PWA + オフライン書込キュー + 楽観ロック（[ADR-0008](../../adr/00
 
 ---
 
+## AppPassword（現在のログインパスワード） — BL-079
+
+サーバ側のみ。現在有効な bcrypt ハッシュを単一レコードで保持する。
+
+| フィールド | 型 | 制約 | 説明 |
+| --- | --- | --- | --- |
+| `id` | string | PK, 固定値 `"current"` | 単一レコード識別子 |
+| `passwordHash` | string | 必須 | ログインとパスワード変更時に照合する bcrypt ハッシュ |
+| `updatedAt` | number (Unix epoch ms) | 必須 | ハッシュを保存した時刻 |
+
+- DB が空の初回起動時だけ `APP_PASSWORD_HASH` から seed する。
+- 起動後は DB を真の source とし、SettingsView から変更できる。
+- ローカルモードは認証を経由しないため AppPassword テーブルを使わない。
+
+---
+
 ## サーバ側とローカルモード側の差分
 
 | 項目 | サーバ側 | Android ローカルモード |

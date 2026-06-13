@@ -7,7 +7,7 @@
  *
  * 設計:
  *   - bcrypt cost factor 4 で予めパスワードハッシュを生成 (plan D-18, 高速化のため).
- *   - createApp() に `passwordHash` + `sessionRepository` を注入したテストアプリを作る.
+ *   - createApp() に `passwordRepository` + `sessionRepository` を注入したテストアプリを作る.
  *   - そのアプリに対して `POST /api/v1/login { password }` を発行し token を取り出す.
  *
  * 使い方 (Step 8 で 47 ファイル超を一括書き換える際の典型例):
@@ -22,14 +22,7 @@
  * const headers = authHeadersForToken(token);
  * ```
  *
- * 既存 `build-test-app.ts` (`buildTestApp` / `authHeaders`) との関係:
- *   - **本 BL の Step 2 では既存ファイルには手を入れない**.
- *   - 既存 47 ファイル超の integration テストは Step 2 完了時点では一斉に red になる
- *     (createApp の `authToken` 廃止 → sessions lookup 切替に伴う).
- *   - Step 8 で本ヘルパ + 新しい assertion を経由する形に一斉書き換える.
- *
- * 現状: 本ヘルパが参照する `createApp` の `passwordHash` / `sessionRepository` 受け口,
- *       `DrizzleSessionRepository`, および /api/v1/login ハンドラは未実装. red になる.
+ * 既存 `build-test-app.ts` (`buildTestApp` / `authHeaders`) と同じ in-memory 依存を使う.
  */
 import { FakeClock } from "@todica/domain/clock";
 import bcrypt from "bcrypt";
@@ -166,25 +159,13 @@ export interface BuildAuthTestAppResult {
   settingsRepository: InMemorySettingsRepository;
   routineRepository: InMemoryRoutineRepository;
   sessionRepository: InMemorySessionRepository;
-  /**
-   * password-change D-6 / D-7:
-   *   `AppDeps.passwordHash: string` を撤去し `passwordRepository: PasswordRepository`
-   *   に置換した形を期待する. テストは InMemoryPasswordRepository を直接注入する.
-   */
   passwordRepository: InMemoryPasswordRepository;
   clock: FakeClock;
   /** plan D-18: テスト固定パスワード. /login の payload に使う. */
   password: string;
-  /** plan D-18: bcrypt cost 4 のハッシュ. passwordRepository に seed される値. */
-  passwordHash: string;
 }
 
-/**
- * テストアプリビルダー (auth 経路を含む).
- *
- * - `createApp` に `passwordHash` + `sessionRepository` を渡す.
- * - 旧 `authToken` フィールドは渡さない (Step 2 で AppDeps から削除予定).
- */
+/** テストアプリビルダー (auth 経路を含む). */
 export function buildAuthTestApp(options: BuildAuthTestAppOptions = {}): BuildAuthTestAppResult {
   const password = options.password ?? TEST_PASSWORD;
   const passwordHash =
@@ -201,13 +182,6 @@ export function buildAuthTestApp(options: BuildAuthTestAppOptions = {}): BuildAu
   const clock = new FakeClock(options.initialTime ?? TEST_INITIAL_TIME);
   const nowMs = new Date(clock.now()).getTime();
 
-  // password-change D-6 / D-7:
-  //   AppDeps は最終的に `passwordHash: string` 撤去 → `passwordRepository` 追加に
-  //   置換されるが, 既存 BL-074 系の login / logout / auth-middleware テストを
-  //   一括赤化させないため, 移行期間中は両方を渡す.
-  //     - 既存 (passwordHash) を読み続ける app.ts → 既存 login テスト緑のまま.
-  //     - 新 (passwordRepository) を読みに行く実装に切り替わったら, 自動で
-  //       passwordRepository 経路に切り替わる.
   const passwordRepository = new InMemoryPasswordRepository(passwordHash, nowMs);
 
   const app = createApp({
@@ -220,9 +194,8 @@ export function buildAuthTestApp(options: BuildAuthTestAppOptions = {}): BuildAu
     routineRepository,
     sessionRepository,
     clock,
-    passwordHash,
     passwordRepository,
-  } as Parameters<typeof createApp>[0]);
+  });
 
   return {
     app,
@@ -237,7 +210,6 @@ export function buildAuthTestApp(options: BuildAuthTestAppOptions = {}): BuildAu
     passwordRepository,
     clock,
     password,
-    passwordHash,
   };
 }
 

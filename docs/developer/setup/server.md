@@ -24,14 +24,14 @@ cp .env.example .env
 
 | 変数 | デフォルト | 説明 |
 |---|---|---|
-| `APP_PASSWORD_HASH` | （必須） | アプリログインパスワードの bcrypt ハッシュ。未設定だと起動失敗（`process.exit(1)`）。生成: `node -e "console.log(require('bcrypt').hashSync('your-password', 12))"` |
+| `APP_PASSWORD_HASH` | 初回 seed 時に必須 | アプリログインパスワードの bcrypt ハッシュ。DB が空の初回起動時だけ seed に使う。起動後は DB が真の source となり、SettingsView から変更可能。DB が空かつ未設定の場合のみ起動失敗する。生成: `node -e "console.log(require('bcrypt').hashSync('your-password', 12))"` |
 | `PORT` | `3000` | リッスンポート |
 | `DATABASE_PATH` | `./todica.db` | SQLite データベースファイルのパス |
 | `VITE_API_BASE_URL` | `http://localhost:3000` | Web から呼び出すサーバ URL |
 
 `.env` は `.gitignore` 済みでコミット対象外。`VITE_*` プレフィックスを持つ変数だけが Vite を通じて Web クライアントに expose される（`web/vite.config.ts` の `envDir` 設定でルートの `.env` を参照）。
 
-Bearer トークンはビルド時に埋め込まれない。アプリ起動後に LoginView でパスワード（`APP_PASSWORD_HASH` の元の平文）を入力し、`POST /api/v1/login` で opaque token を取得する。
+Bearer トークンはビルド時に埋め込まれない。初回は LoginView で `APP_PASSWORD_HASH` の元の平文を入力し、`POST /api/v1/login` で opaque token を取得する。パスワード変更後は DB の値が使われる。
 
 ### 3. サーバの起動
 
@@ -75,6 +75,6 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:3000/api/v1/tasks
 | 症状 | 原因 | 対処 |
 |---|---|---|
 | `401 Unauthorized` | `/api/v1/login` で取得した token が無効/期限切れ | 再度 `/api/v1/login` を叩いて token を取得し直す |
-| `APP_PASSWORD_HASH environment variable is required` | `.env` 未設定 | `.env` に `APP_PASSWORD_HASH=$2b$12$...` を設定する |
+| `APP_PASSWORD_HASH environment variable is required` | DB が空かつ `.env` 未設定 | `.env` に `APP_PASSWORD_HASH=$2b$12$...` を設定して初回 seed する |
 | ポートが既に使用中 | 別プロセスが 3000 番を使用 | `PORT=3001` などに変更して起動する |
 | DB エラーで起動失敗 | マイグレーション SQL に問題がある | `server/drizzle/` 以下の SQL ファイルを確認する |

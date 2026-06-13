@@ -1,3 +1,4 @@
+import type { FakeClock } from "@todica/domain/clock";
 /**
  * 結合テスト: POST /api/v1/password (パスワード変更).
  *
@@ -43,6 +44,7 @@ const NEW_PASSWORD = "new-password-1";
 let app: Hono;
 let sessionRepo: InMemorySessionRepository;
 let passwordRepo: InMemoryPasswordRepository;
+let clock: FakeClock;
 let token: string;
 
 beforeEach(async () => {
@@ -50,6 +52,7 @@ beforeEach(async () => {
   app = built.app;
   sessionRepo = built.sessionRepository;
   passwordRepo = built.passwordRepository;
+  clock = built.clock;
   // /login して Bearer 用 token を取得 (build-test-app.ts と異なり, ここでは
   // sessions に事前 seed していないため login が必要).
   token = await loginForTest(app, TEST_PASSWORD);
@@ -112,7 +115,7 @@ describe("POST /api/v1/password — 正常系 (AC-2)", () => {
   });
 
   it("成功時に app_password.updated_at が呼び出し時刻 (epoch ms) で更新される (AC-2)", async () => {
-    const beforeUpdatedAt = passwordRepo.peek()?.updatedAt;
+    clock.set("2026-06-08T10:11:12.345Z");
 
     await app.request("/api/v1/password", {
       method: "POST",
@@ -121,9 +124,22 @@ describe("POST /api/v1/password — 正常系 (AC-2)", () => {
     });
 
     const afterUpdatedAt = passwordRepo.peek()?.updatedAt;
-    expect(afterUpdatedAt).toBeDefined();
-    // 進んでいる (= 同一値の上書きで終わらない).
-    expect(afterUpdatedAt).not.toBe(beforeUpdatedAt);
+    expect(afterUpdatedAt).toBe(new Date(clock.now()).getTime());
+  });
+
+  it("currentPassword と newPassword が同じでも 200 を返し DB hash を更新する", async () => {
+    const beforeHash = await passwordRepo.getHash();
+
+    const res = await app.request("/api/v1/password", {
+      method: "POST",
+      headers: authHeadersForToken(token),
+      body: JSON.stringify({ currentPassword: TEST_PASSWORD, newPassword: TEST_PASSWORD }),
+    });
+
+    expect(res.status).toBe(200);
+    const afterHash = await passwordRepo.getHash();
+    expect(afterHash).not.toBe(beforeHash);
+    expect(await bcrypt.compare(TEST_PASSWORD, afterHash as string)).toBe(true);
   });
 });
 

@@ -37,23 +37,13 @@ export interface SettingsViewProps {
   onLogout?: () => void | Promise<void>;
   /** パスワード変更 API 呼び出し. */
   onChangePassword?: (currentPassword: string, newPassword: string) => Promise<void>;
-  /** テストおよび既存呼び出し向けの別名. */
-  changePassword?: (currentPassword: string, newPassword: string) => Promise<void>;
   /** パスワード変更成功後のセッション破棄. */
   onPasswordChanged?: () => void | Promise<void>;
 }
 
 export function SettingsView(props: SettingsViewProps): JSX.Element {
-  const {
-    repository,
-    currentMode,
-    onSwitchMode,
-    onLogout,
-    onChangePassword,
-    changePassword,
-    onPasswordChanged,
-  } = props;
-  const passwordChange = onChangePassword ?? changePassword;
+  const { repository, currentMode, onSwitchMode, onLogout, onChangePassword, onPasswordChanged } =
+    props;
   const queryClient = useQueryClient();
 
   const { data: fetchedSettings } = useQuery({
@@ -136,7 +126,7 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
     async (event: React.FormEvent) => {
       event.preventDefault();
       setPasswordError(null);
-      if (!passwordChange || !currentPassword || !newPassword || !confirmPassword) {
+      if (!onChangePassword || !currentPassword || !newPassword || !confirmPassword) {
         return;
       }
       if (newPassword !== confirmPassword) {
@@ -144,7 +134,7 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
         return;
       }
       try {
-        await passwordChange(currentPassword, newPassword);
+        await onChangePassword(currentPassword, newPassword);
         await onPasswordChanged?.();
       } catch (err) {
         setPasswordError(
@@ -154,7 +144,7 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
         );
       }
     },
-    [confirmPassword, currentPassword, newPassword, onPasswordChanged, passwordChange],
+    [confirmPassword, currentPassword, newPassword, onChangePassword, onPasswordChanged],
   );
 
   return (
@@ -185,12 +175,12 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
             />
           </div>
           <button type="submit" className="button button--primary">
-            {passwordChange === undefined ? "保存" : "更新"}
+            {onChangePassword === undefined ? "保存" : "更新"}
           </button>
         </form>
       )}
 
-      {passwordChange !== undefined && (
+      {onChangePassword !== undefined && (
         <section aria-label="パスワード変更" className="settings-view__section">
           <h2>パスワード変更</h2>
           <form onSubmit={handlePasswordSubmit}>

@@ -47,8 +47,10 @@ APP_PASSWORD_HASH=$2b$12$.....................
 VITE_API_BASE_URL=http://localhost:3000
 ```
 
+`APP_PASSWORD_HASH` は DB が空の初回起動時の seed 用途。起動後は DB が真の source となり、SettingsView からパスワードを変更できる。
+
 > Web クライアントは **ビルド時に `VITE_*` を埋め込む**ため、`VITE_API_BASE_URL` は次の step より前に決めておく。
-> 認証トークンはビルド時に埋め込まれない。アプリ起動後に LoginView でパスワード（`APP_PASSWORD_HASH` の元の平文）を入力する。
+> 認証トークンはビルド時に埋め込まれない。初回は LoginView で `APP_PASSWORD_HASH` の元の平文を入力する。
 
 ### A-3. サーバを起動する
 

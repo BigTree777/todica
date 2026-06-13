@@ -46,7 +46,7 @@
 | `server/__tests__/integration/trash.test.ts` | 26 | ゴミ箱一覧・復元・空にする・purgeTrash | BL-011 |
 | `server/__tests__/integration/projects.test.ts` | 24 | プロジェクト CRUD・名称変更・削除 | BL-016 |
 | `server/__tests__/integration/routines.test.ts` | 18 | ルーティン CRUD・編集 | BL-017 |
-| `server/__tests__/integration/password.test.ts` | 18 | `POST /api/v1/password`: 未認証 401 / 正しい現在 PW で 200 + DB hash 更新 + updated_at 更新 / 成功時 sessions 全削除 + 旧 token 401 / 誤った現在 PW 401 + DB / sessions 不変 / body 不正 (欠落・型不正・空文字・JSON 不正) で 400 / 変更後新 PW で /login 成功 + 旧 PW 401 + 新 token で /today 200 | BL-079 |
+| `server/__tests__/integration/password.test.ts` | 20 | `POST /api/v1/password`: 未認証 401 / 正しい現在 PW で 200 + DB hash 更新 + updated_at 更新 / 同値 PW でも再 hash / 成功時 sessions 全削除 + 旧 token 401 / 誤った現在 PW 401 + DB / sessions 不変 / body 不正 (欠落・型不正・空文字・JSON 不正) で 400 / 変更後新 PW で /login 成功 + 旧 PW 401 + 新 token で /today 200 | BL-079 |
 | `server/__tests__/integration/password-seed.test.ts` | 4 | 起動時 seed: DB 空 + env 非空 で seed (INSERT) / DB に既存行ありで env 無視 (DB 値維持) / env 空 + DB 空 は no-op / env 空 + DB に既存行も DB 値維持 | BL-079 |
 
 ---

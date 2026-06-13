@@ -18,9 +18,11 @@
  * 現状: `seedPasswordIfEmpty` は未実装. インポート不能で red.
  *       implementer が Step 4 で main.ts と並行して新設することで green 化する.
  */
+import bcrypt from "bcrypt";
 import { describe, expect, it } from "vitest";
 import type { PasswordRepository } from "../../src/data/password-repository.js";
 import { seedPasswordIfEmpty } from "../../src/password-seed.js";
+import { buildAuthTestApp } from "../helpers/login-for-test.js";
 
 /**
  * テスト用の in-memory `PasswordRepository`.
@@ -97,5 +99,28 @@ describe("seedPasswordIfEmpty (AC-8 / AC-9)", () => {
 
     expect(await repo.getHash()).toBe(DB_HASH);
     expect(repo.peek()?.updatedAt).toBe(NOW - 1000);
+  });
+
+  it("AC-9: DB に seed 済みのパスワードでログインでき env 側の平文ではログインできない", async () => {
+    const dbPassword = "db-password";
+    const envPassword = "env-password";
+    const built = buildAuthTestApp({ password: dbPassword });
+    const envHash = bcrypt.hashSync(envPassword, 4);
+
+    await seedPasswordIfEmpty(built.passwordRepository, envHash, NOW);
+
+    const dbLogin = await built.app.request("/api/v1/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: dbPassword }),
+    });
+    const envLogin = await built.app.request("/api/v1/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: envPassword }),
+    });
+
+    expect(dbLogin.status).toBe(200);
+    expect(envLogin.status).toBe(401);
   });
 });
