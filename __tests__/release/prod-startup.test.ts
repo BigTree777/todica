@@ -7,12 +7,19 @@
  * 対比される dev mode 用テスト: `server/__tests__/integration/startup.test.ts`
  *   (Hono app を直接呼んでヘルスチェックを検証する)
  *
+ * BL-074: 旧 `AUTH_TOKEN` env / 固定 Bearer 経路は廃止. 本テストも下記に更新する.
+ *   - env に `APP_PASSWORD_HASH` (bcrypt cost=4) を渡す.
+ *   - 起動後に `POST /api/v1/login` で token を取得.
+ *   - その token で `/api/v1/today` を Bearer 認証付きで叩いて 200 を確認.
+ *   - 旧 `AUTH_TOKEN` env を残しても起動可否や認証可否は影響を受けない (= 参照無効).
+ *
  * 本テストは:
  *   1. `npm run build -w domain` を実行
  *   2. `npm run build -w server` を実行
  *   3. ビルドされた `server/dist/src/main.js` を子プロセスで起動
  *   4. `/healthz` を fetch して 200 と {"status":"ok"} を確認
- *   5. 子プロセスを終了し、一時 DB を削除
+ *   5. `/api/v1/login` で token を取得し `/api/v1/today` を Bearer で 200 確認
+ *   6. 子プロセスを終了し、一時 DB を削除
  *
  * ビルド時間が長いため testTimeout を 180 秒に設定している。
  */
@@ -20,13 +27,16 @@ import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import bcrypt from "bcrypt";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 describe("本番ビルド + 起動", () => {
   let serverProcess: ChildProcess | null = null;
   let tempDir: string | null = null;
   const PORT = 13901;
-  const AUTH_TOKEN = "prod-startup-test-token";
+  // BL-074: 旧 AUTH_TOKEN は廃止. APP_PASSWORD_HASH (bcrypt cost=4) で起動する.
+  const APP_PASSWORD = "prod-startup-test-password";
+  const APP_PASSWORD_HASH = bcrypt.hashSync(APP_PASSWORD, 4);
 
   beforeAll(async () => {
     // domain → server の順にビルドする（server は composite references で domain/dist に依存）.
@@ -56,13 +66,18 @@ describe("本番ビルド + 起動", () => {
     const dbPath = join(tempDir, "test.db");
 
     // ビルドされた dist の main.js を Node で起動する.
+    // BL-074: APP_PASSWORD_HASH を渡し, 旧 AUTH_TOKEN env は渡さない.
+    // 念のため旧 env (AUTH_TOKEN) を継承先から除去する.
+    const { AUTH_TOKEN: _drop, ...inheritedEnv } = process.env;
+    void _drop;
+    const childEnv: NodeJS.ProcessEnv = {
+      ...inheritedEnv,
+      APP_PASSWORD_HASH,
+      DATABASE_PATH: dbPath,
+      PORT: String(PORT),
+    };
     serverProcess = spawn("node", ["server/dist/src/main.js"], {
-      env: {
-        ...process.env,
-        AUTH_TOKEN,
-        DATABASE_PATH: dbPath,
-        PORT: String(PORT),
-      },
+      env: childEnv,
       stdio: "pipe",
       cwd: process.cwd(),
     });
@@ -119,5 +134,34 @@ describe("本番ビルド + 起動", () => {
     expect(response.status).toBe(200);
     const body = (await response.json()) as { status: string };
     expect(body).toEqual({ status: "ok" });
+  });
+
+  it("BL-074: POST /api/v1/login で APP_PASSWORD で token を取得し /api/v1/today を Bearer で 200 を返す", async () => {
+    // 1. login で token を取得.
+    const loginRes = await fetch(`http://localhost:${PORT}/api/v1/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: APP_PASSWORD }),
+    });
+    expect(loginRes.status).toBe(200);
+    const loginBody = (await loginRes.json()) as { token: string; expiresAt: number };
+    expect(loginBody.token).toMatch(/^[0-9a-f]{64}$/i);
+
+    // 2. token で /api/v1/today を叩く → 200.
+    const todayRes = await fetch(`http://localhost:${PORT}/api/v1/today`, {
+      headers: { Authorization: `Bearer ${loginBody.token}` },
+    });
+    expect(todayRes.status).toBe(200);
+
+    // 3. (旧 AUTH_TOKEN 風 Bearer は 401 — 旧経路への依存が無くなったこと AC-7).
+    const oldStyleRes = await fetch(`http://localhost:${PORT}/api/v1/today`, {
+      headers: { Authorization: "Bearer prod-startup-test-token" },
+    });
+    expect(oldStyleRes.status).toBe(401);
+  });
+
+  it("BL-074 AC-1: Bearer 無しで /api/v1/today を叩くと 401", async () => {
+    const res = await fetch(`http://localhost:${PORT}/api/v1/today`);
+    expect(res.status).toBe(401);
   });
 });
