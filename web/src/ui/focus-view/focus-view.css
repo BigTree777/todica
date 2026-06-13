@@ -1,12 +1,12 @@
 /**
- * focus-view CSS (BL-037).
+ * focus-view CSS .
  *
  * BL-059 で `.focus-view__card` / `.focus-view__project` / `.focus-view__name` /
  * `.focus-view__actions` は撤去した. focus 単独大表示の役割は
  * `<TaskCard variant="focus" />` (= `.task-card.task-card--focus`) に移譲済み.
  *
  * 維持セレクタ:
- *   .focus-view       : ページ全体の枠 (BL-037).
+ *   .focus-view       : ページ全体の枠 .
  *   .focus-view h1    : 「現在のタスク」見出し (D-007 / V-5 非対象).
  *   .focus-view__empty: focusedTask が無いときの placeholder.
  */

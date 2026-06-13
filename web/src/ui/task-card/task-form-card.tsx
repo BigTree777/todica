@@ -1,17 +1,17 @@
 /**
- * `<TaskFormCard>` (BL-059 / task-card-component).
+ * `<TaskFormCard>` .
  *
  * 仕様参照:
  *   docs/developer/features/task-card-component/spec.md REQ-2.
  *   docs/developer/features/task-card-component/plan.md §「<TaskFormCard> API」.
  *   docs/developer/features/project-toggle-removal/spec.md REQ-1 〜 REQ-5
- *     (BL-065: 起票カードのプロジェクト選択トグルを撤去し <select> に戻す).
+ *     (起票カードのプロジェクト選択トグルを撤去し <select> に戻す).
  *
  * 役割:
  *   - today-view / tomorrow-view の起票フォームを置換する単一の起票カード.
  *   - `<TaskCard>` と同じ 3 段ゾーン構造 (header / title / actions) を共有する.
  *   - root 要素は `<form className="task-card task-card--form">`.
- *   - header 段: プロジェクト <select> (左) + PriorityStars (右) (BL-065 D-003 / V-3 同形).
+ *   - header 段: プロジェクト <select> (左) + PriorityStars (右) (D-003 / V-3 同形).
  *   - title 段: タスク名 label + input. font-size は `--font-size-h2` (V-7).
  *   - actions 段: 「追加」 submit button のみ (V-2 で中央配置).
  *
@@ -19,7 +19,7 @@
  *   - V-6: 「↑タップで選択」span と「優先度」label span は含めない.
  *   - REQ-9 / NFR-LABEL-PRESERVE: タスク名 label/input の関連付けは `inputId` prop で保持.
  *   - P-010: PriorityStars の groupLabel は「優先度」を渡す.
- *   - BL-065 D-001 / D-002 / D-003: プロジェクト入力は visually-hidden な
+ *   - D-001 / D-002 / D-003: プロジェクト入力は visually-hidden な
  *     `<label htmlFor={`${idPrefix}-project`}>プロジェクト</label>` + `<select>` で表現.
  *     先頭 option は `value=""` (= 未分類) / textContent「プロジェクトなし」.
  */

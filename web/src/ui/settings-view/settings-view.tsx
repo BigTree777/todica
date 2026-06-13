@@ -12,7 +12,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
  *   - クライアントバリデーション: HH:MM 形式 (00:00 - 23:59) のみ送信する.
  *   - 412 (楽観ロック): エラーメッセージを表示してユーザーに再試行を促す.
  *
- * BL-018: TanStack Query (useQuery / useMutation) でデータ取得・書込みを管理.
+ * TanStack Query (useQuery / useMutation) でデータ取得・書込みを管理.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import "./settings-view.css";
@@ -28,11 +28,11 @@ const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export interface SettingsViewProps {
   repository: SettingsRepository;
-  /** BL-020: 現在のモード（渡されている場合は「モード切替」セクションを表示する） */
+  /** 現在のモード（渡されている場合は「モード切替」セクションを表示する） */
   currentMode?: "local" | "server";
-  /** BL-020: モード切替ボタンクリック時のコールバック */
+  /** モード切替ボタンクリック時のコールバック */
   onSwitchMode?: () => void | Promise<void>;
-  /** BL-074: ログアウトボタン押下時のコールバック (渡されている場合のみボタンを表示) */
+  /** ログアウトボタン押下時のコールバック (渡されている場合のみボタンを表示) */
   onLogout?: () => void | Promise<void>;
 }
 

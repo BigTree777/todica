@@ -15,13 +15,13 @@
  *   - 曜日 (7 checkbox) / 優先度 (PriorityStars) は click 即時に親 handler を呼ぶ (REQ-4 / D-012 案 e).
  *
  * 重要な決定:
- *   - D-002 (BL-061): `as` prop で root tag を `<li>` / `<div>` から選択.
- *   - BL-070 D-001: 同値 blur の抑制は親 view に置く.
- *   - BL-070 D-002 / P-001 (iii): 空文字 blur の元値復元は blur ハンドラ内で
+ *   - D-002 : `as` prop で root tag を `<li>` / `<div>` から選択.
+ *   - D-001: 同値 blur の抑制は親 view に置く.
+ *   - D-002 / P-001 (iii): 空文字 blur の元値復元は blur ハンドラ内で
  *     `e.currentTarget.value = routine.name` を同期的に書き戻して実現 (uncontrolled input).
  *     key (entity.id + entity.name) はサーバ正本値変化時の再マウント同期用.
- *   - BL-070 D-009: input id は `routine-name-{routine.id}` で起票側 `routine-name` と衝突回避.
- *   - BL-070 P-003: PriorityStars idPrefix は `routine-{routine.id}` で起票側 `routine-create` と衝突回避.
+ *   - D-009: input id は `routine-name-{routine.id}` で起票側 `routine-name` と衝突回避.
+ *   - P-003: PriorityStars idPrefix は `routine-{routine.id}` で起票側 `routine-create` と衝突回避.
  */
 import type { Priority } from "@todica/domain/task";
 import type { WebRoutine } from "../../repositories/routine-repository.js";
@@ -56,7 +56,7 @@ export function RoutineCard(props: RoutineCardProps): JSX.Element {
     as = "li",
   } = props;
 
-  // D-012 (BL-061): as prop に応じて root tag を切替.
+  // D-012 : as prop に応じて root tag を切替.
   const Tag = as as "li";
   const inputId = `routine-name-${routine.id}`;
 
@@ -79,7 +79,7 @@ export function RoutineCard(props: RoutineCardProps): JSX.Element {
         <label htmlFor={inputId} className="visually-hidden">
           ルーティン名
         </label>
-        {/* BL-070 REQ-3: 表示時に常時 input を描画. P-001 (iii): uncontrolled + key で再マウントを制御.
+        {/* REQ-3: 表示時に常時 input を描画. P-001 (iii): uncontrolled + key で再マウントを制御.
             空文字 blur (D-002) は親が PATCH を短絡し state も key も変わらないため,
             カード側で DOM 値を正本値 (routine.name) に書き戻して表示を復元する. */}
         <input

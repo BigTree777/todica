@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 /**
- * 単体テスト: ProjectsView (BL-016 / project-crud).
+ * 単体テスト: ProjectsView .
  *
  * 受け入れ基準の出典:
  *   - docs/developer/features/project-crud/spec.md §「Web クライアント - ProjectsView（プロジェクト管理 UI）」
@@ -116,7 +116,7 @@ function makeMockRepository(initial: Project[] = []): ProjectRepository & {
 // ProjectsView テスト
 // ============================================================
 
-describe("ProjectsView (BL-016 プロジェクト管理 UI)", () => {
+describe("ProjectsView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -141,7 +141,7 @@ describe("ProjectsView (BL-016 プロジェクト管理 UI)", () => {
     // list() が 1 回呼ばれる
     expect(repo.listMock).toHaveBeenCalledTimes(1);
 
-    // BL-070: プロジェクト名は input value に入る. findByDisplayValue で取得.
+    // プロジェクト名は input value に入る. findByDisplayValue で取得.
     expect(await screen.findByDisplayValue("仕事")).toBeInTheDocument();
     expect(await screen.findByDisplayValue("個人")).toBeInTheDocument();
   });
@@ -198,7 +198,7 @@ describe("ProjectsView (BL-016 プロジェクト管理 UI)", () => {
     expect(arg.name).toBe("趣味");
     expect(typeof arg.id).toBe("string");
 
-    // BL-070: 一覧が再取得され「趣味」が input value に表示される.
+    // 一覧が再取得され「趣味」が input value に表示される.
     expect(await screen.findByDisplayValue("趣味")).toBeInTheDocument();
   });
 
@@ -218,14 +218,14 @@ describe("ProjectsView (BL-016 プロジェクト管理 UI)", () => {
    *   BL-070 で「編集モード」概念ごと撤去 (REQ-2 / G-2). 「変更」「保存」 button は撤去.
    *   代わりに「name input の blur で onNameBlur → updateMutation」フローへ逆転 (G-4 / REQ-5).
    */
-  it("シナリオ: input の値を変更し blur すると repository.update() が呼ばれ一覧が更新される (BL-070)", async () => {
+  it("シナリオ: input の値を変更し blur すると repository.update() が呼ばれ一覧が更新される ", async () => {
     const P1 = makeProject({ id: PROJECT_ID_1, name: "仕事", version: 1 });
     const repo = makeMockRepository([P1]);
     const user = userEvent.setup();
 
     renderWithQueryClient(<ProjectsView repository={repo} />);
 
-    // BL-070: 表示モードに常時 input が表示される.
+    // 表示モードに常時 input が表示される.
     const editInput = (await screen.findByDisplayValue("仕事")) as HTMLInputElement;
     await user.clear(editInput);
     await user.type(editInput, "仕事2");
@@ -262,7 +262,7 @@ describe("ProjectsView (BL-016 プロジェクト管理 UI)", () => {
 
     renderWithQueryClient(<ProjectsView repository={repo} />);
 
-    // BL-070: プロジェクト名は input value に入る. findByDisplayValue で待つ.
+    // プロジェクト名は input value に入る. findByDisplayValue で待つ.
     await screen.findByDisplayValue("仕事");
 
     // 削除ボタンをクリック
@@ -275,7 +275,7 @@ describe("ProjectsView (BL-016 プロジェクト管理 UI)", () => {
     expect(arg.id).toBe(PROJECT_ID_1);
     expect(arg.ifMatch).toBe(3); // P1.version
 
-    // BL-070: 一覧から「仕事」が消える (input value としても無くなる).
+    // 一覧から「仕事」が消える (input value としても無くなる).
     expect(screen.queryByDisplayValue("仕事")).toBeNull();
   });
 });

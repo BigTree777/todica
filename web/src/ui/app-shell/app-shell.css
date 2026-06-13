@@ -1,7 +1,7 @@
 /*
  * AppShell CSS (BL-036 / ui-sidebar-nav, BL-049 / hamburger-nav).
- * BL-046: 暫定値をデザイントークンに置換済み。
- * BL-049: ハンバーガーナビ用クラス追加。固定サイドバー (.app-shell__sidebar) を廃止。
+ * 暫定値をデザイントークンに置換済み。
+ * ハンバーガーナビ用クラス追加。固定サイドバー (.app-shell__sidebar) を廃止。
  */
 
 .app-shell {
@@ -87,17 +87,17 @@
   flex: 1;
   width: 100%;
   padding: var(--space-md);
-  /* BL-053: 固定ハンバーガーボタン (bottom ~36px) と h1 が重ならないよう上余白を確保. */
+  /* 固定ハンバーガーボタン (bottom ~36px) と h1 が重ならないよう上余白を確保. */
   padding-top: calc(var(--space-md) + var(--space-xl));
   overflow: auto;
 }
 
-/* BL-062: メニュー開時はハンバーガーボタンを視覚的に退避 */
+/* メニュー開時はハンバーガーボタンを視覚的に退避 */
 .app-shell__hamburger--hidden {
   display: none;
 }
 
-/* BL-062: メニュー内「閉じる」ボタン */
+/* メニュー内「閉じる」ボタン */
 .app-shell__menu-close {
   align-self: flex-end;
   background: none;

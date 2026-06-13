@@ -1,8 +1,8 @@
 /**
- * SetupView コンポーネント (BL-019 / BL-020 / BL-074).
+ * SetupView コンポーネント.
  *
  * Android アプリ初回起動時に表示されるサーバ接続設定画面.
- * BL-074 で簡素化: サーバ URL 入力 + `/healthz` 接続検証のみに絞る. 認証トークン入力は廃止.
+ * 役割: サーバ URL 入力 + `/healthz` 接続検証.
  *
  * 仕様参照:
  *   - docs/developer/features/app-login/spec.md §「Android クライアント」/ AC-6
@@ -15,7 +15,7 @@ export interface SetupViewProps {
   /** URL 検証成功時のコールバック. `fetch(url + "/healthz")` が 200 を返した時に呼ばれる. */
   onValidated: (serverUrl: string) => void | Promise<void>;
   initialServerUrl?: string;
-  /** BL-020: ローカルモード選択時のコールバック. 渡されている場合は「ローカルモードで使う」ボタンを表示する. */
+  /** ローカルモード選択時のコールバック. 渡されている場合は「ローカルモードで使う」ボタンを表示する. */
   onSelectLocal?: () => void | Promise<void>;
 }
 

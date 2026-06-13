@@ -1,7 +1,7 @@
 /**
- * projects-view CSS (BL-045 / BL-060).
- * BL-046: 暫定値をデザイントークンに置換済み.
- * BL-060 (project-card-component): .projects-view__form / __item / __actions を
+ * projects-view CSS .
+ * 暫定値をデザイントークンに置換済み.
+ * .projects-view__form / __item / __actions を
  * .project-card 系へ移譲したため撤去 (REQ-5 / D-009).
  * .projects-view / h1 / __list / __empty は維持 (NFR-PRESERVE-SHELL).
  */

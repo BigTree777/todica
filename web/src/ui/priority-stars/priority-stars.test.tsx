@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 /**
- * 単体テスト: `<PriorityStars />` (BL-040 / priority-star-ui).
+ * 単体テスト: `<PriorityStars />` .
  *
  * 仕様参照:
  *   docs/developer/features/priority-star-ui/spec.md
@@ -38,7 +38,7 @@ function litCount(): number {
   return document.querySelectorAll('[data-lit="true"]').length;
 }
 
-describe("<PriorityStars /> (BL-040 単体)", () => {
+describe("<PriorityStars />", () => {
   it('シナリオ: value="normal" のとき 3 つの星 (role=radio) が並び, 2 つが点灯状態である (REQ-1 / REQ-2)', () => {
     // AC-1 / REQ-2: 星 2 つ点灯 = normal.
     render(<PriorityStars value="normal" onChange={() => {}} groupLabel="優先度" />);

@@ -1,5 +1,5 @@
 /*
- * BL-060 (project-card-component): ProjectCard / ProjectFormCard の専用 CSS.
+ * ProjectCard / ProjectFormCard の専用 CSS.
  *
  * 仕様参照:
  *   docs/developer/features/project-card-component/spec.md REQ-3 / AC-1 〜 AC-5 / AC-18
@@ -29,13 +29,13 @@
   /* 本 BL 時点では .project-card と同じ. 将来差異が出たらここに. */
 }
 
-/* BL-070 (inline-edit-all-cards): .project-card--editing modifier / .project-card__name span /
+/* .project-card--editing modifier / .project-card__name span /
    .project-card__actions__edit button / .project-card__form-inline form を撤去. */
 
 .project-card__actions {
   display: flex;
   align-items: center;
-  /* BL-070: DOM 順「削除」のみがそのまま視覚順「右」になる. */
+  /* DOM 順「削除」のみがそのまま視覚順「右」になる. */
   gap: var(--space-sm);
 }
 

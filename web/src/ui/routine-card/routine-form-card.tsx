@@ -1,8 +1,8 @@
 /**
- * `<RoutineFormCard>` (BL-061 / routine-card-component).
+ * `<RoutineFormCard>` .
  *
  * BL-068 (routine-card-edit-fields) 更新:
- *   - 優先度 UI を `<select>` から `<PriorityStars />` (BL-040) に置換 (REQ-1 / D-003).
+ *   - 優先度 UI を `<select>` から `<PriorityStars />`  に置換 (REQ-1 / D-003).
  *   - `defaultPriority` prop 型を `string` → `Priority` に変更 (G-2).
  *   - `priorityId?` prop を撤去 (D-002).
  *   - `.routine-card__priority-row` ラッパおよび「優先度」label を完全撤去.
@@ -26,7 +26,7 @@
  * 役割:
  *   - routines-view の作成フォームを置換する単一の起票カード.
  *   - root 要素は `<form className="routine-card routine-card--form">`.
- *   - 4 段構成 (BL-072):
+ *   - 4 段構成 :
  *     - 1 段目 (.routine-card__header): PriorityStars 単独 (右端固定 / D-001 / D-006).
  *     - 2 段目 (.routine-card__title): visually-hidden label + name input.
  *     - 3 段目 (.routine-card__day-checkboxes): 曜日チェックボックス群 (7 個).

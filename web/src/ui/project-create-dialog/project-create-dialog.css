@@ -1,6 +1,6 @@
 /**
- * <ProjectCreateDialog /> ローカル CSS (BL-044 / inline-project-create).
- * BL-046: 暫定値をデザイントークンに置換済み。
+ * <ProjectCreateDialog /> ローカル CSS .
+ * 暫定値をデザイントークンに置換済み。
  *
  * 注意: dialog の display は UA スタイル (dialog:not([open]) { display: none })
  * に委ねる。ここで display を上書きすると閉時にも表示されてしまう。

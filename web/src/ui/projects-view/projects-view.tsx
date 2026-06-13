@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 /**
- * プロジェクト管理ビュー (BL-016 / project-crud).
+ * プロジェクト管理ビュー .
  *
  * 仕様参照:
  *   - docs/developer/features/project-crud/spec.md §「Web クライアント - ProjectsView」
@@ -12,7 +12,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
  *   - 名称変更: 行の「名称変更」ボタンで編集モード, 保存で repository.update() → 一覧再取得.
  *   - 削除: 削除ボタンで repository.delete() → 一覧再取得.
  *
- * BL-018: TanStack Query (useQuery / useMutation) でデータ取得・書込みを管理.
+ * TanStack Query (useQuery / useMutation) でデータ取得・書込みを管理.
  */
 import { useCallback, useState } from "react";
 import "./projects-view.css";

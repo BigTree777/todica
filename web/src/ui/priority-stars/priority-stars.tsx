@@ -1,6 +1,6 @@
 import type { Priority } from "@todica/domain/task";
 /**
- * `<PriorityStars />` (BL-040 / priority-star-ui).
+ * `<PriorityStars />` .
  *
  * 仕様参照:
  *   docs/developer/features/priority-star-ui/spec.md

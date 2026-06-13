@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 /**
- * 単体テスト: TrashView (BL-014 / web-client-foundation).
+ * 単体テスト: TrashView .
  *
  * 受け入れ基準の出典:
  *   - docs/developer/features/web-client-foundation/spec.md §「TrashView: 一覧表示」
@@ -92,7 +92,7 @@ function makeMockRepository(initial: TrashedTask[] = []): TrashRepository & {
 // TrashView テスト
 // ============================================================
 
-describe("TrashView (BL-014 Web クライアント基盤)", () => {
+describe("TrashView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

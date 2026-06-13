@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Priority, Task } from "@todica/domain/task";
 /**
- * 「明日のタスク」独立ビュー (BL-038 / tomorrow-view).
+ * 「明日のタスク」独立ビュー .
  *
  * 仕様参照:
  *   docs/developer/features/tomorrow-view/spec.md REQ-1〜REQ-7.
@@ -12,7 +12,7 @@ import type { Priority, Task } from "@todica/domain/task";
  *   - 起票フォーム: タスク名 / プロジェクト / 優先度 / 追加 の 4 要素 (期限 UI なし).
  *   - 各カードのアクションは「削除」「今日にする」「完了」の 3 ボタン (REQ-3 / BL-042 REQ-2).
  *   - 「今日にする」は `PATCH /api/v1/tasks/:id { dueDate: "today" }` を発行 (FR-014 逆方向).
- *   - 「削除」は `DELETE /api/v1/tasks/:id` で論理削除 (BL-001 / BL-012).
+ *   - 「削除」は `DELETE /api/v1/tasks/:id` で論理削除 .
  *   - 空状態は「明日のタスクはありません」テキスト. 起票フォームは表示し続ける.
  *
  * 重要な決定 (plan.md):
@@ -23,9 +23,9 @@ import type { Priority, Task } from "@todica/domain/task";
  *   - D-012: 起票時 dueDate = "tomorrow" 固定 (UI には出さない).
  *
  * エラー処理:
- *   - online 412 (`OptimisticLockError`) → `ConflictError` に変換し `ConflictDialog` を開く (BL-031).
- *   - その他のエラー → `notifyError("通信に失敗しました")` (BL-034).
- *   - offline → 書込キューに enqueue し楽観成功 (BL-018).
+ *   - online 412 (`OptimisticLockError`) → `ConflictError` に変換し `ConflictDialog` を開く .
+ *   - その他のエラー → `notifyError("通信に失敗しました")` .
+ *   - offline → 書込キューに enqueue し楽観成功 .
  */
 import { useCallback, useState } from "react";
 import { notifyError } from "../../error-notification.js";
@@ -259,7 +259,7 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
     networkMode: "offlineFirst",
   });
 
-  // BL-042: tomorrow カードに「完了」 button を追加するため completeMutation を追加.
+  // tomorrow カードに「完了」 button を追加するため completeMutation を追加.
   // today-view と同形 (BL-031 ConflictDialog 経路 + BL-034 notifyError 経路に接続).
   // 成功時は ["tomorrow"] / ["today"] / ["focus"] の 3 つを invalidate する
   // (今日の completionCount が +1 されるため ["today"] 再フェッチが必要 / D-1 / plan).
@@ -371,7 +371,7 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
     [updateMutation],
   );
 
-  // BL-042: 「完了」クリックで complete API を呼ぶ.
+  // 「完了」クリックで complete API を呼ぶ.
   const handleComplete = useCallback(
     (task: Task) => {
       const cmd: CompleteTaskCommand = {

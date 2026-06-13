@@ -1,5 +1,5 @@
 /**
- * ゴミ箱ビュー (BL-014 / web-client-foundation).
+ * ゴミ箱ビュー .
  *
  * 仕様参照:
  *   - docs/developer/features/web-client-foundation/spec.md §「TrashView」
@@ -11,7 +11,7 @@
  *   - 各タスク行に「復元」ボタン → repository.restore() → 一覧再取得.
  *   - 「ゴミ箱を空にする」ボタン → repository.empty() → 一覧再取得.
  *
- * BL-018: TanStack Query (useQuery / useMutation) + 書込キュー統合.
+ * TanStack Query (useQuery / useMutation) + 書込キュー統合.
  */
 import { useCallback } from "react";
 import "./trash-view.css";

@@ -29,7 +29,7 @@ import type { DueDate, Priority, Task } from "@todica/domain/task";
  *   - 解除 UI は提供しない (解除は完了 / 削除 / 期限変更によるサーバ側自動解除のみ. plan D-003).
  *   - 失敗時は notifyError + ["focus"] invalidate で最新 version を取り直す (plan D-005).
  *
- * BL-018: TanStack Query (useQuery / useMutation) でデータ取得・書込みを管理.
+ * TanStack Query (useQuery / useMutation) でデータ取得・書込みを管理.
  */
 import { useCallback, useState } from "react";
 import { notifyError } from "../../error-notification.js";
@@ -77,7 +77,7 @@ export function TodayView(props: TodayViewProps): JSX.Element {
   const queryClient = useQueryClient();
   const conflictDialog = useConflictDialog();
 
-  // BL-005: today() でタスク一覧・nextTaskId・completionCount を取得
+  // today() でタスク一覧・nextTaskId・completionCount を取得
   const { data: todayData } = useQuery({
     queryKey: ["today"],
     queryFn: () => repository.today(),
@@ -87,14 +87,14 @@ export function TodayView(props: TodayViewProps): JSX.Element {
   const nextTaskId = todayData?.nextTaskId ?? null;
   const completionCount = todayData?.completionCount ?? 0;
 
-  // BL-006: getFocus() で現在のフォーカスを取得
+  // getFocus() で現在のフォーカスを取得
   const { data: focus } = useQuery({
     queryKey: ["focus"],
     queryFn: () => repository.getFocus(),
     networkMode: "offlineFirst",
   });
 
-  // BL-016: プロジェクト一覧を取得
+  // プロジェクト一覧を取得
   const { data: projectsData } = useQuery({
     queryKey: ["projects"],
     queryFn: () => projectRepository.list(),
@@ -194,7 +194,7 @@ export function TodayView(props: TodayViewProps): JSX.Element {
         void safeDequeueByKey(idempotencyKey);
         return result;
       } catch (error) {
-        // BL-031 (a): online 412 で repository が OptimisticLockError を throw する.
+        // online 412 で repository が OptimisticLockError を throw する.
         // ConflictDialog を開くために queue 内の entry を引いて ConflictError に変換する.
         if (error instanceof OptimisticLockError) {
           const entry = await findEntryByKey(idempotencyKey);
@@ -427,7 +427,7 @@ export function TodayView(props: TodayViewProps): JSX.Element {
     [focus, setFocusMutation],
   );
 
-  // BL-006: 強調対象 = currentTaskId ?? nextTaskId (plan.md D-001 暗黙フォールバック).
+  // 強調対象 = currentTaskId ?? nextTaskId (plan.md D-001 暗黙フォールバック).
   const focusData = focus as FocusSelection | undefined;
   const focusedId: string | null = focusData?.currentTaskId ?? nextTaskId;
   const focusedTask: Task | null = focusedId
@@ -454,7 +454,7 @@ export function TodayView(props: TodayViewProps): JSX.Element {
         </span>
       </header>
 
-      {/* BL-006: 現在のタスク強調セクション (NFR-011 "大きく単独で表示").
+      {/* 現在のタスク強調セクション (NFR-011 "大きく単独で表示").
           BL-059 / REQ-4 / V-5: 旧 h2 見出しは撤去. landmark は section の aria-label で維持.
           BL-059 / REQ-4: <TaskCard as="section" variant="focus" /> に置換 (focusedTask 用). */}
       {focusedTask &&
