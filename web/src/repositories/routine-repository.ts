@@ -3,7 +3,11 @@
  *
  * 仕様参照:
  *   - docs/developer/features/routine/spec.md §「Web クライアント - RoutinesView」
+ *
+ * BL-076 で `authedFetch` 経由に切り替えた. 401 を受けた時点で `authedFetch` 側が
+ * `auth-storage.clearToken()` + `todica:auth-expired` イベント dispatch を行う.
  */
+import { authedFetch } from "../auth/authed-fetch.js";
 
 export interface WebRoutine {
   id: string;
@@ -71,26 +75,15 @@ function uuidV4(): string {
 }
 
 /**
- * HTTP 実装. fetch を使ってサーバの /api/v1/routines 系エンドポイントを叩く.
+ * HTTP 実装. `authedFetch` を使ってサーバの /api/v1/routines 系エンドポイントを叩く.
  */
 export class HttpRoutineRepository implements WebRoutineRepository {
-  constructor(
-    readonly baseUrl: string,
-    readonly authToken: string,
-  ) {}
-
-  private authHeaders(extra: Record<string, string> = {}): Record<string, string> {
-    return {
-      Authorization: `Bearer ${this.authToken}`,
-      ...extra,
-    };
-  }
+  constructor(readonly baseUrl: string) {}
 
   /** GET /api/v1/routines → { routines: WebRoutine[] } */
   async list(): Promise<WebRoutine[]> {
-    const res = await fetch(`${this.baseUrl}/api/v1/routines`, {
+    const res = await authedFetch(`${this.baseUrl}/api/v1/routines`, {
       method: "GET",
-      headers: this.authHeaders(),
     });
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: failed to list routines`);
@@ -102,12 +95,12 @@ export class HttpRoutineRepository implements WebRoutineRepository {
   /** POST /api/v1/routines → { routine: WebRoutine } */
   async create(cmd: CreateRoutineCommand): Promise<WebRoutine> {
     const idemKey = uuidV4();
-    const res = await fetch(`${this.baseUrl}/api/v1/routines`, {
+    const res = await authedFetch(`${this.baseUrl}/api/v1/routines`, {
       method: "POST",
-      headers: this.authHeaders({
+      headers: {
         "Content-Type": "application/json",
         "Idempotency-Key": idemKey,
-      }),
+      },
       body: JSON.stringify({
         id: cmd.id,
         name: cmd.name,
@@ -130,13 +123,13 @@ export class HttpRoutineRepository implements WebRoutineRepository {
     if (cmd.daysOfWeek !== undefined) patch.daysOfWeek = cmd.daysOfWeek;
     if (cmd.defaultPriority !== undefined) patch.defaultPriority = cmd.defaultPriority;
 
-    const res = await fetch(`${this.baseUrl}/api/v1/routines/${cmd.id}`, {
+    const res = await authedFetch(`${this.baseUrl}/api/v1/routines/${cmd.id}`, {
       method: "PATCH",
-      headers: this.authHeaders({
+      headers: {
         "Content-Type": "application/json",
         "Idempotency-Key": idemKey,
         "If-Match": String(cmd.ifMatch),
-      }),
+      },
       body: JSON.stringify(patch),
     });
     if (res.status === 412) {
@@ -153,12 +146,12 @@ export class HttpRoutineRepository implements WebRoutineRepository {
   /** DELETE /api/v1/routines/:id → 204 No Content */
   async delete(cmd: DeleteRoutineCommand): Promise<void> {
     const idemKey = uuidV4();
-    const res = await fetch(`${this.baseUrl}/api/v1/routines/${cmd.id}`, {
+    const res = await authedFetch(`${this.baseUrl}/api/v1/routines/${cmd.id}`, {
       method: "DELETE",
-      headers: this.authHeaders({
+      headers: {
         "Idempotency-Key": idemKey,
         "If-Match": String(cmd.ifMatch),
-      }),
+      },
     });
     if (res.status === 204) return;
     if (res.status === 412) {

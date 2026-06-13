@@ -242,23 +242,13 @@ function uuidV4(): string {
 /**
  * HTTP 実装. `authedFetch` を使ってサーバの /api/v1/tasks 系エンドポイントを叩く.
  *
- * BL-074 差し戻し (Problem 1):
- *   - 旧 API 互換のため `authToken` 引数は受けるが内部では使わない.
- *     token は `authedFetch` が `auth-storage` から都度読む.
+ * BL-074 / BL-076:
+ *   - token は `authedFetch` が `auth-storage` から都度読む (constructor は baseUrl のみ).
  *   - 401 を受けた時点で `authedFetch` 側で `clearToken()` + `todica:auth-expired`
  *     dispatch が行われ, `AppWithAuth` の listener が LoginView に戻す.
  */
 export class HttpTaskRepository implements TaskRepository {
-  constructor(
-    readonly baseUrl: string,
-    /**
-     * @deprecated BL-074: token は `auth-storage` から都度読むようになり本引数は使われない.
-     *   既存呼出 (`main.tsx` の buildHttpRepos) との互換のため optional で残している.
-     */
-    readonly authToken?: string,
-  ) {
-    void authToken;
-  }
+  constructor(readonly baseUrl: string) {}
 
   private jsonHeaders(extra: Record<string, string> = {}): Record<string, string> {
     return {

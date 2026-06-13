@@ -88,7 +88,7 @@ describe("HttpTaskRepository", () => {
       }),
     );
 
-    const repo = new HttpTaskRepository(BASE_URL, AUTH_TOKEN);
+    const repo = new HttpTaskRepository(BASE_URL);
     const task = await repo.create({ id: TASK_ID, name: "牛乳を買う" });
 
     expect(task.id).toBe(TASK_ID);
@@ -118,7 +118,7 @@ describe("HttpTaskRepository", () => {
       }),
     );
 
-    const repo = new HttpTaskRepository(BASE_URL, AUTH_TOKEN);
+    const repo = new HttpTaskRepository(BASE_URL);
     const task = await repo.update({
       id: TASK_ID,
       ifMatch: 1,
@@ -146,7 +146,7 @@ describe("HttpTaskRepository", () => {
       }),
     );
 
-    const repo = new HttpTaskRepository(BASE_URL, AUTH_TOKEN);
+    const repo = new HttpTaskRepository(BASE_URL);
     await repo.delete({ id: TASK_ID, ifMatch: 3 });
 
     expect(received).not.toBeNull();
@@ -165,7 +165,7 @@ describe("HttpTaskRepository", () => {
       }),
     );
 
-    const repo = new HttpTaskRepository(BASE_URL, AUTH_TOKEN);
+    const repo = new HttpTaskRepository(BASE_URL);
     await expect(
       repo.update({ id: TASK_ID, ifMatch: 1, patch: { name: "stale" } }),
     ).rejects.toBeInstanceOf(OptimisticLockError);

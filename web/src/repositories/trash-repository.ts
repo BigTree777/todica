@@ -4,7 +4,11 @@
  * 仕様参照:
  *   - docs/developer/features/web-client-foundation/spec.md §「TrashRepository（HttpTrashRepository）」
  *   - docs/developer/features/web-client-foundation/plan.md §D-003
+ *
+ * BL-076 で `authedFetch` 経由に切り替えた. 401 を受けた時点で `authedFetch` 側が
+ * `auth-storage.clearToken()` + `todica:auth-expired` イベント dispatch を行う.
  */
+import { authedFetch } from "../auth/authed-fetch.js";
 
 export interface TrashedTask {
   id: string;
@@ -62,26 +66,15 @@ function uuidV4(): string {
 }
 
 /**
- * HTTP 実装. fetch を使ってサーバの /api/v1/trash 系エンドポイントを叩く.
+ * HTTP 実装. `authedFetch` を使ってサーバの /api/v1/trash 系エンドポイントを叩く.
  */
 export class HttpTrashRepository implements TrashRepository {
-  constructor(
-    readonly baseUrl: string,
-    readonly authToken: string,
-  ) {}
-
-  private authHeaders(extra: Record<string, string> = {}): Record<string, string> {
-    return {
-      Authorization: `Bearer ${this.authToken}`,
-      ...extra,
-    };
-  }
+  constructor(readonly baseUrl: string) {}
 
   /** GET /api/v1/trash → { tasks: TrashedTask[] } */
   async list(): Promise<TrashedTask[]> {
-    const res = await fetch(`${this.baseUrl}/api/v1/trash`, {
+    const res = await authedFetch(`${this.baseUrl}/api/v1/trash`, {
       method: "GET",
-      headers: this.authHeaders(),
     });
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: failed to list trash`);
@@ -97,12 +90,12 @@ export class HttpTrashRepository implements TrashRepository {
    */
   async restore(cmd: RestoreTaskCommand): Promise<TrashedTask> {
     const idemKey = uuidV4();
-    const res = await fetch(`${this.baseUrl}/api/v1/trash/${cmd.id}/restore`, {
+    const res = await authedFetch(`${this.baseUrl}/api/v1/trash/${cmd.id}/restore`, {
       method: "POST",
-      headers: this.authHeaders({
+      headers: {
         "Idempotency-Key": idemKey,
         "If-Match": String(cmd.ifMatch),
-      }),
+      },
     });
 
     if (res.status === 412) {
@@ -118,16 +111,16 @@ export class HttpTrashRepository implements TrashRepository {
 
   /**
    * DELETE /api/v1/trash
-   * Idempotency-Key (UUID v4) と Authorization ヘッダを付ける.
+   * Idempotency-Key (UUID v4) を付ける. Authorization は `authedFetch` が自動付与する.
    * 204 で正常終了 (void を返す).
    */
   async empty(): Promise<void> {
     const idemKey = uuidV4();
-    const res = await fetch(`${this.baseUrl}/api/v1/trash`, {
+    const res = await authedFetch(`${this.baseUrl}/api/v1/trash`, {
       method: "DELETE",
-      headers: this.authHeaders({
+      headers: {
         "Idempotency-Key": idemKey,
-      }),
+      },
     });
 
     if (res.status === 204) return;
