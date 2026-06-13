@@ -7,11 +7,11 @@
  * 対比される dev mode 用テスト: `server/__tests__/integration/startup.test.ts`
  *   (Hono app を直接呼んでヘルスチェックを検証する)
  *
- * BL-074: 旧 `AUTH_TOKEN` env / 固定 Bearer 経路は廃止. 本テストも下記に更新する.
+ * 認証経路の検証:
  *   - env に `APP_PASSWORD_HASH` (bcrypt cost=4) を渡す.
  *   - 起動後に `POST /api/v1/login` で token を取得.
  *   - その token で `/api/v1/today` を Bearer 認証付きで叩いて 200 を確認.
- *   - 旧 `AUTH_TOKEN` env を残しても起動可否や認証可否は影響を受けない (= 参照無効).
+ *   - sessions に存在しない固定文字列 Bearer は 401 (AC-7).
  *
  * 本テストは:
  *   1. `npm run build -w domain` を実行
@@ -34,7 +34,7 @@ describe("本番ビルド + 起動", () => {
   let serverProcess: ChildProcess | null = null;
   let tempDir: string | null = null;
   const PORT = 13901;
-  // BL-074: 旧 AUTH_TOKEN は廃止. APP_PASSWORD_HASH (bcrypt cost=4) で起動する.
+  // APP_PASSWORD_HASH (bcrypt cost=4) で起動する.
   const APP_PASSWORD = "prod-startup-test-password";
   const APP_PASSWORD_HASH = bcrypt.hashSync(APP_PASSWORD, 4);
 
@@ -66,8 +66,8 @@ describe("本番ビルド + 起動", () => {
     const dbPath = join(tempDir, "test.db");
 
     // ビルドされた dist の main.js を Node で起動する.
-    // BL-074: APP_PASSWORD_HASH を渡し, 旧 AUTH_TOKEN env は渡さない.
-    // 念のため旧 env (AUTH_TOKEN) を継承先から除去する.
+    // APP_PASSWORD_HASH を env として渡す.
+    // 不要な env (AUTH_TOKEN) を継承先から除去する.
     const { AUTH_TOKEN: _drop, ...inheritedEnv } = process.env;
     void _drop;
     const childEnv: NodeJS.ProcessEnv = {
@@ -136,7 +136,7 @@ describe("本番ビルド + 起動", () => {
     expect(body).toEqual({ status: "ok" });
   });
 
-  it("BL-074: POST /api/v1/login で APP_PASSWORD で token を取得し /api/v1/today を Bearer で 200 を返す", async () => {
+  it("POST /api/v1/login で APP_PASSWORD で token を取得し /api/v1/today を Bearer で 200 を返す", async () => {
     // 1. login で token を取得.
     const loginRes = await fetch(`http://localhost:${PORT}/api/v1/login`, {
       method: "POST",
@@ -153,14 +153,14 @@ describe("本番ビルド + 起動", () => {
     });
     expect(todayRes.status).toBe(200);
 
-    // 3. (旧 AUTH_TOKEN 風 Bearer は 401 — 旧経路への依存が無くなったこと AC-7).
+    // 3. (sessions に存在しない固定文字列 Bearer は 401 — AC-7).
     const oldStyleRes = await fetch(`http://localhost:${PORT}/api/v1/today`, {
       headers: { Authorization: "Bearer prod-startup-test-token" },
     });
     expect(oldStyleRes.status).toBe(401);
   });
 
-  it("BL-074 AC-1: Bearer 無しで /api/v1/today を叩くと 401", async () => {
+  it("AC-1: Bearer 無しで /api/v1/today を叩くと 401", async () => {
     const res = await fetch(`http://localhost:${PORT}/api/v1/today`);
     expect(res.status).toBe(401);
   });

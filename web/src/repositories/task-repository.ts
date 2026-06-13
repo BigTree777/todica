@@ -8,14 +8,9 @@
  *   - docs/developer/features/task-crud/plan.md §処理フロー (Web → HTTP)
  *   - ADR-0010 (Idempotency-Key, If-Match の必須化)
  *
- * BL-074 差し戻し (Problem 1) で AC-4 production 経路を成立させるため,
- * 本ファイルは生 `fetch` を廃止し `authedFetch` 経由に切り替えた.
- * `authedFetch` が 401 を捕捉した時点で `auth-storage.clearToken()` と
- * `todica:auth-expired` イベント dispatch を行う (plan D-13). これにより
- * 期限切れ token を持つユーザは API 呼び出しから自動で LoginView に戻れる.
- *
- * BL-076 で残り 4 本 (settings / project / routine / trash) も `authedFetch` 経由に統一済み.
- * これにより全 5 本の repository が 401 自動退場フローに揃った.
+ * 全 HTTP 呼び出しは `authedFetch` を経由する. 401 を受けた時点で
+ * `auth-storage.clearToken()` + `todica:auth-expired` イベント dispatch が
+ * 走り, 期限切れ token を持つクライアントは自動で LoginView に戻る.
  */
 import type { DueDate, Priority, Task } from "@todica/domain/task";
 import { authedFetch } from "../auth/authed-fetch.js";
@@ -243,10 +238,9 @@ function uuidV4(): string {
 /**
  * HTTP 実装. `authedFetch` を使ってサーバの /api/v1/tasks 系エンドポイントを叩く.
  *
- * BL-074 / BL-076:
- *   - token は `authedFetch` が `auth-storage` から都度読む (constructor は baseUrl のみ).
- *   - 401 を受けた時点で `authedFetch` 側で `clearToken()` + `todica:auth-expired`
- *     dispatch が行われ, `AppWithAuth` の listener が LoginView に戻す.
+ * - token は `authedFetch` が `auth-storage` から都度読む (constructor は baseUrl のみ).
+ * - 401 を受けた時点で `authedFetch` 側で `clearToken()` + `todica:auth-expired`
+ *   dispatch が行われ, `AppWithAuth` の listener が LoginView に戻す.
  */
 export class HttpTaskRepository implements TaskRepository {
   constructor(readonly baseUrl: string) {}

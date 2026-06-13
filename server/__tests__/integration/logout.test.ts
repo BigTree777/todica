@@ -1,5 +1,5 @@
 /**
- * 結合テスト: POST /api/v1/logout (BL-074 / Step 2).
+ * 結合テスト: POST /api/v1/logout.
  *
  * 受け入れ基準の出典:
  *   - docs/developer/features/app-login/spec.md §「受け入れ基準」AC-5

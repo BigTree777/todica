@@ -1,5 +1,5 @@
 /**
- * 単体テスト: AC-4 production 経路 (BL-074 差し戻し Problem 1).
+ * 単体テスト: AC-4 production 経路.
  *
  * 受け入れ基準の出典:
  *   - docs/developer/features/app-login/spec.md §「受け入れ基準」AC-4

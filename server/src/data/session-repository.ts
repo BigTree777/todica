@@ -1,5 +1,5 @@
 /**
- * SessionRepository インターフェース (BL-074 / app-login).
+ * SessionRepository インターフェース.
  *
  * 仕様: docs/developer/features/app-login/spec.md
  * 設計: docs/developer/features/app-login/plan.md §「データモデル」/ D-1 / D-6

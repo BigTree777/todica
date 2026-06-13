@@ -35,7 +35,7 @@ beforeAll(() => {
   server.listen({ onUnhandledRequest: "error" });
 });
 beforeEach(async () => {
-  // BL-074: HttpTaskRepository は constructor の authToken を使わず
+  // HttpTaskRepository は constructor の authToken を持たず
   // `authedFetch` 経由で `auth-storage` から token を都度読む.
   // 既存テストの assertion (`Authorization: Bearer ${AUTH_TOKEN}`) を満たすため
   // `WebAuthStorage` に AUTH_TOKEN を seed する.

@@ -1,5 +1,5 @@
 /**
- * 単体テスト: HttpSettingsRepository が 401 を引いたときの挙動 (BL-076 / AC-1).
+ * 単体テスト: HttpSettingsRepository が 401 を引いたときの挙動 (AC-対応).
  *
  * 受け入れ基準の出典:
  *   - docs/developer/features/authed-fetch-repositories/spec.md §AC-1
@@ -13,7 +13,7 @@
  *     3. `todica:auth-expired` Custom Event が dispatch される.
  *
  * 「event を手動 dispatch」ではなく「実 Repository 呼び出しが 401 を引き当てた結果として
- *  event が発火する」形を検証する. これにより BL-076 で settings 経路の `authedFetch` 配線が
+ *  event が発火する」形を検証する. これにより settings 経路の `authedFetch` 配線が
  *  成立していることを担保する.
  *
  * AC-5 の補足: 本ファイルは `new HttpSettingsRepository(BASE_URL)` (引数 1 つ) で生成し,

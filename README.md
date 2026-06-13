@@ -12,7 +12,7 @@
 
 ## セットアップ
 
-Node.js 20 以上が必要です。
+Node.js 24.x （手元の動作確認バージョン）が必要です。
 
 ```bash
 git clone https://github.com/BigTree777/todica.git
@@ -22,8 +22,7 @@ npm install
 
 ## サーバの起動
 
-BL-074 以降は固定トークン (`AUTH_TOKEN`) を廃止し, アプリ内ログイン (`POST /api/v1/login`) に切り替えました.
-サーバ起動時はパスワードの bcrypt ハッシュを `APP_PASSWORD_HASH` 環境変数で渡します.
+認証はアプリ内ログイン (`POST /api/v1/login`) で行います. サーバ起動時にはパスワードの bcrypt ハッシュを `APP_PASSWORD_HASH` 環境変数で渡します.
 
 ```bash
 # 1. ハッシュを生成 (cost factor は本番 12 を推奨)
@@ -53,7 +52,7 @@ npm run android:bundle
 | --- | --- |
 | ユーザー | [`docs/user/`](docs/user/index.md) |
 | 開発者 | [`docs/developer/`](docs/developer/index.md) |
-| 運用者 | [`docs/operations/deploy-guide.md`](docs/operations/deploy-guide.md) |
+| 運用者 | [`docs/user/deploy-guide.md`](docs/user/deploy-guide.md) |
 | プライバシーポリシー | [`docs/privacy-policy.md`](docs/privacy-policy.md) |
 
 ## ライセンス

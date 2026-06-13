@@ -5,7 +5,7 @@
  *   - GET /healthz が 200 OK を返す（サーバが起動している証拠）
  *   - GET /api/v1/tasks で Authorization ヘッダなし → 401
  *
- * BL-074: 旧 `AUTH_TOKEN` 環境変数は廃止され `APP_PASSWORD_HASH` に置き換わる
+ * 認証は `APP_PASSWORD_HASH` (bcrypt) と sessions テーブルで行う
  *         (docs/developer/features/app-login/plan.md D-7).
  * 注: `APP_PASSWORD_HASH` 未設定時の exit(1) は main.ts のトップレベルコードで担保されており、
  * vitest からモジュールインポートだけで process.exit が走るため自動テストは困難。
@@ -27,7 +27,7 @@ describe("サーバ起動 / ヘルスチェック", () => {
   });
 });
 
-describe("Bearer 認証 (BL-074: sessions lookup)", () => {
+describe("Bearer 認証 (sessions lookup)", () => {
   it("GET /api/v1/tasks で Authorization ヘッダなし → 401 (AC-1)", async () => {
     const { app } = buildAuthTestApp();
     const res = await app.request("/api/v1/tasks");

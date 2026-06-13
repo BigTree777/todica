@@ -11,7 +11,7 @@
  *
  * 環境変数:
  *   - DATABASE_PATH (default: ./todica.db)
- *   - APP_PASSWORD_HASH (必須: BL-074 アプリログインの bcrypt ハッシュ)
+ *   - APP_PASSWORD_HASH (必須: アプリログインパスワードの bcrypt ハッシュ)
  */
 import { join } from "node:path";
 import { serve } from "@hono/node-server";
@@ -62,7 +62,7 @@ const app = createApp({
   settingsRepository: new DrizzleSettingsRepository({ db }),
   // BL-017 / routine: SQLite + drizzle-orm による物理永続化.
   routineRepository: new DrizzleRoutineRepository({ db }),
-  // BL-074 / app-login: sessions テーブルの永続化.
+  // sessions テーブルの永続化.
   sessionRepository: new DrizzleSessionRepository({ db }),
   clock,
   // BL-030: testClock が渡されると app は test-only エンドポイントを生やす.

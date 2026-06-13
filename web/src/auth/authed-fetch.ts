@@ -1,5 +1,5 @@
 /**
- * 認証付き fetch ラッパ (BL-074 / plan D-13).
+ * 認証付き fetch ラッパ.
  *
  * - `auth-storage` から token を取得し Authorization: Bearer に乗せる.
  * - 401 を捕捉したら `auth-storage.clearToken()` を呼び `todica:auth-expired` を dispatch する.

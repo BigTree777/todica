@@ -1,5 +1,5 @@
 /**
- * `loginForTest()` ヘルパ (BL-074 / Step 2 で導入).
+ * `loginForTest()` ヘルパ.
  *
  * docs/developer/features/app-login/plan.md D-17:
  *   integration テストの beforeEach で token を取得して各 fetch の Bearer に乗せる.
@@ -127,7 +127,7 @@ export interface BuildAuthTestAppResult {
 }
 
 /**
- * BL-074 用のテストアプリビルダー.
+ * テストアプリビルダー (auth 経路を含む).
  *
  * - `createApp` に `passwordHash` + `sessionRepository` を渡す.
  * - 旧 `authToken` フィールドは渡さない (Step 2 で AppDeps から削除予定).

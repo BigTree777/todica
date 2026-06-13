@@ -1,5 +1,5 @@
 /**
- * 単体テスト: WebAuthStorage / auth-storage (BL-074 / Step 3).
+ * 単体テスト: WebAuthStorage / auth-storage.
  *
  * 受け入れ基準の出典:
  *   - docs/developer/features/app-login/spec.md §「共通コンポーネント」/ AC-2 / AC-4 / AC-5

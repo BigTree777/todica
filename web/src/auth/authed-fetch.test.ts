@@ -1,5 +1,5 @@
 /**
- * 単体テスト: authedFetch (BL-078 / BL-074 補完).
+ * 単体テスト: authedFetch.
  *
  * 受け入れ基準の出典:
  *   - docs/developer/features/auth-storage-tests/spec.md AC-1〜AC-7
@@ -14,7 +14,7 @@
  *   6. (AC-6) getToken() が null を返すとき Authorization ヘッダは付与されない.
  *   7. (AC-7) 呼出側が Authorization を明示指定した場合は上書きしない.
  *
- * production 対象: web/src/auth/authed-fetch.ts (無改修. BL-074 で実装済み).
+ * production 対象: web/src/auth/authed-fetch.ts (本テストでは無改修).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuthStorage } from "./auth-storage.js";
@@ -80,7 +80,7 @@ function extractHeaders(init: RequestInit | undefined): Headers {
 // AC-1 / AC-2 / AC-7
 // ---------------------------------------------------------------------------
 
-describe("authedFetch (BL-078 / authed-fetch.ts)", () => {
+describe("authedFetch", () => {
   it("引数 (URL + RequestInit) を global.fetch に透過し Authorization: Bearer <token> を付与する (AC-1)", async () => {
     const storage: AuthStorage = makeMockStorage("tkn-1");
     setAuthStorage(storage);

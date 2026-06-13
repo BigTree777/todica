@@ -4,7 +4,7 @@
  * 仕様参照:
  *   - docs/developer/features/routine/spec.md §「Web クライアント - RoutinesView」
  *
- * BL-076 で `authedFetch` 経由に切り替えた. 401 を受けた時点で `authedFetch` 側が
+ * HTTP 呼び出しは `authedFetch` を経由する. 401 を受けた時点で `authedFetch` 側が
  * `auth-storage.clearToken()` + `todica:auth-expired` イベント dispatch を行う.
  */
 import { authedFetch } from "../auth/authed-fetch.js";

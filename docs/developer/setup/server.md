@@ -24,14 +24,14 @@ cp .env.example .env
 
 | 変数 | デフォルト | 説明 |
 |---|---|---|
-| `APP_PASSWORD_HASH` | （必須） | アプリログインパスワードの bcrypt ハッシュ (BL-074)。未設定だと起動失敗（`process.exit(1)`）。生成: `node -e "console.log(require('bcrypt').hashSync('your-password', 12))"` |
+| `APP_PASSWORD_HASH` | （必須） | アプリログインパスワードの bcrypt ハッシュ。未設定だと起動失敗（`process.exit(1)`）。生成: `node -e "console.log(require('bcrypt').hashSync('your-password', 12))"` |
 | `PORT` | `3000` | リッスンポート |
 | `DATABASE_PATH` | `./todica.db` | SQLite データベースファイルのパス |
 | `VITE_API_BASE_URL` | `http://localhost:3000` | Web から呼び出すサーバ URL |
 
 `.env` は `.gitignore` 済みでコミット対象外。`VITE_*` プレフィックスを持つ変数だけが Vite を通じて Web クライアントに expose される（`web/vite.config.ts` の `envDir` 設定でルートの `.env` を参照）。
 
-BL-074 以降、Bearer トークンはビルド時に埋め込まない。アプリ起動後に LoginView でパスワード（`APP_PASSWORD_HASH` の元の平文）を入力し、`POST /api/v1/login` で opaque token を取得する。
+Bearer トークンはビルド時に埋め込まれない。アプリ起動後に LoginView でパスワード（`APP_PASSWORD_HASH` の元の平文）を入力し、`POST /api/v1/login` で opaque token を取得する。
 
 ### 3. サーバの起動
 
@@ -49,7 +49,7 @@ npm run dev -w server
 npm run dev -w web
 ```
 
-`http://localhost:5173` で Vite 開発サーバが起動する。ブラウザ版では `.env` の `VITE_API_BASE_URL` がそのまま使われ、起動時に LoginView が表示される（パスワード入力後に `/today` へ遷移）。ネイティブ版（Capacitor）では Preferences が空のとき SetupView が出てサーバ URL を入力 → `/healthz` 検証 → LoginView でパスワード入力、の 2 ステップとなる (BL-074 AC-6)。
+`http://localhost:5173` で Vite 開発サーバが起動する。ブラウザ版では `.env` の `VITE_API_BASE_URL` がそのまま使われ、起動時に LoginView が表示される（パスワード入力後に `/today` へ遷移）。ネイティブ版（Capacitor）では Preferences が空のとき SetupView が出てサーバ URL を入力 → `/healthz` 検証 → LoginView でパスワード入力、の 2 ステップとなる。
 
 ## 動作確認
 
@@ -58,7 +58,7 @@ curl http://localhost:3000/healthz
 # → 200 OK
 ```
 
-認証付きで API を叩く場合 (BL-074):
+認証付きで API を叩く場合:
 
 ```bash
 # 1. login して token を取得

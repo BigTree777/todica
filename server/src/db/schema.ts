@@ -140,7 +140,7 @@ export const routines = sqliteTable("routines", {
 });
 
 /**
- * sessions テーブル (BL-074 / app-login).
+ * sessions テーブル.
  *
  * docs/developer/features/app-login/plan.md §「データモデル」/ D-1.
  * - token は `crypto.randomBytes(32).toString("hex")` の 64 文字 16 進文字列.

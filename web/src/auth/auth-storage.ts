@@ -1,5 +1,5 @@
 /**
- * 認証トークンの保存抽象 (BL-074 / plan D-9 / D-14).
+ * 認証トークンの保存抽象.
  *
  * - Web 実装: `localStorage` の `todica.auth.token` キーに保存.
  * - Capacitor 実装: `@capacitor/preferences` の `authToken` キーに保存 (動的 import).
