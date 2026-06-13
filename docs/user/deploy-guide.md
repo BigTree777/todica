@@ -186,40 +186,77 @@ npm run build -w web
 `/etc/nginx/sites-available/todica`：
 
 ```nginx
+# ===== HTTP → HTTPS リダイレクト =====
 server {
-  listen 80;
-  server_name todica.example.com;
-  return 301 https://$host$request_uri;
+    listen 80;
+    listen [::]:80;
+    server_name todica.example.com;
+
+    # Let's Encrypt の HTTP-01 チャレンジ用 (certbot --webroot を使う場合のみ必要)
+    # certbot --nginx で運用しているなら不要だが入れておくと事故りにくい
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    # それ以外はすべて HTTPS へ恒久リダイレクト
+    location / {
+        return 301 https://$host$request_uri;
+    }
 }
 
+# ===== HTTPS 本体 =====
 server {
-  listen 443 ssl http2;
-  server_name todica.example.com;
-  ssl_certificate     /etc/letsencrypt/live/todica.example.com/fullchain.pem;
-  ssl_certificate_key /etc/letsencrypt/live/todica.example.com/privkey.pem;
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name todica.example.com;
 
-  # Web 静的ファイル
-  root /opt/todica/web/dist;
-  index index.html;
+    ssl_certificate     /etc/letsencrypt/live/todica.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/todica.example.com/privkey.pem;
 
-  # SPA: 存在しないパスは index.html に流す
-  location / {
-    try_files $uri $uri/ /index.html;
-  }
+    # Web 静的ファイル
+    root /opt/todica/web/dist;
+    index index.html;
 
-  # API は Node プロセスへプロキシ
-  location /api/ {
-    proxy_pass http://127.0.0.1:3000;
-    proxy_set_header Host              $host;
-    proxy_set_header X-Real-IP         $remote_addr;
-    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-  }
+    # ----- セキュリティヘッダ -----
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Content-Type-Options    "nosniff"                              always;
+    add_header X-Frame-Options           "SAMEORIGIN"                           always;
+    add_header Referrer-Policy           "strict-origin-when-cross-origin"      always;
 
-  # ヘルスチェック
-  location = /healthz {
-    proxy_pass http://127.0.0.1:3000;
-  }
+    # ----- location 群 (具体 → 抽象の順) -----
+
+    # 1) 隠しファイル (.env / .git/ 等) を一括拒否
+    location ~ /\.(env|git|svn|ht) {
+        deny all;
+        return 404;
+    }
+
+    # 2) ヘルスチェック (完全一致 + ログ抑制)
+    location = /healthz {
+        access_log off;
+        proxy_pass http://127.0.0.1:3000;
+    }
+
+    # 3) API は Node プロセスへプロキシ
+    location /api/ {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # 4) 静的アセット: 長期キャッシュ + 無ければ即 404 (index.html に化けるのを防ぐ)
+    location ~* \.(css|js|jpg|jpeg|png|gif|svg|ico|woff2?|map)$ {
+        try_files $uri =404;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # 5) SPA フォールバック: それ以外は index.html を返してクライアント側ルータに委ねる
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
 }
 ```
 
