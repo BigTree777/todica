@@ -168,9 +168,12 @@ describe("setupInitialPassword(baseUrl, newPassword) — 正常系", () => {
           newPassword?: string;
           currentPassword?: string;
         };
-        return HttpResponse.json({ token: "t".repeat(64), expiresAt: 1_800_000_000_000 }, {
-          status: 200,
-        });
+        return HttpResponse.json(
+          { token: "t".repeat(64), expiresAt: 1_800_000_000_000 },
+          {
+            status: 200,
+          },
+        );
       }),
     );
 

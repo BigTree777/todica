@@ -30,6 +30,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import { type AuthState, fetchAuthState } from "./auth/auth-state-client.js";
 import { type AuthStorage, CapacitorAuthStorage, WebAuthStorage } from "./auth/auth-storage.js";
 import { AUTH_EXPIRED_EVENT, setAuthStorage } from "./auth/authed-fetch.js";
 import {
@@ -38,7 +39,10 @@ import {
   login as loginRequest,
   logout as logoutRequest,
 } from "./auth/login-client.js";
-import { changePassword as changePasswordRequest } from "./auth/password-client.js";
+import {
+  changePassword as changePasswordRequest,
+  setupInitialPassword as setupInitialPasswordRequest,
+} from "./auth/password-client.js";
 import { useSyncQueue } from "./hooks/use-sync-queue.js";
 import { queryClient } from "./query-client.js";
 import { HttpProjectRepository } from "./repositories/project-repository.js";
@@ -54,6 +58,7 @@ import type { TrashRepository } from "./repositories/trash-repository.js";
 import { AppShell } from "./ui/app-shell/app-shell.js";
 import { ErrorNotification } from "./ui/error-notification/error-notification.js";
 import { FocusView } from "./ui/focus-view/focus-view.js";
+import { InitialSetupView } from "./ui/initial-setup-view/initial-setup-view.js";
 import { LoginView } from "./ui/login-view/login-view.js";
 import { OfflineBanner } from "./ui/offline-banner/offline-banner.js";
 import { ProjectsView } from "./ui/projects-view/projects-view.js";
@@ -116,6 +121,37 @@ export function App({ config, repos: initialRepos, authStorage }: AppProps) {
   const [repos, setRepos] = useState<Repositories>(initialRepos);
   // token 有無で起動分岐. server モードのみ token を必要とする.
   const [token, setToken] = useState<string | null>(config.authToken || null);
+  const [authState, setAuthState] = useState<AuthState | null>(
+    config.mode === "local" || config.authToken ? { initialized: true } : null,
+  );
+  const needsServerSetup = config.isNative && currentMode === "server" && baseUrl.length === 0;
+
+  useEffect(() => {
+    if (currentMode === "local") {
+      setAuthState({ initialized: true });
+      return;
+    }
+    if (needsServerSetup) {
+      return;
+    }
+
+    let cancelled = false;
+    if (!config.authToken) {
+      setAuthState(null);
+    }
+    void fetchAuthState(baseUrl)
+      .then((result) => {
+        if (!cancelled) setAuthState(result);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAuthState(config.authToken ? { initialized: true } : null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [baseUrl, config.authToken, currentMode, needsServerSetup]);
 
   // `todica:auth-expired` 発火時に token を破棄して LoginView に戻す.
   useEffect(() => {
@@ -154,6 +190,21 @@ export function App({ config, repos: initialRepos, authStorage }: AppProps) {
     setRepos(buildHttpRepos(baseUrl));
   };
 
+  const handleInitialPasswordSetup = (newPassword: string) =>
+    setupInitialPasswordRequest(baseUrl, newPassword);
+
+  const handleInitialPasswordSetupSuccess = async (result: {
+    token: string;
+    expiresAt: number;
+  }) => {
+    await authStorage.setToken(result.token);
+    setToken(result.token);
+    setAuthToken(result.token);
+    setAuthState({ initialized: true });
+    setRepos(buildHttpRepos(baseUrl));
+    navigate("/today", { replace: true });
+  };
+
   // ログアウト処理. /api/v1/logout を叩いて token を破棄.
   const handleLogout = async () => {
     if (token) {
@@ -177,7 +228,7 @@ export function App({ config, repos: initialRepos, authStorage }: AppProps) {
     setAuthToken("");
   };
 
-  const defaultRoute = config.needsSetup ? "/setup" : "/today";
+  const defaultRoute = needsServerSetup ? "/setup" : "/today";
 
   const handleSelectLocal = config.isNative
     ? async () => {
@@ -292,9 +343,33 @@ export function App({ config, repos: initialRepos, authStorage }: AppProps) {
       }
     : undefined;
 
-  // server モードで token が無い (初回 / 期限切れ / logout 後) は LoginView を全画面で表示する.
+  if (currentMode === "server" && authState === null && !needsServerSetup) {
+    return (
+      <>
+        <OfflineBanner />
+        <PwaUpdateBanner />
+        <ErrorNotification />
+      </>
+    );
+  }
+
+  if (currentMode === "server" && authState?.initialized === false) {
+    return (
+      <>
+        <OfflineBanner />
+        <PwaUpdateBanner />
+        <ErrorNotification />
+        <InitialSetupView
+          setupInitialPassword={handleInitialPasswordSetup}
+          onSetupSuccess={handleInitialPasswordSetupSuccess}
+        />
+      </>
+    );
+  }
+
+  // server モードで token が無い (期限切れ / logout 後) は LoginView を全画面で表示する.
   // local モードは認証不要のため LoginView を経由しない (plan §「スコープ境界」).
-  if (currentMode === "server" && !token && !config.needsSetup) {
+  if (currentMode === "server" && authState?.initialized === true && !token && !needsServerSetup) {
     return (
       <>
         <OfflineBanner />

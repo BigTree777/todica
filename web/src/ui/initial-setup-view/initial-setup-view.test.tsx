@@ -75,9 +75,7 @@ describe("InitialSetupView 初期表示 (NFR-IPS-3 a11y)", () => {
   });
 
   it("初回マウントで新 PW input に autofocus されている", () => {
-    render(
-      <InitialSetupView setupInitialPassword={vi.fn()} onSetupSuccess={vi.fn()} />,
-    );
+    render(<InitialSetupView setupInitialPassword={vi.fn()} onSetupSuccess={vi.fn()} />);
 
     const newInput = screen.getByLabelText(/^新しいパスワード$/);
     expect(newInput).toHaveFocus();

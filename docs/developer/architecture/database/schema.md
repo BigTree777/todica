@@ -166,7 +166,7 @@ PWA + オフライン書込キュー + 楽観ロック（[ADR-0008](../../adr/00
 | `passwordHash` | string | 必須 | ログインとパスワード変更時に照合する bcrypt ハッシュ |
 | `updatedAt` | number (Unix epoch ms) | 必須 | ハッシュを保存した時刻 |
 
-- DB が空の初回起動時だけ `APP_PASSWORD_HASH` から seed する。
+- DB が空の初回アクセス時に、ブラウザから登録されたパスワードのハッシュを保存する。
 - 起動後は DB を真の source とし、SettingsView から変更できる。
 - ローカルモードは認証を経由しないため AppPassword テーブルを使わない。
 

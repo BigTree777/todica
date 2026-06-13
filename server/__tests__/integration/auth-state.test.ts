@@ -1,3 +1,4 @@
+import { FakeClock } from "@todica/domain/clock";
 /**
  * 結合テスト: GET /api/v1/auth-state.
  *
@@ -15,9 +16,8 @@
  * 現状: GET /api/v1/auth-state ハンドラは未実装. 全件 red になる想定.
  */
 import bcrypt from "bcrypt";
-import { createApp } from "../../src/app.js";
-import { FakeClock } from "@todica/domain/clock";
 import { describe, expect, it } from "vitest";
+import { createApp } from "../../src/app.js";
 import {
   InMemoryCounterRepository,
   InMemoryFocusRepository,

@@ -22,17 +22,13 @@ npm install
 
 ## サーバの起動
 
-認証はアプリ内ログイン (`POST /api/v1/login`) で行います. サーバ起動時にはパスワードの bcrypt ハッシュを `APP_PASSWORD_HASH` 環境変数で渡します.
+認証はアプリ内ログイン (`POST /api/v1/login`) で行います。サーバはパスワードenvなしで起動できます。
 
 ```bash
-# 1. ハッシュを生成 (cost factor は本番 12 を推奨)
-export APP_PASSWORD_HASH="$(node -e "console.log(require('bcrypt').hashSync('your-password', 12))")"
-
-# 2. サーバ起動
 npm start -w server
 ```
 
-その後 Web UI を開くとログイン画面が出ます. `your-password` (上記で指定した平文) を入力すると `/api/v1/login` でセッショントークンが発行され, 以降の API 呼び出しは Bearer 認証で透過的に動作します.
+その後 Web UI を開き、初期パスワード設定画面でパスワードを登録します。設定成功時にセッショントークンが発行され、以降の API 呼び出しは Bearer 認証で透過的に動作します。
 
 ## Web クライアントのビルド
 
