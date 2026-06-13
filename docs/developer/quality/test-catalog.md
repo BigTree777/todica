@@ -90,7 +90,8 @@
 | ファイル | 件数 | 保証内容 | 関連 BL |
 |---|---|---|---|
 | `web/__tests__/today-view.test.tsx` | 39 | TodayView（優先度・完了・期限切替・フォーカス・完了数・オフライン書込） | BL-002〜003, 005〜008, 016〜018 |
-| `web/__tests__/settings-view.test.tsx` | 13 | SettingsView（境界時刻・サーバ設定・モード切替・ログアウトボタン） | BL-009, 019〜020, 074 |
+| `web/__tests__/settings-view.test.tsx` | 10 | SettingsView（境界時刻・モード切替・ログアウトボタン） | BL-009, 019〜020, 074 |
+| `web/__tests__/settings-view-dead-path-removed.test.tsx` | 1 | SettingsView から BL-019 由来の旧 props 経路に紐づく DOM 要素が消えていることを regression guard する (AC-1) | BL-075 |
 | `web/src/ui/setup-view/setup-view.test.tsx` | 9 | SetupView（URL + `/healthz` 検証のみに簡素化・ローカルモード選択） | BL-019〜020, 074 |
 | `web/src/ui/login-view/login-view.test.tsx` | 8 | LoginView（パスワード入力・正常送信・401 エラー・ネットワークエラー・aria-busy・autofocus・aria-invalid/describedby） | BL-074 |
 | `web/__tests__/app-login.test.tsx` | 5 | 起動分岐: token 未保存 → LoginView / 有効 token → 本体 / 401 interceptor (`todica:auth-expired`) で LoginView 復帰 | BL-074 |
