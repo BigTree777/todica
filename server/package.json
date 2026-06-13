@@ -19,8 +19,9 @@
     "dev": "cd .. && node --env-file-if-exists=.env node_modules/vite-node/vite-node.mjs --watch server/src/main.ts"
   },
   "dependencies": {
+    "@hono/node-server": "*",
     "@todica/domain": "*",
-    "hono": "*",
-    "@hono/node-server": "*"
+    "bcrypt": "^6.0.0",
+    "hono": "*"
   }
 }

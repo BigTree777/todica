@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import type { Clock, FakeClock } from "@todica/domain/clock";
 import { createProject, updateProject, validateProjectName } from "@todica/domain/project";
 import {
@@ -16,6 +17,7 @@ import {
   trashTask,
   updateTask,
 } from "@todica/domain/task";
+import bcrypt from "bcrypt";
 import { and, eq, isNull } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 /**
@@ -33,6 +35,7 @@ import type { FocusRepository } from "./data/focus-repository.js";
 import type { IdempotencyStore } from "./data/idempotency-store.js";
 import type { ProjectRepository } from "./data/project-repository.js";
 import type { RoutineRepository } from "./data/routine-repository.js";
+import type { SessionRepository } from "./data/session-repository.js";
 import type { SettingsRepository } from "./data/settings-repository.js";
 import type { TaskRepository } from "./data/task-repository.js";
 import {
@@ -69,8 +72,15 @@ export interface AppDeps {
    */
   settingsRepository: SettingsRepository;
   clock: Clock;
-  /** Bearer 認証に使う固定トークン. テストでは任意の値を渡す. */
-  authToken: string;
+  /**
+   * BL-074 / app-login: パスワードハッシュ (bcrypt). `APP_PASSWORD_HASH` env を経由して
+   * `main.ts` から渡される. plan.md D-4 / D-18.
+   */
+  passwordHash: string;
+  /**
+   * BL-074 / app-login: セッション永続化. plan.md D-1 / D-5.
+   */
+  sessionRepository: SessionRepository;
   /**
    * BL-010 / daily-reset: plan.md D-004 トランザクション実行のための Drizzle DB インスタンス（オプショナル）.
    * 本番では渡す. テストでは省略し、Repository の非同期メソッドを使うフォールバックで動作する.
@@ -117,9 +127,18 @@ export function createApp(deps: AppDeps): Hono {
   // ---------- ヘルスチェック（認証不要）----------
   app.get("/healthz", (c) => c.json({ status: "ok" }));
 
-  // ---------- 認証ミドルウェア ----------
+  // ---------- 認証ミドルウェア (BL-074: sessions lookup) ----------
+  // plan.md D-11 / D-15:
+  //   - /api/v1/login は token を持たないクライアントから呼ばれるため素通し.
+  //   - /healthz も素通し (既存仕様の維持).
+  //   - 上記以外は Authorization: Bearer <token> を sessions テーブルから lookup し,
+  //     `expires_at > clock.now()` を満たすときのみ通過.
   const authMiddleware: MiddlewareHandler = async (c, next) => {
     if (!c.req.path.startsWith("/api/")) {
+      await next();
+      return;
+    }
+    if (c.req.path === "/api/v1/login") {
       await next();
       return;
     }
@@ -128,7 +147,13 @@ export function createApp(deps: AppDeps): Hono {
       return errorJson(c, 401, "UNAUTHORIZED", "Authorization header missing");
     }
     const match = /^Bearer\s+(.+)$/i.exec(header);
-    if (!match || match[1] !== deps.authToken) {
+    if (!match) {
+      return errorJson(c, 401, "UNAUTHORIZED", "Invalid Bearer token");
+    }
+    const token = match[1] as string;
+    const nowMs = new Date(deps.clock.now()).getTime();
+    const session = await deps.sessionRepository.findValidByToken(token, nowMs);
+    if (!session) {
       return errorJson(c, 401, "UNAUTHORIZED", "Invalid Bearer token");
     }
     await next();
@@ -150,6 +175,11 @@ export function createApp(deps: AppDeps): Hono {
       await next();
       return;
     }
+    // BL-074 / plan D-16: /login /logout は Idempotency-Key 必須ガードの対象外.
+    if (c.req.path === "/api/v1/login" || c.req.path === "/api/v1/logout") {
+      await next();
+      return;
+    }
     const key = c.req.header("Idempotency-Key") ?? c.req.header("idempotency-key");
     if (!key) {
       return errorJson(c, 400, "MISSING_IDEMPOTENCY_KEY", "Idempotency-Key header is required");
@@ -166,6 +196,55 @@ export function createApp(deps: AppDeps): Hono {
     await next();
   };
   app.use("*", idempotencyMiddleware);
+
+  // ---------- POST /api/v1/login (BL-074 / AC-2 / AC-3) ----------
+  // plan.md §「処理フロー — ログイン」/ D-2 / D-6 / D-14:
+  //   1. body = { password: string }. 不正なら 400.
+  //   2. bcrypt.compare(password, deps.passwordHash). 不一致なら 401 INVALID_PASSWORD.
+  //   3. token = randomBytes(32).toString("hex"). expiresAt = clock.now() + 30 日.
+  //   4. sessionRepository.create({ token, expiresAt, createdAt }).
+  //   5. 200 OK { token, expiresAt }.
+  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+  app.post("/api/v1/login", async (c) => {
+    let body: Record<string, unknown>;
+    try {
+      body = (await c.req.json()) as Record<string, unknown>;
+    } catch {
+      return errorJson(c, 400, "INVALID_REQUEST_BODY", "request body must be valid JSON");
+    }
+    const password = body.password;
+    if (typeof password !== "string" || password.length === 0) {
+      return errorJson(c, 400, "INVALID_REQUEST_BODY", "password must be a non-empty string");
+    }
+    let match: boolean;
+    try {
+      match = await bcrypt.compare(password, deps.passwordHash);
+    } catch {
+      return errorJson(c, 500, "INTERNAL_ERROR", "password verification failed");
+    }
+    if (!match) {
+      return errorJson(c, 401, "INVALID_PASSWORD", "password is incorrect");
+    }
+    const token = randomBytes(32).toString("hex");
+    const nowMs = new Date(deps.clock.now()).getTime();
+    const expiresAt = nowMs + THIRTY_DAYS_MS;
+    await deps.sessionRepository.create({ token, expiresAt, createdAt: nowMs });
+    return c.json({ token, expiresAt }, 200);
+  });
+
+  // ---------- POST /api/v1/logout (BL-074 / AC-5) ----------
+  // plan.md §「処理フロー — ログアウト」: 有効な session でないと到達しない (authMiddleware が 401).
+  // 通過時は Authorization から token を抽出し sessions から DELETE して 204 を返す.
+  app.post("/api/v1/logout", async (c) => {
+    const header = c.req.header("Authorization") ?? c.req.header("authorization");
+    if (header) {
+      const match = /^Bearer\s+(.+)$/i.exec(header);
+      if (match) {
+        await deps.sessionRepository.deleteByToken(match[1] as string);
+      }
+    }
+    return c.body(null, 204);
+  });
 
   // ---------- POST /api/v1/tasks ----------
   app.post("/api/v1/tasks", async (c) => {

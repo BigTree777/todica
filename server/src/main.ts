@@ -11,7 +11,7 @@
  *
  * 環境変数:
  *   - DATABASE_PATH (default: ./todica.db)
- *   - AUTH_TOKEN (必須: Bearer 認証用の固定トークン)
+ *   - APP_PASSWORD_HASH (必須: BL-074 アプリログインの bcrypt ハッシュ)
  */
 import { join } from "node:path";
 import { serve } from "@hono/node-server";
@@ -26,17 +26,18 @@ import { DrizzleFocusRepository } from "./infra/persistence/drizzle/focus-reposi
 import { DrizzleIdempotencyStore } from "./infra/persistence/drizzle/idempotency-store.js";
 import { DrizzleProjectRepository } from "./infra/persistence/drizzle/project-repository.js";
 import { DrizzleRoutineRepository } from "./infra/persistence/drizzle/routine-repository.js";
+import { DrizzleSessionRepository } from "./infra/persistence/drizzle/session-repository.js";
 import { DrizzleSettingsRepository } from "./infra/persistence/drizzle/settings-repository.js";
 import { DrizzleTaskRepository } from "./infra/persistence/drizzle/task-repository.js";
 
 const DATABASE_PATH = process.env.DATABASE_PATH ?? "./todica.db";
 const PORT = Number.parseInt(process.env.PORT ?? "3000", 10);
-const AUTH_TOKEN = process.env.AUTH_TOKEN ?? "";
+const APP_PASSWORD_HASH = process.env.APP_PASSWORD_HASH ?? "";
 const TEST_NOW = process.env.TEST_NOW;
 
-if (!AUTH_TOKEN) {
+if (!APP_PASSWORD_HASH) {
   // eslint-disable-next-line no-console
-  console.error("AUTH_TOKEN environment variable is required");
+  console.error("APP_PASSWORD_HASH environment variable is required");
   process.exit(1);
 }
 
@@ -61,10 +62,12 @@ const app = createApp({
   settingsRepository: new DrizzleSettingsRepository({ db }),
   // BL-017 / routine: SQLite + drizzle-orm による物理永続化.
   routineRepository: new DrizzleRoutineRepository({ db }),
+  // BL-074 / app-login: sessions テーブルの永続化.
+  sessionRepository: new DrizzleSessionRepository({ db }),
   clock,
   // BL-030: testClock が渡されると app は test-only エンドポイントを生やす.
   testClock: clock instanceof FakeClock ? clock : undefined,
-  authToken: AUTH_TOKEN,
+  passwordHash: APP_PASSWORD_HASH,
   db,
 });
 

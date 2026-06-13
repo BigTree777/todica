@@ -141,6 +141,21 @@ PWA + オフライン書込キュー + 楽観ロック（[ADR-0008](../../adr/00
 
 ---
 
+## Session（アプリログインの opaque token） — BL-074
+
+サーバ側のみ. `POST /api/v1/login` 成功時に発行される opaque token を永続化する.
+
+| フィールド | 型 | 制約 | 説明 |
+| --- | --- | --- | --- |
+| `token` | string | PK, 64 文字 16 進文字列 | `crypto.randomBytes(32).toString("hex")` で生成. Bearer の照合キー |
+| `expiresAt` | number (Unix epoch ms) | 必須 | 発行時刻 + 30 日. `expires_at > now` の strict > で期限判定 |
+| `createdAt` | number (Unix epoch ms) | 必須 | 発行時刻 |
+
+- 単一インスタンス / 単一ユーザ運用のため, JWT は採用せず DB 行による即時 revoke 可能な opaque token を使う ([plan D-5](../../features/app-login/plan.md)).
+- ローカルモード (Android) は認証を経由しないため Session テーブルを使わない.
+
+---
+
 ## サーバ側とローカルモード側の差分
 
 | 項目 | サーバ側 | Android ローカルモード |

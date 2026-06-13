@@ -35,6 +35,8 @@ export interface SettingsViewProps {
   currentMode?: "local" | "server";
   /** BL-020: モード切替ボタンクリック時のコールバック */
   onSwitchMode?: () => void | Promise<void>;
+  /** BL-074: ログアウトボタン押下時のコールバック (渡されている場合のみボタンを表示) */
+  onLogout?: () => void | Promise<void>;
 }
 
 export function SettingsView(props: SettingsViewProps): JSX.Element {
@@ -45,6 +47,7 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
     onSaveServer,
     currentMode,
     onSwitchMode,
+    onLogout,
   } = props;
   const queryClient = useQueryClient();
 
@@ -207,6 +210,20 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
               {currentMode === "local" ? "サーバモードへ切り替える" : "ローカルモードへ切り替える"}
             </button>
           )}
+        </section>
+      )}
+
+      {onLogout !== undefined && (
+        <section aria-label="ログアウト" className="settings-view__section">
+          <button
+            type="button"
+            className="button button--ghost"
+            onClick={() => {
+              void onLogout();
+            }}
+          >
+            ログアウト
+          </button>
         </section>
       )}
     </main>

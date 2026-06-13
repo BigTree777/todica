@@ -139,6 +139,20 @@ export const routines = sqliteTable("routines", {
   updatedAt: text("updated_at").notNull(),
 });
 
+/**
+ * sessions テーブル (BL-074 / app-login).
+ *
+ * docs/developer/features/app-login/plan.md §「データモデル」/ D-1.
+ * - token は `crypto.randomBytes(32).toString("hex")` の 64 文字 16 進文字列.
+ * - expires_at / created_at は Unix epoch ms (INTEGER) で保持する.
+ * - 期限境界は `expires_at > now` の strict > 判定 (D-6).
+ */
+export const sessions = sqliteTable("sessions", {
+  token: text("token").primaryKey().notNull(),
+  expiresAt: integer("expires_at").notNull(),
+  createdAt: integer("created_at").notNull(),
+});
+
 /** schema 全体を Drizzle に渡すためのオブジェクト. */
 export const schema = {
   tasks,
@@ -148,4 +162,5 @@ export const schema = {
   counter,
   settings,
   routines,
+  sessions,
 };

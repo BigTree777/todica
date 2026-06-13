@@ -25,7 +25,7 @@
 | `server/__tests__/unit/drizzle-settings-repository.test.ts` | 2 | SettingsRepository の取得・更新 | BL-009 |
 | `server/__tests__/unit/daily-reset.test.ts` | 9 | 境界時刻計算・リセット要否判定ロジック | BL-010 |
 | `server/__tests__/unit/routine-daily-reset.test.ts` | 9 | 日次リセット時のルーティンタスク生成・翌日非持越し | BL-017 |
-| `server/__tests__/unit/session-repository.test.ts` | 7 | SessionRepository の create / findValidByToken / deleteByToken・期限境界 (strict >) | BL-074 |
+| `server/__tests__/unit/session-repository.test.ts` | 8 | SessionRepository の create / findValidByToken / deleteByToken・期限境界 (strict >) | BL-074 |
 
 ### 統合テスト（API エンドポイント）
 
@@ -33,8 +33,8 @@
 |---|---|---|---|
 | `server/__tests__/integration/startup.test.ts` | 2 | サーバ起動・Bearer 認証の基本疎通 (BL-074: sessions lookup 切替後の Bearer 無し → 401) | BL-013, 074 |
 | `server/__tests__/integration/healthz.test.ts` | 2 | `GET /healthz` の正常応答 | BL-013 |
-| `server/__tests__/integration/login.test.ts` | 11 | `POST /api/v1/login` 正常系 (200 + token + sessions INSERT) / 401 / body 不正 400 / Idempotency-Key 除外 / authMiddleware 素通し | BL-074 |
-| `server/__tests__/integration/logout.test.ts` | 7 | `POST /api/v1/logout` 正常系 (sessions DELETE) / 二重 logout 401 / Bearer 無し 401 / Idempotency-Key 除外 | BL-074 |
+| `server/__tests__/integration/login.test.ts` | 9 | `POST /api/v1/login` 正常系 (200 + token + sessions INSERT) / 401 / body 不正 400 / Idempotency-Key 除外 / authMiddleware 素通し | BL-074 |
+| `server/__tests__/integration/logout.test.ts` | 6 | `POST /api/v1/logout` 正常系 (sessions DELETE) / 二重 logout 401 / Bearer 無し 401 / Idempotency-Key 除外 | BL-074 |
 | `server/__tests__/integration/auth-middleware.test.ts` | 9 | sessions lookup 版 authMiddleware: Bearer 無し 401 / 有効 token 200 / 期限切れ 401 / strict > 境界 / 旧 AUTH_TOKEN 風 Bearer 401 / 素通しパス | BL-074 |
 | `server/__tests__/integration/tasks.test.ts` | 43 | タスク CRUD・優先度・期限・楽観ロック・冪等性・2 階層制約 | BL-001〜003, 007, 012, 015 |
 | `server/__tests__/integration/today.test.ts` | 25 | `GET /today` の並び順・completionCount・自動リセット統合 | BL-005, 008, 010 |
@@ -86,9 +86,9 @@
 |---|---|---|---|
 | `web/__tests__/today-view.test.tsx` | 39 | TodayView（優先度・完了・期限切替・フォーカス・完了数・オフライン書込） | BL-002〜003, 005〜008, 016〜018 |
 | `web/__tests__/settings-view.test.tsx` | 13 | SettingsView（境界時刻・サーバ設定・モード切替・ログアウトボタン） | BL-009, 019〜020, 074 |
-| `web/src/ui/setup-view/setup-view.test.tsx` | 10 | SetupView（URL + `/healthz` 検証のみに簡素化・ローカルモード選択） | BL-019〜020, 074 |
-| `web/src/ui/login-view/login-view.test.tsx` | 9 | LoginView（パスワード入力・正常送信・401 エラー・ネットワークエラー・aria-busy・autofocus・aria-invalid/describedby） | BL-074 |
-| `web/__tests__/app-login.test.tsx` | 4 | 起動分岐: token 未保存 → LoginView / 有効 token → 本体 / 401 interceptor (`todica:auth-expired`) で LoginView 復帰 | BL-074 |
+| `web/src/ui/setup-view/setup-view.test.tsx` | 9 | SetupView（URL + `/healthz` 検証のみに簡素化・ローカルモード選択） | BL-019〜020, 074 |
+| `web/src/ui/login-view/login-view.test.tsx` | 8 | LoginView（パスワード入力・正常送信・401 エラー・ネットワークエラー・aria-busy・autofocus・aria-invalid/describedby） | BL-074 |
+| `web/__tests__/app-login.test.tsx` | 5 | 起動分岐: token 未保存 → LoginView / 有効 token → 本体 / 401 interceptor (`todica:auth-expired`) で LoginView 復帰 | BL-074 |
 | `web/src/ui/projects-view/projects-view.test.tsx` | 5 | ProjectsView（作成・削除・名称変更） | BL-016 |
 | `web/src/ui/routines-view/routines-view.test.tsx` | 5 | RoutinesView（作成・削除・編集） | BL-017 |
 | `web/src/ui/trash-view/trash-view.test.tsx` | 5 | TrashView（一覧・復元・空にする） | BL-011, 014 |
