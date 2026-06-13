@@ -28,11 +28,8 @@ import type { ReactNode } from "react";
  *   - dayBoundaryTime: string
  *   - ifMatch: number
  *
- * BL-075: BL-019 で追加された「サーバ接続設定」セクション (serverUrl / authToken /
- *         onSaveServer props) は BL-074 (アプリ内パスワードログイン導入) で dead path と
- *         なり、本 BL で SettingsView から完全削除された。対応するテスト
- *         (describe "SettingsView サーバ接続設定セクション (BL-019 AC-AND-005)") も
- *         本ファイルから削除済み。
+ * BL-075: BL-019 由来の dead path UI と関連テストを削除済み。regression guard は
+ *         settings-view-dead-path-removed.test.tsx に分離。
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PatchConflictError } from "../src/repositories/settings-repository.js";
