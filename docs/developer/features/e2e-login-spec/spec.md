@@ -38,7 +38,7 @@ BL-074 で導入したアプリ内パスワードログイン経路 (`POST /api/
   - 既存 `playwright.config.ts` の `webServer` 設定 (`APP_PASSWORD_HASH` / `DATABASE_PATH` / `TEST_NOW`) を流用する. 新たな env / fixture / グローバルセットアップは追加しない.
   - 追加 spec のローカル実行時間は 30 秒以内 (chromium プロジェクト全体の典型値の倍を上限の目安とする).
   - `npx playwright test e2e/login.spec.ts` 単体実行で完結する (他 spec への暗黙依存を持たない).
-  - 追加 spec 完了後, 既存 e2e spec (24 本) の green 状態に回帰が無いこと.
+  - 追加 spec 完了後, 既存 e2e spec (25 本) の green 状態に回帰が無いこと.
   - typecheck / lint で 0 エラー.
 
 ## 受け入れ基準
@@ -88,7 +88,7 @@ BL-074 で導入したアプリ内パスワードログイン経路 (`POST /api/
 シナリオ AC-5: 既存 e2e spec が回帰なく green を維持する
   Given 本 BL の変更を適用した状態である
   When  `npx playwright test` を実行する
-  Then  既存 24 本の spec (smoke / today-view-create-form / settings / projects / routines / trash / ...) が全件 green である
+  Then  既存 25 本の spec (smoke / today-view-create-form / settings / projects / routines / trash / ...) が全件 green である
     And 新規 `e2e/login.spec.ts` の 4 シナリオも全件 green である
 ```
 

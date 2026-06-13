@@ -77,7 +77,7 @@
 ## スコープ境界
 
 - 触る: `e2e/login.spec.ts` 新規追加.
-- 触らない: server (`/api/v1/login` / `/logout` の実装) / web (`LoginView` / `SettingsView` / `main.tsx` / `auth-storage`) / 既存 e2e spec (24 本) / vitest 系テスト / `playwright.config.ts` の本体ロジック (re-export 確認のみ).
+- 触らない: server (`/api/v1/login` / `/logout` の実装) / web (`LoginView` / `SettingsView` / `main.tsx` / `auth-storage`) / 既存 e2e spec (25 本) / vitest 系テスト / `playwright.config.ts` の本体ロジック (re-export 確認のみ).
 - 触らない (BL-077 範囲外): AC-4 期限切れ / AC-6 Android 2 ステップ / AC-7 旧 AUTH_TOKEN. これらは vitest および server integration テストでカバー済み.
 
 ## テスト方針
@@ -87,7 +87,7 @@
 - 本 BL では Playwright (E2E) のみで検証する. vitest 系のテストは追加・変更しない.
 - 検証コマンド: `npx playwright test e2e/login.spec.ts` で単体検証 → `npx playwright test` で全 e2e 回帰確認.
 - `auditor` への提示物: 新規 spec ファイル + 上記コマンドの green 結果 (Playwright のサマリ).
-- 既存 e2e の green 状態 (24 本) の維持を回帰確認に含める.
+- 既存 e2e の green 状態 (25 本) の維持を回帰確認に含める.
 
 ## 未決事項 / 確認待ち
 

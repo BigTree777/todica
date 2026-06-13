@@ -63,7 +63,7 @@
 
 ### Step 6: AC-5 (既存 e2e の回帰なし)
 
-- [ ] `.e2e-data/` を削除し既存 dev server を停止した clean な状態で `npx playwright test` を実行し, 全 spec (既存 24 本 + 新規 1 本) が green であることを確認する.
+- [ ] `.e2e-data/` を削除し既存 dev server を停止した clean な状態で `npx playwright test` を実行し, 全 spec (既存 25 本 + 新規 1 本) が green であることを確認する.
 - [ ] CI と同じ条件 (`CI=1 npx playwright test`) でも green であることを確認する.
 
 ## テスト
@@ -71,7 +71,7 @@
 - [ ] 単体テスト: 追加しない (本 BL のスコープ外).
 - [ ] 結合 / E2E テスト:
   - [ ] `npx playwright test e2e/login.spec.ts` が単体で green (Step 2 〜 Step 5 の 4 シナリオ).
-  - [ ] `npx playwright test` 全件 green (既存 24 本 + 新規 1 本 = 25 本).
+  - [ ] `npx playwright test` 全件 green (既存 25 本 + 新規 1 本 = 26 本).
 
 ## TDD サイクル (Step ごと)
 
