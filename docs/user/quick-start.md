@@ -33,15 +33,22 @@ npm install
 cp .env.example .env
 ```
 
-`.env` を開いて、`AUTH_TOKEN` / `VITE_AUTH_TOKEN` に同じ任意の文字列を入れる：
+`.env` を開いて、`APP_PASSWORD_HASH` に bcrypt ハッシュを設定する：
 
-```env
-AUTH_TOKEN=local-dev-token
-VITE_API_BASE_URL=http://localhost:3000
-VITE_AUTH_TOKEN=local-dev-token
+```bash
+# 任意のパスワードのハッシュを生成 (cost factor 12 推奨)
+node -e "console.log(require('bcrypt').hashSync('your-password', 12))"
 ```
 
-> Web クライアントは **ビルド時に `VITE_*` を埋め込む**ため、これらは次の step より前に決めておく。
+生成されたハッシュ（`$2b$12$...`）を `.env` に貼り付ける：
+
+```env
+APP_PASSWORD_HASH=$2b$12$.....................
+VITE_API_BASE_URL=http://localhost:3000
+```
+
+> Web クライアントは **ビルド時に `VITE_*` を埋め込む**ため、`VITE_API_BASE_URL` は次の step より前に決めておく。
+> BL-074 以降、認証トークンはビルド時に埋め込まない。アプリ起動後に LoginView でパスワード（`APP_PASSWORD_HASH` の元の平文）を入力する。
 
 ### A-3. サーバを起動する
 

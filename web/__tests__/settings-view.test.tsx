@@ -449,3 +449,59 @@ describe("SettingsView モード切替セクション (BL-020 AC-LOC-005)", () =
     vi.restoreAllMocks();
   });
 });
+
+// ============================================================
+// SettingsView ログアウトボタン (BL-074 / AC-5)
+//
+// 受け入れ基準の出典:
+//   - docs/developer/features/app-login/spec.md §「受け入れ基準」AC-5
+//   - docs/developer/features/app-login/plan.md §「UI」/ D-11
+//
+// 観点:
+//   1. 「ログアウト」ボタンが描画されており role / accessible name が正しい.
+//   2. 押下で onLogout コールバックが呼ばれる.
+//   3. onLogout が省略された場合はボタンが表示されない (BL-019 / 020 既存テストへの非影響を担保).
+// ============================================================
+
+describe("SettingsView ログアウト (BL-074 AC-5)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("onLogout Props が渡されている場合「ログアウト」ボタンが描画される", async () => {
+    const repo = makeMockRepository({ dayBoundaryTime: "04:00" });
+    const onLogout = vi.fn();
+
+    renderWithQueryClient(<SettingsView repository={repo} onLogout={onLogout} />);
+
+    await screen.findByText(/04:00/);
+
+    const logoutButton = screen.getByRole("button", { name: /ログアウト/ });
+    expect(logoutButton).toBeInTheDocument();
+  });
+
+  it("「ログアウト」ボタン押下で onLogout が呼ばれる (sessions DELETE → token 破棄 → LoginView 遷移は呼出元の責務)", async () => {
+    const repo = makeMockRepository({ dayBoundaryTime: "04:00" });
+    const onLogout = vi.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+
+    renderWithQueryClient(<SettingsView repository={repo} onLogout={onLogout} />);
+
+    await screen.findByText(/04:00/);
+
+    const logoutButton = screen.getByRole("button", { name: /ログアウト/ });
+    await user.click(logoutButton);
+
+    expect(onLogout).toHaveBeenCalledTimes(1);
+  });
+
+  it("onLogout が省略された場合は「ログアウト」ボタンは表示されない (既存 BL への非影響)", async () => {
+    const repo = makeMockRepository({ dayBoundaryTime: "04:00" });
+
+    renderWithQueryClient(<SettingsView repository={repo} />);
+
+    await screen.findByText(/04:00/);
+
+    expect(screen.queryByRole("button", { name: /ログアウト/ })).toBeNull();
+  });
+});

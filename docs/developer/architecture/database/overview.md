@@ -117,6 +117,7 @@ FocusSelection: 「現在のタスク」参照（単一レコード）
 | `counter` | `id` TEXT（固定値 `"singleton"`） | （単一レコードのため不要） |
 | `settings` | `id` TEXT（固定値 `"singleton"`） | （同上） |
 | `focus_selection` | `id` TEXT（固定値 `"singleton"`） | （同上） |
+| `sessions` | `token` TEXT | （PK のみ. BL-074） |
 
 ### 列の型対応（論理 → 物理）
 

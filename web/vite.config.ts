@@ -25,6 +25,12 @@ export default defineConfig({
       strategies: "injectManifest",
       srcDir: "src/sw",
       filename: "service-worker.ts",
+      injectManifest: {
+        // BL-074 / plan D-12: precache の対象から `/api/*` を除外する.
+        // (実際には build artifact に /api/ パスは含まれないが, 明示しておくことで
+        // 万一のレース条件で認証応答が precache に混入する事故を防ぐ.)
+        globIgnores: ["**/api/**"],
+      },
       manifest: {
         name: "Todica",
         short_name: "Todica",
