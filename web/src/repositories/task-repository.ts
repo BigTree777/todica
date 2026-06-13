@@ -14,7 +14,8 @@
  * `todica:auth-expired` イベント dispatch を行う (plan D-13). これにより
  * 期限切れ token を持つユーザは API 呼び出しから自動で LoginView に戻れる.
  *
- * 残る 4 本 (settings / project / routine / trash) の同等切り替えは別 BL に切り出す.
+ * BL-076 で残り 4 本 (settings / project / routine / trash) も `authedFetch` 経由に統一済み.
+ * これにより全 5 本の repository が 401 自動退場フローに揃った.
  */
 import type { DueDate, Priority, Task } from "@todica/domain/task";
 import { authedFetch } from "../auth/authed-fetch.js";
