@@ -1,11 +1,12 @@
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 /**
- * 単体テスト: HttpTrashRepository (BL-014 / web-client-foundation).
+ * 単体テスト: HttpTrashRepository (BL-014 / web-client-foundation, BL-076 で seed パターン更新).
  *
  * 受け入れ基準の出典:
  *   - docs/developer/features/web-client-foundation/spec.md §「TrashRepository（HttpTrashRepository）」
  *   - docs/developer/features/web-client-foundation/plan.md §D-003
+ *   - docs/developer/features/authed-fetch-repositories/spec.md §AC-5 / AC-6
  *
  * 観点:
  *   1. list() が GET /api/v1/trash を呼び出し TrashedTask[] を返す。
@@ -13,13 +14,20 @@ import { setupServer } from "msw/node";
  *   3. restore() がサーバ 412 を受けると RestoreConflictError を throw する（currentTask を保持）。
  *   4. empty() が DELETE /api/v1/trash に Idempotency-Key ヘッダを付けて呼び出し正常終了する。
  *
- * 本ファイルは TDD の "red" を作るためのテスト。
- * trash-repository.ts は未実装のため、全テストはインポートエラー / 実行失敗する想定。
- * implementer が HttpTrashRepository を実装することで green 化する。
+ * BL-076 / AC-5: constructor は `(baseUrl)` の 1 引数のみで宣言され,
+ *   `authToken` は受け取らない. token は `authedFetch` が `auth-storage` から都度読む.
+ * BL-076 / AC-6: Authorization ヘッダの値は seed した AUTH_TOKEN と一致する.
+ *
+ * Seed パターン (BL-074 D-13 / BL-076 D-5):
+ *   - beforeEach で WebAuthStorage を生成し setToken(AUTH_TOKEN) で seed,
+ *     setAuthStorage(storage) で authedFetch に注入する.
+ *   - afterEach で setAuthStorage(null) + localStorage.clear() で state を漏らさない.
  *
  * HTTP スタブ: 既存パターン（http-task-repository.test.ts）に合わせ msw を使用する。
  */
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { WebAuthStorage } from "../auth/auth-storage.js";
+import { setAuthStorage } from "../auth/authed-fetch.js";
 import { HttpTrashRepository, RestoreConflictError } from "./trash-repository.js";
 import type { TrashedTask } from "./trash-repository.js";
 
@@ -36,8 +44,20 @@ const server = setupServer();
 beforeAll(() => {
   server.listen({ onUnhandledRequest: "error" });
 });
+beforeEach(async () => {
+  // BL-076 / D-5: HttpTrashRepository は constructor の authToken を持たず
+  // `authedFetch` 経由で `auth-storage` から token を都度読む.
+  // 既存の `Authorization: Bearer ${AUTH_TOKEN}` assertion を満たすため,
+  // `WebAuthStorage` に AUTH_TOKEN を seed する.
+  localStorage.clear();
+  const storage = new WebAuthStorage();
+  await storage.setToken(AUTH_TOKEN);
+  setAuthStorage(storage);
+});
 afterEach(() => {
   server.resetHandlers();
+  setAuthStorage(null);
+  localStorage.clear();
 });
 afterAll(() => {
   server.close();
@@ -91,7 +111,7 @@ describe("HttpTrashRepository", () => {
       }),
     );
 
-    const repo = new HttpTrashRepository(BASE_URL, AUTH_TOKEN);
+    const repo = new HttpTrashRepository(BASE_URL);
     const tasks = await repo.list();
 
     expect(receivedMethod).toBe("GET");
@@ -130,7 +150,7 @@ describe("HttpTrashRepository", () => {
       }),
     );
 
-    const repo = new HttpTrashRepository(BASE_URL, AUTH_TOKEN);
+    const repo = new HttpTrashRepository(BASE_URL);
     const result = await repo.restore({ id: TASK_ID, ifMatch: 2 });
 
     expect(receivedMethod).toBe("POST");
@@ -161,7 +181,7 @@ describe("HttpTrashRepository", () => {
       }),
     );
 
-    const repo = new HttpTrashRepository(BASE_URL, AUTH_TOKEN);
+    const repo = new HttpTrashRepository(BASE_URL);
     let caughtError: unknown = null;
 
     try {
@@ -198,7 +218,7 @@ describe("HttpTrashRepository", () => {
       }),
     );
 
-    const repo = new HttpTrashRepository(BASE_URL, AUTH_TOKEN);
+    const repo = new HttpTrashRepository(BASE_URL);
     // void が返る (例外が投げられない) ことを確認する
     await expect(repo.empty()).resolves.toBeUndefined();
 

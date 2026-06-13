@@ -1,10 +1,11 @@
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 /**
- * 単体テスト: HttpRoutineRepository (BL-017 / routine).
+ * 単体テスト: HttpRoutineRepository (BL-017 / routine, BL-076 で seed パターン更新).
  *
  * 受け入れ基準の出典:
  *   - docs/developer/features/routine/spec.md §「ルーティン作成・一覧・編集・削除」
+ *   - docs/developer/features/authed-fetch-repositories/spec.md §AC-5 / AC-6
  *
  * 観点:
  *   1. list() が GET /api/v1/routines を呼び出し WebRoutine[] を返す。
@@ -12,13 +13,20 @@ import { setupServer } from "msw/node";
  *   3. update() が PATCH /api/v1/routines/:id に If-Match と Idempotency-Key ヘッダを付けて呼び出す。
  *   4. delete() が DELETE /api/v1/routines/:id に If-Match と Idempotency-Key ヘッダを付けて呼び出す。
  *
- * 本ファイルは TDD の "red" を作るためのテスト。
- * routine-repository.ts は未実装のため、全テストはインポートエラー / 実行失敗する想定。
- * implementer が HttpRoutineRepository を実装することで green 化する。
+ * BL-076 / AC-5: constructor は `(baseUrl)` の 1 引数のみで宣言され,
+ *   `authToken` は受け取らない. token は `authedFetch` が `auth-storage` から都度読む.
+ * BL-076 / AC-6: Authorization ヘッダの値は seed した AUTH_TOKEN と一致する.
+ *
+ * Seed パターン (BL-074 D-13 / BL-076 D-5):
+ *   - beforeEach で WebAuthStorage を生成し setToken(AUTH_TOKEN) で seed,
+ *     setAuthStorage(storage) で authedFetch に注入する.
+ *   - afterEach で setAuthStorage(null) + localStorage.clear() で state を漏らさない.
  *
  * HTTP スタブ: 既存パターン（project-repository.test.ts）に合わせ msw を使用する。
  */
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { WebAuthStorage } from "../auth/auth-storage.js";
+import { setAuthStorage } from "../auth/authed-fetch.js";
 import { HttpRoutineRepository } from "./routine-repository.js";
 import type { WebRoutine } from "./routine-repository.js";
 
@@ -36,8 +44,20 @@ const server = setupServer();
 beforeAll(() => {
   server.listen({ onUnhandledRequest: "error" });
 });
+beforeEach(async () => {
+  // BL-076 / D-5: HttpRoutineRepository は constructor の authToken を持たず
+  // `authedFetch` 経由で `auth-storage` から token を都度読む.
+  // 既存の `Authorization: Bearer ${AUTH_TOKEN}` assertion を満たすため,
+  // `WebAuthStorage` に AUTH_TOKEN を seed する.
+  localStorage.clear();
+  const storage = new WebAuthStorage();
+  await storage.setToken(AUTH_TOKEN);
+  setAuthStorage(storage);
+});
 afterEach(() => {
   server.resetHandlers();
+  setAuthStorage(null);
+  localStorage.clear();
 });
 afterAll(() => {
   server.close();
@@ -84,7 +104,7 @@ describe("HttpRoutineRepository (BL-017 / routine)", () => {
       }),
     );
 
-    const repo = new HttpRoutineRepository(BASE_URL, AUTH_TOKEN);
+    const repo = new HttpRoutineRepository(BASE_URL);
     const routines = await repo.list();
 
     expect(receivedMethod).toBe("GET");
@@ -121,7 +141,7 @@ describe("HttpRoutineRepository (BL-017 / routine)", () => {
       }),
     );
 
-    const repo = new HttpRoutineRepository(BASE_URL, AUTH_TOKEN);
+    const repo = new HttpRoutineRepository(BASE_URL);
     const result = await repo.create({
       id: ROUTINE_ID_1,
       name: "朝の運動",
@@ -174,7 +194,7 @@ describe("HttpRoutineRepository (BL-017 / routine)", () => {
       }),
     );
 
-    const repo = new HttpRoutineRepository(BASE_URL, AUTH_TOKEN);
+    const repo = new HttpRoutineRepository(BASE_URL);
     const result = await repo.update({ id: ROUTINE_ID_1, ifMatch: 1, name: "夜の運動" });
 
     expect(receivedMethod).toBe("PATCH");
@@ -218,7 +238,7 @@ describe("HttpRoutineRepository (BL-017 / routine)", () => {
       }),
     );
 
-    const repo = new HttpRoutineRepository(BASE_URL, AUTH_TOKEN);
+    const repo = new HttpRoutineRepository(BASE_URL);
     await expect(repo.delete({ id: ROUTINE_ID_1, ifMatch: 1 })).resolves.toBeUndefined();
 
     expect(receivedMethod).toBe("DELETE");
