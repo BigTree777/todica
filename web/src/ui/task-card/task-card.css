@@ -85,6 +85,11 @@
 /* V-7: input はブラウザ既定で font を継承しない. 明示的に親の font を継承させる. */
 .task-card__title input[type="text"] {
   font: inherit;
+  /* タスク名 input をカード幅一杯まで伸ばす. 親 .task-card__title は flex row なので
+   * flex: 1 で行内で full width を取る. `min-width: 0` は flex item の intrinsic min-content
+   * (= placeholder / value の幅) で潰れないようにするための定石. */
+  flex: 1;
+  min-width: 0;
 }
 
 /*
