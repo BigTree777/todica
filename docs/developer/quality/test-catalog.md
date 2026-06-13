@@ -56,6 +56,8 @@
 |---|---|---|---|
 | `web/__tests__/http-task-repository.test.ts` | 4 | HttpTaskRepository の CRUD・楽観ロックエラー変換 (BL-074 で `auth-storage` seed パターンに統一) | BL-001, 074 |
 | `web/src/auth/auth-storage.test.ts` | 8 | WebAuthStorage の localStorage 保存・取得・破棄・listener パターン | BL-074 |
+| `web/src/auth/authed-fetch.test.ts` | 7 | authedFetch の単体テスト: 引数透過 / 200 透過 / 401 で clearToken + `todica:auth-expired` dispatch / 非 401 素通し / setAuthStorage(null) no-op / getToken=null で Authorization 非付与 / 呼出側 Authorization 上書き禁止 | BL-074, 078 |
+| `web/src/auth/capacitor-auth-storage.test.ts` | 5 | CapacitorAuthStorage の単体テスト (`vi.mock("@capacitor/preferences")`): getToken / setToken / clearToken が key="authToken" で Preferences.get/set/remove を叩く・listener notify・set→get round-trip | BL-074, 078 |
 | `web/src/auth/login-client.test.ts` | 6 | login(password) で /api/v1/login 呼出・200 で token 返却・401 で InvalidPasswordError・ネットワークエラー / logout(token) で Bearer 付き POST | BL-074 |
 | `web/src/repositories/settings-repository.test.ts` | 3 | HttpSettingsRepository の getSettings / patchSettings (Idempotency-Key + If-Match) / 412 → PatchConflictError. auth-storage seed パターン | BL-009, 076 |
 | `web/src/repositories/project-repository.test.ts` | 4 | HttpProjectRepository の CRUD (auth-storage seed パターン. `new HttpProjectRepository(baseUrl)` の 1 引数) | BL-016, 076 |
