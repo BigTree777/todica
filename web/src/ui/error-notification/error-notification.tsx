@@ -1,11 +1,11 @@
 /**
- * ErrorNotification コンポーネント (BL-034).
+ * ErrorNotification コンポーネント .
  *
  * `useErrorNotification` フックで現在のメッセージを受け取り, 非 null の間だけ
  * 画面上部に role="alert" のバナーを描画する.
  *
  * 仕様:
- *   BL-034: 401 / ネットワークエラー時に user に失敗が伝わる UI を提供する.
+ *   401 / ネットワークエラー時に user に失敗が伝わる UI を提供する.
  *   現状の方針はトースト的な短時間表示 (5 秒) で auto-dismiss. user の操作を
  *   ブロックしない. ConflictDialog はモーダルなので別経路.
  */

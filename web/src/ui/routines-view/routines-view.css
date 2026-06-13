@@ -1,7 +1,7 @@
 /**
- * routines-view CSS (BL-045).
- * BL-046: 暫定値をデザイントークンに置換済み.
- * BL-061: ルーティン行 / 作成フォームのスタイルは routine-card.css へ移譲.
+ * routines-view CSS .
+ * 暫定値をデザイントークンに置換済み.
+ * ルーティン行 / 作成フォームのスタイルは routine-card.css へ移譲.
  *         本ファイルは枠系 (.routines-view / h1 / __list / __empty) のみ維持.
  */
 

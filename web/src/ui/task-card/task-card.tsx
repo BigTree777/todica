@@ -1,5 +1,5 @@
 /**
- * `<TaskCard>` (BL-059 / task-card-component).
+ * `<TaskCard>` .
  *
  * 仕様参照:
  *   docs/developer/features/task-card-component/spec.md REQ-1.
@@ -98,7 +98,7 @@ export function TaskCard(props: TaskCardProps): JSX.Element {
         )}
       </div>
       <div className="task-card__title">
-        {/* BL-070 REQ-1: <span>{task.name}</span> を input に置換し name の常時編集を可能にする.
+        {/* REQ-1: <span>{task.name}</span> を input に置換し name の常時編集を可能にする.
             P-001 (iii): uncontrolled (defaultValue + key) で親 state は持たない.
             key に task.name を含めることで, サーバ正本値が変わったとき input を再マウントして表示を更新する.
             空文字 blur (D-002) は親が PATCH を短絡し state も key も変わらないため,

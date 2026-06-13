@@ -1,8 +1,8 @@
 /*
- * 共通レイアウト CSS for /today and /tomorrow (BL-051 / unified-day-view).
+ * 共通レイアウト CSS for /today and /tomorrow .
  *
  * - 本ファイルは「day-view 枠 / ヘッダ / リスト / 空状態」のレイアウト系プロパティと
- *   `.project-chip` (BL-056) のみを扱う.
+ *   `.project-chip`  のみを扱う.
  * - タスクカード / 起票カードの visual と 3 段ゾーン構造は BL-059 で
  *   `.task-card` 系 (web/src/ui/task-card/task-card.css) に責務移譲した.
  *
@@ -47,7 +47,7 @@
 }
 
 /*
- * BL-056 (project-chip): プロジェクト名表示用の角丸カプセル.
+ * プロジェクト名表示用の角丸カプセル.
  *
  * - タスクカード (.task-card__header) 内の <span className="project-chip"> に
  *   適用する視覚言語 (現在は表示専用. BL-065 で ProjectToggle 撤去済).

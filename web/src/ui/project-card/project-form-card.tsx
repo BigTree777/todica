@@ -1,5 +1,5 @@
 /**
- * `<ProjectFormCard>` (BL-060 / project-card-component).
+ * `<ProjectFormCard>` .
  *
  * 仕様参照:
  *   docs/developer/features/project-card-component/spec.md REQ-2.

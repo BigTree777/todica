@@ -1,5 +1,5 @@
 /*
- * BL-061 (routine-card-component): RoutineCard / RoutineFormCard の専用 CSS.
+ * RoutineCard / RoutineFormCard の専用 CSS.
  *
  * 仕様参照:
  *   docs/developer/features/routine-card-component/spec.md REQ-3 / AC-1 〜 AC-8 / AC-22
@@ -18,28 +18,28 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: var(--space-md);
-  /* BL-071: 3 段 layout. TaskCard と同じイディオム. */
+  /* 3 段 layout. TaskCard と同じイディオム. */
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
 }
 
 .routine-card--form {
-  /* V-1 / BL-071 D-005: 起票カードは縦並び維持 (REQ-7).
+  /* V-1 / D-005: 起票カードは縦並び維持 (REQ-7).
      基底が column になったため厳密には no-op だが意図表明として宣言を残す. */
   flex-direction: column;
   align-items: stretch;
 }
 
-/* BL-070 (inline-edit-all-cards): .routine-card--editing modifier /
+/* .routine-card--editing modifier /
    .routine-card__name span / .routine-card__days-label span /
    .routine-card__actions__edit button / .routine-card__form-inline form を撤去. */
-/* BL-071 D-006: .routine-card__main ラッパは完全撤去. */
+/* D-006: .routine-card__main ラッパは完全撤去. */
 
 .routine-card__header {
-  /* BL-073 D-001 / D-008: 表示・起票で共用. header 直下子は PriorityStars 単独で,
+  /* D-001 / D-008: 表示・起票で共用. header 直下子は PriorityStars 単独で,
      右端固定する (= `justify-content: flex-end`).
-     旧 `space-between` (BL-071) は表示カードに name input + PriorityStars を左右配置する
+     旧 `space-between`  は表示カードに name input + PriorityStars を左右配置する
      ためのものだったが, BL-073 で name input は `.routine-card__title` 段に移動したため
      表示カードでも header は PriorityStars 単独になり, 起票カードと同じ右端配置で揃う.
      起票カード側 override (BL-072 D-006) は基底に統合され撤去 (= D-001 (a)). */
@@ -49,17 +49,17 @@
   gap: var(--space-sm);
   /* BL-071 REQ-6 / D-002: input に font: inherit を当てて継承させるため
      header 段に font-size を置く. TaskCard V-4 / V-7 と同じ.
-     BL-073 D-004: 本 BL 後 `.routine-card__header` 直下に input は無いが,
+     D-004: 本 BL 後 `.routine-card__header` 直下に input は無いが,
      起票カードと共用しているため宣言は維持 (= dead-rule 化するが副作用なし). */
   font-size: var(--font-size-h2);
 }
 
 .routine-card__title {
-  /* BL-072 D-003: 起票カードに新設. TaskFormCard の `.task-card__title` と
+  /* D-003: 起票カードに新設. TaskFormCard の `.task-card__title` と
      同名同役割. name input のフォントを親 (= title 段) から継承させる
      (input 側で font: inherit を当てる).
      jsdom 対応で input 側にも `font-size: var(--font-size-h2)` を二重宣言する
-     (= BL-071 D-002 と同じ折衷形). */
+     (= D-002 と同じ折衷形). */
   display: flex;
   align-items: center;
   font-size: var(--font-size-h2);
@@ -78,7 +78,7 @@
   /* 本 BL 時点では空ルール (P-004). */
 }
 
-/* BL-072 D-004: `.routine-card__form-row` 系セレクタは新 4 段構造で使われない
+/* D-004: `.routine-card__form-row` 系セレクタは新 4 段構造で使われない
    ため完全撤去 (= dead-rule 化防止). */
 
 .routine-card__day-checkboxes {
@@ -89,12 +89,12 @@
 }
 
 .routine-card__input {
-  /* V-2 / BL-071 REQ-5: 残り幅を占有. */
+  /* V-2 / REQ-5: 残り幅を占有. */
   flex: 1;
   /* BL-071 REQ-6 / D-002: 親 (.routine-card__header) の font (= --font-size-h2) を継承.
      TaskCard V-7 と同じイディオム. */
   font: inherit;
-  /* BL-071 AC-9: jsdom (vitest css: true) は `font: inherit` ショートハンドを computed
+  /* AC-9: jsdom (vitest css: true) は `font: inherit` ショートハンドを computed
      style に展開しないため, getComputedStyle(input).fontSize が空文字列になる.
      `font: inherit` の後に明示的に var() を当てて, jsdom でも "var(--font-size-h2)" として
      観測できるようにする (実ブラウザでは継承結果と同値 = 20px). */

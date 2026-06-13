@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Outlet, Route, Routes } from "react-router-dom";
 /**
- * 単体テスト: AppShell (BL-036 / ui-sidebar-nav).
+ * 単体テスト: AppShell .
  *
  * 受け入れ基準の出典:
  *   - docs/developer/features/ui-sidebar-nav/spec.md §「受け入れ基準」
@@ -263,11 +263,11 @@ describe("AppShell - アクティブリンクのハイライト (REQ-6)", () => 
 });
 
 // ============================================================
-// BL-049: ハンバーガーナビゲーション
+// ハンバーガーナビゲーション
 // 出典: docs/developer/features/hamburger-nav/spec.md §「受け入れ基準」
 // ============================================================
 
-describe("AppShell (BL-049 ハンバーガーナビゲーション)", () => {
+describe("AppShell", () => {
   // ----------------------------------------------------------
   // AC-1: ハンバーガーボタンの初期表示
   // ----------------------------------------------------------

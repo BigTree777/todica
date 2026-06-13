@@ -1,5 +1,5 @@
 /**
- * 単体テスト: ProjectCreateDialog (BL-044 / inline-project-create).
+ * 単体テスト: ProjectCreateDialog .
  *
  * 仕様参照:
  *   docs/developer/features/inline-project-create/spec.md REQ-2〜REQ-5 / REQ-7.
@@ -106,7 +106,7 @@ function dialogElement(): HTMLDialogElement | null {
 // ProjectCreateDialog テスト
 // ============================================================
 
-describe("ProjectCreateDialog (BL-044 プロジェクト追加モーダル)", () => {
+describe("ProjectCreateDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

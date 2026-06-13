@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Task } from "@todica/domain/task";
 /**
- * 「現在のタスク」独立ビュー (BL-037 / focus-view).
+ * 「現在のタスク」独立ビュー .
  *
  * 仕様参照:
  *   docs/developer/features/focus-view/spec.md REQ-1〜REQ-8.
@@ -20,9 +20,9 @@ import type { Task } from "@todica/domain/task";
  *   - D-008: 空状態でボタンは「非表示」(押下経路を絶つ).
  *
  * エラー処理:
- *   - online 412 (`OptimisticLockError`) → `ConflictError` に変換し `ConflictDialog` を開く (BL-031).
- *   - その他のエラー → `notifyError("通信に失敗しました")` (BL-034).
- *   - offline → 書込キューに enqueue し楽観成功 (BL-018).
+ *   - online 412 (`OptimisticLockError`) → `ConflictError` に変換し `ConflictDialog` を開く .
+ *   - その他のエラー → `notifyError("通信に失敗しました")` .
+ *   - offline → 書込キューに enqueue し楽観成功 .
  */
 import { useCallback } from "react";
 import { notifyError } from "../../error-notification.js";
@@ -147,7 +147,7 @@ export function FocusView(props: FocusViewProps): JSX.Element {
         void safeDequeueByKey(idempotencyKey);
         return result;
       } catch (error) {
-        // BL-031: online 412 → OptimisticLockError → ConflictError 変換.
+        // online 412 → OptimisticLockError → ConflictError 変換.
         if (error instanceof OptimisticLockError) {
           const entry = await findEntryByKey(idempotencyKey);
           if (entry) throw new ConflictError(entry, error.currentTask ?? {});
@@ -166,7 +166,7 @@ export function FocusView(props: FocusViewProps): JSX.Element {
     networkMode: "offlineFirst",
   });
 
-  // BL-070 REQ-9: focus-view でも name 編集経路を提供. 既存 complete/delete と同形.
+  // REQ-9: focus-view でも name 編集経路を提供. 既存 complete/delete と同形.
   const updateMutation = useMutation({
     mutationFn: async (cmd: UpdateTaskCommand) => {
       const idempotencyKey = generateId();

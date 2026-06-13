@@ -1,5 +1,5 @@
 /**
- * LoginView (BL-074 / AC-2 / AC-3).
+ * LoginView.
  *
  * - パスワード入力 → submit で `login(password)` を呼び, 成功時に `onSuccess` を発火する.
  * - 401 (InvalidPasswordError) → 「パスワードが正しくありません」.

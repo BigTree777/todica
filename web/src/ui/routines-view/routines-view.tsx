@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 /**
- * ルーティン管理ビュー (BL-017 / routine).
+ * ルーティン管理ビュー .
  *
  * 仕様参照:
  *   - docs/developer/features/routine/spec.md §「Web クライアント - RoutinesView」
@@ -13,7 +13,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
  *   - 名称変更: 行の「名称変更」ボタンで編集モード, 保存で repository.update() → 一覧再取得.
  *   - 削除: 削除ボタンで repository.delete() → 一覧再取得.
  *
- * BL-018: TanStack Query (useQuery / useMutation) でデータ取得・書込みを管理.
+ * TanStack Query (useQuery / useMutation) でデータ取得・書込みを管理.
  */
 import { useCallback, useState } from "react";
 import "./routines-view.css";
@@ -254,8 +254,8 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
     [updateMutation],
   );
 
-  // BL-070 REQ-4: 曜日 click で即時 PATCH. daysOfWeek が 0 件になる場合は silent return
-  //   (BL-068 D-016 / spec の「曜日 0 件運用は維持」).
+  // REQ-4: 曜日 click で即時 PATCH. daysOfWeek が 0 件になる場合は silent return
+  //   (D-016 / spec の「曜日 0 件運用は維持」).
   const handleDaysOfWeekChange = useCallback(
     async (routine: WebRoutine, next: number[]) => {
       if (next.length === 0) return;
@@ -274,7 +274,7 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
     [updateMutation],
   );
 
-  // BL-070 REQ-4: PriorityStars click で即時 PATCH.
+  // REQ-4: PriorityStars click で即時 PATCH.
   const handleDefaultPriorityChange = useCallback(
     async (routine: WebRoutine, next: Priority) => {
       if (next === routine.defaultPriority) return;

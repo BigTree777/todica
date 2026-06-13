@@ -5,19 +5,19 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import type { ReactNode } from "react";
 /**
- * SetupView コンポーネント 単体テスト (BL-019 / BL-020 / BL-074).
+ * SetupView コンポーネント 単体テスト.
  *
  * 受け入れ基準の出典:
  *   - docs/developer/features/app-login/spec.md §「受け入れ基準」AC-6
  *   - docs/developer/features/app-login/plan.md §「処理フロー — Android 初回起動 (SetupView)」/ D-10
  *   - docs/developer/features/android-server-mode/spec.md §「AC-AND-003: SetupView（初回起動）」(URL 部分は維持)
  *
- * BL-074 / Step 5 での変更点:
+ * SetupView の役割と検証ポイント:
  *   - 「認証トークン」入力欄を削除. URL 入力のみに簡素化.
  *   - 送信時に `fetch(url + "/healthz")` を実行して接続検証.
  *   - 200 応答で `onValidated(url)` (旧 onSave) コールバックを発火.
  *   - 4xx / 5xx / network エラーでビューに留まりエラーメッセージ表示.
- *   - BL-020 の `onSelectLocal` 経路は維持.
+ *   - `onSelectLocal` 経路でローカルモード選択をサポートする.
  *
  * 現状: setup-view.tsx は旧仕様 (token 欄あり / fetch 検証なし) のため red.
  *       Step 5 の改修で green 化する.
@@ -47,7 +47,7 @@ function renderWithQueryClient(ui: ReactNode): ReturnType<typeof render> {
   return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
-describe("SetupView (BL-074 AC-6: URL + /healthz 検証のみ)", () => {
+describe("SetupView (AC-6: URL + /healthz 検証のみ)", () => {
   it("AC-6 前段: 認証トークン入力欄が存在しない (token 欄削除)", () => {
     const onValidated = vi.fn();
     renderWithQueryClient(<SetupView onValidated={onValidated} />);
@@ -146,7 +146,7 @@ describe("SetupView (BL-074 AC-6: URL + /healthz 検証のみ)", () => {
   });
 });
 
-describe("SetupView (BL-020 AC-LOC-002: onSelectLocal は維持)", () => {
+describe("SetupView", () => {
   it("onSelectLocal が渡されている場合「ローカルモードで使う」ボタンが表示される", () => {
     const onValidated = vi.fn();
     const onSelectLocal = vi.fn();

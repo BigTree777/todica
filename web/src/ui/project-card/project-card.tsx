@@ -12,12 +12,12 @@
  *   - 名前は常時表示の `<input>` で編集可能とし, blur で `onNameBlur(next)` を親に通知する.
  *
  * 重要な決定:
- *   - D-002 / D-012 (BL-060): `as` prop で root tag を `<li>` / `<div>` から選択.
- *   - BL-070 D-001: 同値 blur の抑制は親 view に置く (= 本コンポーネントは常に blur 値を流す).
- *   - BL-070 D-002 / P-001 (iii): 空文字 blur の元値復元は blur ハンドラ内で
+ *   - D-002 / D-012 : `as` prop で root tag を `<li>` / `<div>` から選択.
+ *   - D-001: 同値 blur の抑制は親 view に置く (= 本コンポーネントは常に blur 値を流す).
+ *   - D-002 / P-001 (iii): 空文字 blur の元値復元は blur ハンドラ内で
  *     `e.currentTarget.value = project.name` を同期的に書き戻して実現 (uncontrolled input).
  *     key (entity.id + entity.name) はサーバ正本値変化時の再マウント同期用.
- *   - BL-070 D-009: input id は `project-name-{project.id}` で起票側 `project-name` と衝突回避.
+ *   - D-009: input id は `project-name-{project.id}` で起票側 `project-name` と衝突回避.
  *     visually-hidden label を付与し getByLabelText("プロジェクト名") で a11y を維持.
  */
 import type { Project } from "../../repositories/project-repository.js";
@@ -46,7 +46,7 @@ export function ProjectCard(props: ProjectCardProps): JSX.Element {
       <label htmlFor={inputId} className="visually-hidden">
         プロジェクト名
       </label>
-      {/* BL-070 REQ-2: 表示時に常時 input を描画. P-001 (iii): uncontrolled + key で
+      {/* REQ-2: 表示時に常時 input を描画. P-001 (iii): uncontrolled + key で
           サーバ正本値が変わったとき再マウントして表示を更新する.
           空文字 blur (D-002) は親が PATCH を短絡し state も key も変わらないため,
           カード側で DOM 値を正本値 (project.name) に書き戻して表示を復元する. */}

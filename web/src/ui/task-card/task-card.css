@@ -1,5 +1,5 @@
 /*
- * BL-059 (task-card-component): TaskCard / TaskFormCard の専用 CSS.
+ * TaskCard / TaskFormCard の専用 CSS.
  *
  * - <TaskCard> (タスク表示) と <TaskFormCard> (タスク起票) が共有する.
  * - 系統間で共有しない (project-card / routine-card は別 BL の別 CSS).
@@ -98,7 +98,7 @@
 .task-card__actions {
   display: flex;
   align-items: center;
-  /* BL-063 REQ-2 / D-002: BL-059 V-2 の中央寄せ宣言を撤去.
+  /* BL-063 REQ-2 / D-002: V-2 の中央寄せ宣言を撤去.
    * 削除/完了 button の auto-margin で「削除 左端 / 中間 中央寄り / 完了 右端」を実現する. */
   gap: var(--space-sm);
   /* 狭幅端末への安全弁. */

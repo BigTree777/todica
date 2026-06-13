@@ -1,6 +1,6 @@
 /**
- * `<PriorityStars />` ローカル CSS (BL-040 / priority-star-ui).
- * BL-046: 暫定値をデザイントークンに置換済み。
+ * `<PriorityStars />` ローカル CSS .
+ * 暫定値をデザイントークンに置換済み。
  *
  * 色の根拠:
  *   - 点灯 (★): --color-accent (#B45309, amber-700). WCAG AA 5.94:1 on #fff.

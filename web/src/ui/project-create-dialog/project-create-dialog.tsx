@@ -1,5 +1,5 @@
 /**
- * プロジェクト追加モーダル (BL-044 / inline-project-create).
+ * プロジェクト追加モーダル .
  *
  * 仕様参照:
  *   docs/developer/features/inline-project-create/spec.md REQ-2〜REQ-8.
