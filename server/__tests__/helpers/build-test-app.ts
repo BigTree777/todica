@@ -20,7 +20,7 @@ import {
   InMemorySettingsRepository,
   InMemoryTaskRepository,
 } from "./in-memory-repositories.js";
-import { InMemorySessionRepository } from "./login-for-test.js";
+import { InMemoryPasswordRepository, InMemorySessionRepository } from "./login-for-test.js";
 
 export const TEST_AUTH_TOKEN = "test-token";
 export const TEST_INITIAL_TIME = "2026-06-07T09:00:00.000Z";
@@ -55,6 +55,13 @@ export function buildTestApp(
     createdAt: nowMs,
   });
 
+  // password-change D-6 / D-7:
+  //   AppDeps は最終的に `passwordHash: string` 撤去 → `passwordRepository` に置換されるが,
+  //   既存 47 ファイル超の integration テスト群を一括赤化させないため, 移行期間中は両方を渡す.
+  //   既存テストは passwordHash 経由で動き続け, password-change 実装が
+  //   passwordRepository 経路に切り替えたら自動で新経路を使う.
+  const passwordRepository = new InMemoryPasswordRepository(TEST_PASSWORD_HASH, nowMs);
+
   const app = createApp({
     taskRepository,
     projectRepository,
@@ -66,7 +73,8 @@ export function buildTestApp(
     sessionRepository,
     clock,
     passwordHash: TEST_PASSWORD_HASH,
-  });
+    passwordRepository,
+  } as Parameters<typeof createApp>[0]);
 
   return {
     app,

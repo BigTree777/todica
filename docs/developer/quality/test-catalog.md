@@ -25,7 +25,8 @@
 | `server/__tests__/unit/drizzle-settings-repository.test.ts` | 2 | SettingsRepository の取得・更新 | BL-009 |
 | `server/__tests__/unit/daily-reset.test.ts` | 9 | 境界時刻計算・リセット要否判定ロジック | BL-010 |
 | `server/__tests__/unit/routine-daily-reset.test.ts` | 9 | 日次リセット時のルーティンタスク生成・翌日非持越し | BL-017 |
-| `server/__tests__/unit/session-repository.test.ts` | 8 | SessionRepository の create / findValidByToken / deleteByToken・期限境界 (strict >) | BL-074 |
+| `server/__tests__/unit/session-repository.test.ts` | 10 | SessionRepository の create / findValidByToken / deleteByToken・期限境界 (strict >) ・deleteAll (全削除 / 冪等 no-op) | BL-074, BL-079 |
+| `server/__tests__/unit/password-repository.test.ts` | 6 | PasswordRepository の getHash (空時 null) / setHash (INSERT + UPDATE upsert) / 単一行 singleton 保証 / updated_at 反映 | BL-079 |
 
 ### 統合テスト（API エンドポイント）
 
@@ -45,6 +46,8 @@
 | `server/__tests__/integration/trash.test.ts` | 26 | ゴミ箱一覧・復元・空にする・purgeTrash | BL-011 |
 | `server/__tests__/integration/projects.test.ts` | 24 | プロジェクト CRUD・名称変更・削除 | BL-016 |
 | `server/__tests__/integration/routines.test.ts` | 18 | ルーティン CRUD・編集 | BL-017 |
+| `server/__tests__/integration/password.test.ts` | 18 | `POST /api/v1/password`: 未認証 401 / 正しい現在 PW で 200 + DB hash 更新 + updated_at 更新 / 成功時 sessions 全削除 + 旧 token 401 / 誤った現在 PW 401 + DB / sessions 不変 / body 不正 (欠落・型不正・空文字・JSON 不正) で 400 / 変更後新 PW で /login 成功 + 旧 PW 401 + 新 token で /today 200 | BL-079 |
+| `server/__tests__/integration/password-seed.test.ts` | 4 | 起動時 seed: DB 空 + env 非空 で seed (INSERT) / DB に既存行ありで env 無視 (DB 値維持) / env 空 + DB 空 は no-op / env 空 + DB に既存行も DB 値維持 | BL-079 |
 
 ---
 
@@ -59,6 +62,7 @@
 | `web/src/auth/authed-fetch.test.ts` | 7 | authedFetch の単体テスト: 引数透過 / 200 透過 / 401 で clearToken + `todica:auth-expired` dispatch / 非 401 素通し / setAuthStorage(null) no-op / getToken=null で Authorization 非付与 / 呼出側 Authorization 上書き禁止 | BL-074, 078 |
 | `web/src/auth/capacitor-auth-storage.test.ts` | 5 | CapacitorAuthStorage の単体テスト (`vi.mock("@capacitor/preferences")`): getToken / setToken / clearToken が key="authToken" で Preferences.get/set/remove を叩く・listener notify・set→get round-trip | BL-074, 078 |
 | `web/src/auth/login-client.test.ts` | 6 | login(password) で /api/v1/login 呼出・200 で token 返却・401 で InvalidPasswordError・ネットワークエラー / logout(token) で Bearer 付き POST | BL-074 |
+| `web/src/auth/password-client.test.ts` | 6 | changePassword(baseUrl, token, current, next) で /api/v1/password を Bearer + JSON で POST / 200 で resolve / 401 で InvalidPasswordError / 400 で BadRequestError / ネットワークエラーで NetworkError / 5xx で例外 | BL-079 |
 | `web/src/repositories/settings-repository.test.ts` | 3 | HttpSettingsRepository の getSettings / patchSettings (Idempotency-Key + If-Match) / 412 → PatchConflictError. auth-storage seed パターン | BL-009, 076 |
 | `web/src/repositories/project-repository.test.ts` | 4 | HttpProjectRepository の CRUD (auth-storage seed パターン. `new HttpProjectRepository(baseUrl)` の 1 引数) | BL-016, 076 |
 | `web/src/repositories/routine-repository.test.ts` | 4 | HttpRoutineRepository の CRUD (auth-storage seed パターン. `new HttpRoutineRepository(baseUrl)` の 1 引数) | BL-017, 076 |
@@ -92,11 +96,11 @@
 | ファイル | 件数 | 保証内容 | 関連 BL |
 |---|---|---|---|
 | `web/__tests__/today-view.test.tsx` | 39 | TodayView（優先度・完了・期限切替・フォーカス・完了数・オフライン書込） | BL-002〜003, 005〜008, 016〜018 |
-| `web/__tests__/settings-view.test.tsx` | 10 | SettingsView（境界時刻・モード切替・ログアウトボタン） | BL-009, 019〜020, 074 |
+| `web/__tests__/settings-view.test.tsx` | 19 | SettingsView（境界時刻・モード切替・ログアウトボタン・パスワード変更フォーム: セクション表示 / 3 input + autocomplete / 必須空で送信不可 / 新 PW != 確認入力で送信不可 + alert / 正常 submit で changePassword 呼出 / 成功で onPasswordChanged / 401 で alert / changePassword Props なしでセクション非表示） | BL-009, 019〜020, 074, 079 |
 | `web/__tests__/settings-view-dead-path-removed.test.tsx` | 1 | SettingsView から BL-019 由来の旧 props 経路に紐づく DOM 要素が消えていることを regression guard する (AC-1) | BL-075 |
 | `web/src/ui/setup-view/setup-view.test.tsx` | 9 | SetupView（URL + `/healthz` 検証のみに簡素化・ローカルモード選択） | BL-019〜020, 074 |
 | `web/src/ui/login-view/login-view.test.tsx` | 8 | LoginView（パスワード入力・正常送信・401 エラー・ネットワークエラー・aria-busy・autofocus・aria-invalid/describedby） | BL-074 |
-| `web/__tests__/app-login.test.tsx` | 5 | 起動分岐: token 未保存 → LoginView / 有効 token → 本体 / 401 interceptor (`todica:auth-expired`) で LoginView 復帰 | BL-074 |
+| `web/__tests__/app-login.test.tsx` | 6 | 起動分岐: token 未保存 → LoginView / 有効 token → 本体 / 401 interceptor (`todica:auth-expired`) で LoginView 復帰 / SettingsView でパスワード変更成功 → token 破棄 + LoginView 強制遷移 | BL-074, 079 |
 | `web/src/ui/projects-view/projects-view.test.tsx` | 5 | ProjectsView（作成・削除・名称変更） | BL-016 |
 | `web/src/ui/routines-view/routines-view.test.tsx` | 5 | RoutinesView（作成・削除・編集） | BL-017 |
 | `web/src/ui/trash-view/trash-view.test.tsx` | 5 | TrashView（一覧・復元・空にする） | BL-011, 014 |
