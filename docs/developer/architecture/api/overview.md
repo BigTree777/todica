@@ -20,10 +20,13 @@
 
 ## 3. 認証
 
-- **方式**: 単一認証トークン（[ADR-0010](../../adr/0010-api-design.md) 推奨案）.
-- クライアントは要求ごとに認証トークンを付して送信する.
-- トークンの発行・保管・ローテーションは運用手順として別途整備する（feature / 運用ドキュメントの責務）.
-- マルチテナント化しないため, 「ユーザー識別」は行わず, トークンの有無のみで認可する.
+- **方式**: パスワード認証で取得した opaque token を Bearer ヘッダで送る（[ADR-0010](../../adr/0010-api-design.md) Au1 系の本実装）.
+- パスワード本体は bcrypt ハッシュとしてサーバ DB の `app_password` テーブルに 1 行だけ持つ. クライアントはパスワード平文を送信し, サーバが bcrypt で照合する.
+- 認証成功でサーバが 32 byte 乱数の opaque token を発行し, `sessions` テーブルに `(token, expires_at)` で永続化する. クライアントは token を保存し, 以降の要求のヘッダ（`Authorization: Bearer <token>`）に付して送信する.
+- token の有効期限は約 30 日. 期限切れの token は 401 で弾かれ, クライアントは再ログインする.
+- 初期パスワードは **ブラウザの InitialSetupView から設定する**（サーバ起動時の env 経由 seed は行わない）. 詳細は `docs/developer/features/initial-password-setup/spec.md` 参照.
+- パスワード変更は SettingsView 経由（現在 PW + 新 PW + 確認 PW）. 成功時にサーバは全 `sessions` を一括 DELETE して全端末を強制ログアウトさせる.
+- マルチテナント化しないため,「ユーザー識別」は行わず, token の有効性のみで認可する.
 - 「自宅 LAN / VPN 越しでしか使わない」と本人が決めた場合は認証なしの構成も許容する（[ADR-0010](../../adr/0010-api-design.md) Au3 代替案）.
 
 ## 4. バージョニング
@@ -86,7 +89,7 @@
 
 - **OpenAPI を正本にする**: 実装と OpenAPI のどちらが正かを迷わないために, **OpenAPI 定義に書かれていない API は存在しない** を運用原則とする. feature spec の進行に合わせて [`openapi.yaml`](openapi.yaml) を逐次追記する.
 - **DTO 型共有**: OpenAPI 定義（[`openapi.yaml`](openapi.yaml)）から `openapi-typescript` でクライアント側 TypeScript 型を生成する. サーバ実装は Hono の zod-openapi / hono-openapi 等で OpenAPI とハンドラ型を一致させる. **OpenAPI が正本**.
-- **Bearer トークンの取り扱い**: クライアント側はトークンを安全に保管し, 要求のヘッダ（`Authorization: Bearer <token>`）に付して送信する. サーバ側はミドルウェアで検証し, アプリケーション層には「認証済みかどうか」のフラグだけを渡す（ユーザー識別はしない）. リポジトリにトークンをコミットしない.
+- **Bearer トークンの取り扱い**: クライアント側はサーバから受け取った opaque token を localStorage / Preferences に保管し, 要求のヘッダ（`Authorization: Bearer <token>`）に付して送信する. サーバ側はミドルウェアで `sessions` テーブルを参照して有効性検証し, アプリケーション層には「認証済みかどうか」のフラグだけを渡す（ユーザー識別はしない）. パスワード平文や bcrypt ハッシュをリポジトリにコミットしない.
 - **HTTPS 必須**: 本番環境では TLS 終端を必ず通す. リバースプロキシでの終端を想定する. 「認証なし + プライベートネットワーク」構成（[ADR-0010](../../adr/0010-api-design.md) Au3 代替案）を採る場合のみ HTTP 公開を許容するが, インターネット越し公開は禁止.
 - **バージョニング運用**: 破壊的変更時は `/api/v2/...` を新設し, 旧バージョンを一定期間（個人運用なので 1 週間〜1 か月目安）並行運用する（[ADR-0010](../../adr/0010-api-design.md) §「バージョニング・互換性運用」）.
 - **マルチテナント禁止**: レスポンススキーマに `userId` / `tenantId` / `ownerId` を持たない. サーバ側のテーブルにも持たない（CORE-2, [`../database/schema.md`](../database/schema.md) 共通方針）.

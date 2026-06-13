@@ -193,7 +193,7 @@ flowchart LR
 | リセット処理のオーケストレーション | サーバ側 `server/app/reset-usecase`, ローカルモード Android 側 `android/app/reset-usecase` | 起動経路は ADR-0011 参照 |
 | トランザクション境界 | アプリケーション層が指定し, 永続化アダプタが実装 | 1 ユースケース = 1 トランザクションを基本に, 整合性要件（NFR-020）を満たす |
 | ゴミ箱経由処理 | `domain/trash` + 各エンティティの「ゴミ箱状態」 | すべての削除・完了はゴミ箱経由（FR-060） |
-| 認証 | `server/middleware/auth`（サーバ）, クライアント側はトークン保管とリクエストヘッダ付与 | 単一認証トークン（[ADR-0010](../adr/0010-api-design.md)） |
+| 認証 | サーバ: `server/middleware/auth` が `sessions` テーブル参照で token 検証. クライアント: ログインで取得した opaque token を localStorage / Preferences に保管しリクエストヘッダ付与 | パスワード bcrypt 照合で発行する opaque token を Bearer で送る方式（[ADR-0010](../adr/0010-api-design.md), [`api/overview.md`](api/overview.md) §3） |
 | エラー表現 | ドメイン層は例外を投げず, 値（Result 型相当）で表すことを推奨. API レイヤで通信規約上のエラーへ変換. クライアント UI で人間向けメッセージに変換. | |
 
 ## 7. 境界をまたぐ際の約束
