@@ -8,8 +8,8 @@
  *   (Hono app を直接呼んでヘルスチェックを検証する)
  *
  * 認証経路の検証:
- *   - env に `APP_PASSWORD_HASH` (bcrypt cost=4) を渡す.
- *   - 起動後に `POST /api/v1/login` で token を取得.
+ *   - パスワード env なし、空 DB で起動する.
+ *   - 起動後に `POST /api/v1/password` で初期パスワードを設定して token を取得.
  *   - その token で `/api/v1/today` を Bearer 認証付きで叩いて 200 を確認.
  *   - sessions に存在しない固定文字列 Bearer は 401 (AC-7).
  *
@@ -27,16 +27,13 @@ import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import bcrypt from "bcrypt";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 describe("本番ビルド + 起動", () => {
   let serverProcess: ChildProcess | null = null;
   let tempDir: string | null = null;
   const PORT = 13901;
-  // APP_PASSWORD_HASH (bcrypt cost=4) で起動する.
   const APP_PASSWORD = "prod-startup-test-password";
-  const APP_PASSWORD_HASH = bcrypt.hashSync(APP_PASSWORD, 4);
 
   beforeAll(async () => {
     // domain → server の順にビルドする（server は composite references で domain/dist に依存）.
@@ -66,13 +63,11 @@ describe("本番ビルド + 起動", () => {
     const dbPath = join(tempDir, "test.db");
 
     // ビルドされた dist の main.js を Node で起動する.
-    // APP_PASSWORD_HASH を env として渡す.
     // 不要な env (AUTH_TOKEN) を継承先から除去する.
     const { AUTH_TOKEN: _drop, ...inheritedEnv } = process.env;
     void _drop;
     const childEnv: NodeJS.ProcessEnv = {
       ...inheritedEnv,
-      APP_PASSWORD_HASH,
       DATABASE_PATH: dbPath,
       PORT: String(PORT),
     };
@@ -136,20 +131,20 @@ describe("本番ビルド + 起動", () => {
     expect(body).toEqual({ status: "ok" });
   });
 
-  it("POST /api/v1/login で APP_PASSWORD で token を取得し /api/v1/today を Bearer で 200 を返す", async () => {
-    // 1. login で token を取得.
-    const loginRes = await fetch(`http://localhost:${PORT}/api/v1/login`, {
+  it("初期パスワード設定で token を取得し /api/v1/today を Bearer で 200 を返す", async () => {
+    // 1. 初期パスワードを設定して auto-login token を取得.
+    const setupRes = await fetch(`http://localhost:${PORT}/api/v1/password`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password: APP_PASSWORD }),
+      body: JSON.stringify({ newPassword: APP_PASSWORD }),
     });
-    expect(loginRes.status).toBe(200);
-    const loginBody = (await loginRes.json()) as { token: string; expiresAt: number };
-    expect(loginBody.token).toMatch(/^[0-9a-f]{64}$/i);
+    expect(setupRes.status).toBe(200);
+    const setupBody = (await setupRes.json()) as { token: string; expiresAt: number };
+    expect(setupBody.token).toMatch(/^[0-9a-f]{64}$/i);
 
     // 2. token で /api/v1/today を叩く → 200.
     const todayRes = await fetch(`http://localhost:${PORT}/api/v1/today`, {
-      headers: { Authorization: `Bearer ${loginBody.token}` },
+      headers: { Authorization: `Bearer ${setupBody.token}` },
     });
     expect(todayRes.status).toBe(200);
 

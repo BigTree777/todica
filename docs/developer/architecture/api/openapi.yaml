@@ -496,21 +496,73 @@ paths:
                     $ref: "#/components/schemas/Settings"
 
   # ========== Authentication ==========
-  /password:
-    summary: ログインパスワード変更
+  /auth-state:
+    summary: パスワード初期化状態
+    get:
+      tags: [authentication]
+      summary: 初期パスワードが設定済みか取得する
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [initialized]
+                properties:
+                  initialized:
+                    type: boolean
+        "500": { $ref: "#/components/responses/InternalServerError" }
+
+  /login:
+    summary: ログイン
     post:
       tags: [authentication]
-      summary: 現在のパスワードを確認して新しいパスワードへ変更する
-      description: |
-        成功時は bcrypt ハッシュを DB に保存し、既存セッションをすべて削除する。
-        同じ値への変更も受理し、新しい salt で再ハッシュする。
+      summary: パスワードを検証してセッショントークンを発行する
+      security: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [currentPassword, newPassword]
+              required: [password]
+              properties:
+                password:
+                  type: string
+                  minLength: 1
+      responses:
+        "200":
+          description: ログイン成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthToken"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "412":
+          description: 初期パスワード設定が必要
+        "500": { $ref: "#/components/responses/InternalServerError" }
+
+  /password:
+    summary: 初期パスワード設定 / ログインパスワード変更
+    post:
+      tags: [authentication]
+      summary: DB 状態に応じて初期設定またはパスワード変更を行う
+      security:
+        - {}
+        - BearerAuth: []
+      description: |
+        DB が空なら認証と currentPassword は不要で、保存後に自動ログイン token を返す。
+        設定済みなら Bearer 認証と currentPassword が必要で、成功時に既存セッションを削除する。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [newPassword]
               properties:
                 currentPassword:
                   type: string
@@ -520,12 +572,14 @@ paths:
                   minLength: 1
       responses:
         "200":
-          description: パスワード変更成功
+          description: 初期設定時は token を返し、通常変更時は空オブジェクトを返す
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
+                oneOf:
+                  - $ref: "#/components/schemas/AuthToken"
+                  - type: object
+                    additionalProperties: false
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "500": { $ref: "#/components/responses/InternalServerError" }
@@ -640,6 +694,16 @@ components:
             $ref: "#/components/schemas/Error"
 
   schemas:
+    AuthToken:
+      type: object
+      required: [token, expiresAt]
+      properties:
+        token:
+          type: string
+        expiresAt:
+          type: integer
+          format: int64
+
     # ---------- Task 関連 (BL-001 で確定) ----------
     Task:
       type: object

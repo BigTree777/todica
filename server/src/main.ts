@@ -11,7 +11,6 @@
  *
  * 環境変数:
  *   - DATABASE_PATH (default: ./todica.db)
- *   - APP_PASSWORD_HASH (DB が空のときの初期 bcrypt ハッシュ)
  */
 import { join } from "node:path";
 import { serve } from "@hono/node-server";
@@ -30,11 +29,9 @@ import { DrizzleRoutineRepository } from "./infra/persistence/drizzle/routine-re
 import { DrizzleSessionRepository } from "./infra/persistence/drizzle/session-repository.js";
 import { DrizzleSettingsRepository } from "./infra/persistence/drizzle/settings-repository.js";
 import { DrizzleTaskRepository } from "./infra/persistence/drizzle/task-repository.js";
-import { seedPasswordIfEmpty } from "./password-seed.js";
 
 const DATABASE_PATH = process.env.DATABASE_PATH ?? "./todica.db";
 const PORT = Number.parseInt(process.env.PORT ?? "3000", 10);
-const APP_PASSWORD_HASH = process.env.APP_PASSWORD_HASH ?? "";
 const TEST_NOW = process.env.TEST_NOW;
 
 const sqlite = new Database(DATABASE_PATH);
@@ -42,12 +39,6 @@ sqlite.pragma("journal_mode = WAL");
 const db = drizzle(sqlite, { schema });
 migrate(db, { migrationsFolder: join(process.cwd(), "server", "drizzle") });
 const passwordRepository = new DrizzlePasswordRepository({ db });
-await seedPasswordIfEmpty(passwordRepository, APP_PASSWORD_HASH, Date.now());
-if ((await passwordRepository.getHash()) === null) {
-  // eslint-disable-next-line no-console
-  console.error("APP_PASSWORD_HASH environment variable is required when app_password is empty");
-  process.exit(1);
-}
 
 // E2E テスト用 (BL-030): `TEST_NOW` が設定されていればその時刻を初期値とする
 // `FakeClock` を使う. `/api/v1/test/clock/*` エンドポイントがこの clock を進める手段を提供する.

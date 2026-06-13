@@ -112,9 +112,7 @@ export class InMemorySessionRepository implements SessionRepository {
  *   - password-change feature の統合テストで `createApp` に注入する.
  *   - `getHash()` / `setHash(hash, updatedAt)` の振る舞いを Drizzle 実装と揃える (upsert).
  *
- * docs/developer/features/password-change/plan.md D-7:
- *   サーバ単体テストでは `APP_PASSWORD_HASH` env を使わず, `InMemoryPasswordRepository`
- *   を直接注入する.
+ * サーバ単体テストでは `InMemoryPasswordRepository` を直接注入する.
  */
 export class InMemoryPasswordRepository implements PasswordRepository {
   private current: { hash: string; updatedAt: number } | null;

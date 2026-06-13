@@ -24,14 +24,13 @@ cp .env.example .env
 
 | 変数 | デフォルト | 説明 |
 |---|---|---|
-| `APP_PASSWORD_HASH` | 初回 seed 時に必須 | アプリログインパスワードの bcrypt ハッシュ。DB が空の初回起動時だけ seed に使う。起動後は DB が真の source となり、SettingsView から変更可能。DB が空かつ未設定の場合のみ起動失敗する。生成: `node -e "console.log(require('bcrypt').hashSync('your-password', 12))"` |
 | `PORT` | `3000` | リッスンポート |
 | `DATABASE_PATH` | `./todica.db` | SQLite データベースファイルのパス |
 | `VITE_API_BASE_URL` | `http://localhost:3000` | Web から呼び出すサーバ URL |
 
 `.env` は `.gitignore` 済みでコミット対象外。`VITE_*` プレフィックスを持つ変数だけが Vite を通じて Web クライアントに expose される（`web/vite.config.ts` の `envDir` 設定でルートの `.env` を参照）。
 
-Bearer トークンはビルド時に埋め込まれない。初回は LoginView で `APP_PASSWORD_HASH` の元の平文を入力し、`POST /api/v1/login` で opaque token を取得する。パスワード変更後は DB の値が使われる。
+Bearer トークンはビルド時に埋め込まれない。DB が空の初回アクセスではブラウザからパスワードを登録し、同時に opaque token を取得する。以後のログインとパスワード変更には DB の値が使われる。
 
 ### 3. サーバの起動
 
@@ -49,7 +48,7 @@ npm run dev -w server
 npm run dev -w web
 ```
 
-`http://localhost:5173` で Vite 開発サーバが起動する。ブラウザ版では `.env` の `VITE_API_BASE_URL` がそのまま使われ、起動時に LoginView が表示される（パスワード入力後に `/today` へ遷移）。ネイティブ版（Capacitor）では Preferences が空のとき SetupView が出てサーバ URL を入力 → `/healthz` 検証 → LoginView でパスワード入力、の 2 ステップとなる。
+`http://localhost:5173` で Vite 開発サーバが起動する。DB が空なら初期パスワード設定画面、設定済みなら LoginView が表示される。ネイティブ版（Capacitor）でも SetupView の URL 検証後に同じ分岐へ進む。
 
 ## 動作確認
 
@@ -61,7 +60,12 @@ curl http://localhost:3000/healthz
 認証付きで API を叩く場合:
 
 ```bash
-# 1. login して token を取得
+# DB が空なら最初にパスワードを設定して token を取得
+TOKEN=$(curl -s -X POST http://localhost:3000/api/v1/password \
+  -H "Content-Type: application/json" \
+  -d '{"newPassword":"your-password"}' | jq -r '.token')
+
+# 設定済みなら login して token を取得
 TOKEN=$(curl -s -X POST http://localhost:3000/api/v1/login \
   -H "Content-Type: application/json" \
   -d '{"password":"your-password"}' | jq -r '.token')
@@ -75,6 +79,6 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:3000/api/v1/tasks
 | 症状 | 原因 | 対処 |
 |---|---|---|
 | `401 Unauthorized` | `/api/v1/login` で取得した token が無効/期限切れ | 再度 `/api/v1/login` を叩いて token を取得し直す |
-| `APP_PASSWORD_HASH environment variable is required` | DB が空かつ `.env` 未設定 | `.env` に `APP_PASSWORD_HASH=$2b$12$...` を設定して初回 seed する |
+| `/api/v1/login` が `412 INITIAL_SETUP_REQUIRED` | DB にパスワードが未登録 | ブラウザの初期パスワード設定画面から登録する |
 | ポートが既に使用中 | 別プロセスが 3000 番を使用 | `PORT=3001` などに変更して起動する |
 | DB エラーで起動失敗 | マイグレーション SQL に問題がある | `server/drizzle/` 以下の SQL ファイルを確認する |

@@ -33,24 +33,12 @@ npm install
 cp .env.example .env
 ```
 
-`.env` を開いて、`APP_PASSWORD_HASH` に bcrypt ハッシュを設定する：
-
-```bash
-# 任意のパスワードのハッシュを生成 (cost factor 12 推奨)
-node -e "console.log(require('bcrypt').hashSync('your-password', 12))"
-```
-
-生成されたハッシュ（`$2b$12$...`）を `.env` に貼り付ける：
-
 ```env
-APP_PASSWORD_HASH=$2b$12$.....................
 VITE_API_BASE_URL=http://localhost:3000
 ```
 
-`APP_PASSWORD_HASH` は DB が空の初回起動時の seed 用途。起動後は DB が真の source となり、SettingsView からパスワードを変更できる。
-
 > Web クライアントは **ビルド時に `VITE_*` を埋め込む**ため、`VITE_API_BASE_URL` は次の step より前に決めておく。
-> 認証トークンはビルド時に埋め込まれない。初回は LoginView で `APP_PASSWORD_HASH` の元の平文を入力する。
+> パスワードと認証トークンはビルド時に埋め込まれない。
 
 ### A-3. サーバを起動する
 
@@ -77,9 +65,9 @@ npm run dev -w web
 
 `Local:   http://localhost:5173/` と表示される。
 
-### A-5. ブラウザで開いてログインする
+### A-5. ブラウザで初期パスワードを設定する
 
-`http://localhost:5173` を開く。**LoginView** が表示されるので、A-2 で `.env` に設定したパスワードの**平文**（ハッシュ化前の文字列）を入力してログインする。成功すると今日のタスク一覧（最初は空）が表示される。
+`http://localhost:5173` を開く。DB が空なら **初期パスワード設定**画面が表示されるので、新しいパスワードを2回入力する。設定成功後は自動ログインし、今日のタスク一覧（最初は空）が表示される。2回目以降は LoginView から設定済みパスワードでログインする。
 
 > **`http://localhost:3000` ではない**。3000 は API サーバで、ブラウザで開いても UI は出ない。
 

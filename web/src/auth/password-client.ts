@@ -19,6 +19,40 @@ export class NetworkError extends Error {
   }
 }
 
+export interface InitialPasswordResult {
+  token: string;
+  expiresAt: number;
+}
+
+export async function setupInitialPassword(
+  baseUrl: string,
+  newPassword: string,
+): Promise<InitialPasswordResult> {
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}/api/v1/password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newPassword }),
+    });
+  } catch (error) {
+    throw new NetworkError(error instanceof Error ? error.message : undefined);
+  }
+
+  if (response.status === 400) {
+    throw new BadRequestError();
+  }
+  if (!response.ok) {
+    throw new Error(`Initial password setup failed: HTTP ${response.status}`);
+  }
+
+  const body = (await response.json()) as { token?: unknown; expiresAt?: unknown };
+  if (typeof body.token !== "string" || typeof body.expiresAt !== "number") {
+    throw new Error("Initial password response missing token or expiresAt");
+  }
+  return { token: body.token, expiresAt: body.expiresAt };
+}
+
 export async function changePassword(
   baseUrl: string,
   token: string,

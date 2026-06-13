@@ -120,6 +120,266 @@ describe("AppWithAuth — クリーンアップ", () => {
 });
 
 // ============================================================
+// 起動時 auth-state 分岐 (initial-password-setup AC-8 / AC-9 / AC-12 / AC-13)
+//
+// 受け入れ基準の出典:
+//   - docs/developer/features/initial-password-setup/spec.md §「受け入れ基準」AC-8 / AC-9 / AC-12 / AC-13
+//   - docs/developer/features/initial-password-setup/plan.md §「Web — `main.tsx` の分岐」
+//
+// 観点:
+//   1. AC-8: 起動時に GET /api/v1/auth-state が { initialized: false } を返したら
+//            InitialSetupView (見出し「初期パスワード設定」 / 2 つの password input) が描画される.
+//            LoginView (パスワード input) は描画されない.
+//   2. AC-9: InitialSetupView の送信成功で
+//            - localStorage に token が保存される
+//            - /today に遷移する (= LoginView も InitialSetupView も画面に出ない)
+//   3. AC-12: { initialized: true } + token 無し → 従来どおり LoginView を描画する.
+//             InitialSetupView は出ない.
+//   4. AC-13: { initialized: true } + 有効 token あり → 本体 (LoginView/InitialSetupView 非表示).
+// ============================================================
+
+describe("App — 起動時 auth-state 分岐 (initial-password-setup AC-8 / AC-12 / AC-13)", () => {
+  it("AC-8: auth-state が { initialized: false } のとき InitialSetupView が描画される (LoginView は出ない)", async () => {
+    const storage = new WebAuthStorage();
+    // token は無い (= localStorage.clear 済み).
+
+    const originalFetch = window.fetch;
+    window.fetch = (async (input: RequestInfo | URL, _init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.endsWith("/api/v1/auth-state")) {
+        return new Response(JSON.stringify({ initialized: false }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({}), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }) as typeof window.fetch;
+
+    try {
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+      });
+      render(
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            <App
+              config={{
+                mode: "server",
+                baseUrl: "",
+                authToken: "",
+                isNative: false,
+                needsSetup: false,
+              }}
+              repos={buildHttpRepos("")}
+              authStorage={storage}
+            />
+          </BrowserRouter>
+        </QueryClientProvider>,
+      );
+
+      // InitialSetupView の見出し.
+      await waitFor(() => {
+        expect(screen.getByRole("heading", { name: /初期パスワード設定/ })).toBeInTheDocument();
+      });
+
+      // LoginView の「パスワード」label は出ない.
+      expect(screen.queryByLabelText("パスワード")).toBeNull();
+    } finally {
+      window.fetch = originalFetch;
+    }
+  });
+
+  it("AC-12: auth-state が { initialized: true } のとき token 無しなら LoginView が描画される (InitialSetupView は出ない)", async () => {
+    const storage = new WebAuthStorage();
+
+    const originalFetch = window.fetch;
+    window.fetch = (async (input: RequestInfo | URL, _init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.endsWith("/api/v1/auth-state")) {
+        return new Response(JSON.stringify({ initialized: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({}), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }) as typeof window.fetch;
+
+    try {
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+      });
+      render(
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            <App
+              config={{
+                mode: "server",
+                baseUrl: "",
+                authToken: "",
+                isNative: false,
+                needsSetup: false,
+              }}
+              repos={buildHttpRepos("")}
+              authStorage={storage}
+            />
+          </BrowserRouter>
+        </QueryClientProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByLabelText("パスワード")).toBeInTheDocument();
+      });
+      // InitialSetupView の見出しは出ない.
+      expect(screen.queryByRole("heading", { name: /初期パスワード設定/ })).toBeNull();
+    } finally {
+      window.fetch = originalFetch;
+    }
+  });
+
+  it("AC-13: auth-state が { initialized: true } + 有効 token があるとき本体が描画される (LoginView / InitialSetupView は出ない)", async () => {
+    const storage = new WebAuthStorage();
+    await storage.setToken("valid-session-token");
+
+    const originalFetch = window.fetch;
+    window.fetch = (async (input: RequestInfo | URL, _init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.endsWith("/api/v1/auth-state")) {
+        return new Response(JSON.stringify({ initialized: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({}), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }) as typeof window.fetch;
+
+    try {
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+      });
+      render(
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            <App
+              config={{
+                mode: "server",
+                baseUrl: "",
+                authToken: "valid-session-token",
+                isNative: false,
+                needsSetup: false,
+              }}
+              repos={buildHttpRepos("")}
+              authStorage={storage}
+            />
+          </BrowserRouter>
+        </QueryClientProvider>,
+      );
+
+      // LoginView / InitialSetupView ともに出ない.
+      await waitFor(() => {
+        expect(screen.queryByLabelText("パスワード")).toBeNull();
+        expect(screen.queryByRole("heading", { name: /初期パスワード設定/ })).toBeNull();
+      });
+    } finally {
+      window.fetch = originalFetch;
+    }
+  });
+});
+
+describe("App — InitialSetupView 送信成功で auto-login + /today 遷移 (initial-password-setup AC-9)", () => {
+  it("送信成功で localStorage に token が保存される + LoginView / InitialSetupView が画面から消える", async () => {
+    const storage = new WebAuthStorage();
+
+    const originalFetch = window.fetch;
+    window.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString();
+      const method = (init?.method ?? "GET").toUpperCase();
+
+      if (url.endsWith("/api/v1/auth-state") && method === "GET") {
+        return new Response(JSON.stringify({ initialized: false }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (url.endsWith("/api/v1/password") && method === "POST") {
+        // 初期設定モードの auto-login レスポンス.
+        return new Response(
+          JSON.stringify({
+            token: "setup-token-1234567890abcdef",
+            expiresAt: 1_800_000_000_000,
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      }
+      // 本体 (TodayView 等) からの fetch.
+      return new Response(JSON.stringify({}), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }) as typeof window.fetch;
+
+    try {
+      const user = (await import("@testing-library/user-event")).default.setup();
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+      });
+      render(
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            <App
+              config={{
+                mode: "server",
+                baseUrl: "",
+                authToken: "",
+                isNative: false,
+                needsSetup: false,
+              }}
+              repos={buildHttpRepos("")}
+              authStorage={storage}
+            />
+          </BrowserRouter>
+        </QueryClientProvider>,
+      );
+
+      // InitialSetupView が出るまで待つ.
+      const newInput = await screen.findByLabelText(/^新しいパスワード$/);
+      const confirmInput = await screen.findByLabelText(/新しいパスワード\s*\(?確認\)?/);
+      const submit = screen.getByRole("button", { name: /設定|登録|保存/ });
+
+      await user.type(newInput, "P0");
+      await user.type(confirmInput, "P0");
+      await act(async () => {
+        await user.click(submit);
+      });
+
+      // localStorage に token が保存される.
+      await waitFor(async () => {
+        expect(await storage.getToken()).toBe("setup-token-1234567890abcdef");
+      });
+
+      // LoginView も InitialSetupView もこの時点で画面から消えている (= 本体に入った).
+      await waitFor(() => {
+        expect(screen.queryByLabelText("パスワード")).toBeNull();
+        expect(screen.queryByRole("heading", { name: /初期パスワード設定/ })).toBeNull();
+      });
+    } finally {
+      window.fetch = originalFetch;
+    }
+  });
+});
+
+// ============================================================
 // パスワード変更成功時の LoginView 強制遷移 (password-change AC-7)
 //
 // 受け入れ基準の出典:

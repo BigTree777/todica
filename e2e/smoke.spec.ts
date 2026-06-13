@@ -6,9 +6,9 @@
  *
  * このテスト 1 件が green になることで以下を同時に保証する:
  *   - CORS preflight が通る (server に hono/cors が設定されている)
- *   - root .env の VITE_API_BASE_URL が web に注入される (token 関連は不要 / BL-074 で廃止)
- *   - playwright.config.ts の `APP_PASSWORD_HASH` で server が起動し, LoginView 経由で
- *     セッショントークンを取得 → Bearer 認証が一致する
+ *   - root .env の VITE_API_BASE_URL が web に注入される (token はビルド時に埋め込まない)
+ *   - playwright.config.ts の起動時に `POST /api/v1/password` で初期パスワードを設定し,
+ *     LoginView 経由でセッショントークンを取得 → Bearer 認証が一致する
  *   - drizzle migrate() で初期テーブルが作成される (空 DB → migration 適用)
  *   - POST /api/v1/tasks → DB 永続化 → GET /api/v1/today → UI 反映の経路全部
  */

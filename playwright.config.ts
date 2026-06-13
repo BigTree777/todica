@@ -5,10 +5,8 @@
  *   テスト開始前に自動起動し, 終了時に落とす.
  * - E2E 専用の DB ファイル (`./.e2e-data/e2e.db`) を `DATABASE_PATH` で渡し,
  *   開発用 `./todica.db` を汚さない. このファイルは `.gitignore` 対象.
- * - BL-074 以降は固定 `AUTH_TOKEN` を廃止し, `APP_PASSWORD_HASH` (bcrypt ハッシュ)
- *   を webServer の env で渡す. テスト時の password は `E2E_TEST_PASSWORD` の平文に対応する
- *   cost=4 のハッシュ (`E2E_TEST_PASSWORD_HASH`) を埋め込む. E2E スペック側は
- *   この password で `/api/v1/login` を叩いて token を取得する.
+ * - E2E 用サーバは空 DB で起動し、Web 起動前に初期設定 API でパスワードを登録する.
+ *   E2E スペック側は `E2E_TEST_PASSWORD` で `/api/v1/login` を叩く.
  * - 当面は chromium のみ. クロスブラウザ対応はテスト本数が増えてから検討する.
  */
 import { mkdirSync, readdirSync, rmSync } from "node:fs";
@@ -19,12 +17,8 @@ import { defineConfig, devices } from "@playwright/test";
 const E2E_DATA_DIR = "./.e2e-data";
 const E2E_DB_PATH = `${E2E_DATA_DIR}/e2e.db`;
 
-// BL-074: E2E webServer は `APP_PASSWORD_HASH` 必須. 起動失敗を避けるため
-// テスト時 password 固定 + cost=4 で予め生成したハッシュを埋め込む.
-// 平文の password はテストスペック側が `/api/v1/login` を叩く際に使う.
-// 値はテスト fixture であり機密ではない (公開リポジトリの仕様上問題なし).
 const E2E_TEST_PASSWORD = "test-password";
-const E2E_TEST_PASSWORD_HASH = "$2b$04$929IWdoSfzVpFBjd4HANfeYf/FKjFVSP9qWHT0sBkYS3SDGFblt4q";
+const INITIALIZE_E2E_PASSWORD_COMMAND = `node -e "fetch('http://localhost:3000/api/v1/password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({newPassword:'${E2E_TEST_PASSWORD}'})}).then(r=>{if(!r.ok&&r.status!==401)throw new Error('setup failed: '+r.status)})"`;
 
 // テスト実行前に毎回 .e2e-data を空ディレクトリにする.
 // (1) 前回の DB を引きずらない. (2) better-sqlite3 は親ディレクトリ不在で
@@ -102,14 +96,10 @@ export default defineConfig({
         // デフォルト境界時刻 04:00 を既に通過しているため初回 /today で自動 reset が
         // 1 回走り, 以降の clock advance(24h) で再度 reset が triggered される.
         TEST_NOW: "2026-06-09T05:00:00.000Z",
-        // BL-074: server は `APP_PASSWORD_HASH` 未設定で起動失敗する. E2E では
-        // cost=4 で生成したテスト用 hash を埋め込み, スペック側は `E2E_TEST_PASSWORD`
-        // で `/api/v1/login` を叩く.
-        APP_PASSWORD_HASH: E2E_TEST_PASSWORD_HASH,
       },
     },
     {
-      command: "npm run dev -w web",
+      command: `${INITIALIZE_E2E_PASSWORD_COMMAND} && npm run dev -w web`,
       port: 5173,
       timeout: 30_000,
       reuseExistingServer: !process.env.CI,
@@ -120,21 +110,12 @@ export default defineConfig({
       // reuseExistingServer で 2 回目以降は再ビルドをスキップしたいが,
       // Playwright の webServer は command 全体を毎回実行する点に注意.
       //
-      // BL-074: prod build した web は同一オリジン (port 4173 → 3000) に向かない設計だが,
-      // PWA spec は SW の registration / cache 検証が主体で API は叩かない. それでも
-      // `vite preview` 用 server に固定 password hash を渡しておくと将来 PWA で
-      // API 経路を追加した際に再修正が要らない.
-      command: "npm run build -w web && npm run preview -w web",
+      command: `${INITIALIZE_E2E_PASSWORD_COMMAND} && npm run build -w web && npm run preview -w web`,
       port: 4173,
       timeout: 120_000,
       reuseExistingServer: !process.env.CI,
-      env: {
-        APP_PASSWORD_HASH: E2E_TEST_PASSWORD_HASH,
-      },
     },
   ],
 });
 
-// 平文 password は E2E スペックから参照される想定. 現状未参照のため eslint の
-// no-unused-vars を回避するためにここで明示的に re-export しておく.
-export { E2E_TEST_PASSWORD, E2E_TEST_PASSWORD_HASH };
+export { E2E_TEST_PASSWORD };

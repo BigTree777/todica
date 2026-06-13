@@ -5,14 +5,8 @@
  *   - GET /healthz が 200 OK を返す（サーバが起動している証拠）
  *   - GET /api/v1/tasks で Authorization ヘッダなし → 401
  *
- * 認証は `APP_PASSWORD_HASH` (bcrypt) と sessions テーブルで行う
- *         (docs/developer/features/app-login/plan.md D-7).
- * 注: `APP_PASSWORD_HASH` 未設定時の exit(1) は main.ts のトップレベルコードで担保されており、
- * vitest からモジュールインポートだけで process.exit が走るため自動テストは困難。
- * このシナリオは main.ts の実装コードで担保し、自動テスト対象外とする。
- *
- * `APP_PASSWORD_HASH environment variable is required` というエラーメッセージを
- * main.ts が出力していることを `__tests__/release/prod-startup.test.ts` で間接的に確認する.
+ * 認証は DB のパスワードハッシュと sessions テーブルで行う。
+ * DB が空でもサーバは起動し、ブラウザから初期パスワードを設定できる。
  */
 import { describe, expect, it } from "vitest";
 import { buildAuthTestApp } from "../helpers/login-for-test.js";

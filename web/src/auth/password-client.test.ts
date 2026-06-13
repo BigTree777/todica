@@ -4,6 +4,8 @@
  * 受け入れ基準の出典:
  *   - docs/developer/features/password-change/spec.md §「FR-PWD-6」/ AC-2 / AC-3 / AC-12
  *   - docs/developer/features/password-change/plan.md §「Web クライアント設計」(password-client.ts)
+ *   - docs/developer/features/initial-password-setup/spec.md §「FR-IPS-5」
+ *   - docs/developer/features/initial-password-setup/plan.md §「Web — `password-client.ts` (`setupInitialPassword` 追加)」
  *
  * 観点:
  *   1. `changePassword(baseUrl, token, currentPassword, newPassword)` が
@@ -16,8 +18,11 @@
  *   4. 400 応答時に `BadRequestError` (または相当の Error) を throw する (AC-12).
  *   5. ネットワークエラー時に `NetworkError` を throw する.
  *   6. 5xx 応答 (サーバ側エラー) でも例外を throw する.
+ *   7. `setupInitialPassword(baseUrl, newPassword)` が
+ *      `POST <baseUrl>/api/v1/password` を **Authorization 無し** + `{ newPassword }` で発行する.
+ *      200 で `{ token, expiresAt }` を resolve / 400 で `BadRequestError` / network で `NetworkError`.
  *
- * 現状: `web/src/auth/password-client.ts` は未実装. インポート不能で red.
+ * 現状: `web/src/auth/password-client.ts` の setupInitialPassword は未実装. 追加分は red.
  */
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -27,6 +32,7 @@ import {
   InvalidPasswordError,
   NetworkError,
   changePassword,
+  setupInitialPassword,
 } from "./password-client.js";
 
 const BASE_URL = "http://localhost:3000";
@@ -138,5 +144,103 @@ describe("changePassword — ネットワーク / その他エラー", () => {
     );
 
     await expect(changePassword(BASE_URL, TOKEN, "P0", "P1")).rejects.toThrow();
+  });
+});
+
+// ============================================================
+// setupInitialPassword (initial-password-setup FR-IPS-5)
+//
+// 初期設定モード用のクライアント. DB 空時の POST /api/v1/password を
+// Authorization 無し / { newPassword } で叩き, 200 で { token, expiresAt } を resolve する.
+// ============================================================
+
+describe("setupInitialPassword(baseUrl, newPassword) — 正常系", () => {
+  it("/api/v1/password に Authorization 無しで { newPassword } を POST し 200 で { token, expiresAt } を resolve する", async () => {
+    let receivedAuth: string | null = null;
+    let receivedContentType: string | null = null;
+    let receivedBody: { newPassword?: string; currentPassword?: string } | null = null;
+
+    server.use(
+      http.post(`${BASE_URL}/api/v1/password`, async ({ request }) => {
+        receivedAuth = request.headers.get("Authorization");
+        receivedContentType = request.headers.get("Content-Type");
+        receivedBody = (await request.json()) as {
+          newPassword?: string;
+          currentPassword?: string;
+        };
+        return HttpResponse.json(
+          { token: "t".repeat(64), expiresAt: 1_800_000_000_000 },
+          {
+            status: 200,
+          },
+        );
+      }),
+    );
+
+    await expect(setupInitialPassword(BASE_URL, "P0")).resolves.toEqual({
+      token: "t".repeat(64),
+      expiresAt: 1_800_000_000_000,
+    });
+
+    // 認証ヘッダは付与しない.
+    expect(receivedAuth).toBeNull();
+    expect(receivedContentType).toMatch(/application\/json/);
+    // currentPassword は送らない.
+    expect(receivedBody).toEqual({ newPassword: "P0" });
+  });
+});
+
+describe("setupInitialPassword — 異常系", () => {
+  it("400 INVALID_REQUEST_BODY で BadRequestError を throw する", async () => {
+    server.use(
+      http.post(`${BASE_URL}/api/v1/password`, async () => {
+        return HttpResponse.json(
+          { code: "INVALID_REQUEST_BODY", message: "newPassword is required" },
+          { status: 400 },
+        );
+      }),
+    );
+
+    await expect(setupInitialPassword(BASE_URL, "")).rejects.toBeInstanceOf(BadRequestError);
+  });
+
+  it("ネットワークエラーで NetworkError を throw する", async () => {
+    server.use(
+      http.post(`${BASE_URL}/api/v1/password`, async () => {
+        return HttpResponse.error();
+      }),
+    );
+
+    await expect(setupInitialPassword(BASE_URL, "P0")).rejects.toBeInstanceOf(NetworkError);
+  });
+
+  it("401 / 409 など 200 以外の応答で何らかの例外を throw する (初期設定状態不一致)", async () => {
+    server.use(
+      http.post(`${BASE_URL}/api/v1/password`, async () => {
+        return new HttpResponse(null, { status: 409 });
+      }),
+    );
+
+    await expect(setupInitialPassword(BASE_URL, "P0")).rejects.toThrow();
+  });
+
+  it("5xx 応答で何らかの例外を throw する", async () => {
+    server.use(
+      http.post(`${BASE_URL}/api/v1/password`, async () => {
+        return new HttpResponse(null, { status: 500 });
+      }),
+    );
+
+    await expect(setupInitialPassword(BASE_URL, "P0")).rejects.toThrow();
+  });
+
+  it("レスポンスに token / expiresAt が無い 200 応答は例外を throw する", async () => {
+    server.use(
+      http.post(`${BASE_URL}/api/v1/password`, async () => {
+        return HttpResponse.json({}, { status: 200 });
+      }),
+    );
+
+    await expect(setupInitialPassword(BASE_URL, "P0")).rejects.toThrow();
   });
 });
