@@ -14,7 +14,8 @@
  * `todica:auth-expired` イベント dispatch を行う (plan D-13). これにより
  * 期限切れ token を持つユーザは API 呼び出しから自動で LoginView に戻れる.
  *
- * 残る 4 本 (settings / project / routine / trash) の同等切り替えは別 BL に切り出す.
+ * BL-076 で残り 4 本 (settings / project / routine / trash) も `authedFetch` 経由に統一済み.
+ * これにより全 5 本の repository が 401 自動退場フローに揃った.
  */
 import type { DueDate, Priority, Task } from "@todica/domain/task";
 import { authedFetch } from "../auth/authed-fetch.js";
@@ -242,23 +243,13 @@ function uuidV4(): string {
 /**
  * HTTP 実装. `authedFetch` を使ってサーバの /api/v1/tasks 系エンドポイントを叩く.
  *
- * BL-074 差し戻し (Problem 1):
- *   - 旧 API 互換のため `authToken` 引数は受けるが内部では使わない.
- *     token は `authedFetch` が `auth-storage` から都度読む.
+ * BL-074 / BL-076:
+ *   - token は `authedFetch` が `auth-storage` から都度読む (constructor は baseUrl のみ).
  *   - 401 を受けた時点で `authedFetch` 側で `clearToken()` + `todica:auth-expired`
  *     dispatch が行われ, `AppWithAuth` の listener が LoginView に戻す.
  */
 export class HttpTaskRepository implements TaskRepository {
-  constructor(
-    readonly baseUrl: string,
-    /**
-     * @deprecated BL-074: token は `auth-storage` から都度読むようになり本引数は使われない.
-     *   既存呼出 (`main.tsx` の buildHttpRepos) との互換のため optional で残している.
-     */
-    readonly authToken?: string,
-  ) {
-    void authToken;
-  }
+  constructor(readonly baseUrl: string) {}
 
   private jsonHeaders(extra: Record<string, string> = {}): Record<string, string> {
     return {

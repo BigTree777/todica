@@ -54,12 +54,17 @@
 
 | ファイル | 件数 | 保証内容 | 関連 BL |
 |---|---|---|---|
-| `web/__tests__/http-task-repository.test.ts` | 4 | HttpTaskRepository の CRUD・楽観ロックエラー変換 | BL-001 |
+| `web/__tests__/http-task-repository.test.ts` | 4 | HttpTaskRepository の CRUD・楽観ロックエラー変換 (BL-074 で `auth-storage` seed パターンに統一) | BL-001, 074 |
 | `web/src/auth/auth-storage.test.ts` | 8 | WebAuthStorage の localStorage 保存・取得・破棄・listener パターン | BL-074 |
 | `web/src/auth/login-client.test.ts` | 6 | login(password) で /api/v1/login 呼出・200 で token 返却・401 で InvalidPasswordError・ネットワークエラー / logout(token) で Bearer 付き POST | BL-074 |
-| `web/src/repositories/project-repository.test.ts` | 4 | HttpProjectRepository の CRUD | BL-016 |
-| `web/src/repositories/routine-repository.test.ts` | 4 | HttpRoutineRepository の CRUD | BL-017 |
-| `web/src/repositories/trash-repository.test.ts` | 4 | HttpTrashRepository の一覧・復元・空にする | BL-011 |
+| `web/src/repositories/settings-repository.test.ts` | 3 | HttpSettingsRepository の getSettings / patchSettings (Idempotency-Key + If-Match) / 412 → PatchConflictError. auth-storage seed パターン | BL-009, 076 |
+| `web/src/repositories/project-repository.test.ts` | 4 | HttpProjectRepository の CRUD (auth-storage seed パターン. `new HttpProjectRepository(baseUrl)` の 1 引数) | BL-016, 076 |
+| `web/src/repositories/routine-repository.test.ts` | 4 | HttpRoutineRepository の CRUD (auth-storage seed パターン. `new HttpRoutineRepository(baseUrl)` の 1 引数) | BL-017, 076 |
+| `web/src/repositories/trash-repository.test.ts` | 4 | HttpTrashRepository の一覧・復元・空にする (auth-storage seed パターン. `new HttpTrashRepository(baseUrl)` の 1 引数) | BL-011, 076 |
+| `web/__tests__/settings-repository-auth-expired.test.tsx` | 1 | HttpSettingsRepository.getSettings() で 401 を引いたとき auth-storage の token が破棄され `todica:auth-expired` Custom Event が dispatch される | BL-076 |
+| `web/__tests__/project-repository-auth-expired.test.tsx` | 1 | HttpProjectRepository.list() で 401 を引いたとき auth-storage の token が破棄され `todica:auth-expired` Custom Event が dispatch される | BL-076 |
+| `web/__tests__/routine-repository-auth-expired.test.tsx` | 1 | HttpRoutineRepository.list() で 401 を引いたとき auth-storage の token が破棄され `todica:auth-expired` Custom Event が dispatch される | BL-076 |
+| `web/__tests__/trash-repository-auth-expired.test.tsx` | 1 | HttpTrashRepository.list() で 401 を引いたとき auth-storage の token が破棄され `todica:auth-expired` Custom Event が dispatch される | BL-076 |
 | `web/src/repositories/local-task-repository.test.ts` | 11 | LocalTaskRepository（SQLite）の CRUD・完了・フォーカス | BL-020 |
 | `web/src/repositories/local-project-repository.test.ts` | 5 | LocalProjectRepository（SQLite）の CRUD | BL-020 |
 | `web/src/repositories/local-routine-repository.test.ts` | 4 | LocalRoutineRepository（SQLite）の CRUD | BL-020 |

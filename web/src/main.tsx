@@ -80,13 +80,13 @@ interface Repositories {
   routine: WebRoutineRepository;
 }
 
-function buildHttpRepos(baseUrl: string, authToken: string): Repositories {
+function buildHttpRepos(baseUrl: string): Repositories {
   return {
-    task: new HttpTaskRepository(baseUrl, authToken),
-    settings: new HttpSettingsRepository(baseUrl, authToken),
-    trash: new HttpTrashRepository(baseUrl, authToken),
-    project: new HttpProjectRepository(baseUrl, authToken),
-    routine: new HttpRoutineRepository(baseUrl, authToken),
+    task: new HttpTaskRepository(baseUrl),
+    settings: new HttpSettingsRepository(baseUrl),
+    trash: new HttpTrashRepository(baseUrl),
+    project: new HttpProjectRepository(baseUrl),
+    routine: new HttpRoutineRepository(baseUrl),
   };
 }
 
@@ -150,7 +150,7 @@ function App({ config, repos: initialRepos, authStorage }: AppProps) {
     await authStorage.setToken(result.token);
     setToken(result.token);
     setAuthToken(result.token);
-    setRepos(buildHttpRepos(baseUrl, result.token));
+    setRepos(buildHttpRepos(baseUrl));
   };
 
   // BL-074: ログアウト処理. /api/v1/logout を叩いて token を破棄.
@@ -228,7 +228,7 @@ function App({ config, repos: initialRepos, authStorage }: AppProps) {
             /* Preferences が利用できない場合はスキップ */
           }
           setCurrentMode("server");
-          setRepos(buildHttpRepos("", ""));
+          setRepos(buildHttpRepos(""));
           navigate("/setup", { replace: true });
         } else {
           // サーバ → ローカル切替: Preferences 消去 → ローカル DB 初期化 → /today へ遷移
@@ -316,7 +316,7 @@ function App({ config, repos: initialRepos, authStorage }: AppProps) {
                 }
                 setBaseUrl(url);
                 setCurrentMode("server");
-                setRepos(buildHttpRepos(url, ""));
+                setRepos(buildHttpRepos(url));
               }}
               onSelectLocal={handleSelectLocal}
             />
@@ -439,7 +439,7 @@ async function init() {
       const url = serverUrl ?? "";
       const token = (await authStorage.getToken()) ?? "";
       config = { mode: "server", baseUrl: url, authToken: token, isNative: true, needsSetup: !url };
-      repos = buildHttpRepos(url, token);
+      repos = buildHttpRepos(url);
     }
   } catch {
     // ブラウザ（Web）: 環境変数からベース URL を取得 / token は auth-storage 経由.
@@ -447,7 +447,7 @@ async function init() {
     const baseUrl = env.VITE_API_BASE_URL ?? "";
     const token = (await authStorage.getToken()) ?? "";
     config = { mode: "server", baseUrl, authToken: token, isNative: false, needsSetup: false };
-    repos = buildHttpRepos(baseUrl, token);
+    repos = buildHttpRepos(baseUrl);
   }
 
   // BL-074: authed-fetch に auth-storage を注入 (401 検知時に token を破棄するため).

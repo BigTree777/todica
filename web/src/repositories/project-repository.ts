@@ -3,7 +3,11 @@
  *
  * 仕様参照:
  *   - docs/developer/features/project-crud/spec.md §「Web クライアント - ProjectsView」
+ *
+ * BL-076 で `authedFetch` 経由に切り替えた. 401 を受けた時点で `authedFetch` 側が
+ * `auth-storage.clearToken()` + `todica:auth-expired` イベント dispatch を行う.
  */
+import { authedFetch } from "../auth/authed-fetch.js";
 
 export interface Project {
   id: string;
@@ -65,26 +69,15 @@ function uuidV4(): string {
 }
 
 /**
- * HTTP 実装. fetch を使ってサーバの /api/v1/projects 系エンドポイントを叩く.
+ * HTTP 実装. `authedFetch` を使ってサーバの /api/v1/projects 系エンドポイントを叩く.
  */
 export class HttpProjectRepository implements ProjectRepository {
-  constructor(
-    readonly baseUrl: string,
-    readonly authToken: string,
-  ) {}
-
-  private authHeaders(extra: Record<string, string> = {}): Record<string, string> {
-    return {
-      Authorization: `Bearer ${this.authToken}`,
-      ...extra,
-    };
-  }
+  constructor(readonly baseUrl: string) {}
 
   /** GET /api/v1/projects → { projects: Project[] } */
   async list(): Promise<Project[]> {
-    const res = await fetch(`${this.baseUrl}/api/v1/projects`, {
+    const res = await authedFetch(`${this.baseUrl}/api/v1/projects`, {
       method: "GET",
-      headers: this.authHeaders(),
     });
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: failed to list projects`);
@@ -96,12 +89,12 @@ export class HttpProjectRepository implements ProjectRepository {
   /** POST /api/v1/projects → { project: Project } */
   async create(cmd: CreateProjectCommand): Promise<Project> {
     const idemKey = uuidV4();
-    const res = await fetch(`${this.baseUrl}/api/v1/projects`, {
+    const res = await authedFetch(`${this.baseUrl}/api/v1/projects`, {
       method: "POST",
-      headers: this.authHeaders({
+      headers: {
         "Content-Type": "application/json",
         "Idempotency-Key": idemKey,
-      }),
+      },
       body: JSON.stringify({ id: cmd.id, name: cmd.name }),
     });
     if (!res.ok) {
@@ -114,13 +107,13 @@ export class HttpProjectRepository implements ProjectRepository {
   /** PATCH /api/v1/projects/:id → { project: Project } */
   async update(cmd: UpdateProjectCommand): Promise<Project> {
     const idemKey = uuidV4();
-    const res = await fetch(`${this.baseUrl}/api/v1/projects/${cmd.id}`, {
+    const res = await authedFetch(`${this.baseUrl}/api/v1/projects/${cmd.id}`, {
       method: "PATCH",
-      headers: this.authHeaders({
+      headers: {
         "Content-Type": "application/json",
         "Idempotency-Key": idemKey,
         "If-Match": String(cmd.ifMatch),
-      }),
+      },
       body: JSON.stringify({ name: cmd.name }),
     });
     if (res.status === 412) {
@@ -137,12 +130,12 @@ export class HttpProjectRepository implements ProjectRepository {
   /** DELETE /api/v1/projects/:id → 204 No Content */
   async delete(cmd: DeleteProjectCommand): Promise<void> {
     const idemKey = uuidV4();
-    const res = await fetch(`${this.baseUrl}/api/v1/projects/${cmd.id}`, {
+    const res = await authedFetch(`${this.baseUrl}/api/v1/projects/${cmd.id}`, {
       method: "DELETE",
-      headers: this.authHeaders({
+      headers: {
         "Idempotency-Key": idemKey,
         "If-Match": String(cmd.ifMatch),
-      }),
+      },
     });
     if (res.status === 204) return;
     if (res.status === 412) {

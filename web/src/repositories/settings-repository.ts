@@ -4,7 +4,12 @@
  * 仕様参照:
  *   - docs/developer/features/settings-day-boundary/spec.md
  *   - docs/developer/features/settings-day-boundary/plan.md §「UI 設計」
+ *
+ * BL-076 で `authedFetch` 経由に切り替えた. 401 を受けた時点で `authedFetch` 側が
+ * `auth-storage.clearToken()` + `todica:auth-expired` イベント dispatch を行う.
+ * これにより期限切れ token を持つユーザは API 呼び出しから自動で LoginView に戻れる.
  */
+import { authedFetch } from "../auth/authed-fetch.js";
 
 export interface Settings {
   id: string;
@@ -31,24 +36,21 @@ export class PatchConflictError extends Error {
 }
 
 export class HttpSettingsRepository implements SettingsRepository {
-  constructor(
-    readonly baseUrl: string,
-    readonly authToken: string,
-  ) {}
+  constructor(readonly baseUrl: string) {}
 
   async getSettings(): Promise<Settings> {
-    const res = await fetch(`${this.baseUrl}/api/v1/settings`, {
-      headers: { Authorization: `Bearer ${this.authToken}` },
+    const res = await authedFetch(`${this.baseUrl}/api/v1/settings`, {
+      method: "GET",
     });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = (await res.json()) as { settings: Settings };
     return json.settings;
   }
 
   async patchSettings(cmd: PatchSettingsCommand): Promise<Settings> {
-    const res = await fetch(`${this.baseUrl}/api/v1/settings`, {
+    const res = await authedFetch(`${this.baseUrl}/api/v1/settings`, {
       method: "PATCH",
       headers: {
-        Authorization: `Bearer ${this.authToken}`,
         "Content-Type": "application/json",
         "Idempotency-Key": crypto.randomUUID(),
         "If-Match": String(cmd.ifMatch),
