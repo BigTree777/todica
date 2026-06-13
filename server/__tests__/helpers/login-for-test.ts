@@ -49,7 +49,7 @@ import {
 /** plan D-18: テスト時パスワード固定. */
 export const TEST_PASSWORD = "test-password";
 
-/** plan D-19: cost factor 4 で予めハッシュ生成しキャッシュする. */
+/** plan D-18: cost factor 4 で予めハッシュ生成しキャッシュする. */
 const TEST_PASSWORD_HASH = bcrypt.hashSync(TEST_PASSWORD, 4);
 
 export const TEST_INITIAL_TIME = "2026-06-07T09:00:00.000Z";

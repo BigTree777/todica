@@ -22,10 +22,18 @@ npm install
 
 ## サーバの起動
 
+BL-074 以降は固定トークン (`AUTH_TOKEN`) を廃止し, アプリ内ログイン (`POST /api/v1/login`) に切り替えました.
+サーバ起動時はパスワードの bcrypt ハッシュを `APP_PASSWORD_HASH` 環境変数で渡します.
+
 ```bash
-export AUTH_TOKEN=your-secret-token
+# 1. ハッシュを生成 (cost factor は本番 12 を推奨)
+export APP_PASSWORD_HASH="$(node -e "console.log(require('bcrypt').hashSync('your-password', 12))")"
+
+# 2. サーバ起動
 npm start -w server
 ```
+
+その後 Web UI を開くとログイン画面が出ます. `your-password` (上記で指定した平文) を入力すると `/api/v1/login` でセッショントークンが発行され, 以降の API 呼び出しは Bearer 認証で透過的に動作します.
 
 ## Web クライアントのビルド
 

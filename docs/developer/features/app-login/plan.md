@@ -176,6 +176,18 @@ spec.md §「既存資産で再利用するもの」を引き継ぎつつ, plan 
 - マルチユーザ / 役割 / 共有 (project.md §3 CORE-2).
 - JWT / リフレッシュトークン / SSO / OAuth (spec の非ゴール).
 
+### 将来 BL に切り出し
+
+- **`HttpTaskRepository` 以外の 4 本 (settings / project / routine / trash) の `authedFetch` 切替**:
+  BL-074 では監査差し戻し Problem 1 (AC-4 production 経路) を最低 1 本の Repository で
+  成立させるため `HttpTaskRepository` のみを `authedFetch` 経由に切り替えた. 残り 4 本も
+  同等に切り替えるが影響範囲が広いため別 BL に分離する.
+- **SettingsView の旧 authToken 入力 UI (BL-019 由来 dead path) の削除は別 BL に切り出し (BL-075)**:
+  BL-074 で auth フローを廃止したが BL-019 由来の `serverUrl` / `authToken` props と
+  `onSaveServer` 経路が dead path として残っている. main.tsx は `onSaveServer` を渡さない
+  ため production では非表示だが, 既存 test 2 件が dead path を検証し続けている. 本 BL では
+  この dead path と関連 test の削除には踏み込まず BL-075 に分離する.
+
 ## 非機能 / アクセシビリティ
 
 - LoginView 入力要件:

@@ -16,7 +16,9 @@ import { setupServer } from "msw/node";
  *
  * 現状: HttpTaskRepository は全メソッドが throw のスタブ. 全テストが red になる想定.
  */
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { WebAuthStorage } from "../src/auth/auth-storage.js";
+import { setAuthStorage } from "../src/auth/authed-fetch.js";
 import { HttpTaskRepository, OptimisticLockError } from "../src/repositories/task-repository.js";
 
 const BASE_URL = "http://localhost:3000";
@@ -32,8 +34,20 @@ const server = setupServer();
 beforeAll(() => {
   server.listen({ onUnhandledRequest: "error" });
 });
+beforeEach(async () => {
+  // BL-074: HttpTaskRepository は constructor の authToken を使わず
+  // `authedFetch` 経由で `auth-storage` から token を都度読む.
+  // 既存テストの assertion (`Authorization: Bearer ${AUTH_TOKEN}`) を満たすため
+  // `WebAuthStorage` に AUTH_TOKEN を seed する.
+  localStorage.clear();
+  const storage = new WebAuthStorage();
+  await storage.setToken(AUTH_TOKEN);
+  setAuthStorage(storage);
+});
 afterEach(() => {
   server.resetHandlers();
+  setAuthStorage(null);
+  localStorage.clear();
 });
 afterAll(() => {
   server.close();

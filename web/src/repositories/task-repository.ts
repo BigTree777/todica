@@ -7,8 +7,17 @@
  * 仕様参照:
  *   - docs/developer/features/task-crud/plan.md §処理フロー (Web → HTTP)
  *   - ADR-0010 (Idempotency-Key, If-Match の必須化)
+ *
+ * BL-074 差し戻し (Problem 1) で AC-4 production 経路を成立させるため,
+ * 本ファイルは生 `fetch` を廃止し `authedFetch` 経由に切り替えた.
+ * `authedFetch` が 401 を捕捉した時点で `auth-storage.clearToken()` と
+ * `todica:auth-expired` イベント dispatch を行う (plan D-13). これにより
+ * 期限切れ token を持つユーザは API 呼び出しから自動で LoginView に戻れる.
+ *
+ * 残る 4 本 (settings / project / routine / trash) の同等切り替えは別 BL に切り出す.
  */
 import type { DueDate, Priority, Task } from "@todica/domain/task";
+import { authedFetch } from "../auth/authed-fetch.js";
 
 export interface CreateTaskCommand {
   id: string;
@@ -231,17 +240,28 @@ function uuidV4(): string {
 }
 
 /**
- * HTTP 実装. fetch を使ってサーバの /api/v1/tasks 系エンドポイントを叩く.
+ * HTTP 実装. `authedFetch` を使ってサーバの /api/v1/tasks 系エンドポイントを叩く.
+ *
+ * BL-074 差し戻し (Problem 1):
+ *   - 旧 API 互換のため `authToken` 引数は受けるが内部では使わない.
+ *     token は `authedFetch` が `auth-storage` から都度読む.
+ *   - 401 を受けた時点で `authedFetch` 側で `clearToken()` + `todica:auth-expired`
+ *     dispatch が行われ, `AppWithAuth` の listener が LoginView に戻す.
  */
 export class HttpTaskRepository implements TaskRepository {
   constructor(
     readonly baseUrl: string,
-    readonly authToken: string,
-  ) {}
+    /**
+     * @deprecated BL-074: token は `auth-storage` から都度読むようになり本引数は使われない.
+     *   既存呼出 (`main.tsx` の buildHttpRepos) との互換のため optional で残している.
+     */
+    readonly authToken?: string,
+  ) {
+    void authToken;
+  }
 
-  private authHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  private jsonHeaders(extra: Record<string, string> = {}): Record<string, string> {
     return {
-      Authorization: `Bearer ${this.authToken}`,
       "Content-Type": "application/json",
       ...extra,
     };
@@ -251,9 +271,9 @@ export class HttpTaskRepository implements TaskRepository {
     // BL-038 / tomorrow-view: filter.dueDate が渡されたら URL に `?dueDate=...` を乗せる.
     // 既存呼び出し (引数なし) との互換のため optional.
     const qs = filter?.dueDate ? `?dueDate=${encodeURIComponent(filter.dueDate)}` : "";
-    const res = await fetch(`${this.baseUrl}/api/v1/tasks${qs}`, {
+    const res = await authedFetch(`${this.baseUrl}/api/v1/tasks${qs}`, {
       method: "GET",
-      headers: this.authHeaders(),
+      headers: this.jsonHeaders(),
     });
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: failed to list tasks`);
@@ -275,9 +295,9 @@ export class HttpTaskRepository implements TaskRepository {
     // (plan.md §処理フロー: 「id を Idempotency-Key として送る」).
     const idemKey = cmd.id;
 
-    const res = await fetch(`${this.baseUrl}/api/v1/tasks`, {
+    const res = await authedFetch(`${this.baseUrl}/api/v1/tasks`, {
       method: "POST",
-      headers: this.authHeaders({ "Idempotency-Key": idemKey }),
+      headers: this.jsonHeaders({ "Idempotency-Key": idemKey }),
       body: JSON.stringify(body),
     });
 
@@ -302,9 +322,9 @@ export class HttpTaskRepository implements TaskRepository {
     // PATCH の Idempotency-Key は task id とは独立に採番する (同じ id でも複数回 PATCH しうる).
     const idemKey = uuidV4();
 
-    const res = await fetch(`${this.baseUrl}/api/v1/tasks/${cmd.id}`, {
+    const res = await authedFetch(`${this.baseUrl}/api/v1/tasks/${cmd.id}`, {
       method: "PATCH",
-      headers: this.authHeaders({
+      headers: this.jsonHeaders({
         "Idempotency-Key": idemKey,
         "If-Match": String(cmd.ifMatch),
       }),
@@ -325,9 +345,9 @@ export class HttpTaskRepository implements TaskRepository {
   async delete(cmd: DeleteTaskCommand): Promise<void> {
     const idemKey = uuidV4();
 
-    const res = await fetch(`${this.baseUrl}/api/v1/tasks/${cmd.id}`, {
+    const res = await authedFetch(`${this.baseUrl}/api/v1/tasks/${cmd.id}`, {
       method: "DELETE",
-      headers: this.authHeaders({
+      headers: this.jsonHeaders({
         "Idempotency-Key": idemKey,
         "If-Match": String(cmd.ifMatch),
       }),
@@ -352,9 +372,9 @@ export class HttpTaskRepository implements TaskRepository {
    * クライアントは再ソートせずそのまま表示する (plan.md D-004).
    */
   async today(): Promise<TodayViewResponse> {
-    const res = await fetch(`${this.baseUrl}/api/v1/today`, {
+    const res = await authedFetch(`${this.baseUrl}/api/v1/today`, {
       method: "GET",
-      headers: this.authHeaders(),
+      headers: this.jsonHeaders(),
     });
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: failed to fetch today view`);
@@ -368,9 +388,9 @@ export class HttpTaskRepository implements TaskRepository {
    * GET /api/v1/focus に対応.
    */
   async getFocus(): Promise<FocusSelection> {
-    const res = await fetch(`${this.baseUrl}/api/v1/focus`, {
+    const res = await authedFetch(`${this.baseUrl}/api/v1/focus`, {
       method: "GET",
-      headers: this.authHeaders(),
+      headers: this.jsonHeaders(),
     });
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: failed to fetch focus`);
@@ -385,9 +405,9 @@ export class HttpTaskRepository implements TaskRepository {
    */
   async setFocus(cmd: SetFocusCommand): Promise<FocusSelection> {
     const idemKey = uuidV4();
-    const res = await fetch(`${this.baseUrl}/api/v1/focus`, {
+    const res = await authedFetch(`${this.baseUrl}/api/v1/focus`, {
       method: "PUT",
-      headers: this.authHeaders({
+      headers: this.jsonHeaders({
         "Idempotency-Key": idemKey,
         "If-Match": String(cmd.ifMatch),
       }),
@@ -409,9 +429,9 @@ export class HttpTaskRepository implements TaskRepository {
    * 本メソッドは test-designer 段階のスタブ. implementer が本実装で green 化する.
    */
   async getCounter(): Promise<Counter> {
-    const res = await fetch(`${this.baseUrl}/api/v1/counter`, {
+    const res = await authedFetch(`${this.baseUrl}/api/v1/counter`, {
       method: "GET",
-      headers: this.authHeaders(),
+      headers: this.jsonHeaders(),
     });
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: failed to fetch counter`);
@@ -429,9 +449,9 @@ export class HttpTaskRepository implements TaskRepository {
   async complete(cmd: CompleteTaskCommand): Promise<Task> {
     const idemKey = uuidV4();
 
-    const res = await fetch(`${this.baseUrl}/api/v1/tasks/${cmd.id}/complete`, {
+    const res = await authedFetch(`${this.baseUrl}/api/v1/tasks/${cmd.id}/complete`, {
       method: "POST",
-      headers: this.authHeaders({
+      headers: this.jsonHeaders({
         "Idempotency-Key": idemKey,
         "If-Match": String(cmd.ifMatch),
       }),
