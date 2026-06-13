@@ -14,7 +14,7 @@ import type { ReactNode } from "react";
  *   「サーバ接続設定」セクション (`serverUrl?` / `authToken?` / `onSaveServer?` props と
  *   それに伴う <section aria-label="サーバ接続設定"> / サーバ URL input /
  *   認証トークン input / 「変更を保存」ボタン) は、
- *   BL-074 (アプリ内パスワードログイン導入) で responsibilities 全体が再編されたため
+ *   SettingsView の責務は境界時刻 / モード切替 / ログアウトの 3 点に絞り込まれており
  *   dead path と化していた。本 BL (BL-075) でこの dead path を完全削除した。
  *
  * 補足: AC-2 / AC-3 の「dead path props を渡しても DOM に出現しない」検証は

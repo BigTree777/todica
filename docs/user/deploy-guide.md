@@ -179,7 +179,7 @@ npm run build -w web
 成果物は `web/dist/`。
 
 > **重要**: `VITE_API_BASE_URL` は **ビルド時に埋め込まれる**ため、値を変えたら必ず `npm run build -w web` を再実行する。
-> BL-074 以降、認証トークンはビルド時に埋め込まない。ユーザがアプリ起動時に LoginView でパスワードを入力し、`POST /api/v1/login` で取得した opaque token を `localStorage` (Web) / `@capacitor/preferences` (Android) に保存する形になっている。
+> 認証トークンはビルド時に埋め込まれない。ユーザがアプリ起動時に LoginView でパスワードを入力し、`POST /api/v1/login` で取得した opaque token を `localStorage` (Web) / `@capacitor/preferences` (Android) に保存する形になっている。
 
 同一ドメイン配信（後述の reverse proxy 構成）なら `VITE_API_BASE_URL=""` でよい。Web の JS は相対パスで `/api/v1/*` を叩く。
 

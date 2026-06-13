@@ -1,5 +1,5 @@
 /**
- * `POST /api/v1/login` / `POST /api/v1/logout` クライアント (BL-074 / plan §「Web モジュール」).
+ * `POST /api/v1/login` / `POST /api/v1/logout` クライアント.
  *
  * - login: 200 → `{ token, expiresAt }`, 401 → `InvalidPasswordError`, network → `NetworkError`, その他 → `Error`.
  * - logout: 4xx/5xx でも throw せず resolve する (token 破棄の後始末は呼出元で行う).

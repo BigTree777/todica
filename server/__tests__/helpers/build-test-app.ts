@@ -2,7 +2,7 @@
  * 結合テスト用の App ビルダー.
  *
  * - createApp() に in-memory 依存性を注入する.
- * - BL-074: 旧 `authToken` 引数は廃止. 代わりに `passwordHash` + `sessionRepository` を渡す.
+ * - `passwordHash` + `sessionRepository` を deps として渡す.
  *   既存 47 ファイル超の integration テストとの互換のため, ビルド時に
  *   sessionRepository に "test-token" を有効 session として seed しておく.
  *   既存テストの `authHeaders()` ( `Authorization: Bearer test-token` ) はそのまま動く.
@@ -41,7 +41,7 @@ export function buildTestApp(
   const settingsRepository = new InMemorySettingsRepository();
   // BL-017: RoutineRepository を追加
   const routineRepository = new InMemoryRoutineRepository();
-  // BL-074: SessionRepository を追加.
+  // SessionRepository を deps に追加.
   const sessionRepository = new InMemorySessionRepository();
   const clock = new FakeClock(options.initialTime ?? TEST_INITIAL_TIME);
 

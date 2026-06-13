@@ -1,5 +1,5 @@
 /**
- * 結合テスト: 新方式 authMiddleware (sessions lookup) (BL-074 / Step 2).
+ * 結合テスト: authMiddleware (sessions lookup).
  *
  * 受け入れ基準の出典:
  *   - docs/developer/features/app-login/spec.md §「受け入れ基準」AC-1 / AC-4 / AC-7
@@ -9,7 +9,7 @@
  *   1. AC-1: Bearer 無しで `/api/v1/tasks` → 401.
  *   2. AC-2 経路: 有効な session token で `/api/v1/tasks` → 200.
  *   3. AC-4: 期限切れ session token で `/api/v1/tasks` → 401.
- *   4. AC-7: 旧 AUTH_TOKEN 風の固定文字列 Bearer (sessions に存在しない) で 401.
+ *   4. AC-7: sessions に存在しない固定文字列 Bearer で 401.
  *   5. authMiddleware は `/healthz` を素通し (既存挙動の維持).
  *   6. authMiddleware は `/api/v1/login` を素通し (login 時に token 不要).
  *
@@ -90,8 +90,8 @@ describe("authMiddleware (sessions lookup) — AC-4 期限切れ", () => {
   });
 });
 
-describe("authMiddleware (sessions lookup) — AC-7 旧 AUTH_TOKEN 拒否", () => {
-  it("旧 AUTH_TOKEN 風の固定文字列 Bearer (sessions に存在しない) で 401 を返す", async () => {
+describe("authMiddleware (sessions lookup) — AC-7 未知の固定文字列 Bearer 拒否", () => {
+  it("sessions に存在しない固定文字列 Bearer で 401 を返す", async () => {
     // AC-7: 古いクライアント (固定 AUTH_TOKEN Bearer) で API を呼ぶと 401.
     const oldStyleTokens = [
       "test-token", // 旧テスト用固定値.

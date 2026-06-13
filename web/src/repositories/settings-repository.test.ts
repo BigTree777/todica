@@ -1,7 +1,7 @@
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 /**
- * 単体テスト: HttpSettingsRepository (BL-009 / settings-day-boundary, BL-076 で新規追加).
+ * 単体テスト: HttpSettingsRepository (BL-009 / settings-day-boundary).
  *
  * 受け入れ基準の出典:
  *   - docs/developer/features/settings-day-boundary/spec.md
@@ -16,10 +16,10 @@ import { setupServer } from "msw/node";
  *   4. patchSettings() が 412 を受けると PatchConflictError を throw し,
  *      error.settings に response body の settings が入る.
  *
- * BL-076 / AC-5: constructor は `(baseUrl)` の 1 引数のみで宣言され,
+ * AC-5: constructor は `(baseUrl)` の 1 引数のみで宣言され,
  *   `authToken` は受け取らない. token は `authedFetch` が `auth-storage` から都度読む.
  *
- * Seed パターン (BL-074 D-13 / BL-076 D-5):
+ * Seed パターン (auth-storage D-13 / D-5):
  *   - beforeEach で WebAuthStorage を生成し setToken(AUTH_TOKEN) で seed,
  *     setAuthStorage(storage) で authedFetch に注入する.
  *   - afterEach で setAuthStorage(null) + localStorage.clear() で state を漏らさない.
@@ -46,7 +46,7 @@ beforeAll(() => {
   server.listen({ onUnhandledRequest: "error" });
 });
 beforeEach(async () => {
-  // BL-076 / D-5: HttpSettingsRepository は constructor の authToken を持たず
+  // D-5: HttpSettingsRepository は constructor の authToken を持たず
   // `authedFetch` 経由で `auth-storage` から token を都度読む.
   // 既存の `Authorization: Bearer ${AUTH_TOKEN}` assertion を満たすため,
   // `WebAuthStorage` に AUTH_TOKEN を seed する.

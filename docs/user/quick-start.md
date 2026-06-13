@@ -48,7 +48,7 @@ VITE_API_BASE_URL=http://localhost:3000
 ```
 
 > Web クライアントは **ビルド時に `VITE_*` を埋め込む**ため、`VITE_API_BASE_URL` は次の step より前に決めておく。
-> BL-074 以降、認証トークンはビルド時に埋め込まない。アプリ起動後に LoginView でパスワード（`APP_PASSWORD_HASH` の元の平文）を入力する。
+> 認証トークンはビルド時に埋め込まれない。アプリ起動後に LoginView でパスワード（`APP_PASSWORD_HASH` の元の平文）を入力する。
 
 ### A-3. サーバを起動する
 

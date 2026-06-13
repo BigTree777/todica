@@ -1,5 +1,5 @@
 /**
- * 単体テスト: アプリ起動分岐 (BL-074 / Step 4).
+ * 単体テスト: アプリ起動分岐.
  *
  * 受け入れ基準の出典:
  *   - docs/developer/features/app-login/spec.md §「受け入れ基準」AC-1 / AC-4

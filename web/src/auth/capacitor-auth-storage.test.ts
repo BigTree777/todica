@@ -1,5 +1,5 @@
 /**
- * 単体テスト: CapacitorAuthStorage (BL-078 / BL-074 補完).
+ * 単体テスト: CapacitorAuthStorage.
  *
  * 受け入れ基準の出典:
  *   - docs/developer/features/auth-storage-tests/spec.md AC-8〜AC-12

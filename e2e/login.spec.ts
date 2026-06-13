@@ -1,12 +1,12 @@
 /**
- * LoginView E2E (BL-077 / e2e-login-spec).
+ * LoginView E2E (e2e-login-spec).
  *
  * 仕様参照:
  *   - docs/developer/features/e2e-login-spec/spec.md (AC-1 / AC-2 / AC-3 / AC-4)
  *   - docs/developer/features/e2e-login-spec/plan.md (D-1 〜 D-9, Step 1 〜 6)
  *
  * 検証範囲:
- *   BL-074 (アプリ内パスワードログイン) で実装した
+ *   アプリ内パスワードログイン経路を Playwright で実機検証する:
  *     LoginView → /api/v1/login → 今日ビュー → SettingsView ログアウト → LoginView 戻り
  *   の往復を, 実ブラウザ経由で 1 spec にまとめて回帰防止する.
  *
@@ -30,9 +30,9 @@ import { E2E_TEST_PASSWORD } from "../playwright.config";
 /** auth-storage が `localStorage` に保存するキー. `web/src/auth/auth-storage.ts` の `STORAGE_KEY` と揃える. */
 const AUTH_TOKEN_STORAGE_KEY = "todica.auth.token";
 
-test.describe("BL-077 LoginView 往復シナリオ", () => {
+test.describe("LoginView 往復シナリオ", () => {
   // D-4: 各 test を独立 reproducible にするため, 開始時点で必ず未認証状態にする.
-  // localStorage の token と cookie をクリアし, BL-074 で保存される token を引きずらない.
+  // localStorage の token と cookie をクリアして各 test を未認証状態から開始する.
   test.beforeEach(async ({ page, context }) => {
     await context.clearCookies();
     // localStorage は origin スコープなので, baseURL を一度開いてからクリアする.

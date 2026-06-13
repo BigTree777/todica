@@ -1,5 +1,5 @@
 /**
- * 単体テスト: HttpProjectRepository が 401 を引いたときの挙動 (BL-076 / AC-2).
+ * 単体テスト: HttpProjectRepository が 401 を引いたときの挙動 (AC-対応).
  *
  * 受け入れ基準の出典:
  *   - docs/developer/features/authed-fetch-repositories/spec.md §AC-2

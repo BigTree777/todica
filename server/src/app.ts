@@ -73,12 +73,12 @@ export interface AppDeps {
   settingsRepository: SettingsRepository;
   clock: Clock;
   /**
-   * BL-074 / app-login: パスワードハッシュ (bcrypt). `APP_PASSWORD_HASH` env を経由して
+   * パスワードハッシュ (bcrypt). `APP_PASSWORD_HASH` env を経由して
    * `main.ts` から渡される. plan.md D-4 / D-18.
    */
   passwordHash: string;
   /**
-   * BL-074 / app-login: セッション永続化. plan.md D-1 / D-5.
+   * セッション永続化.
    */
   sessionRepository: SessionRepository;
   /**
@@ -127,7 +127,7 @@ export function createApp(deps: AppDeps): Hono {
   // ---------- ヘルスチェック（認証不要）----------
   app.get("/healthz", (c) => c.json({ status: "ok" }));
 
-  // ---------- 認証ミドルウェア (BL-074: sessions lookup) ----------
+  // ---------- 認証ミドルウェア (sessions lookup) ----------
   // plan.md D-11 / D-15:
   //   - /api/v1/login は token を持たないクライアントから呼ばれるため素通し.
   //   - /healthz も素通し (既存仕様の維持).
@@ -175,7 +175,7 @@ export function createApp(deps: AppDeps): Hono {
       await next();
       return;
     }
-    // BL-074 / plan D-16: /login /logout は Idempotency-Key 必須ガードの対象外.
+    // /login /logout は Idempotency-Key 必須ガードの対象外.
     if (c.req.path === "/api/v1/login" || c.req.path === "/api/v1/logout") {
       await next();
       return;
@@ -197,7 +197,7 @@ export function createApp(deps: AppDeps): Hono {
   };
   app.use("*", idempotencyMiddleware);
 
-  // ---------- POST /api/v1/login (BL-074 / AC-2 / AC-3) ----------
+  // ---------- POST /api/v1/login ----------
   // plan.md §「処理フロー — ログイン」/ D-2 / D-6 / D-14:
   //   1. body = { password: string }. 不正なら 400.
   //   2. bcrypt.compare(password, deps.passwordHash). 不一致なら 401 INVALID_PASSWORD.
@@ -232,7 +232,7 @@ export function createApp(deps: AppDeps): Hono {
     return c.json({ token, expiresAt }, 200);
   });
 
-  // ---------- POST /api/v1/logout (BL-074 / AC-5) ----------
+  // ---------- POST /api/v1/logout ----------
   // plan.md §「処理フロー — ログアウト」: 有効な session でないと到達しない (authMiddleware が 401).
   // 通過時は Authorization から token を抽出し sessions から DELETE して 204 を返す.
   app.post("/api/v1/logout", async (c) => {

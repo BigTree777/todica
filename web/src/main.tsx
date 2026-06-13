@@ -4,7 +4,7 @@
  * - BrowserRouter + Routes でルーティングを設定.
  * - "/"         → /today にリダイレクト（またはネイティブ初回起動時は /setup）
  * - "/setup"    → SetupView（Android 初回起動時のサーバ URL 検証 + /healthz）
- * - "/login"    → LoginView (BL-074 / token 未保持 / 401 受信時に表示)
+ * - "/login"    → LoginView (token 未保持 / 401 受信時に表示)
  * - "/today"    → TodayView
  * - "/settings" → SettingsView
  * - "/trash"    → TrashView
@@ -20,7 +20,7 @@
  *   - mode = 'local' の場合は Local Repository 実装を注入する.
  *   - LocalResetUsecase.runIfNeeded() を起動時に実行する.
  *
- * BL-074: 旧 `VITE_AUTH_TOKEN` env / SetupView の token 入力は廃止. token は
+ * 認証 token は
  *   `auth-storage` (Web: localStorage / Android: Preferences) 経由で保存し,
  *   起動時に token 有無で `LoginView` / 本体 を分岐する.
  */
@@ -113,10 +113,10 @@ function App({ config, repos: initialRepos, authStorage }: AppProps) {
   const [authToken, setAuthToken] = useState(config.authToken);
   const [currentMode, setCurrentMode] = useState<AppMode>(config.mode);
   const [repos, setRepos] = useState<Repositories>(initialRepos);
-  // BL-074: token 有無で起動分岐. server モードのみ token を必要とする.
+  // token 有無で起動分岐. server モードのみ token を必要とする.
   const [token, setToken] = useState<string | null>(config.authToken || null);
 
-  // BL-074: `todica:auth-expired` 発火時に token を破棄して LoginView に戻す.
+  // `todica:auth-expired` 発火時に token を破棄して LoginView に戻す.
   useEffect(() => {
     const handler = () => {
       void (async () => {
@@ -135,7 +135,7 @@ function App({ config, repos: initialRepos, authStorage }: AppProps) {
     };
   }, [authStorage]);
 
-  // BL-074: LoginView の login コールバック.
+  // LoginView の login コールバック.
   const handleLogin = async (password: string) => {
     try {
       const result = await loginRequest(baseUrl, password);
@@ -153,7 +153,7 @@ function App({ config, repos: initialRepos, authStorage }: AppProps) {
     setRepos(buildHttpRepos(baseUrl));
   };
 
-  // BL-074: ログアウト処理. /api/v1/logout を叩いて token を破棄.
+  // ログアウト処理. /api/v1/logout を叩いて token を破棄.
   const handleLogout = async () => {
     if (token) {
       await logoutRequest(baseUrl, token);
@@ -278,7 +278,7 @@ function App({ config, repos: initialRepos, authStorage }: AppProps) {
       }
     : undefined;
 
-  // BL-074: server モードで token が無い (初回 / 期限切れ / logout 後) は LoginView を全画面で表示する.
+  // server モードで token が無い (初回 / 期限切れ / logout 後) は LoginView を全画面で表示する.
   // local モードは認証不要のため LoginView を経由しない (plan §「スコープ境界」).
   if (currentMode === "server" && !token && !config.needsSetup) {
     return (
@@ -374,7 +374,7 @@ function SetupViewWithNav({ onValidated, onSelectLocal }: SetupViewWithNavProps)
 
   const handleValidated = async (serverUrl: string) => {
     await onValidated(serverUrl);
-    // BL-074: URL 検証完了後は LoginView (= "/") へ遷移する.
+    // URL 検証完了後は LoginView (= "/") へ遷移する.
     navigate("/", { replace: true });
   };
 
@@ -435,7 +435,7 @@ async function init() {
         routine: new LocalRoutineRepository(anyDb),
       };
     } else {
-      // BL-019 / BL-074: サーバモード. token は auth-storage から取得 (なければ LoginView).
+      // サーバモード. token は auth-storage から取得 (なければ LoginView).
       const url = serverUrl ?? "";
       const token = (await authStorage.getToken()) ?? "";
       config = { mode: "server", baseUrl: url, authToken: token, isNative: true, needsSetup: !url };
@@ -450,7 +450,7 @@ async function init() {
     repos = buildHttpRepos(baseUrl);
   }
 
-  // BL-074: authed-fetch に auth-storage を注入 (401 検知時に token を破棄するため).
+  // authed-fetch に auth-storage を注入 (401 検知時に token を破棄するため).
   setAuthStorage(authStorage);
 
   createRoot(root).render(
