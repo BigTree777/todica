@@ -54,4 +54,8 @@ export class DrizzleSessionRepository implements SessionRepository {
   async deleteByToken(token: string): Promise<void> {
     this.db.delete(sessions).where(eq(sessions.token, token)).run();
   }
+
+  async deleteAll(): Promise<void> {
+    this.db.delete(sessions).run();
+  }
 }

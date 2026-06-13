@@ -38,6 +38,7 @@ import {
   login as loginRequest,
   logout as logoutRequest,
 } from "./auth/login-client.js";
+import { changePassword as changePasswordRequest } from "./auth/password-client.js";
 import { useSyncQueue } from "./hooks/use-sync-queue.js";
 import { queryClient } from "./query-client.js";
 import { HttpProjectRepository } from "./repositories/project-repository.js";
@@ -158,6 +159,19 @@ function App({ config, repos: initialRepos, authStorage }: AppProps) {
     if (token) {
       await logoutRequest(baseUrl, token);
     }
+    await authStorage.clearToken();
+    setToken(null);
+    setAuthToken("");
+  };
+
+  const handleChangePassword = async (currentPassword: string, newPassword: string) => {
+    if (!token) {
+      throw new Error("Authentication token is missing");
+    }
+    await changePasswordRequest(baseUrl, token, currentPassword, newPassword);
+  };
+
+  const handlePasswordChanged = async () => {
     await authStorage.clearToken();
     setToken(null);
     setAuthToken("");
@@ -351,6 +365,10 @@ function App({ config, repos: initialRepos, authStorage }: AppProps) {
                       }
                     : undefined
                 }
+                onChangePassword={
+                  currentMode === "server" && token ? handleChangePassword : undefined
+                }
+                onPasswordChanged={handlePasswordChanged}
               />
             }
           />

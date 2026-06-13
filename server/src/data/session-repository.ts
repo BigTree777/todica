@@ -22,4 +22,6 @@ export interface SessionRepository {
   findValidByToken(token: string, now: number): Promise<SessionRecord | null>;
   /** token に対応する行を削除する. 不在なら no-op (冪等). */
   deleteByToken(token: string): Promise<void>;
+  /** 全 session を削除する. */
+  deleteAll(): Promise<void>;
 }

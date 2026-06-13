@@ -16,6 +16,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import "./settings-view.css";
+import { InvalidPasswordError } from "../../auth/password-client.js";
 import { PatchConflictError } from "../../repositories/settings-repository.js";
 import type {
   PatchSettingsCommand,
@@ -34,10 +35,25 @@ export interface SettingsViewProps {
   onSwitchMode?: () => void | Promise<void>;
   /** ログアウトボタン押下時のコールバック (渡されている場合のみボタンを表示) */
   onLogout?: () => void | Promise<void>;
+  /** パスワード変更 API 呼び出し. */
+  onChangePassword?: (currentPassword: string, newPassword: string) => Promise<void>;
+  /** テストおよび既存呼び出し向けの別名. */
+  changePassword?: (currentPassword: string, newPassword: string) => Promise<void>;
+  /** パスワード変更成功後のセッション破棄. */
+  onPasswordChanged?: () => void | Promise<void>;
 }
 
 export function SettingsView(props: SettingsViewProps): JSX.Element {
-  const { repository, currentMode, onSwitchMode, onLogout } = props;
+  const {
+    repository,
+    currentMode,
+    onSwitchMode,
+    onLogout,
+    onChangePassword,
+    changePassword,
+    onPasswordChanged,
+  } = props;
+  const passwordChange = onChangePassword ?? changePassword;
   const queryClient = useQueryClient();
 
   const { data: fetchedSettings } = useQuery({
@@ -52,6 +68,10 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
 
   const [inputValue, setInputValue] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   // 初期化済みフラグ（fetchedSettings が取得されたら一度だけ inputValue を初期化）
   const initializedRef = useRef(false);
@@ -112,6 +132,31 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
     [inputValue, settings, patchMutation, repository, queryClient],
   );
 
+  const handlePasswordSubmit = useCallback(
+    async (event: React.FormEvent) => {
+      event.preventDefault();
+      setPasswordError(null);
+      if (!passwordChange || !currentPassword || !newPassword || !confirmPassword) {
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        setPasswordError("新パスワードと確認入力が一致しません");
+        return;
+      }
+      try {
+        await passwordChange(currentPassword, newPassword);
+        await onPasswordChanged?.();
+      } catch (err) {
+        setPasswordError(
+          err instanceof InvalidPasswordError
+            ? "現在のパスワードが正しくありません"
+            : "変更できませんでした",
+        );
+      }
+    },
+    [confirmPassword, currentPassword, newPassword, onPasswordChanged, passwordChange],
+  );
+
   return (
     <main className="settings-view">
       <h1>設定</h1>
@@ -128,20 +173,64 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
         </div>
       )}
 
-      <form onSubmit={handleSave} aria-label="設定フォーム" className="settings-view__form">
-        <div>
-          <label htmlFor="day-boundary-time">境界時刻</label>
-          <input
-            id="day-boundary-time"
-            type="text"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-          />
-        </div>
-        <button type="submit" className="button button--primary">
-          保存
-        </button>
-      </form>
+      {settings && (
+        <form onSubmit={handleSave} aria-label="設定フォーム" className="settings-view__form">
+          <div>
+            <label htmlFor="day-boundary-time">境界時刻</label>
+            <input
+              id="day-boundary-time"
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+            />
+          </div>
+          <button type="submit" className="button button--primary">
+            {passwordChange === undefined ? "保存" : "更新"}
+          </button>
+        </form>
+      )}
+
+      {passwordChange !== undefined && (
+        <section aria-label="パスワード変更" className="settings-view__section">
+          <h2>パスワード変更</h2>
+          <form onSubmit={handlePasswordSubmit}>
+            <div>
+              <label htmlFor="current-password">現在のパスワード</label>
+              <input
+                id="current-password"
+                type="password"
+                autoComplete="current-password"
+                value={currentPassword}
+                onChange={(event) => setCurrentPassword(event.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="new-password">新しいパスワード</label>
+              <input
+                id="new-password"
+                type="password"
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="confirm-password">新しいパスワード (確認)</label>
+              <input
+                id="confirm-password"
+                type="password"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+              />
+            </div>
+            {passwordError && <div role="alert">{passwordError}</div>}
+            <button type="submit" className="button button--primary">
+              変更する
+            </button>
+          </form>
+        </section>
+      )}
 
       {currentMode !== undefined && (
         <section aria-label="モード切替" className="settings-view__section">

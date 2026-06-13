@@ -33,6 +33,7 @@ import { cors } from "hono/cors";
 import type { CounterRepository } from "./data/counter-repository.js";
 import type { FocusRepository } from "./data/focus-repository.js";
 import type { IdempotencyStore } from "./data/idempotency-store.js";
+import type { PasswordRepository } from "./data/password-repository.js";
 import type { ProjectRepository } from "./data/project-repository.js";
 import type { RoutineRepository } from "./data/routine-repository.js";
 import type { SessionRepository } from "./data/session-repository.js";
@@ -72,11 +73,8 @@ export interface AppDeps {
    */
   settingsRepository: SettingsRepository;
   clock: Clock;
-  /**
-   * パスワードハッシュ (bcrypt). `APP_PASSWORD_HASH` env を経由して
-   * `main.ts` から渡される. plan.md D-4 / D-18.
-   */
-  passwordHash: string;
+  /** 現在の bcrypt パスワードハッシュの永続化. */
+  passwordRepository: PasswordRepository;
   /**
    * セッション永続化.
    */
@@ -175,8 +173,12 @@ export function createApp(deps: AppDeps): Hono {
       await next();
       return;
     }
-    // /login /logout は Idempotency-Key 必須ガードの対象外.
-    if (c.req.path === "/api/v1/login" || c.req.path === "/api/v1/logout") {
+    // 認証操作は Idempotency-Key 必須ガードの対象外.
+    if (
+      c.req.path === "/api/v1/login" ||
+      c.req.path === "/api/v1/logout" ||
+      c.req.path === "/api/v1/password"
+    ) {
       await next();
       return;
     }
@@ -200,7 +202,7 @@ export function createApp(deps: AppDeps): Hono {
   // ---------- POST /api/v1/login ----------
   // plan.md §「処理フロー — ログイン」/ D-2 / D-6 / D-14:
   //   1. body = { password: string }. 不正なら 400.
-  //   2. bcrypt.compare(password, deps.passwordHash). 不一致なら 401 INVALID_PASSWORD.
+  //   2. DB の現在ハッシュと照合し, 不一致なら 401 INVALID_PASSWORD.
   //   3. token = randomBytes(32).toString("hex"). expiresAt = clock.now() + 30 日.
   //   4. sessionRepository.create({ token, expiresAt, createdAt }).
   //   5. 200 OK { token, expiresAt }.
@@ -216,9 +218,13 @@ export function createApp(deps: AppDeps): Hono {
     if (typeof password !== "string" || password.length === 0) {
       return errorJson(c, 400, "INVALID_REQUEST_BODY", "password must be a non-empty string");
     }
+    const passwordHash = await deps.passwordRepository.getHash();
+    if (passwordHash === null) {
+      return errorJson(c, 500, "INTERNAL_ERROR", "password is not configured");
+    }
     let match: boolean;
     try {
-      match = await bcrypt.compare(password, deps.passwordHash);
+      match = await bcrypt.compare(password, passwordHash);
     } catch {
       return errorJson(c, 500, "INTERNAL_ERROR", "password verification failed");
     }
@@ -230,6 +236,49 @@ export function createApp(deps: AppDeps): Hono {
     const expiresAt = nowMs + THIRTY_DAYS_MS;
     await deps.sessionRepository.create({ token, expiresAt, createdAt: nowMs });
     return c.json({ token, expiresAt }, 200);
+  });
+
+  app.post("/api/v1/password", async (c) => {
+    let body: Record<string, unknown>;
+    try {
+      body = (await c.req.json()) as Record<string, unknown>;
+    } catch {
+      return errorJson(c, 400, "INVALID_REQUEST_BODY", "request body must be valid JSON");
+    }
+
+    const currentPassword = body.currentPassword;
+    const newPassword = body.newPassword;
+    if (
+      typeof currentPassword !== "string" ||
+      currentPassword.length === 0 ||
+      typeof newPassword !== "string" ||
+      newPassword.length === 0 ||
+      currentPassword === newPassword
+    ) {
+      return errorJson(
+        c,
+        400,
+        "INVALID_REQUEST_BODY",
+        "currentPassword and newPassword must be different non-empty strings",
+      );
+    }
+
+    try {
+      const currentHash = await deps.passwordRepository.getHash();
+      if (currentHash === null) {
+        return errorJson(c, 500, "INTERNAL_ERROR", "password is not configured");
+      }
+      if (!(await bcrypt.compare(currentPassword, currentHash))) {
+        return errorJson(c, 401, "INVALID_PASSWORD", "password is incorrect");
+      }
+
+      const newHash = bcrypt.hashSync(newPassword, 12);
+      await deps.passwordRepository.setHash(newHash, Date.now());
+      await deps.sessionRepository.deleteAll();
+      return c.json({}, 200);
+    } catch {
+      return errorJson(c, 500, "INTERNAL_ERROR", "password change failed");
+    }
   });
 
   // ---------- POST /api/v1/logout ----------
