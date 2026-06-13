@@ -94,10 +94,7 @@ test.describe("BL-077 LoginView 往復シナリオ", () => {
 
     // And: localStorage に token が保存されている.
     //   D-7: キー名は auth-storage.ts の STORAGE_KEY を固定値として参照する.
-    const token = await page.evaluate(
-      (key) => localStorage.getItem(key),
-      AUTH_TOKEN_STORAGE_KEY,
-    );
+    const token = await page.evaluate((key) => localStorage.getItem(key), AUTH_TOKEN_STORAGE_KEY);
     expect(token).not.toBeNull();
     expect((token ?? "").length).toBeGreaterThan(0);
   });
