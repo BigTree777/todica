@@ -226,7 +226,8 @@ graph TB
 
 ### 7.4 認証・通信
 
-- 認証は単一認証トークン（推奨案. [ADR-0010](../adr/0010-api-design.md)）.
+- 認証はパスワード認証で取得した opaque token を Bearer ヘッダで送る単一トークン方式（[ADR-0010](../adr/0010-api-design.md)）. パスワードは bcrypt ハッシュとして DB の `app_password` テーブルに 1 行だけ持ち, opaque token は 32 byte 乱数として `sessions` テーブルに永続化する. token 有効期限は約 30 日.
+- 初期パスワードはブラウザの InitialSetupView から設定する. サーバ起動時の env 経由 seed は行わない. 詳細は [`api/overview.md`](api/overview.md) §3 参照.
 - 暗号化された通信路を必須とする. 終端方法は実装ドキュメントを参照.
 - マルチテナント化しない. ユーザー ID / テナント ID をスキーマに持たない.
 

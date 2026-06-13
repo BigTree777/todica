@@ -141,7 +141,7 @@ PWA + オフライン書込キュー + 楽観ロック（[ADR-0008](../../adr/00
 
 ---
 
-## Session（アプリログインの opaque token） — BL-074
+## Session（アプリログインの opaque token）
 
 サーバ側のみ. `POST /api/v1/login` 成功時に発行される opaque token を永続化する.
 
@@ -156,7 +156,7 @@ PWA + オフライン書込キュー + 楽観ロック（[ADR-0008](../../adr/00
 
 ---
 
-## AppPassword（現在のログインパスワード） — BL-079
+## AppPassword（現在のログインパスワード）
 
 サーバ側のみ。現在有効な bcrypt ハッシュを単一レコードで保持する。
 
