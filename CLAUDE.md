@@ -57,12 +57,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - テストが通ることをもって機能が実装されたとみなす。この対応関係を重視する。
 - したがってテストは仕様を正しく表現している必要がある。
 
-### 5. 実装の実行手段（implementer の方針）
+### 5. 実装の実行手段（管理者が選ぶ）
 
-実装の実行手段は `implementer` サブエージェントの責務であり、その定義（`.claude/agents/implementer.md`）に従う。概要は以下のとおり。
+実装フェーズの実行手段は **管理者 (メインの claude)** が選ぶ。`implementer` サブエージェントが内部で切り替えるのではない。
 
-- 実装は原則、Claude Code のスキル **`codex-rescue`**（CodeX 関連スキル）に委譲する。
-- codex がリミットに達している場合、または `codex-rescue` スキル / codex が利用できない場合は、**claude でそのまま実装**する。
+- 実装の選択肢は次の 2 通り:
+  1. **管理者が直接 `codex-rescue` スキル / `codex:codex-rescue` サブエージェントを呼ぶ**。
+  2. **管理者が `implementer` サブエージェントに依頼する**（implementer は claude として直接実装する。codex-rescue を呼ばない）。
+- `codex-rescue` から `claude` への委譲連鎖は無い。codex-rescue は単独のスキル / エージェントであり, 失敗時に別エージェントへ自動フォールバックする仕組みは持たない。
+- `implementer` は「codex-rescue 利用可否を判定して切替える」ようなロジックを持たない。管理者が依頼した時点で claude として実装することが確定している。
+- 詳細は `.claude/agents/implementer.md` を参照。
 
 ## Git 規約
 
