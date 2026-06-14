@@ -59,10 +59,8 @@ export function calcTodayBoundaryAt(
   return new Date(boundaryLocalAsUtc - offsetMs).toISOString();
 }
 
-function getServerTimeZone(): string {
-  if (process.env.TZ) return process.env.TZ;
-  if (process.env.NODE_ENV === "test") return "UTC";
-  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+export function getServerTimeZone(): string {
+  return process.env.TZ ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
 /**

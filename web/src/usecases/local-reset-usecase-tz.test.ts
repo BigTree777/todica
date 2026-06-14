@@ -11,7 +11,7 @@
  *
  * 補足:
  *   既存 local-reset-usecase.ts は dayBoundaryTimezone カラムをサーバ由来として
- *   読みに行く設計だが, BL-091 では「端末 TZ をフォールバックとして使う」方針に揃える.
+ *   読みに行き, 未設定の場合は端末 TZ をフォールバックとして使う.
  *   本テストでは dayBoundaryTimezone カラムを「未設定 (undefined)」にして,
  *   端末 TZ から自然に Asia/Tokyo が解決されるかを検証する.
  *   実装が dayBoundaryTimezone を "Asia/Tokyo" にハードコードしている現状ではこの

@@ -163,6 +163,20 @@ describe("SettingsView (BL-091 / spec.md G-4 重複表示の撤去)", () => {
     expect(input.value).toBe("04:00");
   });
 
+  it("シナリオ: dayBoundaryTime は input control 以外の DOM ノードに表示されない", async () => {
+    const repo = makeMockRepository({ dayBoundaryTime: "04:00" });
+    const { container } = renderWithQueryClient(<SettingsView repository={repo} />);
+
+    const input = await screen.findByLabelText("リセット時刻");
+    const form = input.closest("form");
+
+    expect(form).not.toBeNull();
+    expect(form?.querySelector("output")).toBeNull();
+    expect(screen.queryByText("04:00")).toBeNull();
+    expect(input).toHaveValue("04:00");
+    expect(container.querySelectorAll('input[value="04:00"]')).toHaveLength(1);
+  });
+
   it("シナリオ: 保存後の最新値は input の value に反映される (重複表示しない)", async () => {
     // spec.md §G-4 シナリオ:
     //   Given SettingsView が開かれており input 欄に "04:00" が表示されている

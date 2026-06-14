@@ -29,6 +29,7 @@ import { DrizzleRoutineRepository } from "./infra/persistence/drizzle/routine-re
 import { DrizzleSessionRepository } from "./infra/persistence/drizzle/session-repository.js";
 import { DrizzleSettingsRepository } from "./infra/persistence/drizzle/settings-repository.js";
 import { DrizzleTaskRepository } from "./infra/persistence/drizzle/task-repository.js";
+import { getServerTimeZone } from "./use-cases/daily-reset.js";
 
 const DATABASE_PATH = process.env.DATABASE_PATH ?? "./todica.db";
 const PORT = Number.parseInt(process.env.PORT ?? "3000", 10);
@@ -44,6 +45,9 @@ const passwordRepository = new DrizzlePasswordRepository({ db });
 // `FakeClock` を使う. `/api/v1/test/clock/*` エンドポイントがこの clock を進める手段を提供する.
 // 本番では `TEST_NOW` を立てない (= 常に `SystemClock`).
 const clock: Clock = TEST_NOW ? new FakeClock(TEST_NOW) : new SystemClock();
+
+// eslint-disable-next-line no-console
+console.log("[server] resolved timezone:", getServerTimeZone());
 
 const app = createApp({
   taskRepository: new DrizzleTaskRepository({ db }),

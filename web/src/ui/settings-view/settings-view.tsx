@@ -167,7 +167,6 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
             />
-            <output hidden>{inputValue}</output>
           </div>
           <button type="submit" className="button button--primary">
             {onChangePassword === undefined ? "保存" : "更新"}

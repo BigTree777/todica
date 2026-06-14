@@ -122,7 +122,7 @@ describe("SettingsView (BL-009 境界時刻の設定)", () => {
     renderWithQueryClient(<SettingsView repository={repo} />);
 
     // getSettings() が呼ばれる.
-    expect(await screen.findByText(/04:00/)).toBeInTheDocument();
+    expect(await screen.findByDisplayValue("04:00")).toBeInTheDocument();
     expect(repo.getSettingsMock).toHaveBeenCalledTimes(1);
   });
 
@@ -136,10 +136,10 @@ describe("SettingsView (BL-009 境界時刻の設定)", () => {
     renderWithQueryClient(<SettingsView repository={repo} />);
 
     // 初期表示を待つ.
-    await screen.findByText(/04:00/);
+    await screen.findByDisplayValue("04:00");
 
     // フォームに "06:00" を入力する.
-    // BL-091: ラベル文言は「境界時刻」から「リセット時刻」へ統一中. どちらでも取得できる正規表現にする.
+    // ラベルは「リセット時刻」(旧表記との互換のため正規表現で受ける).
     const input = screen.getByLabelText(/境界時刻|リセット時刻/);
     await user.clear(input);
     await user.type(input, "06:00");
@@ -155,7 +155,7 @@ describe("SettingsView (BL-009 境界時刻の設定)", () => {
     expect(arg.ifMatch).toBe(1);
 
     // 保存成功後に表示が "06:00" に更新される.
-    expect(await screen.findByText(/06:00/)).toBeInTheDocument();
+    expect(screen.getByDisplayValue("06:00")).toBeInTheDocument();
 
     // PATCH 成功後に getSettings() を再フェッチしてサーバ正本値を反映する（初回 + 再フェッチ = 2 回）.
     expect(repo.getSettingsMock).toHaveBeenCalledTimes(2);
@@ -171,10 +171,10 @@ describe("SettingsView (BL-009 境界時刻の設定)", () => {
     renderWithQueryClient(<SettingsView repository={repo} />);
 
     // 初期表示を待つ.
-    await screen.findByText(/04:00/);
+    await screen.findByDisplayValue("04:00");
 
     // バリデーション違反の値を入力する.
-    // BL-091: ラベル文言は「境界時刻」から「リセット時刻」へ統一中. どちらでも取得できる正規表現にする.
+    // ラベルは「リセット時刻」(旧表記との互換のため正規表現で受ける).
     const input = screen.getByLabelText(/境界時刻|リセット時刻/);
     await user.clear(input);
     await user.type(input, "25:00");
@@ -209,9 +209,9 @@ describe("SettingsView (BL-009 境界時刻の設定)", () => {
     renderWithQueryClient(<SettingsView repository={repo} />);
 
     // 初期表示を待つ.
-    await screen.findByText(/04:00/);
+    await screen.findByDisplayValue("04:00");
 
-    // BL-091: ラベル文言は「境界時刻」から「リセット時刻」へ統一中. どちらでも取得できる正規表現にする.
+    // ラベルは「リセット時刻」(旧表記との互換のため正規表現で受ける).
     const input = screen.getByLabelText(/境界時刻|リセット時刻/);
     await user.clear(input);
     await user.type(input, "06:00");
@@ -224,7 +224,7 @@ describe("SettingsView (BL-009 境界時刻の設定)", () => {
     expect(errorMessage).toBeInTheDocument();
 
     // 412 ボディから取得したサーバ最新値 "05:00" が設定値として表示される (D-004: 追加リクエスト不要).
-    expect(await screen.findByText(/05:00/)).toBeInTheDocument();
+    expect(screen.getByDisplayValue("05:00")).toBeInTheDocument();
 
     // 412 時は getSettings() の追加呼び出しはしない（初回のみ = 1 回）(D-004).
     expect(repo.getSettingsMock).toHaveBeenCalledTimes(1);
@@ -357,7 +357,7 @@ describe("SettingsView ログアウト (BL-074 AC-5)", () => {
 
     renderWithQueryClient(<SettingsView repository={repo} onLogout={onLogout} />);
 
-    await screen.findByText(/04:00/);
+    await screen.findByDisplayValue("04:00");
 
     const logoutButton = screen.getByRole("button", { name: /ログアウト/ });
     expect(logoutButton).toBeInTheDocument();
@@ -370,7 +370,7 @@ describe("SettingsView ログアウト (BL-074 AC-5)", () => {
 
     renderWithQueryClient(<SettingsView repository={repo} onLogout={onLogout} />);
 
-    await screen.findByText(/04:00/);
+    await screen.findByDisplayValue("04:00");
 
     const logoutButton = screen.getByRole("button", { name: /ログアウト/ });
     await user.click(logoutButton);
@@ -383,7 +383,7 @@ describe("SettingsView ログアウト (BL-074 AC-5)", () => {
 
     renderWithQueryClient(<SettingsView repository={repo} />);
 
-    await screen.findByText(/04:00/);
+    await screen.findByDisplayValue("04:00");
 
     expect(screen.queryByRole("button", { name: /ログアウト/ })).toBeNull();
   });
@@ -436,7 +436,7 @@ describe("SettingsView パスワード変更セクション (password-change AC-
 
     // 「パスワード変更」セクション (aria-label) が描画される.
     // 初期表示の dayBoundaryTime を待ってから検査する.
-    await screen.findByText(/04:00/);
+    await screen.findByDisplayValue("04:00");
     const section = await screen.findByRole("region", { name: /パスワード変更/ });
     expect(section).toBeInTheDocument();
   });
@@ -454,7 +454,7 @@ describe("SettingsView パスワード変更セクション (password-change AC-
       />,
     );
 
-    await screen.findByText(/04:00/);
+    await screen.findByDisplayValue("04:00");
 
     // 3 つの password input.
     const current = await screen.findByLabelText(/現在のパスワード/);
@@ -492,7 +492,7 @@ describe("SettingsView パスワード変更セクション (password-change AC-
       />,
     );
 
-    await screen.findByText(/04:00/);
+    await screen.findByDisplayValue("04:00");
 
     const current = await screen.findByLabelText(/現在のパスワード/);
     // 現在 PW だけ入力し, 新 PW / 確認 PW は空のまま submit.
@@ -524,7 +524,7 @@ describe("SettingsView パスワード変更セクション (password-change AC-
       />,
     );
 
-    await screen.findByText(/04:00/);
+    await screen.findByDisplayValue("04:00");
 
     const current = await screen.findByLabelText(/現在のパスワード/);
     const next = await screen.findByLabelText(/^新しいパスワード$/);
@@ -564,7 +564,7 @@ describe("SettingsView パスワード変更セクション (password-change AC-
       />,
     );
 
-    await screen.findByText(/04:00/);
+    await screen.findByDisplayValue("04:00");
 
     const current = await screen.findByLabelText(/現在のパスワード/);
     const next = await screen.findByLabelText(/^新しいパスワード$/);
@@ -600,7 +600,7 @@ describe("SettingsView パスワード変更セクション (password-change AC-
       />,
     );
 
-    await screen.findByText(/04:00/);
+    await screen.findByDisplayValue("04:00");
 
     const current = await screen.findByLabelText(/現在のパスワード/);
     const next = await screen.findByLabelText(/^新しいパスワード$/);
@@ -636,7 +636,7 @@ describe("SettingsView パスワード変更セクション (password-change AC-
       />,
     );
 
-    await screen.findByText(/04:00/);
+    await screen.findByDisplayValue("04:00");
 
     const current = await screen.findByLabelText(/現在のパスワード/);
     const next = await screen.findByLabelText(/^新しいパスワード$/);
@@ -664,7 +664,7 @@ describe("SettingsView パスワード変更セクション (password-change AC-
 
     renderWithQueryClient(<SettingsView repository={repo} />);
 
-    await screen.findByText(/04:00/);
+    await screen.findByDisplayValue("04:00");
 
     expect(screen.queryByRole("region", { name: /パスワード変更/ })).toBeNull();
     expect(screen.queryByLabelText(/現在のパスワード/)).toBeNull();
