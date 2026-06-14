@@ -30,6 +30,7 @@
 
 .settings-view__label {
   font-weight: bold;
+  font-size: var(--font-size-h2);
 }
 
 .settings-view__field-row {
