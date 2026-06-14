@@ -19,7 +19,7 @@ BL-074 で導入したアプリ内パスワードログイン経路 (`POST /api/
 - 非ゴール:
   - BL-074 の AC-4 (token 期限切れ → LoginView 戻り) の E2E カバー. 期限切れシナリオは vitest (server integration / web 単体) でカバー済み.
   - BL-074 の AC-6 (Android の SetupView → LoginView 2 ステップ) の E2E カバー. Playwright は Web (Chromium) のみ.
-  - BL-074 の AC-7 (旧 `AUTH_TOKEN` 完全廃止) の E2E カバー. 旧トークン拒否は server integration でカバー済み.
+  - BL-074 の AC-7 (旧固定トークン完全廃止) の E2E カバー. 旧トークン拒否は server integration でカバー済み.
   - 既存 e2e spec (`smoke.spec.ts` / `today-view-create-form.spec.ts` / `settings.spec.ts` 等) の構造改修.
   - クロスブラウザ (firefox / webkit) 展開. 現状の `playwright.config.ts` 方針 (chromium 限定) を踏襲する.
   - server / web の本体コード改修. テスト追加のみ.

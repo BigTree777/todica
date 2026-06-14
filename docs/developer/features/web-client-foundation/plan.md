@@ -126,7 +126,7 @@ export interface TrashViewProps {
 - `HttpSettingsRepository` — SettingsView に渡す（新規）
 - `HttpTrashRepository` — TrashView に渡す（新規）
 
-3 つのインスタンスはすべて同じ `BASE_URL` と `AUTH_TOKEN` を使う。
+3 つのインスタンスはすべて同じ `BASE_URL` を共有する。認証 token は `authedFetch` 経由で `auth-storage` から実行時に取得する (Repository が token を保持しない)。
 
 ## 重要な決定
 

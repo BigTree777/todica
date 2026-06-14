@@ -78,7 +78,7 @@
 
 - 触る: `e2e/login.spec.ts` 新規追加.
 - 触らない: server (`/api/v1/login` / `/logout` の実装) / web (`LoginView` / `SettingsView` / `main.tsx` / `auth-storage`) / 既存 e2e spec (25 本) / vitest 系テスト / `playwright.config.ts` の本体ロジック (re-export 確認のみ).
-- 触らない (BL-077 範囲外): AC-4 期限切れ / AC-6 Android 2 ステップ / AC-7 旧 AUTH_TOKEN. これらは vitest および server integration テストでカバー済み.
+- 触らない (BL-077 範囲外): AC-4 期限切れ / AC-6 Android 2 ステップ / AC-7 旧固定トークン拒否. これらは vitest および server integration テストでカバー済み.
 
 ## テスト方針
 

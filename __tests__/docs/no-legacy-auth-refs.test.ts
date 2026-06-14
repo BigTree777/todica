@@ -18,13 +18,7 @@ const excludedFeatureDirectories = new Set([
   "docs/developer/features/initial-password-setup",
 ]);
 
-const historyAllowedFiles = new Set([
-  "docs/developer/features/server-foundation/tasks.md",
-  "docs/developer/features/password-change/tasks.md",
-  "docs/developer/features/oss-release-prep/tasks.md",
-]);
-
-const forbiddenPattern = /VITE_AUTH_TOKEN|APP_PASSWORD_HASH|AUTH_TOKEN=/;
+const forbiddenPattern = /VITE_AUTH_TOKEN|APP_PASSWORD_HASH|AUTH_TOKEN/;
 const historyHeading = "## 経緯";
 
 function listMarkdownFiles(directory: string): string[] {
@@ -59,11 +53,8 @@ describe("docs の旧認証参照", () => {
         lines.forEach((line, index) => {
           if (!forbiddenPattern.test(line)) return;
 
-          const isAllowedHistory =
-            historyAllowedFiles.has(relativePath) &&
-            historyIndex !== -1 &&
-            index > historyIndex;
-          if (!isAllowedHistory) {
+          const isInHistorySection = historyIndex !== -1 && index > historyIndex;
+          if (!isInHistorySection) {
             violations.push(`${relativePath}:${index + 1}: ${line}`);
           }
         });
