@@ -35,6 +35,8 @@
   --color-border-subtle: #eee;
   /* アクセント (amber-700, WCAG AA 5.94:1 on #fff) */
   --color-accent: #b45309;
+  /* アクセント背景 (amber-100, 現在のタスクカード等で強調) */
+  --color-accent-bg-subtle: #fef3c7;
   /* フォーカスリング (blue-700, WCAG AAA 7.2:1 on #fff) */
   --color-focus-ring: #1d4ed8;
 }
