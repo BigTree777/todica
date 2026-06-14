@@ -2,7 +2,7 @@
 
 /**
  * RoutineCard 表示カードのレイアウト刷新 (RoutineFormCard と同じ 4 段構造に揃える)
- * (BL-073 / routine-card-align-with-form) 受け入れ基準テスト.
+ * 受け入れ基準テスト.
  *
  * 仕様参照:
  *   docs/developer/features/routine-card-align-with-form/spec.md
@@ -17,23 +17,23 @@
  *     AC-4 : `.routine-card__header` 直下子は PriorityStars のみ (name input / 曜日 / 削除 button が含まれない) (DOM).
  *     AC-5 : 「削除」 button が `.routine-card__actions` 直下に配置される (DOM).
  *   CSS 直読み:
- *     AC-6 : `.routine-card__title` ルールセットの 3 宣言 (BL-072 D-003) が無改修で残存 (CSS).
+ *     AC-6 : `.routine-card__title` ルールセットの 3 宣言 が無改修で残存 (CSS).
  *     AC-7 : `.routine-card__header` の justify-content が flex-end に変更されている (CSS).
  *     AC-8 : `.routine-card--form .routine-card__header` override が完全撤去されている (CSS / D-001 (a)).
- *     AC-9 : `.routine-card` 基底の 7 宣言 (BL-071 / BL-052) が無改修 (CSS).
+ *     AC-9 : `.routine-card` 基底の 7 宣言 が無改修 (CSS).
  *     AC-10: `.routine-card--form` / `.routine-card--form .routine-card__actions` セレクタが維持 (CSS).
  *   computed style:
  *     AC-11: 表示カード name input の computed font-size が --font-size-h2 (= 20px) と一致 (computed style).
  *   既存挙動の回帰防止:
  *     AC-12: name input blur で onNameBlur が呼ばれる (DOM).
- *     AC-13: 空文字 blur で input DOM 値が元値に復元 + onNameBlur("") (DOM / BL-070 D-002 維持).
- *     AC-14: 同値 blur でも onNameBlur が呼ばれる (DOM / BL-070 D-001 / 親が短絡判断).
- *     AC-15: 曜日 checkbox click で onDaysOfWeekChange が呼ばれる (DOM / BL-068 維持).
- *     AC-16: PriorityStars click で onDefaultPriorityChange が呼ばれる (DOM / BL-069 維持).
+ *     AC-13: 空文字 blur で input DOM 値が元値に復元 + onNameBlur("") (DOM / D-002 維持).
+ *     AC-14: 同値 blur でも onNameBlur が呼ばれる (DOM / D-001 / 親が短絡判断).
+ *     AC-15: 曜日 checkbox click で onDaysOfWeekChange が呼ばれる (DOM / 現状).
+ *     AC-16: PriorityStars click で onDefaultPriorityChange が呼ばれる (DOM / 現状).
  *     AC-17: 「削除」 button click で onDelete が呼ばれる (DOM).
  *     AC-18: routine.name 変更時に input DOM value が同期する (key 再マウント) (DOM).
  *   起票カード <RoutineFormCard> の不変性:
- *     AC-19: 起票カード DOM 構造 (BL-072 の 4 段) が無改修 (DOM).
+ *     AC-19: 起票カード DOM 構造 が無改修 (DOM).
  *     AC-20: 起票 name input の computed font-size が変わらない (= 20px) (computed style).
  *   a11y:
  *     AC-21: visually-hidden label が name input と紐づく (entity id suffix) (DOM / a11y).
@@ -44,7 +44,7 @@
  *     AC-25: 起票カード `.routine-card__header` の computed justify-content = flex-end (視覚不変) (computed style).
  *
  * 本ファイルは TDD の "red" を作るためのテスト.
- *   - 実装前 (= 表示カード `<RoutineCard>` の JSX が BL-071 + BL-070 の 3 段 / CSS が
+ *   - 実装前 (= 表示カード `<RoutineCard>` の JSX が + 現状 3 段 / CSS が
  *     `.routine-card__header { justify-content: space-between }` + 起票側 override の状態) では,
  *     AC-1 / AC-2 / AC-3 / AC-4 / AC-7 / AC-8 が red になる想定.
  *     加えて AC-25 (起票 computed justify-content) は本 BL の CSS 変更で表現が変わる箇所のため,
@@ -54,7 +54,7 @@
  *     実装前から green となる可能性もあるが, 本 BL 後も継続して green であることを担保する.
  *   - implementer が REQ-1 〜 REQ-6 を実装することで red 群が green 化する.
  *
- * 検証スタイル (BL-071 routine-card-header-layout.test.tsx / BL-072 routine-form-card-header-layout.test.tsx と同型):
+ * 検証スタイル:
  *   - CSS 直読み: readFileSync + extractRuleBody.
  *   - DOM レンダ: 動的 import + render パターン.
  *   - computed style: jsdom + vitest css: true 環境で getComputedStyle を取得.
@@ -86,7 +86,7 @@ const NOW = "2026-06-12T09:00:00.000Z";
 const ROUTINE_ID_R1 = "r-1";
 
 // ============================================================
-// CSS ルール本文の抽出ヘルパ (BL-071 / BL-072 と同形)
+// CSS ルール本文の抽出ヘルパ
 // ============================================================
 
 function extractRuleBody(css: string, selector: string): string | null {
@@ -134,7 +134,7 @@ async function importRoutineFormCard(): Promise<RoutineFormCardModule> {
 // describe ブロック
 // ============================================================
 
-describe("RoutineCard 表示カードのレイアウト刷新 (BL-073 / routine-card-align-with-form)", () => {
+describe("RoutineCard 表示カードのレイアウト刷新", () => {
   // ============================================================
   // DOM 構造系 (AC-1 / AC-2 / AC-3 / AC-4 / AC-5)
   // ============================================================
@@ -512,7 +512,7 @@ describe("RoutineCard 表示カードのレイアウト刷新 (BL-073 / routine-
   // ============================================================
 
   // ----------------------------------------------------------
-  // AC-6: `.routine-card__title` ルールセットの 3 宣言 (BL-072 D-003) が無改修で残存
+  // AC-6: `.routine-card__title` ルールセットの 3 宣言 が無改修で残存
   // ----------------------------------------------------------
   /**
    * シナリオ AC-6:
@@ -521,7 +521,7 @@ describe("RoutineCard 表示カードのレイアウト刷新 (BL-073 / routine-
    *   Then  display: flex / align-items: center / font-size: var(--font-size-h2) の 3 宣言が維持
    *    かつ `.routine-card--form .routine-card__title` のような起票専用 override が追加されていない
    */
-  describe("AC-6: .routine-card__title ルールセットの 3 宣言 (BL-072 D-003) が無改修", () => {
+  describe("AC-6: .routine-card__title ルールセットの 3 宣言 が無改修", () => {
     it(".routine-card__title ルールに display: flex を含む", () => {
       const css = readFileSync(routineCardCssPath, "utf-8");
       const body = extractRuleBody(css, ".routine-card__title");
@@ -628,11 +628,11 @@ describe("RoutineCard 表示カードのレイアウト刷新 (BL-073 / routine-
    * シナリオ AC-9:
    *   Given routine-card.css を読み込む
    *   When  `.routine-card` ルールセットを参照する
-   *   Then  BL-071 で確定した 7 宣言 (display: flex / flex-direction: column / gap: var(--space-md) +
+   *   Then  現状確定した 7 宣言 (display: flex / flex-direction: column / gap: var(--space-md) +
    *         visual 4 宣言: background / border / border-radius: var(--radius-lg) / padding: var(--space-md))
    *         がそのまま維持されている
    */
-  describe("AC-9: .routine-card 基底の 7 宣言 (BL-071 / BL-052) が無改修", () => {
+  describe("AC-9: .routine-card 基底の 7 宣言 が無改修", () => {
     it(".routine-card ルールに display: flex / flex-direction: column / gap: var(--space-md) を含む", () => {
       const css = readFileSync(routineCardCssPath, "utf-8");
       const body = extractRuleBody(css, ".routine-card");
@@ -670,7 +670,7 @@ describe("RoutineCard 表示カードのレイアウト刷新 (BL-073 / routine-
    * シナリオ AC-10:
    *   Given routine-card.css を読み込む
    *   When  `.routine-card--form` / `.routine-card--form .routine-card__actions` ルールセットを参照する
-   *   Then  BL-072 で確定した `flex-direction: column; align-items: stretch` および
+   *   Then  現状確定した `flex-direction: column; align-items: stretch` および
    *         `.routine-card--form .routine-card__actions { justify-content: flex-end }` が残存
    */
   describe("AC-10: .routine-card--form 系セレクタ (起票専用) が無改修で維持", () => {
@@ -761,13 +761,13 @@ describe("RoutineCard 表示カードのレイアウト刷新 (BL-073 / routine-
   // AC-13: 空文字 blur で DOM 値が元値に復元 + onNameBlur("")
   // ----------------------------------------------------------
   /**
-   * シナリオ AC-13 (BL-070 D-002 / P-001 (iii) 維持):
+   * シナリオ AC-13 維持):
    *   Given <RoutineCard routine={{ name: "朝のヨガ" }} onNameBlur={spy}> を render
    *   When  name input の値を "" にして blur する
    *   Then  input の DOM value が "朝のヨガ" に書き戻される
    *    かつ spy が ("") で 1 回呼ばれる (= 親 view が短絡判断する経路を維持)
    */
-  describe("AC-13: 空文字 blur で input DOM 値が routine.name に復元され onNameBlur('') が呼ばれる (BL-070 D-002 維持)", () => {
+  describe("AC-13: 空文字 blur で input DOM 値が routine.name に復元され onNameBlur('') が呼ばれる", () => {
     it("空文字 blur で input.value が '朝のヨガ' に書き戻され onNameBlur('') が呼ばれる", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine({ id: "r-1", name: "朝のヨガ" });
@@ -799,7 +799,7 @@ describe("RoutineCard 表示カードのレイアウト刷新 (BL-073 / routine-
   // AC-14: 同値 blur でも onNameBlur が呼ばれる
   // ----------------------------------------------------------
   /**
-   * シナリオ AC-14 (BL-070 D-001 維持):
+   * シナリオ AC-14:
    *   Given <RoutineCard routine={{ name: "朝のヨガ" }} onNameBlur={spy}> を render
    *   When  name input の値を変えずに blur する (defaultValue="朝のヨガ" / 編集なし)
    *   Then  spy が ("朝のヨガ") で 1 回呼ばれる (= カードは常に blur 値を流す)
@@ -831,12 +831,12 @@ describe("RoutineCard 表示カードのレイアウト刷新 (BL-073 / routine-
   // AC-15: 曜日 checkbox click で onDaysOfWeekChange が呼ばれる
   // ----------------------------------------------------------
   /**
-   * シナリオ AC-15 (BL-068 維持):
+   * シナリオ AC-15:
    *   Given <RoutineCard routine={{ daysOfWeek: [1] }} onDaysOfWeekChange={spy}> を render
    *   When  「水」 (day=3) の checkbox を click する
    *   Then  spy が ([1, 3]) で呼ばれる (sort 済み配列)
    */
-  describe("AC-15: 曜日 checkbox click で onDaysOfWeekChange が呼ばれる (BL-068 維持)", () => {
+  describe("AC-15: 曜日 checkbox click で onDaysOfWeekChange が呼ばれる", () => {
     it("水 (day=3) の checkbox click で onDaysOfWeekChange([1, 3]) が呼ばれる", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine({ daysOfWeek: [1] });
@@ -866,14 +866,14 @@ describe("RoutineCard 表示カードのレイアウト刷新 (BL-073 / routine-
   // AC-16: PriorityStars click で onDefaultPriorityChange が呼ばれる
   // ----------------------------------------------------------
   /**
-   * シナリオ AC-16 (BL-069 維持):
+   * シナリオ AC-16:
    *   Given <RoutineCard routine={{ defaultPriority: "normal" }} onDefaultPriorityChange={spy}> を render
    *   When  PriorityStars の "highest" 相当 (3 つ目の星) を click する
    *   Then  spy が ("highest") で呼ばれる
-   *   注: BL-069 維持 / spec AC-16 は "high" と書かれているが実装上 PriorityStars の 3 つ目は "highest".
-   *       BL-071 / BL-072 の同等 AC も "highest" で機械検証している.
+   *   注: 現状 / spec AC-16 は "high" と書かれているが実装上 PriorityStars の 3 つ目は "highest".
+   *       / 現状同等 AC も "highest" で機械検証している.
    */
-  describe("AC-16: PriorityStars click で onDefaultPriorityChange が呼ばれる (BL-069 維持)", () => {
+  describe("AC-16: PriorityStars click で onDefaultPriorityChange が呼ばれる", () => {
     it("3 つ目の星 click で onDefaultPriorityChange('highest') が呼ばれる", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine({ defaultPriority: "normal" });
@@ -938,9 +938,9 @@ describe("RoutineCard 表示カードのレイアウト刷新 (BL-073 / routine-
    * シナリオ AC-18:
    *   Given <RoutineCard routine={{ name: "朝のヨガ" }}> を render
    *   When  routine.name を "夜の体操" に変えて再 render する
-   *   Then  input の DOM value が "夜の体操" になる (= サーバ正本値変化時の同期 / BL-070)
+   *   Then  input の DOM value が "夜の体操" になる (= サーバ正本値変化時の同期 / )
    */
-  describe("AC-18: routine.name 変更時に input DOM value が同期する (key 再マウント / BL-070)", () => {
+  describe("AC-18: routine.name 変更時に input DOM value が同期する (key 再マウント / )", () => {
     it("routine.name を変更すると input の value が同期する", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine1 = makeRoutine({ id: "r-1", name: "朝のヨガ" });
@@ -978,7 +978,7 @@ describe("RoutineCard 表示カードのレイアウト刷新 (BL-073 / routine-
   // ============================================================
 
   // ----------------------------------------------------------
-  // AC-19: 起票カードの DOM 構造 (BL-072 の 4 段) が無改修
+  // AC-19: 起票カードの DOM 構造 が無改修
   // ----------------------------------------------------------
   /**
    * シナリオ AC-19:
@@ -987,7 +987,7 @@ describe("RoutineCard 表示カードのレイアウト刷新 (BL-073 / routine-
    *   Then  form 直下に __header (PriorityStars 単独) / __title (label + name input) /
    *         __day-checkboxes / __actions (「追加」 button) の 4 要素のみが並ぶ
    */
-  describe("AC-19: 起票カード <RoutineFormCard> の DOM 構造 (BL-072 の 4 段) が無改修", () => {
+  describe("AC-19: 起票カード <RoutineFormCard> の DOM 構造 が無改修", () => {
     it("form 直下が __header / __title / __day-checkboxes / __actions の 4 段順に並ぶ", async () => {
       const { RoutineFormCard } = await importRoutineFormCard();
       const { container } = render(
@@ -1057,15 +1057,15 @@ describe("RoutineCard 表示カードのレイアウト刷新 (BL-073 / routine-
   });
 
   // ----------------------------------------------------------
-  // AC-20: 起票 name input の computed font-size が --font-size-h2 と一致 (= 20px / BL-072 維持)
+  // AC-20: 起票 name input の computed font-size が --font-size-h2 と一致 (= 20px / 現状)
   // ----------------------------------------------------------
   /**
    * シナリオ AC-20:
    *   Given <RoutineFormCard ...> を render
    *   When  name input の getComputedStyle().fontSize を取得する
-   *   Then  '20px' または 'var(--font-size-h2)' (BL-072 AC-10 維持)
+   *   Then  '20px' または 'var(--font-size-h2)'
    */
-  describe("AC-20: 起票カード name input の computed font-size が --font-size-h2 (= 20px / BL-072 維持)", () => {
+  describe("AC-20: 起票カード name input の computed font-size が --font-size-h2 (= 20px / 現状)", () => {
     it("input#routine-name の computed fontSize が '20px' または 'var(--font-size-h2)'", async () => {
       const { RoutineFormCard } = await importRoutineFormCard();
       const { container } = render(

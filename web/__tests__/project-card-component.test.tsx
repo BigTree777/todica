@@ -2,7 +2,7 @@
 
 /**
  * ProjectCard / ProjectFormCard コンポーネント新設 + projects-view 適用
- * (BL-060 / project-card-component) 受け入れ基準テスト.
+ * 受け入れ基準テスト.
  *
  * 仕様参照:
  *   docs/developer/features/project-card-component/spec.md
@@ -40,9 +40,9 @@
  *   - implementer が REQ-1 〜 REQ-9 を実装することで red 群が green 化する.
  *
  * 検証スタイル:
- *   - CSS 直読み: BL-052 / BL-054 / BL-057 / BL-058 / BL-059 と同じ
+ *   - CSS 直読み: / / / / と同じ
  *     readFileSync + extractRuleBody (P-005). ヘルパは本ファイル内に再定義する.
- *   - DOM レンダ: BL-059 と同形の動的 import + render パターン.
+ *   - DOM レンダ: と同形の動的 import + render パターン.
  *
  * vitest-environment:
  *   DOM レンダ AC は jsdom 必須のため 1 ファイル全体を jsdom で動かす
@@ -80,7 +80,7 @@ const NOW = "2026-06-11T09:00:00.000Z";
 const PROJECT_ID_1 = "p1p1p1p1-p1p1-4p1p-8p1p-p1p1p1p1p1p1";
 
 // ============================================================
-// CSS ルール本文の抽出ヘルパ (P-005 / BL-059 等から再実装)
+// CSS ルール本文の抽出ヘルパ (P-005 / 等から再実装)
 // ============================================================
 
 /**
@@ -133,7 +133,7 @@ async function importProjectFormCard(): Promise<ProjectFormCardModule> {
 // describe ブロック
 // ============================================================
 
-describe("ProjectCard / ProjectFormCard コンポーネント新設 (BL-060 / project-card-component)", () => {
+describe("ProjectCard / ProjectFormCard コンポーネント新設", () => {
   // ============================================================
   // CSS 直読み系 (AC-1 〜 AC-5 / AC-18)
   // ============================================================
@@ -352,14 +352,14 @@ describe("ProjectCard / ProjectFormCard コンポーネント新設 (BL-060 / pr
   // ----------------------------------------------------------
   // AC-6: <ProjectCard> が表示モードの DOM を出す
   //
-  // BL-070 (inline-edit-all-cards) 追従:
-  //   旧 BL-060 では isEditing=false の表示モードで .project-card__name <span> を assert していた.
-  //   本 BL-070 で「編集モード」概念を撤去し name は常時 input 表示へ逆転する (REQ-2).
+  // (inline-edit-all-cards) 追従:
+  //   旧 現状は isEditing=false の表示モードで .project-card__name <span> を assert していた.
+  //   本 現状「編集モード」概念を撤去し name は常時 input 表示へ逆転する (REQ-2).
   //   このため .project-card__name span 要素は撤去され, 代わりに input が常時表示される.
   //   それに合わせて表示モード assert を「<input> 常時 + 「削除」 button のみ」へ書き換える.
   // ----------------------------------------------------------
   /**
-   * シナリオ AC-6 (BL-070 追従後):
+   * シナリオ AC-6:
    *   Given <ProjectCard project={...} onNameBlur={...} onDelete={...} /> を render する
    *   When  出力 DOM を観察する
    *   Then  ルート要素は <li class="project-card"> である
@@ -368,7 +368,7 @@ describe("ProjectCard / ProjectFormCard コンポーネント新設 (BL-060 / pr
    *    かつ .project-card 内に <div class="project-card__actions"> が存在する
    *    かつ .project-card__actions 内に「削除」 button が 1 個存在する (「変更」は撤去)
    */
-  describe("AC-6: <ProjectCard> が表示モードの DOM を出す (BL-070 追従 / 編集モード撤去)", () => {
+  describe("AC-6: <ProjectCard> が表示モードの DOM を出す", () => {
     it("ルート要素は <li class='project-card'> である", async () => {
       const { ProjectCard } = await importProjectCard();
       const project = makeProject({ name: "仕事" });
@@ -379,35 +379,35 @@ describe("ProjectCard / ProjectFormCard コンポーネント新設 (BL-060 / pr
       expect(root, "ProjectCard の root 要素が見つからない").not.toBeNull();
       expect(root?.tagName.toLowerCase()).toBe("li");
       expect(root?.classList.contains("project-card")).toBe(true);
-      // BL-070: project-card--editing modifier は撤去.
+      // : project-card--editing modifier は撤去.
       expect(
         root?.classList.contains("project-card--editing"),
-        "project-card--editing modifier が残存 (BL-070 REQ-2 違反)",
+        "project-card--editing modifier が残存",
       ).toBe(false);
     });
 
-    it("BL-070 追従: .project-card__name span 要素が存在しない (= input が span を置換)", async () => {
+    it("現状: .project-card__name span 要素が存在しない (= input が span を置換)", async () => {
       const { ProjectCard } = await importProjectCard();
       const project = makeProject({ name: "仕事" });
       const { container } = render(
         <ProjectCard project={project} onNameBlur={() => {}} onDelete={() => {}} />,
       );
       const name = container.querySelector(".project-card__name");
-      expect(name, ".project-card__name span が残存 (BL-070 REQ-2 違反)").toBeNull();
+      expect(name, ".project-card__name span が残存").toBeNull();
     });
 
-    it("BL-070 追従: .project-card 内に <input type='text' value={project.name}> が常時存在する", async () => {
+    it("現状: .project-card 内に <input type='text' value={project.name}> が常時存在する", async () => {
       const { ProjectCard } = await importProjectCard();
       const project = makeProject({ name: "仕事" });
       const { container } = render(
         <ProjectCard project={project} onNameBlur={() => {}} onDelete={() => {}} />,
       );
       const input = container.querySelector("input[type='text']") as HTMLInputElement | null;
-      expect(input, "BL-070: <input> が見つからない").not.toBeNull();
+      expect(input, ": <input> が見つからない").not.toBeNull();
       expect(input?.value).toBe("仕事");
     });
 
-    it("BL-070 追従: .project-card__actions div 内に「削除」 button が 1 個のみ存在し「変更」 button は撤去されている", async () => {
+    it("現状: .project-card__actions div 内に「削除」 button が 1 個のみ存在し「変更」 button は撤去されている", async () => {
       const { ProjectCard } = await importProjectCard();
       const project = makeProject();
       const { container } = render(
@@ -418,7 +418,7 @@ describe("ProjectCard / ProjectFormCard コンポーネント新設 (BL-060 / pr
       expect(actions?.tagName.toLowerCase()).toBe("div");
       const buttons = Array.from(actions?.querySelectorAll("button") ?? []);
       const labels = buttons.map((b) => b.textContent?.trim() ?? "");
-      expect(labels, "「変更」 button が残存 (BL-070 REQ-2 違反)").not.toContain("変更");
+      expect(labels, "「変更」 button が残存").not.toContain("変更");
       expect(labels, "「削除」 button が見つからない").toContain("削除");
       // 「削除」 button が 1 個.
       expect(labels.filter((t) => t === "削除").length).toBe(1);
@@ -439,15 +439,15 @@ describe("ProjectCard / ProjectFormCard コンポーネント新設 (BL-060 / pr
   // ----------------------------------------------------------
   // AC-7: <ProjectCard> の name input + visually-hidden label の関連付け
   //
-  // BL-070 (inline-edit-all-cards) 追従:
-  //   旧 BL-060 では isEditing=true の編集モードで form / 保存 / キャンセル / input を assert していた.
-  //   本 BL-070 で「編集モード」概念ごと撤去 (REQ-2 / G-2). isEditing prop は撤去.
+  // (inline-edit-all-cards) 追従:
+  //   旧 現状は isEditing=true の編集モードで form / 保存 / キャンセル / input を assert していた.
+  //   本 現状「編集モード」概念ごと撤去 (REQ-2 / G-2). isEditing prop は撤去.
   //   代わりに「表示モードで常時 input 表示 + visually-hidden label + htmlFor=id 関連付け」を assert する.
   //   従って下記 it ブロックは「常時表示の input/label 関連付け」へ書き換える.
   //   form / 保存 / キャンセル button の不在は inline-edit-all-cards.test.tsx AC-3 / AC-4 で網羅.
   // ----------------------------------------------------------
   /**
-   * シナリオ AC-7 (BL-070 追従後):
+   * シナリオ AC-7:
    *   Given <ProjectCard project={{id: "p1", name: "仕事"}} onNameBlur={...} onDelete={...} /> を render する
    *   When  出力 DOM を観察する
    *   Then  ルート要素は <li class="project-card"> である
@@ -457,8 +457,8 @@ describe("ProjectCard / ProjectFormCard コンポーネント新設 (BL-060 / pr
    *    かつ label の htmlFor と input の id が一致する
    *    かつ 「保存」「キャンセル」 button は存在しない (= 編集モード撤去)
    */
-  describe("AC-7: <ProjectCard> の name input + visually-hidden label の関連付け (BL-070 で編集モード撤去)", () => {
-    it("ルート要素は <li class='project-card'> であり project-card--editing modifier は付かない (BL-070)", async () => {
+  describe("AC-7: <ProjectCard> の name input + visually-hidden label の関連付け", () => {
+    it("ルート要素は <li class='project-card'> であり project-card--editing modifier は付かない", async () => {
       const { ProjectCard } = await importProjectCard();
       const project = makeProject({ id: "p1" });
       const { container } = render(
@@ -470,21 +470,21 @@ describe("ProjectCard / ProjectFormCard コンポーネント新設 (BL-060 / pr
       expect(root?.classList.contains("project-card")).toBe(true);
       expect(
         root?.classList.contains("project-card--editing"),
-        "project-card--editing modifier が残存 (BL-070 REQ-2 違反)",
+        "project-card--editing modifier が残存",
       ).toBe(false);
     });
 
-    it("BL-070: <form aria-label='プロジェクト名称変更フォーム'> は存在しない (= 編集モード form 撤去)", async () => {
+    it(": <form aria-label='プロジェクト名称変更フォーム'> は存在しない (= 編集モード form 撤去)", async () => {
       const { ProjectCard } = await importProjectCard();
       const project = makeProject();
       const { container } = render(
         <ProjectCard project={project} onNameBlur={() => {}} onDelete={() => {}} />,
       );
       const form = container.querySelector("form[aria-label='プロジェクト名称変更フォーム']");
-      expect(form, "編集モード form が残存 (BL-070 REQ-2 違反)").toBeNull();
+      expect(form, "編集モード form が残存").toBeNull();
     });
 
-    it("BL-070: visually-hidden な <label> + <input> が存在し htmlFor と id が一致する", async () => {
+    it(": visually-hidden な <label> + <input> が存在し htmlFor と id が一致する", async () => {
       const { ProjectCard } = await importProjectCard();
       const project = makeProject({ id: "p1" });
       const { container } = render(
@@ -498,7 +498,7 @@ describe("ProjectCard / ProjectFormCard コンポーネント新設 (BL-060 / pr
       expect(label?.getAttribute("for")).toBe(input?.getAttribute("id"));
     });
 
-    it("BL-070: 「保存」「キャンセル」 button が存在しない (= 編集モード撤去)", async () => {
+    it(": 「保存」「キャンセル」 button が存在しない (= 編集モード撤去)", async () => {
       const { ProjectCard } = await importProjectCard();
       const project = makeProject();
       const { container } = render(
@@ -511,7 +511,7 @@ describe("ProjectCard / ProjectFormCard コンポーネント新設 (BL-060 / pr
       expect(labels, "「キャンセル」 button が残存").not.toContain("キャンセル");
     });
 
-    it("BL-070: 「変更」 button も存在しない (= 編集モード概念撤去)", async () => {
+    it(": 「変更」 button も存在しない (= 編集モード概念撤去)", async () => {
       const { ProjectCard } = await importProjectCard();
       const project = makeProject();
       const { container } = render(
@@ -520,10 +520,10 @@ describe("ProjectCard / ProjectFormCard コンポーネント新設 (BL-060 / pr
       const labels = Array.from(container.querySelectorAll("button")).map(
         (b) => b.textContent?.trim() ?? "",
       );
-      expect(labels, "「変更」 button が残存 (BL-070 REQ-2 違反)").not.toContain("変更");
+      expect(labels, "「変更」 button が残存").not.toContain("変更");
     });
 
-    it("BL-070: input の blur で onNameBlur が呼ばれる (onSaveEdit / form onSubmit 経路は撤去)", async () => {
+    it(": input の blur で onNameBlur が呼ばれる (onSaveEdit / form onSubmit 経路は撤去)", async () => {
       const { ProjectCard } = await importProjectCard();
       const project = makeProject({ id: "p1", name: "古い" });
       const onNameBlur = vi.fn();
@@ -533,7 +533,7 @@ describe("ProjectCard / ProjectFormCard コンポーネント新設 (BL-060 / pr
       const input = container.querySelector("input#project-name-p1") as HTMLInputElement | null;
       expect(input, "input が見つからない").not.toBeNull();
       if (!input) return;
-      // BL-070 追従: dispatchEvent(new Event("blur")) は React 合成イベント onBlur を発火しない.
+      // 現状: dispatchEvent(new Event("blur")) は React 合成イベント onBlur を発火しない.
       // fireEvent.blur で input value を渡しつつ React の合成 onBlur を発火させる.
       fireEvent.input(input, { target: { value: "新しい" } });
       fireEvent.blur(input);
@@ -682,22 +682,22 @@ describe("ProjectCard / ProjectFormCard コンポーネント新設 (BL-060 / pr
   });
 
   // ----------------------------------------------------------
-  // AC-10: 「変更」 button が撤去されている (BL-070 で逆転)
+  // AC-10: 「変更」 button が撤去されている
   //
-  // 旧 BL-060 では「変更」 button の存在と onStartEdit を assert していた.
-  // BL-070 で「変更」 button 自体が撤去 (REQ-2 / G-2). 代わりに「削除」 button のみ存在.
+  // 旧 現状は「変更」 button の存在と onStartEdit を assert していた.
+  // 現状「変更」 button 自体が撤去 (REQ-2 / G-2). 代わりに「削除」 button のみ存在.
   // 旧 it 群は「button 不在 + 削除 button のみ」へ書き換える.
   // ----------------------------------------------------------
   /**
-   * シナリオ AC-10 (BL-070 追従後):
+   * シナリオ AC-10:
    *   Given <ProjectCard project={...} onNameBlur={...} onDelete={...} /> を render する
    *   When  ボタンを観察する
    *   Then  「変更」 button が存在しない
    *    かつ 「名称変更」 button も存在しない
    *    かつ 「削除」 button のみ存在し click で onDelete が呼ばれる
    */
-  describe("AC-10: 「変更」 button が撤去されている (BL-070 / G-8 / REQ-6 を逆転)", () => {
-    it("BL-070: 「変更」「名称変更」 button が共に存在しない", async () => {
+  describe("AC-10: 「変更」 button が撤去されている", () => {
+    it(": 「変更」「名称変更」 button が共に存在しない", async () => {
       const { ProjectCard } = await importProjectCard();
       const project = makeProject();
       const { container } = render(
@@ -706,11 +706,11 @@ describe("ProjectCard / ProjectFormCard コンポーネント新設 (BL-060 / pr
       const labels = Array.from(container.querySelectorAll("button")).map(
         (b) => b.textContent?.trim() ?? "",
       );
-      expect(labels, "「変更」 button が残存 (BL-070 REQ-2 違反)").not.toContain("変更");
+      expect(labels, "「変更」 button が残存").not.toContain("変更");
       expect(labels, "「名称変更」 button が残存").not.toContain("名称変更");
     });
 
-    it("「削除」 button をクリックすると onDelete が呼ばれる (BL-070 でも維持)", async () => {
+    it("「削除」 button をクリックすると onDelete が呼ばれる", async () => {
       const { ProjectCard } = await importProjectCard();
       const project = makeProject();
       const onDelete = vi.fn();
@@ -1011,14 +1011,14 @@ describe("ProjectCard / ProjectFormCard コンポーネント新設 (BL-060 / pr
       expect(form).toBeTruthy();
     });
 
-    it("BL-070: <ProjectCard> の 「プロジェクト名称変更フォーム」 form は撤去されている (= 編集モード form 廃止)", async () => {
+    it(": <ProjectCard> の 「プロジェクト名称変更フォーム」 form は撤去されている (= 編集モード form 廃止)", async () => {
       const { ProjectCard } = await importProjectCard();
       const project = makeProject();
       const { container } = render(
         <ProjectCard project={project} onNameBlur={() => {}} onDelete={() => {}} />,
       );
       const form = container.querySelector("form[aria-label='プロジェクト名称変更フォーム']");
-      expect(form, "プロジェクト名称変更フォーム form が残存 (BL-070 REQ-2 違反)").toBeNull();
+      expect(form, "プロジェクト名称変更フォーム form が残存").toBeNull();
     });
   });
 

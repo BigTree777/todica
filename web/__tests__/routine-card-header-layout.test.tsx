@@ -2,7 +2,7 @@
 
 /**
  * RoutineCard ヘッダレイアウト刷新 (TaskCard と同じ 3 段構造に揃える)
- * (BL-071 / routine-card-header-layout) 受け入れ基準テスト.
+ * 受け入れ基準テスト.
  *
  * 仕様参照:
  *   docs/developer/features/routine-card-header-layout/spec.md
@@ -21,10 +21,10 @@
  *   AC-9 : name input の computed font-size が --font-size-h2 (= 20px) と一致する (computed style).
  *   AC-10: .routine-card--form は flex-direction: column / align-items: stretch を維持 (CSS 直読み).
  *   AC-11: <RoutineFormCard> の DOM 構造が既存と変わらない (= 2 段構成 + 主要要素) (DOM).
- *   AC-12: 空文字 blur で input が routine.name に書き戻され onNameBlur が ("") で呼ばれる (DOM / BL-070 D-002 維持).
+ *   AC-12: 空文字 blur で input が routine.name に書き戻され onNameBlur が ("") で呼ばれる (DOM / D-002 維持).
  *   AC-13: 同値 blur で input の value は維持されたまま onNameBlur が同値で呼ばれる (DOM).
- *   AC-14: 曜日 checkbox click で onDaysOfWeekChange が次の配列で呼ばれる (DOM / BL-068 維持).
- *   AC-15: PriorityStars click で onDefaultPriorityChange が呼ばれる (DOM / BL-069 維持).
+ *   AC-14: 曜日 checkbox click で onDaysOfWeekChange が次の配列で呼ばれる (DOM / 現状).
+ *   AC-15: PriorityStars click で onDefaultPriorityChange が呼ばれる (DOM / 現状).
  *   AC-16: 「削除」 button click で onDelete が 1 回呼ばれる (DOM).
  *   AC-17: visually-hidden label が name input と htmlFor / id で紐づく (DOM / a11y).
  *   AC-18: PriorityStars の accessibleName が "${routine.name} の優先度" / idPrefix が "routine-${routine.id}" (DOM / a11y).
@@ -34,12 +34,12 @@
  *   - 実装前 (= JSX が .routine-card__main 構造 / CSS が flex-direction: row 構造) では,
  *     AC-1 / AC-2 / AC-3 / AC-4 / AC-5 / AC-6 / AC-7 / AC-8 / AC-9 / AC-18 / AC-19 が red になる想定.
  *   - AC-10 / AC-11 / AC-12 / AC-13 / AC-14 / AC-15 / AC-16 / AC-17 は既存挙動の回帰防止のため
- *     実装前から green である可能性がある (= BL-061 / BL-068 / BL-069 / BL-070 で確立済み).
+ *     実装前から green である可能性がある (= / / / 現状確立済み).
  *   - implementer が REQ-1 〜 REQ-8 を実装することで red 群が green 化する.
  *
  * 検証スタイル:
- *   - CSS 直読み: BL-052 / BL-059 / BL-061 等と同じ readFileSync + extractRuleBody.
- *   - DOM レンダ: BL-061 / BL-070 と同形の動的 import + render パターン.
+ *   - CSS 直読み: / / 等と同じ readFileSync + extractRuleBody.
+ *   - DOM レンダ: / と同形の動的 import + render パターン.
  *   - computed style: jsdom + vitest css: true 環境で getComputedStyle を取得.
  *     plan R-1 に従い「'20px' または 'var(--font-size-h2)' (未解決) のいずれかを許容」する.
  *
@@ -69,7 +69,7 @@ const NOW = "2026-06-12T09:00:00.000Z";
 const ROUTINE_ID_R1 = "r1r1r1r1-r1r1-4r1r-8r1r-r1r1r1r1r1r1";
 
 // ============================================================
-// CSS ルール本文の抽出ヘルパ (BL-061 と同形)
+// CSS ルール本文の抽出ヘルパ
 // ============================================================
 
 function extractRuleBody(css: string, selector: string): string | null {
@@ -117,7 +117,7 @@ async function importRoutineFormCard(): Promise<RoutineFormCardModule> {
 // describe ブロック
 // ============================================================
 
-describe("RoutineCard ヘッダレイアウト刷新 (BL-071 / routine-card-header-layout)", () => {
+describe("RoutineCard ヘッダレイアウト刷新", () => {
   // ----------------------------------------------------------
   // AC-2: .routine-card__main ラッパが撤去されている
   // ----------------------------------------------------------
@@ -362,14 +362,14 @@ describe("RoutineCard ヘッダレイアウト刷新 (BL-071 / routine-card-head
    *   Then  root 要素は <form class="routine-card routine-card--form"> のまま
    *    かつ name input + 「追加」 button + 曜日 7 checkbox + PriorityStars が全て描画される
    *
-   * 補足 (BL-072 / routine-form-card-header-layout 追従):
-   *   旧 BL-071 では「`.routine-card__form-row` が 2 個」を assert していたが,
-   *   BL-072 で起票カードを 4 段 (`.routine-card__header` / `__title` /
+   * 補足:
+   *   旧 現状は「`.routine-card__form-row` が 2 個」を assert していたが,
+   *   現状起票カードを 4 段 (`.routine-card__header` / `__title` /
    *   `__day-checkboxes` / `__actions`) に再編し `.routine-card__form-row` 系を完全撤去するため,
    *   起票カードの「不変性」要求は本 BL で破棄する. 旧 assert の代替として
    *   「主要要素 (name input / 追加 button / 曜日 7 checkbox / PriorityStars) が
    *   引き続き描画される」までを保つ.
-   *   起票カードの新 DOM 構造の網羅 assert は `routine-form-card-header-layout.test.tsx` (BL-072) に集約.
+   *   起票カードの新 DOM 構造の網羅 assert は `routine-form-card-header-layout.test.tsx` に集約.
    */
   describe("AC-11: <RoutineFormCard> の DOM 構造 (= 主要要素が描画される)", () => {
     it("root は <form class='routine-card routine-card--form'> のまま", async () => {
@@ -438,13 +438,13 @@ describe("RoutineCard ヘッダレイアウト刷新 (BL-071 / routine-card-head
   // AC-12: 空文字 blur で input が routine.name に書き戻され onNameBlur が ("") で呼ばれる
   // ----------------------------------------------------------
   /**
-   * シナリオ AC-12 (BL-070 D-002 維持):
+   * シナリオ AC-12:
    *   Given <RoutineCard routine={{name: "朝の体操"}} ... /> を render する
    *   When  name input に空文字を入力して blur する
    *   Then  input の value が "朝の体操" に書き戻される
    *    かつ onNameBlur は ("") で呼ばれる
    */
-  describe("AC-12: 空文字 blur で input が元の名前に書き戻される (BL-070 D-002 維持)", () => {
+  describe("AC-12: 空文字 blur で input が元の名前に書き戻される", () => {
     it("空文字 blur で input.value が routine.name に書き戻され, onNameBlur('') が呼ばれる", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine({ id: "r1", name: "朝の体操" });
@@ -511,15 +511,15 @@ describe("RoutineCard ヘッダレイアウト刷新 (BL-071 / routine-card-head
   });
 
   // ----------------------------------------------------------
-  // AC-14: 曜日 checkbox click で onDaysOfWeekChange が呼ばれる (BL-068 維持)
+  // AC-14: 曜日 checkbox click で onDaysOfWeekChange が呼ばれる
   // ----------------------------------------------------------
   /**
-   * シナリオ AC-14 (BL-068 維持):
+   * シナリオ AC-14:
    *   Given <RoutineCard routine={{daysOfWeek: [1]}} ... /> を render する
    *   When  「水」(day=3) の checkbox を click する
    *   Then  onDaysOfWeekChange は ([1, 3]) で呼ばれる
    */
-  describe("AC-14: 曜日 checkbox click で onDaysOfWeekChange が呼ばれる (BL-068 維持)", () => {
+  describe("AC-14: 曜日 checkbox click で onDaysOfWeekChange が呼ばれる", () => {
     it("水 (day 3) の checkbox click で onDaysOfWeekChange([1, 3]) が呼ばれる", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine({ daysOfWeek: [1] });
@@ -549,15 +549,15 @@ describe("RoutineCard ヘッダレイアウト刷新 (BL-071 / routine-card-head
   });
 
   // ----------------------------------------------------------
-  // AC-15: PriorityStars click で onDefaultPriorityChange が呼ばれる (BL-069 維持)
+  // AC-15: PriorityStars click で onDefaultPriorityChange が呼ばれる
   // ----------------------------------------------------------
   /**
-   * シナリオ AC-15 (BL-069 維持):
+   * シナリオ AC-15:
    *   Given <RoutineCard routine={{defaultPriority: "normal"}} ... /> を render する
    *   When  PriorityStars の "highest" 相当の radio (3 つ目の星) を click する
    *   Then  onDefaultPriorityChange は ("highest") で呼ばれる
    */
-  describe("AC-15: PriorityStars click で onDefaultPriorityChange が呼ばれる (BL-069 維持)", () => {
+  describe("AC-15: PriorityStars click で onDefaultPriorityChange が呼ばれる", () => {
     it("3 つ目の星 click で onDefaultPriorityChange('highest') が呼ばれる", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine({ defaultPriority: "normal" });
