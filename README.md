@@ -12,7 +12,7 @@
 
 ## セットアップ
 
-Node.js 24.x （手元の動作確認バージョン）が必要です。
+Node.js 24.x（手元の動作確認バージョン。他バージョンは未検証）が必要です。
 
 ```bash
 git clone https://github.com/BigTree777/todica.git
@@ -22,19 +22,23 @@ npm install
 
 ## サーバの起動
 
-認証はアプリ内ログイン (`POST /api/v1/login`) で行います。サーバはパスワードenvなしで起動できます。
+開発用の起動コマンドはビルド不要で TypeScript を直接実行します。
 
 ```bash
-npm start -w server
+npm run dev -w server
 ```
 
-その後 Web UI を開き、初期パスワード設定画面でパスワードを登録します。設定成功時にセッショントークンが発行され、以降の API 呼び出しは Bearer 認証で透過的に動作します。
+認証はアプリ内ログイン (`POST /api/v1/login`) で行います。サーバはパスワード env なしで起動でき、初回起動時に Web UI で初期パスワード設定画面が表示されます。設定成功時にセッショントークンが発行され、以降の API 呼び出しは Bearer 認証で透過的に動作します。
+
+本番運用の起動 (`npm start -w server`) は事前に `npm run build -w domain && npm run build -w server` でビルドする必要があります。詳細は [`docs/user/deploy-guide.md`](docs/user/deploy-guide.md) を参照してください。
 
 ## Web クライアントのビルド
 
 ```bash
 npm run build -w web
 ```
+
+`npm start -w server` でサーバを本番起動する前に、上記の `npm run build -w domain && npm run build -w server` も実行してください。
 
 ## Android ビルド
 
