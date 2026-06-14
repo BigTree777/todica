@@ -22,7 +22,7 @@ import { FakeClock } from "@todica/domain/clock";
  *   2026-06-08T04:01:00.000Z = 月曜日 (getUTCDay() = 1)
  *   2026-06-09T04:01:00.000Z = 火曜日 (getUTCDay() = 2)
  */
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { maybeRunDailyReset } from "../../src/use-cases/daily-reset.js";
 import {
   InMemoryCounterRepository,
@@ -51,6 +51,8 @@ let settingsRepo: InMemorySettingsRepository;
 let routineRepo: InMemoryRoutineRepository;
 
 beforeEach(() => {
+  vi.stubEnv("TZ", "UTC");
+
   taskRepo = new InMemoryTaskRepository();
   counterRepo = new InMemoryCounterRepository();
   settingsRepo = new InMemorySettingsRepository();
@@ -60,6 +62,10 @@ beforeEach(() => {
   counterRepo.seed({
     lastResetExecutedAt: SUNDAY_RESET_TIME,
   });
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 // ============================================================

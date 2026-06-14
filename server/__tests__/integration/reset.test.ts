@@ -17,7 +17,7 @@ import type { Hono } from "hono";
  *   非同期 Repository の update() を通じてリセット処理を模倣する。
  *   テスト観点は「HTTP レスポンスの形状」と「状態変化（counter / taskの dueDate）」とする。
  */
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   TEST_AUTH_TOKEN,
   TEST_INITIAL_TIME,
@@ -71,6 +71,8 @@ function makeTask(overrides: Partial<Task> & { id: string }): Task {
 }
 
 beforeEach(() => {
+  vi.stubEnv("TZ", "UTC");
+
   // 境界を超えた状態（04:01）で初期化する。各テストで clock.set() により変更可能。
   const built = buildTestApp({ initialTime: TIME_AFTER_BOUNDARY });
   app = built.app;
@@ -81,6 +83,10 @@ beforeEach(() => {
 
   // デフォルトの境界時刻を "04:00" に設定する（InMemorySettingsRepository の初期値と同じだが明示する）。
   settingsRepo.seed({ dayBoundaryTime: BOUNDARY_TIME });
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 // ============================================================

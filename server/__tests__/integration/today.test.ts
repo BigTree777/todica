@@ -14,7 +14,7 @@ import type { Hono } from "hono";
  * 既存 GET /api/v1/tasks のサーバソート規則の統一 (plan.md D-003) に伴う
  * regression 検証もここに同梱する.
  */
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   TEST_AUTH_TOKEN,
   TEST_INITIAL_TIME,
@@ -39,10 +39,16 @@ let taskRepo: InMemoryTaskRepository;
 let counterRepo: InMemoryCounterRepository;
 
 beforeEach(() => {
+  vi.stubEnv("TZ", "UTC");
+
   const built = buildTestApp();
   app = built.app;
   taskRepo = built.taskRepository;
   counterRepo = built.counterRepository;
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 /** Task のテストフィクスチャ. デフォルトは today / normal / active. */

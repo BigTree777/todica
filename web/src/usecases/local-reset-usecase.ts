@@ -124,7 +124,9 @@ export class LocalResetUsecase {
     const settingsRow = (settingsResult.values ?? [])[0];
 
     const boundaryTime = (settingsRow?.day_boundary_time as string | undefined) ?? "04:00";
-    const timezone = (settingsRow?.day_boundary_timezone as string | undefined) ?? "Asia/Tokyo";
+    const timezone =
+      (settingsRow?.day_boundary_timezone as string | undefined) ??
+      Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     // 2. counter から lastResetExecutedAt を取得
     const counterResult = await this.db.query("SELECT * FROM counter WHERE id = 'singleton'");

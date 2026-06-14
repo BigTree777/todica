@@ -117,8 +117,8 @@ describe("SettingsView dead path 削除検証 (BL-075)", () => {
 
     const { container } = renderWithQueryClient(<SettingsView repository={repo} />);
 
-    // 既存 BL-009 の dayBoundaryTime 表示で render 完了を確認.
-    expect(await screen.findByText(/04:00/)).toBeInTheDocument();
+    // dayBoundaryTime input の値で render 完了を確認.
+    expect(await screen.findByDisplayValue("04:00")).toBeInTheDocument();
 
     // <section aria-label="サーバ接続設定"> が存在しないこと.
     expect(container.querySelector('section[aria-label="サーバ接続設定"]')).toBeNull();
