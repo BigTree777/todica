@@ -104,7 +104,7 @@ const TARGET_TSX_FILES = {
   settingsView: resolve(webSrcRoot, "ui/settings-view/settings-view.tsx"),
   setupView: resolve(webSrcRoot, "ui/setup-view/setup-view.tsx"),
   projectCreateDialog: resolve(webSrcRoot, "ui/project-create-dialog/project-create-dialog.tsx"),
-  pwaUpdateBanner: resolve(webSrcRoot, "ui/pwa-update-banner/pwa-update-banner.tsx"),
+  pwaUpdateBanner: resolve(webSrcRoot, "ui/sw-update-dialog/sw-update-dialog.tsx"),
   errorNotification: resolve(webSrcRoot, "ui/error-notification/error-notification.tsx"),
   conflictDialog: resolve(webSrcRoot, "ui/conflict-dialog/conflict-dialog.tsx"),
   // 対象外 (S-1 / S-2 / S-3).
@@ -805,13 +805,13 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
         ).toBe(true);
       });
 
-      it('pwa-update-banner.tsx の「閉じる」 button が className に "button" を含む', () => {
+      it('pwa-update-banner.tsx の「あとで」 button が className に "button" を含む', () => {
         const src = readFileSync(TARGET_TSX_FILES.pwaUpdateBanner, "utf-8");
-        const cn = findButtonClassNameByLabel(src, "閉じる");
-        expect(cn, "pwa-update-banner.tsx の「閉じる」 button が見つからない").not.toBeNull();
+        const cn = findButtonClassNameByLabel(src, "あとで");
+        expect(cn, "pwa-update-banner.tsx の「あとで」 button が見つからない").not.toBeNull();
         expect(
           (cn ?? "").split(/\s+/).includes("button"),
-          `pwa-update-banner.tsx の「閉じる」 button に "button" className が無い (現値: "${cn}")`,
+          `pwa-update-banner.tsx の「あとで」 button に "button" className が無い (現値: "${cn}")`,
         ).toBe(true);
       });
     });
@@ -1199,13 +1199,13 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
       ).toBe(true);
     });
 
-    it("PwaUpdateBanner の「閉じる」 button が --ghost を持つ (ソース直読み)", () => {
+    it("SwUpdateDialog の「あとで」 button が --ghost を持つ (ソース直読み)", () => {
       const src = readFileSync(TARGET_TSX_FILES.pwaUpdateBanner, "utf-8");
-      const cn = findButtonClassNameByLabel(src, "閉じる");
-      expect(cn, "pwa-update-banner.tsx の「閉じる」 button が見つからない").not.toBeNull();
+      const cn = findButtonClassNameByLabel(src, "あとで");
+      expect(cn, "sw-update-dialog.tsx の「あとで」 button が見つからない").not.toBeNull();
       expect(
         (cn ?? "").split(/\s+/).includes("button--ghost"),
-        `pwa-update-banner.tsx の「閉じる」 button に "button--ghost" が無い (現値: "${cn}")`,
+        `sw-update-dialog.tsx の「あとで」 button に "button--ghost" が無い (現値: "${cn}")`,
       ).toBe(true);
     });
 
