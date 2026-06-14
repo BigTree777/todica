@@ -93,7 +93,10 @@ npm install
 |---|---|---|---|
 | `DATABASE_PATH` | いいえ | `./todica.db` | SQLite ファイルのパス。本番では `/var/lib/todica/todica.db` 等の永続領域へ |
 | `PORT` | いいえ | `3000` | リッスンポート |
+| `ALLOWED_ORIGINS` | はい | `http://localhost:5173,capacitor://localhost` | CORS で許可するオリジンのカンマ区切りリスト |
 | `VITE_API_BASE_URL` | Web ビルド時 | - | Web クライアントから叩く API のオリジン。同一ドメイン配信なら空文字でよい（相対パスで叩く） |
+
+本番ドメインのオリジンを `ALLOWED_ORIGINS` に必ず指定する。たとえば `https://todica.example.com` で配信する場合は `ALLOWED_ORIGINS=https://todica.example.com` とする。パスや末尾の `/` は含めない。
 
 パスワードは `.env` に置かない。サーバ起動後、DB が空ならブラウザに初期パスワード設定画面が表示され、登録したパスワードの bcrypt ハッシュが DB に保存される。
 

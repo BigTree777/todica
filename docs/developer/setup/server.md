@@ -26,7 +26,10 @@ cp .env.example .env
 |---|---|---|
 | `PORT` | `3000` | リッスンポート |
 | `DATABASE_PATH` | `./todica.db` | SQLite データベースファイルのパス |
+| `ALLOWED_ORIGINS` | `http://localhost:5173,capacitor://localhost` | CORS で許可するオリジンのカンマ区切りリスト |
 | `VITE_API_BASE_URL` | `http://localhost:3000` | Web から呼び出すサーバ URL |
+
+`ALLOWED_ORIGINS` はオリジンを完全一致で判定する。複数指定する場合はカンマで区切り、本番では Web クライアントを配信するオリジンを指定する。
 
 `VITE_API_BASE_URL` は構成で値が変わる。dev (Web `:5173` と API `:3000` が別オリジン) では `http://localhost:3000` を指定する。本番 (nginx 等で Web と API を同一ドメイン配信する構成) では空文字にして相対パス `/api/...` で同一オリジンに解決させる。`.env.example` のコメントが正本。
 
