@@ -8,7 +8,7 @@
 
 BL-074 で導入したアプリ内パスワードログイン経路 (`POST /api/v1/login` / sessions テーブル / `LoginView` / `SettingsView` のログアウトボタン) は, server integration テストおよび web 単体テスト (vitest) でカバーされている. 一方で, Playwright (E2E) でブラウザ実機経由の往復シナリオは未追加であり, `e2e/` 配下に login 専用 spec が存在しない.
 
-このため, 「実ブラウザで `LoginView` → `/api/v1/login` → 今日ビュー → `SettingsView` ログアウト → `LoginView` 戻り」までを 1 経路で連動検証する自動テストが無く, BL-074 の AC-1 / AC-2 / AC-3 / AC-5 のいずれかが将来のリファクタリングで回帰しても CI で捕捉できない. `playwright.config.ts` は BL-074 で既に `APP_PASSWORD_HASH` を `webServer.env` に渡す形に更新済みであり, server 起動環境は整っているため, あとは spec を追加するだけで往復シナリオを守れる状態にある.
+このため, 「実ブラウザで `LoginView` → `/api/v1/login` → 今日ビュー → `SettingsView` ログアウト → `LoginView` 戻り」までを 1 経路で連動検証する自動テストが無く, BL-074 の AC-1 / AC-2 / AC-3 / AC-5 のいずれかが将来のリファクタリングで回帰しても CI で捕捉できない. `playwright.config.ts` は空の E2E 用 DB で server を起動し, Web 起動前に初期設定 API でテスト用パスワードを登録するため, spec を追加するだけで往復シナリオを守れる状態にある.
 
 ## ゴール / 非ゴール
 
@@ -35,7 +35,7 @@ BL-074 で導入したアプリ内パスワードログイン経路 (`POST /api/
   - `E2E_TEST_PASSWORD` の値は `playwright.config.ts` から re-export 済みのリテラル, または同等の経路 (`process.env` / spec 内定数) で参照する. 直書きは禁止.
   - 各シナリオは Playwright の `test()` 単位で分割し, `test.describe.serial()` 等で連結はしない (各テストの先頭で `await page.goto("/")` から始めて独立に再現可能にする).
 - 非機能要件:
-  - 既存 `playwright.config.ts` の `webServer` 設定 (`APP_PASSWORD_HASH` / `DATABASE_PATH` / `TEST_NOW`) を流用する. 新たな env / fixture / グローバルセットアップは追加しない.
+  - 既存 `playwright.config.ts` の `webServer` 設定 (`DATABASE_PATH` / `TEST_NOW` と初期設定 API の実行) を流用する. 新たな env / fixture / グローバルセットアップは追加しない.
   - 追加 spec のローカル実行時間は 30 秒以内 (chromium プロジェクト全体の典型値の倍を上限の目安とする).
   - `npx playwright test e2e/login.spec.ts` 単体実行で完結する (他 spec への暗黙依存を持たない).
   - 追加 spec 完了後, 既存 e2e spec (25 本) の green 状態に回帰が無いこと.

@@ -25,7 +25,7 @@ spec.md §「未決事項 / 確認待ち」の U-001 〜 U-007 は plan.md §「
 
 - [ ] サーバ用 Node.js プロジェクトを初期化（`package.json`, TypeScript 設定, Biome 設定）
 - [ ] Hono の最小サーバを起動できる骨格を作成（ヘルスチェック `GET /healthz`）
-- [ ] Bearer 認証ミドルウェア（環境変数 `TODICA_AUTH_TOKEN` と一致するときのみ通過）
+- [ ] Bearer 認証ミドルウェア（sessions テーブルで opaque token を検証。詳細は [`../app-login/plan.md`](../app-login/plan.md)）
 - [ ] better-sqlite3 + drizzle-orm の接続とトランザクション境界ヘルパ
 - [ ] drizzle-kit のスキーマ定義（`tasks`, `projects`, `idempotency_keys` の最小 3 テーブル）と初期マイグレーション生成
 - [ ] Hono zod-openapi 統合の最小構成（ハンドラと OpenAPI 型の一致を担保）

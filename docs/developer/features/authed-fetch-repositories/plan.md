@@ -33,7 +33,7 @@ BL-074 で `HttpTaskRepository` に適用済みの「`authedFetch` 経由 + cons
 | `web/src/repositories/project-repository.test.ts` | 改修 | `beforeEach` で `WebAuthStorage` + `setAuthStorage` で token を seed する形に統一, `new HttpProjectRepository(BASE_URL)` に変更 |
 | `web/src/repositories/routine-repository.test.ts` | 改修 | 同上 |
 | `web/src/repositories/trash-repository.test.ts` | 改修 | 同上 |
-| `web/__tests__/http-task-repository.test.ts` | 改修 | `new HttpTaskRepository(BASE_URL, AUTH_TOKEN)` → `new HttpTaskRepository(BASE_URL)` に揃える (seed パターンは既に統一済み) |
+| `web/__tests__/http-task-repository.test.ts` | 改修 | `new HttpTaskRepository(BASE_URL, TEST_TOKEN)` → `new HttpTaskRepository(BASE_URL)` に揃える (seed パターンは既に統一済み) |
 | `web/src/repositories/settings-repository.test.ts` | 新規 | AC-6 の seed パターン + AC-7 観点の単体テストを追加 |
 | `web/__tests__/http-settings-repository-401.test.ts` (案) | 新規 | AC-1 の 401 捕捉テスト |
 | `web/__tests__/http-project-repository-401.test.ts` (案) | 新規 | AC-2 の 401 捕捉テスト |
@@ -97,12 +97,12 @@ BL-074 で `HttpTaskRepository` に適用済みの「`authedFetch` 経由 + cons
 
 ### 既存 Repository テストの seed パターン統一
 
-既存 3 ファイル (`project-repository.test.ts` / `routine-repository.test.ts` / `trash-repository.test.ts`) は constructor の第 2 引数として直接 `AUTH_TOKEN` を渡し, msw 側で `request.headers.get("Authorization")` をそのまま受けて assertion している. 本 BL では:
+既存 3 ファイル (`project-repository.test.ts` / `routine-repository.test.ts` / `trash-repository.test.ts`) は constructor の第 2 引数として直接 `TEST_TOKEN` を渡し, msw 側で `request.headers.get("Authorization")` をそのまま受けて assertion している. 本 BL では:
 
-- `beforeEach` で `localStorage.clear()` → `new WebAuthStorage()` → `await storage.setToken(AUTH_TOKEN)` → `setAuthStorage(storage)` の seed を行う.
+- `beforeEach` で `localStorage.clear()` → `new WebAuthStorage()` → `await storage.setToken(TEST_TOKEN)` → `setAuthStorage(storage)` の seed を行う.
 - `afterEach` で `setAuthStorage(null)` + `localStorage.clear()` を行う.
-- `new HttpXxxRepository(BASE_URL, AUTH_TOKEN)` → `new HttpXxxRepository(BASE_URL)` に変更する.
-- 既存の `expect(receivedAuth).toBe(\`Bearer ${AUTH_TOKEN}\`)` 等の assertion はそのまま green を保つ (`authedFetch` が seed 済み token を `Authorization` に乗せるため).
+- `new HttpXxxRepository(BASE_URL, TEST_TOKEN)` → `new HttpXxxRepository(BASE_URL)` に変更する.
+- 既存の `expect(receivedAuth).toBe(\`Bearer ${TEST_TOKEN}\`)` 等の assertion はそのまま green を保つ (`authedFetch` が seed 済み token を `Authorization` に乗せるため).
 - パターン参照は `web/__tests__/http-task-repository.test.ts` の `beforeEach` (lines 37–46) を正典とする.
 
 ### 401 捕捉テスト (新規 4 本)
@@ -125,7 +125,7 @@ BL-074 で `HttpTaskRepository` に適用済みの「`authedFetch` 経由 + cons
 
 既存テストが存在しない `HttpSettingsRepository` について, 他 3 本のテスト構造に揃えた msw ベースの単体テストを新設する. 観点は最低限以下:
 
-- `getSettings` が `GET /api/v1/settings` に `Authorization: Bearer ${AUTH_TOKEN}` を付ける.
+- `getSettings` が `GET /api/v1/settings` に `Authorization: Bearer ${TEST_TOKEN}` を付ける.
 - `patchSettings` が `PATCH /api/v1/settings` に `Idempotency-Key` (UUID v4) と `If-Match: ${ifMatch}` を付ける.
 - 412 応答で `PatchConflictError` を throw し, error.settings に response body の settings が入る.
 - 上記すべてで `setAuthStorage` seed パターンを採用する.
@@ -136,10 +136,10 @@ BL-074 で `HttpTaskRepository` に適用済みの「`authedFetch` 経由 + cons
 - **D-2**: 5 本すべての constructor から `authToken` 引数を撤去する. BL-074 では task 側だけ optional unused のまま残していたが, 本 BL のタイミングで揃える方が将来の呼出元 (Local / Storybook / 別エントリ) の見通しが良くなる.
 - **D-3**: 後方互換 (`authToken` を optional で残す) は採用しない. 本 BL は機械的なクリーンアップであり, 段階的 deprecation の必要性がない (内部呼出のみで, 外部公開 API ではないため).
 - **D-4**: 401 捕捉の単体テストは `app-login-production-path.test.tsx` と同じ `vi.spyOn(global, "fetch")` パターンを採用する (msw でも代替可能だが, 既存 production-path テストとの一貫性を優先). 4 本それぞれに 1 件ずつ独立ファイルとして配置し, `web/__tests__/http-{settings,project,routine,trash}-repository-401.test.ts` の命名で並べる. これにより監査時の対応関係が見やすく, 失敗時の局所化が容易になる.
-- **D-5**: 既存 Repository unit テストの auth seed は `beforeEach` で `localStorage.clear()` → `new WebAuthStorage()` → `storage.setToken(AUTH_TOKEN)` → `setAuthStorage(storage)` の 4 ステップ固定パターンで揃える. `afterEach` も `setAuthStorage(null)` + `localStorage.clear()` の 2 ステップで固定する. 個別 it 内で seed を行わない (テスト間で auth state が漏れないようにするため).
+- **D-5**: 既存 Repository unit テストの auth seed は `beforeEach` で `localStorage.clear()` → `new WebAuthStorage()` → `storage.setToken(TEST_TOKEN)` → `setAuthStorage(storage)` の 4 ステップ固定パターンで揃える. `afterEach` も `setAuthStorage(null)` + `localStorage.clear()` の 2 ステップで固定する. 個別 it 内で seed を行わない (テスト間で auth state が漏れないようにするため).
 - **D-6**: `authedFetch` 自体には改修を加えない. 401 → `clearToken` + event dispatch のロジックは BL-074 のまま. 本 BL は呼出側を増やすだけのスコープ.
 - **D-7**: 段階分割は 1 PR / 1 commit を推奨する. 4 本の Repository 改修・5 本の constructor 整理・main.tsx 整理・テスト改修は相互依存 (constructor を変えると既存テストの new 呼び出しも変える必要がある) しており, 個別 commit に分けるメリットが薄い. PR 内のレビュー単位として diff を Repository 4 + テスト 4 + main + task 整理に分かるよう構造化する (commit メッセージで明示).
-- **D-8**: 既存テストの「`Authorization: Bearer ${AUTH_TOKEN}` を付ける」観点は維持する. `authedFetch` 経由でも seed した token がそのまま `Authorization` ヘッダに乗るため, msw 側 assertion を書き換える必要はない.
+- **D-8**: 既存テストの「`Authorization: Bearer ${TEST_TOKEN}` を付ける」観点は維持する. `authedFetch` 経由でも seed した token がそのまま `Authorization` ヘッダに乗るため, msw 側 assertion を書き換える必要はない.
 
 ## リスク / 代替案
 
