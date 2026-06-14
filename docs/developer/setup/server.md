@@ -28,6 +28,8 @@ cp .env.example .env
 | `DATABASE_PATH` | `./todica.db` | SQLite データベースファイルのパス |
 | `VITE_API_BASE_URL` | `http://localhost:3000` | Web から呼び出すサーバ URL |
 
+`VITE_API_BASE_URL` は構成で値が変わる。dev (Web `:5173` と API `:3000` が別オリジン) では `http://localhost:3000` を指定する。本番 (nginx 等で Web と API を同一ドメイン配信する構成) では空文字にして相対パス `/api/...` で同一オリジンに解決させる。`.env.example` のコメントが正本。
+
 `.env` は `.gitignore` 済みでコミット対象外。`VITE_*` プレフィックスを持つ変数だけが Vite を通じて Web クライアントに expose される（`web/vite.config.ts` の `envDir` 設定でルートの `.env` を参照）。
 
 Bearer トークンはビルド時に埋め込まれない。DB が空の初回アクセスではブラウザからパスワードを登録し、同時に opaque token を取得する。以後のログインとパスワード変更には DB の値が使われる。
