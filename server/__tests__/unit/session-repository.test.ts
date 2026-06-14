@@ -18,7 +18,7 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { schema } from "../../src/db/schema.js";
-import { DrizzleSessionRepository } from "../../src/infra/persistence/drizzle/session-repository.js";
+import { DrizzleSessionRepository } from "../../src/infra/persistence/drizzle/drizzle-session-repository.js";
 
 const TOKEN_A = "a".repeat(64);
 const TOKEN_B = "b".repeat(64);

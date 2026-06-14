@@ -8,9 +8,8 @@
  *   (spec.md §「初回アクセス時の FocusSelection はサーバ初期化時に 1 件存在し currentTaskId は null」).
  * - update() は version 含めて全フィールド上書きする (アプリ層で version++ 済みの値を渡す).
  *
- * 本ファイルは test-designer 段階のインターフェース定義. 物理スキーマ (drizzle) /
- * 本実装は implementer が `server/src/infra/persistence/drizzle/focus-repository.ts`
- * (相当) で追加する.
+ * 本ファイルはインターフェース定義. 物理スキーマ (drizzle) を含む本実装は
+ * `server/src/infra/persistence/drizzle/drizzle-focus-repository.ts` にある.
  */
 export interface FocusSelection {
   /** 単一レコードを示す固定値 "singleton". */
