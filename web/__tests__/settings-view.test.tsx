@@ -145,7 +145,7 @@ describe("SettingsView (BL-009 境界時刻の設定)", () => {
     await user.type(input, "06:00");
 
     // 保存ボタンをクリックする.
-    const saveButton = screen.getByRole("button", { name: /保存|更新/ });
+    const saveButton = screen.getByRole("button", { name: /変更|保存|更新/ });
     await user.click(saveButton);
 
     // patchSettings が呼ばれ、引数に dayBoundaryTime と ifMatch が含まれる.
@@ -179,7 +179,7 @@ describe("SettingsView (BL-009 境界時刻の設定)", () => {
     await user.clear(input);
     await user.type(input, "25:00");
 
-    const saveButton = screen.getByRole("button", { name: /保存|更新/ });
+    const saveButton = screen.getByRole("button", { name: /変更|保存|更新/ });
     await user.click(saveButton);
 
     // エラーメッセージが表示される.
@@ -216,7 +216,7 @@ describe("SettingsView (BL-009 境界時刻の設定)", () => {
     await user.clear(input);
     await user.type(input, "06:00");
 
-    const saveButton = screen.getByRole("button", { name: /保存|更新/ });
+    const saveButton = screen.getByRole("button", { name: /変更|保存|更新/ });
     await user.click(saveButton);
 
     // エラーメッセージが表示される.
@@ -470,8 +470,9 @@ describe("SettingsView パスワード変更セクション (password-change AC-
     expect(next).toHaveAttribute("autocomplete", "new-password");
     expect(confirm).toHaveAttribute("autocomplete", "new-password");
 
-    // 「変更する」ボタン.
-    const submit = screen.getByRole("button", { name: /変更|保存/ });
+    // 「変更」ボタン (パスワード変更セクション内).
+    const section = screen.getByRole("region", { name: "パスワード変更" });
+    const submit = within(section).getByRole("button", { name: /変更|保存/ });
     expect(submit).toBeInTheDocument();
   });
 

@@ -159,26 +159,28 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
 
       {settings && (
         <form onSubmit={handleSave} aria-label="設定フォーム" className="settings-view__form">
-          <div>
-            <label htmlFor="day-boundary-time">リセット時刻</label>
+          <label htmlFor="day-boundary-time" className="settings-view__label">
+            リセット時刻
+          </label>
+          <div className="settings-view__field-row">
             <input
               id="day-boundary-time"
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
             />
+            <button type="submit" className="button button--primary">
+              変更
+            </button>
           </div>
-          <button type="submit" className="button button--primary">
-            {onChangePassword === undefined ? "保存" : "更新"}
-          </button>
         </form>
       )}
 
       {onChangePassword !== undefined && (
         <section aria-label="パスワード変更" className="settings-view__section">
           <h2>パスワード変更</h2>
-          <form onSubmit={handlePasswordSubmit}>
-            <div>
+          <form onSubmit={handlePasswordSubmit} className="settings-view__password-form">
+            <div className="settings-view__password-field">
               <label htmlFor="current-password">現在のパスワード</label>
               <input
                 id="current-password"
@@ -188,7 +190,7 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
                 onChange={(event) => setCurrentPassword(event.target.value)}
               />
             </div>
-            <div>
+            <div className="settings-view__password-field">
               <label htmlFor="new-password">新しいパスワード</label>
               <input
                 id="new-password"
@@ -198,7 +200,7 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
                 onChange={(event) => setNewPassword(event.target.value)}
               />
             </div>
-            <div>
+            <div className="settings-view__password-field">
               <label htmlFor="confirm-password">新しいパスワード (確認)</label>
               <input
                 id="confirm-password"
@@ -210,7 +212,7 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
             </div>
             {passwordError && <div role="alert">{passwordError}</div>}
             <button type="submit" className="button button--primary">
-              変更する
+              変更
             </button>
           </form>
         </section>
@@ -237,7 +239,7 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
       )}
 
       {onLogout !== undefined && (
-        <section aria-label="ログアウト" className="settings-view__section">
+        <section aria-label="ログアウト" className="settings-view__logout">
           <button
             type="button"
             className="button button--ghost"

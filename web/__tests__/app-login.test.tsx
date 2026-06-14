@@ -14,7 +14,7 @@
  * 現状: `web/src/auth/auth-storage.ts` / `App` の token 分岐は未実装. red.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it } from "vitest";
 /**
@@ -355,7 +355,7 @@ describe("App — InitialSetupView 送信成功で auto-login + /today 遷移 (i
       // InitialSetupView が出るまで待つ.
       const newInput = await screen.findByLabelText(/^新しいパスワード$/);
       const confirmInput = await screen.findByLabelText(/新しいパスワード\s*\(?確認\)?/);
-      const submit = screen.getByRole("button", { name: /設定|登録|保存/ });
+      const submit = screen.getByRole("button", { name: /変更|設定|登録|保存/ });
 
       await user.type(newInput, "P0");
       await user.type(confirmInput, "P0");
@@ -466,7 +466,8 @@ describe("App — パスワード変更成功時の LoginView 遷移 (password-c
       await user.type(next, "P1");
       await user.type(confirm, "P1");
 
-      const submit = screen.getByRole("button", { name: /変更|保存/ });
+      const section = screen.getByRole("region", { name: "パスワード変更" });
+      const submit = within(section).getByRole("button", { name: /変更|保存/ });
       await act(async () => {
         await user.click(submit);
       });

@@ -28,6 +28,20 @@
   padding: var(--space-md);
 }
 
+.settings-view__label {
+  font-weight: bold;
+}
+
+.settings-view__field-row {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.settings-view__field-row input {
+  flex: 1;
+}
+
 .settings-view__section {
   display: flex;
   flex-direction: column;
@@ -35,4 +49,26 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: var(--space-md);
+}
+
+.settings-view__password-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.settings-view__password-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.settings-view__password-field label {
+  display: block;
+}
+
+/* ログアウトは外枠 (border / padding) を持たない (button--ghost との二重箱を回避) */
+.settings-view__logout {
+  display: flex;
+  flex-direction: column;
 }

@@ -194,7 +194,7 @@ describe("SettingsView (BL-091 / spec.md G-4 重複表示の撤去)", () => {
     await user.clear(input);
     await user.type(input, "06:00");
 
-    const saveButton = screen.getByRole("button", { name: /保存|更新/ });
+    const saveButton = screen.getByRole("button", { name: /変更|保存|更新/ });
     await user.click(saveButton);
 
     // patchSettings が呼ばれる.
