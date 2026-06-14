@@ -239,34 +239,6 @@ describe("ProjectCard / ProjectFormCard コンポーネント新設 (BL-060 / pr
   });
 
   // ----------------------------------------------------------
-  // AC-2: .project-card__name が flex: 1 で残り幅を占有する (V-4)
-  // ----------------------------------------------------------
-  /**
-   * シナリオ AC-2:
-   *   Given project-card.css を開いた
-   *   When  .project-card__name セレクタのルール本文を観察する
-   *   Then  flex: 1 (または flex-grow: 1) の宣言を含む
-   *
-   *   BL-070 (inline-edit-all-cards) で .project-card__name span は撤去された.
-   *   常時 input 表示に置換されたため, 残り幅を占有する責務は AC-4 の
-   *   .project-card__input が引き継ぐ. 本 describe は撤去対象として skip する.
-   */
-  describe.skip("AC-2: .project-card__name が flex: 1 で残り幅を占有する (V-4) (BL-070 で撤去 / AC-4 に集約)", () => {
-    it(".project-card__name ルール本文に flex: 1 (または flex-grow: 1) を含む", () => {
-      const css = readFileSync(projectCardCssPath, "utf-8");
-      const body = extractRuleBody(css, ".project-card__name");
-      expect(body, ".project-card__name ルールが見つからない").not.toBeNull();
-      const bodyText = body ?? "";
-      const hasShorthand = /(?:^|;|\n)\s*flex\s*:\s*1(?:\s|;|$)/.test(bodyText);
-      const hasFlexGrow = /flex-grow\s*:\s*1/.test(bodyText);
-      expect(
-        hasShorthand || hasFlexGrow,
-        ".project-card__name に flex: 1 (または flex-grow: 1) が無い",
-      ).toBe(true);
-    });
-  });
-
-  // ----------------------------------------------------------
   // AC-3: .project-card__actions がボタン横並びを持つ (V-5)
   // ----------------------------------------------------------
   /**

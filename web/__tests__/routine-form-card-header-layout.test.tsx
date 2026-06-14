@@ -623,19 +623,6 @@ describe("RoutineFormCard レイアウト刷新 (BL-072 / routine-form-card-head
       expect(body ?? "").toMatch(/align-items\s*:\s*center/);
     });
 
-    // BL-073 (routine-card-align-with-form / D-001) で
-    // `.routine-card__header { justify-content: space-between }` を
-    // `justify-content: flex-end` に変更. 起票カード側 override も撤去して共用化.
-    // 旧「space-between 維持」 it は本 BL で逆転するため skip にする.
-    it.skip(".routine-card__header に justify-content: space-between を含む (= BL-071 維持) (BL-073 で flex-end に逆転)", () => {
-      const css = readFileSync(routineCardCssPath, "utf-8");
-      const body = extractRuleBody(css, ".routine-card__header");
-      expect(
-        body ?? "",
-        ".routine-card__header の justify-content が BL-071 の space-between から変更されている (AC-7 / REQ-2 違反)",
-      ).toMatch(/justify-content\s*:\s*space-between/);
-    });
-
     it(".routine-card__header に gap: var(--space-sm) を含む", () => {
       const css = readFileSync(routineCardCssPath, "utf-8");
       const body = extractRuleBody(css, ".routine-card__header");
@@ -646,79 +633,6 @@ describe("RoutineFormCard レイアウト刷新 (BL-072 / routine-form-card-head
       const css = readFileSync(routineCardCssPath, "utf-8");
       const body = extractRuleBody(css, ".routine-card__header");
       expect(body ?? "").toMatch(/font-size\s*:\s*var\(--font-size-h2\)/);
-    });
-  });
-
-  // ----------------------------------------------------------
-  // D-006: .routine-card--form .routine-card__header { justify-content: flex-end } 宣言
-  // ----------------------------------------------------------
-  /**
-   * シナリオ (D-006 追加):
-   *   Given routine-card.css を読み込む
-   *   When  .routine-card--form .routine-card__header ルールセットを参照する
-   *   Then  justify-content: flex-end が宣言されている
-   *
-   * 起票カードでは PriorityStars 単独. space-between は単独要素時に「flex-start (左寄せ)」
-   * 相当に振る舞うため, override で右端固定にする (plan D-006).
-   */
-  // BL-073 (routine-card-align-with-form / D-001 (a)) で基底 `.routine-card__header` が
-  // `flex-end` 化したため `.routine-card--form .routine-card__header` override は完全撤去.
-  // 旧 BL-072 D-006 の override 存在要求は本 BL で逆転するため skip にする.
-  // 起票カードの header 視覚配置 (= 右端固定) は AC-25 (routine-card-align-with-form.test.tsx) で担保する.
-  describe.skip("D-006: .routine-card--form .routine-card__header に justify-content: flex-end の override が宣言される (BL-073 で override 撤去)", () => {
-    it(".routine-card--form .routine-card__header ルールが存在する", () => {
-      const css = readFileSync(routineCardCssPath, "utf-8");
-      const body = extractRuleBody(css, ".routine-card--form .routine-card__header");
-      expect(
-        body,
-        ".routine-card--form .routine-card__header の override ルールが無い (D-006 違反)",
-      ).not.toBeNull();
-    });
-
-    it(".routine-card--form .routine-card__header に justify-content: flex-end を含む", () => {
-      const css = readFileSync(routineCardCssPath, "utf-8");
-      const body = extractRuleBody(css, ".routine-card--form .routine-card__header");
-      expect(body, ".routine-card--form .routine-card__header ルールが無い").not.toBeNull();
-      expect(
-        body ?? "",
-        ".routine-card--form .routine-card__header に justify-content: flex-end が無い (D-006 違反)",
-      ).toMatch(/justify-content\s*:\s*flex-end/);
-    });
-  });
-
-  // ----------------------------------------------------------
-  // D-007: .routine-card--form .routine-card__actions { justify-content: flex-end } 宣言
-  // ----------------------------------------------------------
-  /**
-   * シナリオ (D-007 追加):
-   *   Given routine-card.css を読み込む
-   *   When  .routine-card--form .routine-card__actions ルールセットを参照する
-   *   Then  justify-content: flex-end が宣言されている
-   *
-   * user 希望 (起票カードでは「追加」を右端に置きたい / U-5 候補 b) に従う.
-   * 表示カード (= 「削除」 button) の actions 段は基底のまま (= flex 自然順 = 左寄せ).
-   */
-  // BL-074 で .routine-card__actions 基底に justify-content: flex-end を統合し
-  // .routine-card--form .routine-card__actions の override は撤去された.
-  // 起票・表示とも右端配置という挙動は基底ルールで担保される.
-  describe.skip("D-007: .routine-card--form .routine-card__actions に justify-content: flex-end の override が宣言される", () => {
-    it(".routine-card--form .routine-card__actions ルールが存在する", () => {
-      const css = readFileSync(routineCardCssPath, "utf-8");
-      const body = extractRuleBody(css, ".routine-card--form .routine-card__actions");
-      expect(
-        body,
-        ".routine-card--form .routine-card__actions の override ルールが無い (D-007 違反)",
-      ).not.toBeNull();
-    });
-
-    it(".routine-card--form .routine-card__actions に justify-content: flex-end を含む", () => {
-      const css = readFileSync(routineCardCssPath, "utf-8");
-      const body = extractRuleBody(css, ".routine-card--form .routine-card__actions");
-      expect(body, ".routine-card--form .routine-card__actions ルールが無い").not.toBeNull();
-      expect(
-        body ?? "",
-        ".routine-card--form .routine-card__actions に justify-content: flex-end が無い (D-007 違反)",
-      ).toMatch(/justify-content\s*:\s*flex-end/);
     });
   });
 
@@ -818,77 +732,6 @@ describe("RoutineFormCard レイアウト刷新 (BL-072 / routine-form-card-head
         fontSize === "20px" || fontSize === "var(--font-size-h2)" || /20px/.test(fontSize),
         `name input の font-size が '20px' でも 'var(--font-size-h2)' でもない (実際: "${fontSize}") (AC-10 / R-1 違反)`,
       ).toBe(true);
-    });
-  });
-
-  // ============================================================
-  // 表示カード <RoutineCard> の不変性 (AC-11 / AC-12)
-  // ============================================================
-
-  // ----------------------------------------------------------
-  // AC-11: 表示カードの DOM 構造 (BL-071 の 3 段) が無改修
-  // ----------------------------------------------------------
-  /**
-   * シナリオ AC-11:
-   *   Given <RoutineCard routine={...} ... /> を render する
-   *   When  DOM をクエリする
-   *   Then  .routine-card 直下に __header / __day-checkboxes / __actions の 3 要素のみが並ぶ
-   *    かつ header 直下に label + input + PriorityStars (radiogroup) の 3 要素が並ぶ
-   */
-  // BL-073 で表示カードは 4 段化 (header / title / day-checkboxes / actions).
-  // 旧 BL-072 AC-11 の「3 段維持」「header に label + input + radiogroup」要求は本 BL で逆転.
-  // 表示カード新構造の網羅 assert は `routine-card-align-with-form.test.tsx` (BL-073) に集約.
-  describe.skip("AC-11: 表示カード <RoutineCard> の DOM 構造 (BL-071 の 3 段) が無改修 (BL-073 で 4 段化)", () => {
-    it(".routine-card 直下の子が 3 個 (header / day-checkboxes / actions)", async () => {
-      const { RoutineCard } = await importRoutineCard();
-      const routine = makeRoutine();
-      const { container } = render(
-        <RoutineCard
-          routine={routine}
-          onNameBlur={() => {}}
-          onDaysOfWeekChange={() => {}}
-          onDefaultPriorityChange={() => {}}
-          onDelete={() => {}}
-        />,
-      );
-      const root = container.querySelector(".routine-card") as HTMLElement | null;
-      expect(root, ".routine-card root が無い").not.toBeNull();
-      if (!root) return;
-      expect(
-        root.children.length,
-        `.routine-card 直下の子が 3 個ではない (実際: ${root.children.length}) (AC-11 / R-2 違反)`,
-      ).toBe(3);
-      const classes = Array.from(root.children).map((el) => el.className);
-      expect(classes[0]?.includes("routine-card__header")).toBe(true);
-      expect(classes[1]?.includes("routine-card__day-checkboxes")).toBe(true);
-      expect(classes[2]?.includes("routine-card__actions")).toBe(true);
-    });
-
-    it("表示カードの header 直下に label + input + radiogroup が並ぶ (BL-071 AC-1 維持)", async () => {
-      const { RoutineCard } = await importRoutineCard();
-      const routine = makeRoutine({ id: "r1" });
-      const { container } = render(
-        <RoutineCard
-          routine={routine}
-          onNameBlur={() => {}}
-          onDaysOfWeekChange={() => {}}
-          onDefaultPriorityChange={() => {}}
-          onDelete={() => {}}
-        />,
-      );
-      const header = container.querySelector(".routine-card__header") as HTMLElement | null;
-      expect(header, "表示カードの .routine-card__header が無い").not.toBeNull();
-      if (!header) return;
-      const directChildren = Array.from(header.children);
-      const input = directChildren.find(
-        (el) => el.tagName.toLowerCase() === "input" && el.getAttribute("type") === "text",
-      );
-      const radiogroup = directChildren.find((el) => el.getAttribute("role") === "radiogroup");
-      expect(input, "表示カード header の直下に input が無い (AC-11 違反)").toBeDefined();
-      expect(
-        radiogroup,
-        "表示カード header の直下に PriorityStars が無い (AC-11 違反)",
-      ).toBeDefined();
     });
   });
 

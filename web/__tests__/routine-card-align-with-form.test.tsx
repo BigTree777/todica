@@ -681,19 +681,6 @@ describe("RoutineCard 表示カードのレイアウト刷新 (BL-073 / routine-
       expect(body ?? "").toMatch(/flex-direction\s*:\s*column/);
       expect(body ?? "").toMatch(/align-items\s*:\s*stretch/);
     });
-
-    // BL-074 で .routine-card__actions 基底に justify-content: flex-end を統合し
-    // .routine-card--form .routine-card__actions の override は撤去された.
-    // 起票・表示とも右端配置という挙動は基底ルールで担保される.
-    it.skip(".routine-card--form .routine-card__actions ルールに justify-content: flex-end を含む", () => {
-      const css = readFileSync(routineCardCssPath, "utf-8");
-      const body = extractRuleBody(css, ".routine-card--form .routine-card__actions");
-      expect(
-        body,
-        ".routine-card--form .routine-card__actions ルールが無い (AC-10 違反)",
-      ).not.toBeNull();
-      expect(body ?? "").toMatch(/justify-content\s*:\s*flex-end/);
-    });
   });
 
   // ============================================================
