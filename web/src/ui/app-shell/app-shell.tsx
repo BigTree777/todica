@@ -94,6 +94,29 @@ export function AppShell(): JSX.Element {
         ☰
       </button>
 
+      <button
+        type="button"
+        className="app-shell__reload"
+        aria-label="アップデートを確認して再読み込み"
+        onClick={async () => {
+          if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+            try {
+              const registration = await navigator.serviceWorker.getRegistration();
+              if (registration?.waiting) {
+                registration.waiting.postMessage({ type: "SKIP_WAITING" });
+              } else if (registration) {
+                await registration.update();
+              }
+            } catch {
+              // SW 利用不可環境は無視して reload のみ実行
+            }
+          }
+          window.location.reload();
+        }}
+      >
+        ↻
+      </button>
+
       {/* オーバーレイ背景: メニューが開いているときのみ表示 (REQ-3) */}
       {menuOpen && (
         // biome-ignore lint/a11y/useKeyWithClickEvents: オーバーレイ背景はクリック専用の半透明幕
