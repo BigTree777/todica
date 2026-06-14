@@ -75,3 +75,16 @@
   display: flex;
   flex-direction: column;
 }
+
+/* 設定の操作結果メッセージ (赤 = error / 緑 = success) */
+.settings-view__message {
+  font-weight: bold;
+}
+
+.settings-view__message--error {
+  color: #c00;
+}
+
+.settings-view__message--success {
+  color: #060;
+}

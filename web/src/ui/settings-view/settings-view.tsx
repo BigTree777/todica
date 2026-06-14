@@ -58,10 +58,12 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
 
   const [inputValue, setInputValue] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccessMessage, setPasswordSuccessMessage] = useState<string | null>(null);
 
   // 初期化済みフラグ（fetchedSettings が取得されたら一度だけ inputValue を初期化）
   const initializedRef = useRef(false);
@@ -81,6 +83,7 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
     async (e: React.FormEvent) => {
       e.preventDefault();
       setError(null);
+      setSuccessMessage(null);
 
       // クライアントバリデーション.
       if (!TIME_PATTERN.test(inputValue)) {
@@ -103,6 +106,7 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
         setLocalSettings(updated);
         setInputValue(updated.dayBoundaryTime);
         setError(null);
+        setSuccessMessage(`リセット時刻を ${updated.dayBoundaryTime} に変更しました。`);
         // QueryClient のキャッシュを直接更新する（invalidateQueries は追加フェッチを引き起こすため使わない）
         queryClient.setQueryData(["settings"], updated);
       } catch (err) {
@@ -126,6 +130,7 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
     async (event: React.FormEvent) => {
       event.preventDefault();
       setPasswordError(null);
+      setPasswordSuccessMessage(null);
       if (!onChangePassword || !currentPassword || !newPassword || !confirmPassword) {
         return;
       }
@@ -135,6 +140,7 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
       }
       try {
         await onChangePassword(currentPassword, newPassword);
+        setPasswordSuccessMessage("パスワードを変更しました。");
         await onPasswordChanged?.();
       } catch (err) {
         setPasswordError(
@@ -152,8 +158,22 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
       <h1>設定</h1>
 
       {error && (
-        <div role="alert" aria-live="assertive">
+        <div
+          role="alert"
+          aria-live="assertive"
+          className="settings-view__message settings-view__message--error"
+        >
           {error}
+        </div>
+      )}
+
+      {successMessage && !error && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="settings-view__message settings-view__message--success"
+        >
+          {successMessage}
         </div>
       )}
 
@@ -167,7 +187,11 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
               id="day-boundary-time"
               type="text"
               value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
+              onChange={(e) => {
+                setInputValue(e.target.value);
+                setSuccessMessage(null);
+                setError(null);
+              }}
             />
             <button type="submit" className="button button--primary">
               変更
@@ -210,7 +234,20 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
                 onChange={(event) => setConfirmPassword(event.target.value)}
               />
             </div>
-            {passwordError && <div role="alert">{passwordError}</div>}
+            {passwordError && (
+              <div role="alert" className="settings-view__message settings-view__message--error">
+                {passwordError}
+              </div>
+            )}
+            {passwordSuccessMessage && !passwordError && (
+              <div
+                role="status"
+                aria-live="polite"
+                className="settings-view__message settings-view__message--success"
+              >
+                {passwordSuccessMessage}
+              </div>
+            )}
             <button type="submit" className="button button--primary">
               変更
             </button>

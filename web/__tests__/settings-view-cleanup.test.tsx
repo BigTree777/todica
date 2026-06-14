@@ -71,6 +71,15 @@ describe("SettingsView 整理 (BL-094)", () => {
     expect(css).toMatch(/\.settings-view__label\s*\{[^}]*font-size:\s*var\(--font-size-h2\)/);
   });
 
+  it("メッセージのクラス: error は赤 (#c00), success は緑 (#060)", () => {
+    const css = readFileSync(
+      resolve(repoRoot, "web/src/ui/settings-view/settings-view.css"),
+      "utf-8",
+    );
+    expect(css).toMatch(/\.settings-view__message--error\s*\{[^}]*color:\s*#c00/);
+    expect(css).toMatch(/\.settings-view__message--success\s*\{[^}]*color:\s*#060/);
+  });
+
   it("FR-4: リセット時刻 input と変更ボタンが .settings-view__field-row 内に並ぶ", async () => {
     const repo = makeRepo();
     const { container } = renderWithClient(<SettingsView repository={repo as never} />);
