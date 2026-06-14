@@ -37,7 +37,9 @@ cp .env.example .env
 VITE_API_BASE_URL=http://localhost:3000
 ```
 
-> Web クライアントは **ビルド時に `VITE_*` を埋め込む**ため、`VITE_API_BASE_URL` は次の step より前に決めておく。
+> 上記の値は dev 想定 (Web `:5173` と API `:3000` が別オリジン)。本番 (nginx 等で Web と API を同一ドメイン配信) では空文字にして相対パス `/api/...` で同一オリジンに解決させる。詳細は `.env.example` のコメントを参照。
+
+> Web クライアントは **ビルド時に `VITE_*` を埋め込む**ため、`VITE_API_BASE_URL` は次の step より前に決めておく。サーバ dev 起動 (`npm run dev -w server`) は env をランタイムで読むので, サーバ側は再起動だけで反映される。
 > パスワードと認証トークンはビルド時に埋め込まれない。
 
 ### A-3. サーバを起動する
