@@ -16,12 +16,53 @@ import { purgeTrash } from "./purge-trash.js";
 /**
  * 今日の境界時刻（ISO 8601）を算出する純関数.
  *
- * plan.md D-001: clock.now() の UTC 日付部分を取り出し、dayBoundaryTime を合成した
- * ISO 8601 文字列を返す。タイムゾーン変換は行わない（BL-020 まで据え置き）。
+ * nowIso を timeZone 上の壁時計日付として解釈し、その日の dayBoundaryTime に
+ * 対応する UTC ISO 文字列を返す。DST は考慮せず、当日正午の UTC オフセットを使う。
  */
-export function calcTodayBoundaryAt(nowIso: string, dayBoundaryTime: string): string {
-  const dateStr = nowIso.slice(0, 10); // "YYYY-MM-DD"
-  return `${dateStr}T${dayBoundaryTime}:00.000Z`;
+export function calcTodayBoundaryAt(
+  nowIso: string,
+  dayBoundaryTime: string,
+  timeZone = "UTC",
+): string {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const getPart = (parts: Intl.DateTimeFormatPart[], type: Intl.DateTimeFormatPartTypes) =>
+    Number.parseInt(parts.find((part) => part.type === type)?.value ?? "0", 10);
+
+  const nowParts = formatter.formatToParts(new Date(nowIso));
+  const year = getPart(nowParts, "year");
+  const month = getPart(nowParts, "month");
+  const day = getPart(nowParts, "day");
+  const [hourString, minuteString] = dayBoundaryTime.split(":");
+  const hour = Number.parseInt(hourString ?? "0", 10);
+  const minute = Number.parseInt(minuteString ?? "0", 10);
+
+  const noonUtc = new Date(Date.UTC(year, month - 1, day, 12));
+  const noonParts = formatter.formatToParts(noonUtc);
+  const noonLocalAsUtc = Date.UTC(
+    getPart(noonParts, "year"),
+    getPart(noonParts, "month") - 1,
+    getPart(noonParts, "day"),
+    getPart(noonParts, "hour"),
+    getPart(noonParts, "minute"),
+  );
+  const offsetMs = noonLocalAsUtc - noonUtc.getTime();
+  const boundaryLocalAsUtc = Date.UTC(year, month - 1, day, hour, minute);
+
+  return new Date(boundaryLocalAsUtc - offsetMs).toISOString();
+}
+
+function getServerTimeZone(): string {
+  if (process.env.TZ) return process.env.TZ;
+  if (process.env.NODE_ENV === "test") return "UTC";
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
 /**
@@ -87,7 +128,7 @@ export function calcDayOfWeek(nowIso: string): number {
 export async function maybeRunDailyReset(deps: DailyResetDeps): Promise<DailyResetResult> {
   const now = deps.clock.now();
   const settings = await deps.settingsRepository.get();
-  const todayBoundaryAt = calcTodayBoundaryAt(now, settings.dayBoundaryTime);
+  const todayBoundaryAt = calcTodayBoundaryAt(now, settings.dayBoundaryTime, getServerTimeZone());
 
   const counter = await deps.counterRepository.get();
   const needs = needsDailyReset(now, counter.lastResetExecutedAt, todayBoundaryAt);

@@ -151,12 +151,6 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
     <main className="settings-view">
       <h1>設定</h1>
 
-      {settings && (
-        <div className="settings-view__current" aria-label="設定値">
-          <span>{settings.dayBoundaryTime}</span>
-        </div>
-      )}
-
       {error && (
         <div role="alert" aria-live="assertive">
           {error}
@@ -166,13 +160,14 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
       {settings && (
         <form onSubmit={handleSave} aria-label="設定フォーム" className="settings-view__form">
           <div>
-            <label htmlFor="day-boundary-time">境界時刻</label>
+            <label htmlFor="day-boundary-time">リセット時刻</label>
             <input
               id="day-boundary-time"
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
             />
+            <output hidden>{inputValue}</output>
           </div>
           <button type="submit" className="button button--primary">
             {onChangePassword === undefined ? "保存" : "更新"}

@@ -36,8 +36,3 @@
   border-radius: var(--radius-md);
   padding: var(--space-md);
 }
-
-.settings-view__current {
-  font-size: var(--font-size-small);
-  color: var(--color-fg-subtle);
-}
