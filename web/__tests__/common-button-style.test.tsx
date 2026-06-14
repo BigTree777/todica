@@ -712,13 +712,13 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
     // (BL-075: BL-019 由来の「変更を保存」 button は dead path として削除済み)
     // ----------------------------------------------------------
     describe('AC-4-SettingsView: settings-view.tsx 内 button のソースに className="button ..." を含む', () => {
-      it('settings-view.tsx の「保存」 button が className に "button" を含む', () => {
+      it('settings-view.tsx の「変更」 button が className に "button" を含む', () => {
         const src = readFileSync(TARGET_TSX_FILES.settingsView, "utf-8");
-        const cn = findButtonClassNameByLabel(src, "保存");
-        expect(cn, "settings-view.tsx の「保存」 button が見つからない").not.toBeNull();
+        const cn = findButtonClassNameByLabel(src, "変更");
+        expect(cn, "settings-view.tsx の「変更」 button が見つからない").not.toBeNull();
         expect(
           (cn ?? "").split(/\s+/).includes("button"),
-          `settings-view.tsx の「保存」 button に "button" className が無い (現値: "${cn}")`,
+          `settings-view.tsx の「変更」 button に "button" className が無い (現値: "${cn}")`,
         ).toBe(true);
       });
 
@@ -1068,11 +1068,9 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
       ).toBe(true);
     });
 
-    it("SettingsView の「保存」 button が --primary を持つ (ソース直読み)", () => {
-      // BL-075: BL-019 由来の「変更を保存」 button は dead path として削除済みのため
-      // 本テストの対象から外す.
+    it("SettingsView の「変更」 button が --primary を持つ (ソース直読み)", () => {
       const src = readFileSync(TARGET_TSX_FILES.settingsView, "utf-8");
-      const labels = ["保存"] as const;
+      const labels = ["変更"] as const;
       for (const label of labels) {
         const cn = findButtonClassNameByLabel(src, label);
         expect(cn, `settings-view.tsx の「${label}」 button が見つからない`).not.toBeNull();
