@@ -30,7 +30,7 @@
 
 ## 要件
 
-- **FR-1**: 以下 7 ファイルの obsolete `describe.skip` / `it.skip` をブロックごと削除する:
+- **FR-1**: 以下 7 ファイルの obsolete `describe.skip` / `it.skip` をブロックごと削除する. 削除対象は skip ブロック自体と「その直上のコメント (履歴表現を含む)」に限定する. passed テスト側に残る履歴表現の整理は別 BL のスコープ:
   - `web/__tests__/routine-card-component.test.tsx`
   - `web/__tests__/routine-card-edit-fields.test.tsx`
   - `web/__tests__/routine-card-edit-priority.test.tsx`
