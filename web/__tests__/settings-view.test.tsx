@@ -139,7 +139,8 @@ describe("SettingsView (BL-009 境界時刻の設定)", () => {
     await screen.findByText(/04:00/);
 
     // フォームに "06:00" を入力する.
-    const input = screen.getByLabelText(/境界時刻/);
+    // BL-091: ラベル文言は「境界時刻」から「リセット時刻」へ統一中. どちらでも取得できる正規表現にする.
+    const input = screen.getByLabelText(/境界時刻|リセット時刻/);
     await user.clear(input);
     await user.type(input, "06:00");
 
@@ -173,7 +174,8 @@ describe("SettingsView (BL-009 境界時刻の設定)", () => {
     await screen.findByText(/04:00/);
 
     // バリデーション違反の値を入力する.
-    const input = screen.getByLabelText(/境界時刻/);
+    // BL-091: ラベル文言は「境界時刻」から「リセット時刻」へ統一中. どちらでも取得できる正規表現にする.
+    const input = screen.getByLabelText(/境界時刻|リセット時刻/);
     await user.clear(input);
     await user.type(input, "25:00");
 
@@ -209,7 +211,8 @@ describe("SettingsView (BL-009 境界時刻の設定)", () => {
     // 初期表示を待つ.
     await screen.findByText(/04:00/);
 
-    const input = screen.getByLabelText(/境界時刻/);
+    // BL-091: ラベル文言は「境界時刻」から「リセット時刻」へ統一中. どちらでも取得できる正規表現にする.
+    const input = screen.getByLabelText(/境界時刻|リセット時刻/);
     await user.clear(input);
     await user.type(input, "06:00");
 
