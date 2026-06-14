@@ -34,8 +34,10 @@
 }
 
 .task-card--focus {
-  /* V-1: padding は通常と同じ. border-width だけ太く (3px) して強調. */
+  /* 現在のタスクを視覚的に強調する: 太枠 + アクセント色 + 薄背景. */
   border-width: 3px;
+  border-color: var(--color-accent);
+  background: var(--color-accent-bg-subtle);
 }
 
 .task-card--form {

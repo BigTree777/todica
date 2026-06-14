@@ -157,22 +157,22 @@ describe("タスクカードのデザイン統一 (BL-052 / task-card-design, BL
    *    かつ background プロパティを単独で宣言していない
    *    かつ border shorthand 宣言が存在しない (= border-width のみ上書き)
    */
-  describe("AC-3: .task-card--focus は border-color / background / border shorthand を単独宣言しない", () => {
-    it(".task-card--focus ルール本文に border-color: 単独宣言が存在しない", () => {
+  describe("AC-3: .task-card--focus は border-color / background を上書きしてアクセント色で強調する", () => {
+    it(".task-card--focus ルール本文に border-color: var(--color-accent) を含む", () => {
       const css = readFileSync(taskCardCssPath, "utf-8");
       const body = extractRuleBody(css, ".task-card--focus");
       expect(body, ".task-card--focus ルールが見つからない").not.toBeNull();
-      expect(body ?? "").not.toMatch(/(?:^|;|\n)\s*border-color\s*:/);
+      expect(body ?? "").toMatch(/border-color\s*:\s*var\(--color-accent\)/);
     });
 
-    it(".task-card--focus ルール本文に background / background-color 単独宣言が存在しない", () => {
+    it(".task-card--focus ルール本文に background: var(--color-accent-bg-subtle) を含む", () => {
       const css = readFileSync(taskCardCssPath, "utf-8");
       const body = extractRuleBody(css, ".task-card--focus");
       expect(body, ".task-card--focus ルールが見つからない").not.toBeNull();
-      expect(body ?? "").not.toMatch(/(?:^|;|\n)\s*background(?:-color)?\s*:/);
+      expect(body ?? "").toMatch(/background\s*:\s*var\(--color-accent-bg-subtle\)/);
     });
 
-    it(".task-card--focus ルール本文に border shorthand 宣言が存在しない (border-width のみ上書き)", () => {
+    it(".task-card--focus ルール本文に border shorthand 宣言が存在しない (個別プロパティで上書き)", () => {
       const css = readFileSync(taskCardCssPath, "utf-8");
       const body = extractRuleBody(css, ".task-card--focus");
       expect(body, ".task-card--focus ルールが見つからない").not.toBeNull();
