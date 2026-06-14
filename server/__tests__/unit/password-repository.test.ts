@@ -21,7 +21,7 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { schema } from "../../src/db/schema.js";
-import { DrizzlePasswordRepository } from "../../src/infra/persistence/drizzle/password-repository.js";
+import { DrizzlePasswordRepository } from "../../src/infra/persistence/drizzle/drizzle-password-repository.js";
 
 /**
  * 本実装で使うことになる app_password テーブル定義の最低限を CREATE TABLE で立てる.

@@ -15,7 +15,7 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
  */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { schema } from "../../src/db/schema.js";
-import { DrizzleSettingsRepository } from "../../src/infra/persistence/drizzle/settings-repository.js";
+import { DrizzleSettingsRepository } from "../../src/infra/persistence/drizzle/drizzle-settings-repository.js";
 
 const CREATE_SETTINGS_SQL = `
 CREATE TABLE IF NOT EXISTS settings (

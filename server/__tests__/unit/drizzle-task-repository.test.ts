@@ -20,7 +20,7 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
  */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { schema } from "../../src/db/schema.js";
-import { DrizzleTaskRepository } from "../../src/infra/persistence/drizzle/task-repository.js";
+import { DrizzleTaskRepository } from "../../src/infra/persistence/drizzle/drizzle-task-repository.js";
 
 const TASK_ID = "11111111-1111-4111-8111-111111111111";
 const TASK_ID_2 = "22222222-2222-4222-8222-222222222222";
