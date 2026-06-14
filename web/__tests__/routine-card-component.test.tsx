@@ -210,43 +210,6 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
       expect(body, ".routine-card ルールが見つからない").not.toBeNull();
       expect(body ?? "").toMatch(/display\s*:\s*flex/);
     });
-
-    // BL-071 (routine-card-header-layout) で .routine-card 基底は 3 段の縦並び
-    // (flex-direction: column / gap: var(--space-md) / align-items 既定値) に組み替わった.
-    // 旧 BL-061 の「1 段横並び (row / center / sm)」前提の 3 it は BL-071 で stale となるため skip.
-    // 新基底の同等 assert は web/__tests__/routine-card-header-layout.test.tsx AC-4 が担う.
-    it.skip(".routine-card ルール本文に flex-direction: row を含む (または flex-direction を持たない既定値) (BL-071 で column に変更)", () => {
-      const css = readFileSync(routineCardCssPath, "utf-8");
-      const body = extractRuleBody(css, ".routine-card");
-      expect(body, ".routine-card ルールが見つからない").not.toBeNull();
-      const bodyText = body ?? "";
-      // 基底に明示的に column が指定されていないこと.
-      expect(
-        bodyText,
-        ".routine-card は基底で 1 段横並びのため flex-direction: column であってはならない",
-      ).not.toMatch(/flex-direction\s*:\s*column/);
-      // flex-direction: row が書かれているか, または書かれていない (既定値 row).
-      const hasExplicitRow = /flex-direction\s*:\s*row/.test(bodyText);
-      const hasNoFlexDirection = !/flex-direction\s*:/.test(bodyText);
-      expect(
-        hasExplicitRow || hasNoFlexDirection,
-        ".routine-card に flex-direction: row が明示されているか, 宣言なし (既定値 row) であること",
-      ).toBe(true);
-    });
-
-    it.skip(".routine-card ルール本文に align-items: center を含む (BL-071 で 3 段縦並びのため撤去)", () => {
-      const css = readFileSync(routineCardCssPath, "utf-8");
-      const body = extractRuleBody(css, ".routine-card");
-      expect(body, ".routine-card ルールが見つからない").not.toBeNull();
-      expect(body ?? "").toMatch(/align-items\s*:\s*center/);
-    });
-
-    it.skip(".routine-card ルール本文に gap: var(--space-sm) を含む (BL-071 で gap: var(--space-md) に変更)", () => {
-      const css = readFileSync(routineCardCssPath, "utf-8");
-      const body = extractRuleBody(css, ".routine-card");
-      expect(body, ".routine-card ルールが見つからない").not.toBeNull();
-      expect(body ?? "").toMatch(/gap\s*:\s*var\(--space-sm\)/);
-    });
   });
 
   // ----------------------------------------------------------
@@ -272,48 +235,6 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
       const body = extractRuleBody(css, ".routine-card--form");
       expect(body, ".routine-card--form ルールが見つからない").not.toBeNull();
       expect(body ?? "").toMatch(/align-items\s*:\s*stretch/);
-    });
-  });
-
-  // ----------------------------------------------------------
-  // AC-3: .routine-card__main が左ブロックの flex 占有と縦並びを持つ (V-4 / V-5)
-  // ----------------------------------------------------------
-  /**
-   * シナリオ AC-3:
-   *   Given routine-card.css を開いた
-   *   When  .routine-card__main セレクタのルール本文を観察する
-   *   Then  flex: 1 (または flex-grow: 1) の宣言を含む
-   *    かつ display: flex の宣言を含む
-   *    かつ flex-direction: column の宣言を含む
-   */
-  // BL-071 (routine-card-header-layout) D-006 で .routine-card__main ラッパは完全撤去された.
-  // CSS ルールセット自体も撤去されたため, 本 describe は skip する.
-  describe.skip("AC-3: .routine-card__main が左ブロックの flex 占有と縦並びを持つ (V-4 / V-5) (BL-071 で撤去)", () => {
-    it(".routine-card__main ルール本文に flex: 1 (または flex-grow: 1) を含む", () => {
-      const css = readFileSync(routineCardCssPath, "utf-8");
-      const body = extractRuleBody(css, ".routine-card__main");
-      expect(body, ".routine-card__main ルールが見つからない").not.toBeNull();
-      const bodyText = body ?? "";
-      const hasShorthand = /(?:^|;|\n)\s*flex\s*:\s*1(?:\s|;|$)/.test(bodyText);
-      const hasFlexGrow = /flex-grow\s*:\s*1/.test(bodyText);
-      expect(
-        hasShorthand || hasFlexGrow,
-        ".routine-card__main に flex: 1 (または flex-grow: 1) が無い",
-      ).toBe(true);
-    });
-
-    it(".routine-card__main ルール本文に display: flex を含む", () => {
-      const css = readFileSync(routineCardCssPath, "utf-8");
-      const body = extractRuleBody(css, ".routine-card__main");
-      expect(body, ".routine-card__main ルールが見つからない").not.toBeNull();
-      expect(body ?? "").toMatch(/display\s*:\s*flex/);
-    });
-
-    it(".routine-card__main ルール本文に flex-direction: column を含む", () => {
-      const css = readFileSync(routineCardCssPath, "utf-8");
-      const body = extractRuleBody(css, ".routine-card__main");
-      expect(body, ".routine-card__main ルールが見つからない").not.toBeNull();
-      expect(body ?? "").toMatch(/flex-direction\s*:\s*column/);
     });
   });
 
@@ -377,37 +298,6 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
       const css = readFileSync(routineCardCssPath, "utf-8");
       const body = extractRuleBody(css, ".routine-card__input::placeholder");
       expect(body, ".routine-card__input::placeholder ルールが見つからない").not.toBeNull();
-      expect(body ?? "").toMatch(/color\s*:\s*var\(--color-fg-subtle\)/);
-    });
-  });
-
-  // ----------------------------------------------------------
-  // AC-6: .routine-card__days-label が小さい字 + 薄色を持つ (V-5)
-  // ----------------------------------------------------------
-  /**
-   * シナリオ AC-6:
-   *   Given routine-card.css を開いた
-   *   When  .routine-card__days-label セレクタのルール本文を観察する
-   *   Then  font-size: var(--font-size-small) を含む
-   *    かつ color: var(--color-fg-subtle) を含む
-   */
-  /**
-   * BL-070 (inline-edit-all-cards) で .routine-card__days-label は撤去された.
-   * 曜日 read-only 表示用ラベルは消え, 常時 checkbox 表示に統一されたため,
-   * 当該 CSS ルールも撤去対象. 本 describe は skip する.
-   */
-  describe.skip("AC-6: .routine-card__days-label が小さい字 + 薄色を持つ (V-5) (BL-070 で撤去)", () => {
-    it(".routine-card__days-label ルール本文に font-size: var(--font-size-small) を含む", () => {
-      const css = readFileSync(routineCardCssPath, "utf-8");
-      const body = extractRuleBody(css, ".routine-card__days-label");
-      expect(body, ".routine-card__days-label ルールが見つからない").not.toBeNull();
-      expect(body ?? "").toMatch(/font-size\s*:\s*var\(--font-size-small\)/);
-    });
-
-    it(".routine-card__days-label ルール本文に color: var(--color-fg-subtle) を含む", () => {
-      const css = readFileSync(routineCardCssPath, "utf-8");
-      const body = extractRuleBody(css, ".routine-card__days-label");
-      expect(body, ".routine-card__days-label ルールが見つからない").not.toBeNull();
       expect(body ?? "").toMatch(/color\s*:\s*var\(--color-fg-subtle\)/);
     });
   });
@@ -535,25 +425,6 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
         root?.classList.contains("routine-card--editing"),
         "routine-card--editing modifier が残存 (BL-070 REQ-3 違反)",
       ).toBe(false);
-    });
-
-    // BL-071 (routine-card-header-layout) D-006 で .routine-card__main ラッパは完全撤去された.
-    // 代わりに .routine-card__header / .routine-card__day-checkboxes / .routine-card__actions の
-    // 3 段構造が .routine-card 直下に並ぶ (BL-071 routine-card-header-layout.test.tsx AC-3 で検証).
-    it.skip(".routine-card__main が .routine-card 内に存在する (BL-070 でも左ブロック構造は維持) (BL-071 で撤去)", async () => {
-      const { RoutineCard } = await importRoutineCard();
-      const routine = makeRoutine();
-      const { container } = render(
-        <RoutineCard
-          routine={routine}
-          onNameBlur={() => {}}
-          onDaysOfWeekChange={() => {}}
-          onDefaultPriorityChange={() => {}}
-          onDelete={() => {}}
-        />,
-      );
-      const main = container.querySelector(".routine-card__main");
-      expect(main, ".routine-card__main が見つからない").not.toBeNull();
     });
 
     it("BL-070: .routine-card__name span が撤去され, name は input で常時表示される", async () => {

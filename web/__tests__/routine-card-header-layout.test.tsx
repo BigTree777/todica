@@ -118,103 +118,6 @@ async function importRoutineFormCard(): Promise<RoutineFormCardModule> {
 // ============================================================
 
 describe("RoutineCard ヘッダレイアウト刷新 (BL-071 / routine-card-header-layout)", () => {
-  // ============================================================
-  // DOM 構造系 (AC-1 / AC-2 / AC-3)
-  // ============================================================
-
-  // ----------------------------------------------------------
-  // AC-1: name input と PriorityStars が同一の .routine-card__header 直下に並ぶ
-  // ----------------------------------------------------------
-  /**
-   * シナリオ AC-1:
-   *   Given <RoutineCard routine={...} ... /> を表示モードで render する
-   *   When  DOM をクエリする
-   *   Then  .routine-card__header 要素が存在し,
-   *         その直下の子に <input type="text"> と PriorityStars の root (role="radiogroup") の
-   *         両方が含まれる
-   *    かつ name input は曜日 checkbox 群 (.routine-card__day-checkboxes) と同じ親に属さない
-   */
-  // BL-073 (routine-card-align-with-form) で表示カードを 4 段化:
-  //   - header 段: PriorityStars 単独
-  //   - title 段 (新設): visually-hidden label + name input
-  // 旧 BL-071 では「header 直下に input + radiogroup」を要求していたが本 BL で逆転.
-  // 新構造の網羅 assert は `routine-card-align-with-form.test.tsx` (BL-073) に集約.
-  describe.skip("AC-1: name input と PriorityStars が同一の .routine-card__header 直下に並ぶ (BL-073 で逆転 / header は PriorityStars 単独)", () => {
-    it(".routine-card__header 要素が存在する", async () => {
-      const { RoutineCard } = await importRoutineCard();
-      const routine = makeRoutine();
-      const { container } = render(
-        <RoutineCard
-          routine={routine}
-          onNameBlur={() => {}}
-          onDaysOfWeekChange={() => {}}
-          onDefaultPriorityChange={() => {}}
-          onDelete={() => {}}
-        />,
-      );
-      const header = container.querySelector(".routine-card__header");
-      expect(header, ".routine-card__header が見つからない (AC-1 違反)").not.toBeNull();
-    });
-
-    it(".routine-card__header の直下に input[type=text] と div[role=radiogroup] の両方が含まれる", async () => {
-      const { RoutineCard } = await importRoutineCard();
-      const routine = makeRoutine();
-      const { container } = render(
-        <RoutineCard
-          routine={routine}
-          onNameBlur={() => {}}
-          onDaysOfWeekChange={() => {}}
-          onDefaultPriorityChange={() => {}}
-          onDelete={() => {}}
-        />,
-      );
-      const header = container.querySelector(".routine-card__header") as HTMLElement | null;
-      expect(header, ".routine-card__header が見つからない (AC-1 違反)").not.toBeNull();
-      if (!header) return;
-      // 直下の子要素から input と radiogroup を見つける.
-      const directChildren = Array.from(header.children);
-      const input = directChildren.find(
-        (el) => el.tagName.toLowerCase() === "input" && el.getAttribute("type") === "text",
-      );
-      const radiogroup = directChildren.find((el) => el.getAttribute("role") === "radiogroup");
-      expect(
-        input,
-        ".routine-card__header の直下に <input type='text'> が無い (AC-1 違反)",
-      ).toBeDefined();
-      expect(
-        radiogroup,
-        ".routine-card__header の直下に <div role='radiogroup'> (PriorityStars) が無い (AC-1 違反)",
-      ).toBeDefined();
-    });
-
-    it("name input は曜日 checkbox 群 (.routine-card__day-checkboxes) と同じ親には属さない", async () => {
-      const { RoutineCard } = await importRoutineCard();
-      const routine = makeRoutine({ id: "r1" });
-      const { container } = render(
-        <RoutineCard
-          routine={routine}
-          onNameBlur={() => {}}
-          onDaysOfWeekChange={() => {}}
-          onDefaultPriorityChange={() => {}}
-          onDelete={() => {}}
-        />,
-      );
-      const input = container.querySelector(
-        "input#routine-name-r1[type='text']",
-      ) as HTMLElement | null;
-      const dayCheckboxes = container.querySelector(
-        ".routine-card__day-checkboxes",
-      ) as HTMLElement | null;
-      expect(input, "name input が見つからない").not.toBeNull();
-      expect(dayCheckboxes, ".routine-card__day-checkboxes が見つからない").not.toBeNull();
-      if (!input || !dayCheckboxes) return;
-      expect(
-        input.parentElement === dayCheckboxes.parentElement,
-        "name input と .routine-card__day-checkboxes が同じ親に属している (AC-1 違反)",
-      ).toBe(false);
-    });
-  });
-
   // ----------------------------------------------------------
   // AC-2: .routine-card__main ラッパが撤去されている
   // ----------------------------------------------------------
@@ -239,71 +142,6 @@ describe("RoutineCard ヘッダレイアウト刷新 (BL-071 / routine-card-head
       );
       const main = container.querySelector(".routine-card__main");
       expect(main, ".routine-card__main 要素が残存 (AC-2 / REQ-3 違反)").toBeNull();
-    });
-  });
-
-  // ----------------------------------------------------------
-  // AC-3: .routine-card 直下に header / day-checkboxes / actions の 3 段のみが並ぶ
-  // ----------------------------------------------------------
-  /**
-   * シナリオ AC-3:
-   *   Given <RoutineCard ... /> を表示モードで render する
-   *   When  .routine-card の直下の子要素を取得する
-   *   Then  順に .routine-card__header / .routine-card__day-checkboxes / .routine-card__actions の
-   *         3 要素のみが存在する
-   */
-  // BL-073: 表示カードは 4 段化 (header / title / day-checkboxes / actions).
-  // 旧 BL-071 の 3 段 (header / day-checkboxes / actions) 前提は逆転.
-  describe.skip("AC-3: .routine-card 直下に 3 段 (header / day-checkboxes / actions) のみが並ぶ (BL-073 で 4 段化)", () => {
-    it(".routine-card の直下の子要素が 3 個ある", async () => {
-      const { RoutineCard } = await importRoutineCard();
-      const routine = makeRoutine();
-      const { container } = render(
-        <RoutineCard
-          routine={routine}
-          onNameBlur={() => {}}
-          onDaysOfWeekChange={() => {}}
-          onDefaultPriorityChange={() => {}}
-          onDelete={() => {}}
-        />,
-      );
-      const root = container.querySelector(".routine-card") as HTMLElement | null;
-      expect(root, ".routine-card root が見つからない").not.toBeNull();
-      if (!root) return;
-      expect(
-        root.children.length,
-        `.routine-card の直下の子が 3 個ではない (実際: ${root.children.length})`,
-      ).toBe(3);
-    });
-
-    it(".routine-card 直下の子は順に __header / __day-checkboxes / __actions である", async () => {
-      const { RoutineCard } = await importRoutineCard();
-      const routine = makeRoutine();
-      const { container } = render(
-        <RoutineCard
-          routine={routine}
-          onNameBlur={() => {}}
-          onDaysOfWeekChange={() => {}}
-          onDefaultPriorityChange={() => {}}
-          onDelete={() => {}}
-        />,
-      );
-      const root = container.querySelector(".routine-card") as HTMLElement | null;
-      expect(root, ".routine-card root が見つからない").not.toBeNull();
-      if (!root) return;
-      const childClasses = Array.from(root.children).map((el) => el.className);
-      expect(
-        childClasses[0]?.includes("routine-card__header"),
-        `1 番目の子が .routine-card__header ではない (実際: "${childClasses[0]}")`,
-      ).toBe(true);
-      expect(
-        childClasses[1]?.includes("routine-card__day-checkboxes"),
-        `2 番目の子が .routine-card__day-checkboxes ではない (実際: "${childClasses[1]}")`,
-      ).toBe(true);
-      expect(
-        childClasses[2]?.includes("routine-card__actions"),
-        `3 番目の子が .routine-card__actions ではない (実際: "${childClasses[2]}")`,
-      ).toBe(true);
     });
   });
 
@@ -348,13 +186,7 @@ describe("RoutineCard ヘッダレイアウト刷新 (BL-071 / routine-card-head
    *   When  .routine-card__header ルールセットを参照する
    *   Then  display: flex / align-items: center / justify-content: space-between が宣言されている
    */
-  // BL-073 (routine-card-align-with-form / D-001) で
-  // `.routine-card__header { justify-content: space-between }` を
-  // `justify-content: flex-end` に変更し,
-  // `.routine-card--form .routine-card__header { justify-content: flex-end }` override を撤去.
-  // display: flex / align-items: center は維持される (= 残 2 it は green を維持).
-  // 旧「space-between」 it は本 BL で逆転するため skip にする.
-  describe("AC-5: .routine-card__header は space-between で左右配置される (BL-073 で flex-end に逆転 / 該当 it のみ skip)", () => {
+  describe("AC-5: .routine-card__header は flex コンテナとして中央揃えされる", () => {
     it(".routine-card__header ルール本文に display: flex を含む", () => {
       const css = readFileSync(routineCardCssPath, "utf-8");
       const body = extractRuleBody(css, ".routine-card__header");
@@ -367,14 +199,6 @@ describe("RoutineCard ヘッダレイアウト刷新 (BL-071 / routine-card-head
       const body = extractRuleBody(css, ".routine-card__header");
       expect(body, ".routine-card__header ルールが見つからない (AC-5 / REQ-4 違反)").not.toBeNull();
       expect(body ?? "").toMatch(/align-items\s*:\s*center/);
-    });
-
-    // BL-073 D-001 で space-between → flex-end に逆転.
-    it.skip(".routine-card__header ルール本文に justify-content: space-between を含む (BL-073 で flex-end に逆転)", () => {
-      const css = readFileSync(routineCardCssPath, "utf-8");
-      const body = extractRuleBody(css, ".routine-card__header");
-      expect(body, ".routine-card__header ルールが見つからない (AC-5 / REQ-4 違反)").not.toBeNull();
-      expect(body ?? "").toMatch(/justify-content\s*:\s*space-between/);
     });
   });
 
@@ -887,59 +711,6 @@ describe("RoutineCard ヘッダレイアウト刷新 (BL-071 / routine-card-head
           `radio の id prefix が 'routine-r1' で始まらない (実際: "${id}")`,
         ).toBe(true);
       }
-    });
-  });
-
-  // ============================================================
-  // 順序保証 (AC-19)
-  // ============================================================
-
-  // ----------------------------------------------------------
-  // AC-19: header 内で visually-hidden label → input → PriorityStars の順で並ぶ
-  // ----------------------------------------------------------
-  /**
-   * シナリオ AC-19:
-   *   Given <RoutineCard ... /> を render する
-   *   When  .routine-card__header の直下の子要素を順に取得する
-   *   Then  visually-hidden label → input → PriorityStars の順で並ぶ
-   */
-  // BL-073: 表示カードでは header に PriorityStars 単独. name input は title 段に移動.
-  // 旧 BL-071 の「header 内に label → input → radiogroup の順で並ぶ」 assert は逆転.
-  describe.skip("AC-19: header 内で input が PriorityStars より前に並ぶ (BL-073 で header は PriorityStars 単独)", () => {
-    it(".routine-card__header の直下の子は label → input → radiogroup の順で並ぶ", async () => {
-      const { RoutineCard } = await importRoutineCard();
-      const routine = makeRoutine({ id: "r1" });
-      const { container } = render(
-        <RoutineCard
-          routine={routine}
-          onNameBlur={() => {}}
-          onDaysOfWeekChange={() => {}}
-          onDefaultPriorityChange={() => {}}
-          onDelete={() => {}}
-        />,
-      );
-      const header = container.querySelector(".routine-card__header") as HTMLElement | null;
-      expect(header, ".routine-card__header が見つからない (AC-19 / REQ-1 違反)").not.toBeNull();
-      if (!header) return;
-      const children = Array.from(header.children);
-      // 1 番目は visually-hidden label.
-      const first = children[0];
-      expect(
-        first?.tagName.toLowerCase() === "label" && first.classList.contains("visually-hidden"),
-        `header の 1 番目の子が visually-hidden label ではない (実際: tag="${first?.tagName.toLowerCase()}", class="${first?.className}")`,
-      ).toBe(true);
-      // 2 番目は input[type=text].
-      const second = children[1];
-      expect(
-        second?.tagName.toLowerCase() === "input" && second.getAttribute("type") === "text",
-        `header の 2 番目の子が <input type='text'> ではない (実際: tag="${second?.tagName.toLowerCase()}")`,
-      ).toBe(true);
-      // 3 番目は radiogroup (PriorityStars).
-      const third = children[2];
-      expect(
-        third?.getAttribute("role") === "radiogroup",
-        `header の 3 番目の子が role='radiogroup' ではない (実際: tag="${third?.tagName.toLowerCase()}", role="${third?.getAttribute("role")}")`,
-      ).toBe(true);
     });
   });
 });
