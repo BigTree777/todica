@@ -2,7 +2,7 @@
 
 /**
  * RoutineFormCard レイアウト刷新 (RoutineCard と同じ 4 段構造に揃える)
- * (BL-072 / routine-form-card-header-layout) 受け入れ基準テスト.
+ * 受け入れ基準テスト.
  *
  * 仕様参照:
  *   docs/developer/features/routine-form-card-header-layout/spec.md
@@ -16,11 +16,11 @@
  *   AC-4 : `.routine-card__form-row*` 系セレクタが DOM から撤去されている (DOM).
  *   AC-5 : 「追加」 submit button が `.routine-card__actions` 直下に配置される (DOM).
  *   AC-6 : `.routine-card__title` ルールセットに font-size: var(--font-size-h2) が宣言 (CSS).
- *   AC-7 : `.routine-card__header` の BL-071 5 宣言が無改修で維持される (CSS).
+ *   AC-7 : `.routine-card__header` の 5 宣言が無改修で維持される (CSS).
  *   AC-8 : `.routine-card__form-row` 系ルールセットが routine-card.css から撤去 (CSS).
  *   AC-9 : `.routine-card--form` は flex-direction: column / align-items: stretch を維持 (CSS).
  *   AC-10: name input の computed font-size が --font-size-h2 (= 20px) と一致 (computed style).
- *   AC-11: 表示カード <RoutineCard> の DOM 構造 (BL-071 の 3 段) が無改修 (DOM).
+ *   AC-11: 表示カード <RoutineCard> の DOM 構造 が無改修 (DOM).
  *   AC-12: 表示カード <RoutineCard> の name input computed font-size が変わらない (computed style).
  *   AC-13: form submit で onSubmit が呼ばれる (DOM).
  *   AC-14: name input への入力で onNameChange が呼ばれる (controlled) (DOM).
@@ -41,12 +41,12 @@
  *     AC-1 / AC-2 / AC-3 / AC-4 / AC-5 / AC-6 / AC-8 / AC-23 が red になる想定.
  *     加えて D-006 / D-007 の CSS 宣言テストも red.
  *   - AC-7 / AC-9 / AC-10 / AC-11 / AC-12 / AC-13〜AC-22 は既に green である可能性がある
- *     (= BL-061 / BL-068 / BL-071 で確立済).
+ *     (= / / 現状確立済).
  *   - implementer が REQ-1 〜 REQ-6 を実装することで red 群が green 化する.
  *
- * 検証スタイル (BL-071 routine-card-header-layout.test.tsx と同型):
- *   - CSS 直読み: BL-052 / BL-061 / BL-071 と同じ readFileSync + extractRuleBody.
- *   - DOM レンダ: BL-061 / BL-070 / BL-071 と同形の動的 import + render パターン.
+ * 検証スタイル:
+ *   - CSS 直読み: / / と同じ readFileSync + extractRuleBody.
+ *   - DOM レンダ: / / と同形の動的 import + render パターン.
  *   - computed style: jsdom + vitest css: true 環境で getComputedStyle を取得.
  *     plan R-1 に従い「'20px' または 'var(--font-size-h2)' (未解決) のいずれかを許容」.
  *
@@ -76,7 +76,7 @@ const NOW = "2026-06-12T09:00:00.000Z";
 const ROUTINE_ID_R1 = "r1r1r1r1-r1r1-4r1r-8r1r-r1r1r1r1r1r1";
 
 // ============================================================
-// CSS ルール本文の抽出ヘルパ (BL-071 と同形)
+// CSS ルール本文の抽出ヘルパ
 // ============================================================
 
 function extractRuleBody(css: string, selector: string): string | null {
@@ -124,7 +124,7 @@ async function importRoutineFormCard(): Promise<RoutineFormCardModule> {
 // describe ブロック
 // ============================================================
 
-describe("RoutineFormCard レイアウト刷新 (BL-072 / routine-form-card-header-layout)", () => {
+describe("RoutineFormCard レイアウト刷新", () => {
   // ============================================================
   // DOM 構造系 (AC-1 / AC-2 / AC-3 / AC-4 / AC-5 / AC-23)
   // ============================================================
@@ -599,17 +599,17 @@ describe("RoutineFormCard レイアウト刷新 (BL-072 / routine-form-card-head
   });
 
   // ----------------------------------------------------------
-  // AC-7: .routine-card__header は表示カードと共用 (BL-071 5 宣言維持)
+  // AC-7: .routine-card__header は表示カードと共用
   // ----------------------------------------------------------
   /**
    * シナリオ AC-7:
    *   Given routine-card.css を読み込む
    *   When  .routine-card__header ルールセットを参照する
-   *   Then  BL-071 で確定した display: flex / align-items: center /
+   *   Then  現状確定した display: flex / align-items: center /
    *         justify-content: space-between / gap: var(--space-sm) /
    *         font-size: var(--font-size-h2) の 5 宣言がそのまま維持されている
    */
-  describe("AC-7: .routine-card__header の BL-071 5 宣言が無改修で維持される (D-002)", () => {
+  describe("AC-7: .routine-card__header の 5 宣言が無改修で維持される (D-002)", () => {
     it(".routine-card__header に display: flex を含む", () => {
       const css = readFileSync(routineCardCssPath, "utf-8");
       const body = extractRuleBody(css, ".routine-card__header");
@@ -742,9 +742,9 @@ describe("RoutineFormCard レイアウト刷新 (BL-072 / routine-form-card-head
    * シナリオ AC-12:
    *   Given <RoutineCard ... /> を render する
    *   When  name input の getComputedStyle().fontSize を取得する
-   *   Then  '20px' または 'var(--font-size-h2)' (= BL-071 AC-9 維持)
+   *   Then  '20px' または 'var(--font-size-h2)' (= AC-9 維持)
    */
-  describe("AC-12: 表示カード name input の computed font-size が変わらない (BL-071 AC-9 維持)", () => {
+  describe("AC-12: 表示カード name input の computed font-size が変わらない", () => {
     it("表示カード input#routine-name-{id} の computed fontSize が 20px / var(--font-size-h2)", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine({ id: "r1" });
@@ -1074,8 +1074,8 @@ describe("RoutineFormCard レイアウト刷新 (BL-072 / routine-form-card-head
   describe("AC-21: PriorityStars の groupLabel='優先度' / idPrefix='routine-create'", () => {
     it("radiogroup の aria-label に '優先度' が含まれる", async () => {
       // 補足: spec AC-21 は accessibleName を "優先度" と規定するが,
-      // 実装上 PriorityStars (BL-040) の aria-label は `${groupLabel}: ${value 表示名}`
-      // 形式 (例: "優先度: 普通") を生成する. BL-071 routine-card-header-layout.test.tsx
+      // 実装上 PriorityStars の aria-label は `${groupLabel}: ${value 表示名}`
+      // 形式 (例: "優先度: 普通") を生成する. routine-card-header-layout.test.tsx
       // AC-18 と同じく toContain で検証し, groupLabel が "優先度" として渡されたことを担保する.
       const { RoutineFormCard } = await importRoutineFormCard();
       const { container } = render(

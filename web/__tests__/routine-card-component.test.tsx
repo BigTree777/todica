@@ -2,7 +2,7 @@
 
 /**
  * RoutineCard / RoutineFormCard コンポーネント新設 + routines-view 適用
- * (BL-061 / routine-card-component) 受け入れ基準テスト.
+ * 受け入れ基準テスト.
  *
  * 仕様参照:
  *   docs/developer/features/routine-card-component/spec.md
@@ -45,9 +45,9 @@
  *   - implementer が REQ-1 〜 REQ-9 を実装することで red 群が green 化する.
  *
  * 検証スタイル:
- *   - CSS 直読み: BL-052 / BL-054 / BL-057 / BL-058 / BL-059 / BL-060 と同じ
+ *   - CSS 直読み: / / / / / と同じ
  *     readFileSync + extractRuleBody (P-005). ヘルパは本ファイル内に再定義する.
- *   - DOM レンダ: BL-060 と同形の動的 import + render パターン.
+ *   - DOM レンダ: と同形の動的 import + render パターン.
  *
  * vitest-environment:
  *   DOM レンダ AC は jsdom 必須のため 1 ファイル全体を jsdom で動かす
@@ -85,7 +85,7 @@ const NOW = "2026-06-12T09:00:00.000Z";
 const ROUTINE_ID_1 = "r1r1r1r1-r1r1-4r1r-8r1r-r1r1r1r1r1r1";
 
 // ============================================================
-// CSS ルール本文の抽出ヘルパ (P-005 / BL-060 等から再実装)
+// CSS ルール本文の抽出ヘルパ (P-005 / 等から再実装)
 // ============================================================
 
 /**
@@ -140,7 +140,7 @@ async function importRoutineFormCard(): Promise<RoutineFormCardModule> {
 // describe ブロック
 // ============================================================
 
-describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / routine-card-component)", () => {
+describe("RoutineCard / RoutineFormCard コンポーネント新設", () => {
   // ============================================================
   // CSS 直読み系 (AC-1 〜 AC-8 / AC-22)
   // ============================================================
@@ -396,15 +396,15 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
    *    かつ .routine-card__actions 内に「変更」「削除」 button が存在する
    *    かつ DOM 順は「変更」が「削除」より先
    */
-  describe("AC-9: <RoutineCard> が表示 (常時編集) モードの DOM を出す (BL-070 で編集モード概念撤去)", () => {
-    // BL-070 (inline-edit-all-cards) 追従:
-    //   旧 BL-061 では isEditing=false の表示モードで .routine-card__name <span> +
+  describe("AC-9: <RoutineCard> が表示 (常時編集) モードの DOM を出す", () => {
+    // (inline-edit-all-cards) 追従:
+    //   旧 現状は isEditing=false の表示モードで .routine-card__name <span> +
     //   .routine-card__days-label <span> + 「変更」「削除」 button を assert していた.
-    //   BL-070 で「編集モード」概念を撤去 (REQ-3 / G-3). isEditing prop / editing* 系
+    //   現状「編集モード」概念を撤去 (REQ-3 / G-3). isEditing prop / editing* 系
     //   prop / 「変更」「保存」「キャンセル」 button は全撤去.
     //   常時 input + 7 個の曜日 checkbox + PriorityStars + 「削除」 button が表示される.
     //   それに合わせて旧 it ブロックを新流儀に書き換える.
-    it("ルート要素は <li class='routine-card'> であり routine-card--editing modifier は付かない (BL-070)", async () => {
+    it("ルート要素は <li class='routine-card'> であり routine-card--editing modifier は付かない", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine({ name: "朝の運動" });
       const { container } = render(
@@ -420,14 +420,14 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
       expect(root, "RoutineCard の root 要素が見つからない").not.toBeNull();
       expect(root?.tagName.toLowerCase()).toBe("li");
       expect(root?.classList.contains("routine-card")).toBe(true);
-      // BL-070: routine-card--editing modifier は撤去.
+      // : routine-card--editing modifier は撤去.
       expect(
         root?.classList.contains("routine-card--editing"),
-        "routine-card--editing modifier が残存 (BL-070 REQ-3 違反)",
+        "routine-card--editing modifier が残存",
       ).toBe(false);
     });
 
-    it("BL-070: .routine-card__name span が撤去され, name は input で常時表示される", async () => {
+    it(": .routine-card__name span が撤去され, name は input で常時表示される", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine({ id: "r1", name: "朝の運動" });
       const { container } = render(
@@ -441,14 +441,14 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
       );
       // span は撤去.
       const nameSpan = container.querySelector(".routine-card__name");
-      expect(nameSpan, ".routine-card__name span が残存 (BL-070 REQ-3 違反)").toBeNull();
+      expect(nameSpan, ".routine-card__name span が残存").toBeNull();
       // input が常時表示.
       const input = container.querySelector("input#routine-name-r1") as HTMLInputElement | null;
-      expect(input, "input#routine-name-r1 が無い (BL-070 REQ-3 違反)").not.toBeNull();
+      expect(input, "input#routine-name-r1 が無い").not.toBeNull();
       expect(input?.value).toBe("朝の運動");
     });
 
-    it("BL-070: .routine-card__days-label span が撤去され, 曜日は checkbox 7 個で常時表示される", async () => {
+    it(": .routine-card__days-label span が撤去され, 曜日は checkbox 7 個で常時表示される", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine({ daysOfWeek: [1, 3, 5] }); // 月水金
       const { container } = render(
@@ -462,7 +462,7 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
       );
       // days-label span は撤去.
       const daysLabel = container.querySelector(".routine-card__days-label");
-      expect(daysLabel, ".routine-card__days-label span が残存 (BL-070 REQ-3 違反)").toBeNull();
+      expect(daysLabel, ".routine-card__days-label span が残存").toBeNull();
       // checkbox 7 個が常時表示.
       const group = container.querySelector("div[role='group'][aria-label='曜日']");
       expect(group, "div[role='group'][aria-label='曜日'] が見つからない").not.toBeNull();
@@ -470,7 +470,7 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
       expect(checkboxes.length, "曜日 checkbox が 7 個ではない").toBe(7);
     });
 
-    it("BL-070: .routine-card__actions 内に「変更」 button は存在せず, 「削除」 button が 1 個存在する", async () => {
+    it(": .routine-card__actions 内に「変更」 button は存在せず, 「削除」 button が 1 個存在する", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine();
       const { container } = render(
@@ -486,7 +486,7 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
       expect(actions, ".routine-card__actions が見つからない").not.toBeNull();
       const buttons = Array.from(actions?.querySelectorAll("button") ?? []);
       const labels = buttons.map((b) => b.textContent?.trim() ?? "");
-      expect(labels, "「変更」 button が残存 (BL-070 REQ-3 違反)").not.toContain("変更");
+      expect(labels, "「変更」 button が残存").not.toContain("変更");
       expect(labels.filter((t) => t === "削除").length, "「削除」 button が 1 個ではない").toBe(1);
     });
 
@@ -508,7 +508,7 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
       expect(root?.classList.contains("routine-card")).toBe(true);
     });
 
-    it("「削除」 button をクリックすると onDelete が呼ばれる (BL-070 でも維持)", async () => {
+    it("「削除」 button をクリックすると onDelete が呼ばれる", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine();
       const onDelete = vi.fn();
@@ -541,23 +541,23 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
    *    かつ ルート内に <form aria-label="ルーティン名称変更フォーム"> が存在する
    *    かつ form 内に visually-hidden な <label class="visually-hidden">ルーティン名</label> + <input>
    *    かつ input の id と label の htmlFor が一致する
-   *    かつ form 内に div.routine-card__day-checkboxes (BL-068 で追加 / REQ-2)
+   *    かつ form 内に div.routine-card__day-checkboxes
    *    かつ form 内に <button type="submit">保存</button>
    *    かつ form 内に <button type="button">キャンセル</button>
    *
-   *   BL-068 (routine-card-edit-fields) 追従: 編集モード form の DOM 構造に
+   *   (routine-card-edit-fields) 追従: 編集モード form の DOM 構造に
    *   `.routine-card__day-checkboxes` (7 個の曜日 checkbox) を追加.
-   *   旧 BL-061 では編集モードに曜日 UI が無いことを前提にしていたが,
+   *   旧 現状は編集モードに曜日 UI が無いことを前提にしていたが,
    *   本 BL で曜日 UI 存在検証へ逆転する (R-001 / P-005).
    */
-  describe("AC-10: <RoutineCard> の常時表示モードに name input / 曜日 checkbox 7 個 / PriorityStars が含まれる (BL-070 で編集モード撤去)", () => {
-    // BL-070 (inline-edit-all-cards) 追従:
-    //   旧 BL-061 / BL-068 / BL-069 では isEditing=true の編集モードで
+  describe("AC-10: <RoutineCard> の常時表示モードに name input / 曜日 checkbox 7 個 / PriorityStars が含まれる", () => {
+    // (inline-edit-all-cards) 追従:
+    //   旧 / / 現状は isEditing=true の編集モードで
     //   form / 保存 / キャンセル / 7 曜日 checkbox / PriorityStars を assert していた.
-    //   BL-070 で「編集モード」概念ごと撤去 (REQ-3 / G-3). isEditing prop / editing* 系 prop は撤去.
+    //   現状「編集モード」概念ごと撤去 (REQ-3 / G-3). isEditing prop / editing* 系 prop は撤去.
     //   常時 input + 7 曜日 checkbox + PriorityStars が表示モードで描画される.
     //   form / 保存 / キャンセル button は撤去. 「削除」 button のみ残る.
-    it("BL-070: ルートは <li class='routine-card'> であり routine-card--editing modifier は付かない", async () => {
+    it(": ルートは <li class='routine-card'> であり routine-card--editing modifier は付かない", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine();
       const { container } = render(
@@ -575,11 +575,11 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
       expect(root?.classList.contains("routine-card")).toBe(true);
       expect(
         root?.classList.contains("routine-card--editing"),
-        "routine-card--editing modifier が残存 (BL-070 REQ-3 違反)",
+        "routine-card--editing modifier が残存",
       ).toBe(false);
     });
 
-    it("BL-070: <form aria-label='ルーティン名称変更フォーム'> は存在しない (= 編集モード form 撤去)", async () => {
+    it(": <form aria-label='ルーティン名称変更フォーム'> は存在しない (= 編集モード form 撤去)", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine();
       const { container } = render(
@@ -592,10 +592,10 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
         />,
       );
       const form = container.querySelector("form[aria-label='ルーティン名称変更フォーム']");
-      expect(form, "編集モード form が残存 (BL-070 REQ-3 違反)").toBeNull();
+      expect(form, "編集モード form が残存").toBeNull();
     });
 
-    it("BL-070: visually-hidden な <label>ルーティン名</label> + <input> が常時表示で htmlFor と id が一致する", async () => {
+    it(": visually-hidden な <label>ルーティン名</label> + <input> が常時表示で htmlFor と id が一致する", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine({ id: "r1" });
       const { container } = render(
@@ -616,7 +616,7 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
       expect(label?.getAttribute("for")).toBe(input?.getAttribute("id"));
     });
 
-    it("BL-070: 「保存」「キャンセル」 button が存在しない (= 編集モード撤去)", async () => {
+    it(": 「保存」「キャンセル」 button が存在しない (= 編集モード撤去)", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine();
       const { container } = render(
@@ -631,13 +631,11 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
       const labels = Array.from(container.querySelectorAll("button")).map(
         (b) => b.textContent?.trim() ?? "",
       );
-      expect(labels, "「保存」 button が残存 (BL-070 REQ-3 違反)").not.toContain("保存");
-      expect(labels, "「キャンセル」 button が残存 (BL-070 REQ-3 違反)").not.toContain(
-        "キャンセル",
-      );
+      expect(labels, "「保存」 button が残存").not.toContain("保存");
+      expect(labels, "「キャンセル」 button が残存").not.toContain("キャンセル");
     });
 
-    it("BL-070: 常時表示モードに .routine-card__day-checkboxes (7 個の曜日 checkbox) が存在する", async () => {
+    it(": 常時表示モードに .routine-card__day-checkboxes (7 個の曜日 checkbox) が存在する", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine({ daysOfWeek: [1] });
       const { container } = render(
@@ -650,10 +648,7 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
         />,
       );
       const dayCheckboxes = container.querySelector(".routine-card__day-checkboxes");
-      expect(
-        dayCheckboxes,
-        ".routine-card__day-checkboxes が無い (BL-070 REQ-3 違反)",
-      ).not.toBeNull();
+      expect(dayCheckboxes, ".routine-card__day-checkboxes が無い").not.toBeNull();
       expect(dayCheckboxes?.getAttribute("role")).toBe("group");
       expect(dayCheckboxes?.getAttribute("aria-label")).toBe("曜日");
       const checkboxes = Array.from(
@@ -662,7 +657,7 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
       expect(checkboxes.length, "曜日 checkbox が 7 個ではない").toBe(7);
     });
 
-    it("BL-070: 常時表示モードに <PriorityStars /> (= div[role='radiogroup']) が存在する", async () => {
+    it(": 常時表示モードに <PriorityStars /> (= div[role='radiogroup']) が存在する", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine();
       const { container } = render(
@@ -675,15 +670,12 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
         />,
       );
       const radiogroup = container.querySelector("div[role='radiogroup']");
-      expect(
-        radiogroup,
-        "<PriorityStars /> (= div[role='radiogroup']) が無い (BL-070 REQ-3 違反)",
-      ).not.toBeNull();
+      expect(radiogroup, "<PriorityStars /> (= div[role='radiogroup']) が無い").not.toBeNull();
       const stars = Array.from(radiogroup?.querySelectorAll("button[role='radio']") ?? []);
       expect(stars.length, "PriorityStars の星 button が 3 個ではない").toBe(3);
     });
 
-    it("BL-070: 「変更」 button も存在しない (= 編集モード概念撤去)", async () => {
+    it(": 「変更」 button も存在しない (= 編集モード概念撤去)", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine();
       const { container } = render(
@@ -698,10 +690,10 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
       const labels = Array.from(container.querySelectorAll("button")).map(
         (b) => b.textContent?.trim() ?? "",
       );
-      expect(labels, "「変更」 button が残存 (BL-070 REQ-3 違反)").not.toContain("変更");
+      expect(labels, "「変更」 button が残存").not.toContain("変更");
     });
 
-    it("BL-070: input の blur で onNameBlur が呼ばれる (onSaveEdit / form onSubmit 経路は撤去)", async () => {
+    it(": input の blur で onNameBlur が呼ばれる (onSaveEdit / form onSubmit 経路は撤去)", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine({ id: "r1", name: "古い" });
       const onNameBlur = vi.fn();
@@ -717,7 +709,7 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
       const input = container.querySelector("input#routine-name-r1") as HTMLInputElement | null;
       expect(input, "input が見つからない").not.toBeNull();
       if (!input) return;
-      // BL-070 追従: React 合成 onBlur を発火するため fireEvent.blur を使う.
+      // 現状: React 合成 onBlur を発火するため fireEvent.blur を使う.
       fireEvent.input(input, { target: { value: "新しい" } });
       fireEvent.blur(input);
       expect(onNameBlur).toHaveBeenCalledTimes(1);
@@ -737,15 +729,15 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
    *    かつ .routine-card__day-checkboxes (内に 7 個の checkbox) + div[role="radiogroup"] (PriorityStars) が存在する
    *    かつ getByLabelText("ルーティン名") で name input が取得可能
    *
-   *   BL-068 (routine-card-edit-fields) 追従: 旧 <select id="routine-priority"> 系 assert を
+   *   (routine-card-edit-fields) 追従: 旧 <select id="routine-priority"> 系 assert を
    *   <PriorityStars /> (= div[role="radiogroup"]) の存在 assert に逆転 (R-001 / P-005).
-   *   BL-072 (routine-form-card-header-layout) 追従:
-   *     旧 BL-061 では「`.routine-card__form-row` が 2 個」を assert していたが,
-   *     BL-072 で起票カードを 4 段 (`.routine-card__header` / `__title` /
+   *   (routine-form-card-header-layout) 追従:
+   *     旧 現状は「`.routine-card__form-row` が 2 個」を assert していたが,
+   *     現状起票カードを 4 段 (`.routine-card__header` / `__title` /
    *     `__day-checkboxes` / `__actions`) に再編し `.routine-card__form-row` 系を完全撤去するため,
    *     「2 段構成」 assert と「1 段目に input + submit が同居 / 2 段目に曜日 + PriorityStars が同居」
    *     系 assert は廃止. 代替として「主要要素が描画される」までを保つ.
-   *     起票カードの新 DOM 構造の網羅 assert は `routine-form-card-header-layout.test.tsx` (BL-072) に集約.
+   *     起票カードの新 DOM 構造の網羅 assert は `routine-form-card-header-layout.test.tsx` に集約.
    */
   describe("AC-11: <RoutineFormCard> が作成フォームを描画する (主要要素)", () => {
     it("ルートは <form class='routine-card routine-card--form' aria-label='ルーティン作成フォーム'>", async () => {
@@ -823,7 +815,7 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
       expect(checkboxes.length, "曜日 checkbox が 7 個ではない").toBe(7);
     });
 
-    it("div[role='radiogroup'] (PriorityStars) が存在し 3 個の星 button (role='radio') を含む (BL-068 で <select> から逆転)", async () => {
+    it("div[role='radiogroup'] (PriorityStars) が存在し 3 個の星 button (role='radio') を含む", async () => {
       const { RoutineFormCard } = await importRoutineFormCard();
       const { container } = render(
         <RoutineFormCard
@@ -838,20 +830,17 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           }}
         />,
       );
-      // BL-068: 旧 <select id="routine-priority"> 系 assert を <PriorityStars /> 存在 assert に逆転.
+      // : 旧 <select id="routine-priority"> 系 assert を <PriorityStars /> 存在 assert に逆転.
       const radiogroup = container.querySelector("div[role='radiogroup']");
       expect(
         radiogroup,
-        "form 内に <PriorityStars /> (= div[role='radiogroup']) が無い (BL-068 REQ-1 違反)",
+        "form 内に <PriorityStars /> (= div[role='radiogroup']) が無い",
       ).not.toBeNull();
       const stars = Array.from(radiogroup?.querySelectorAll("button[role='radio']") ?? []);
       expect(stars.length, "PriorityStars の星 button が 3 個ではない").toBe(3);
       // 旧 <select id="routine-priority"> が残存していないこと.
       const select = container.querySelector("select#routine-priority");
-      expect(
-        select,
-        "form 内に <select id='routine-priority'> が残っている (BL-068 REQ-1 違反)",
-      ).toBeNull();
+      expect(select, "form 内に <select id='routine-priority'> が残っている").toBeNull();
     });
 
     it('getByLabelText("ルーティン名") で name input が取得可能 (NFR-NAME-LABEL-CHANGE)', async () => {
@@ -937,10 +926,10 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
    *   Then  「変更」 button が存在する
    *    かつ 「名称変更」 button は存在しない
    */
-  describe("AC-13: 「変更」 button が撤去されている (BL-070 で G-8 / REQ-6 を逆転)", () => {
-    // BL-070 追従: 旧 BL-061 では「変更」 button の存在を assert していたが,
-    //   BL-070 で「変更」 button 自体が撤去 (REQ-3 / G-3).
-    it("BL-070: 「変更」「名称変更」 button が共に存在しない", async () => {
+  describe("AC-13: 「変更」 button が撤去されている", () => {
+    // 現状: 旧 現状は「変更」 button の存在を assert していたが,
+    //   現状「変更」 button 自体が撤去 (REQ-3 / G-3).
+    it(": 「変更」「名称変更」 button が共に存在しない", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine();
       const { container } = render(
@@ -955,7 +944,7 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
       const labels = Array.from(container.querySelectorAll("button")).map(
         (b) => b.textContent?.trim() ?? "",
       );
-      expect(labels, "「変更」 button が残存 (BL-070 REQ-3 違反)").not.toContain("変更");
+      expect(labels, "「変更」 button が残存").not.toContain("変更");
       expect(labels, "「名称変更」 button が残存").not.toContain("名称変更");
     });
   });
@@ -1340,7 +1329,7 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
       expect(nameLabel?.textContent ?? "").toContain("ルーティン名");
     });
 
-    it('<RoutineFormCard> の優先度 UI は <PriorityStars /> (radiogroup) で実現され, <label htmlFor="routine-priority"> と <select id="routine-priority"> は撤去されている (BL-068 で D-008-2 を逆転)', async () => {
+    it('<RoutineFormCard> の優先度 UI は <PriorityStars /> (radiogroup) で実現され, <label htmlFor="routine-priority"> と <select id="routine-priority"> は撤去されている', async () => {
       const { RoutineFormCard } = await importRoutineFormCard();
       const { container } = render(
         <RoutineFormCard
@@ -1355,27 +1344,20 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
           }}
         />,
       );
-      // BL-068 (routine-card-edit-fields) で D-008-2 を逆転.
+      // (routine-card-edit-fields) で D-008-2 を逆転.
       // 旧: 「優先度 label を可視のまま残す」を assert
       // 新: 「優先度 label 自体を撤去し, <PriorityStars /> の groupLabel で a11y を担保」を assert
       const priorityLabel = container.querySelector("label[for='routine-priority']");
       const prioritySelect = container.querySelector("select#routine-priority");
-      expect(
-        priorityLabel,
-        "<label htmlFor='routine-priority'> が残っている (BL-068 REQ-6 / D-003 違反)",
-      ).toBeNull();
-      expect(
-        prioritySelect,
-        "<select id='routine-priority'> が残っている (BL-068 REQ-1 違反)",
-      ).toBeNull();
-      // <PriorityStars /> radiogroup の aria-label に「優先度」が含まれることで a11y を担保 (BL-040 REQ-4).
+      expect(priorityLabel, "<label htmlFor='routine-priority'> が残っている").toBeNull();
+      expect(prioritySelect, "<select id='routine-priority'> が残っている").toBeNull();
+      // <PriorityStars /> radiogroup の aria-label に「優先度」が含まれることで a11y を担保.
       const radiogroup = container.querySelector("div[role='radiogroup']");
       expect(radiogroup, "<PriorityStars /> radiogroup が無い").not.toBeNull();
       const ariaLabel = radiogroup?.getAttribute("aria-label") ?? "";
-      expect(
-        ariaLabel,
-        "radiogroup の aria-label に「優先度」が含まれていない (BL-068 D-003 / BL-040 REQ-4 違反)",
-      ).toContain("優先度");
+      expect(ariaLabel, "radiogroup の aria-label に「優先度」が含まれていない").toContain(
+        "優先度",
+      );
     });
 
     it("7 個の曜日 label (日〜土) と checkbox の関連付けが維持されている", async () => {
@@ -1435,7 +1417,7 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
       expect(form).toBeTruthy();
     });
 
-    it("BL-070: <RoutineCard> の 「ルーティン名称変更フォーム」 form は撤去されている (= 編集モード form 廃止)", async () => {
+    it(": <RoutineCard> の 「ルーティン名称変更フォーム」 form は撤去されている (= 編集モード form 廃止)", async () => {
       const { RoutineCard } = await importRoutineCard();
       const routine = makeRoutine();
       const { container } = render(
@@ -1448,7 +1430,7 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設 (BL-061 / ro
         />,
       );
       const form = container.querySelector("form[aria-label='ルーティン名称変更フォーム']");
-      expect(form, "ルーティン名称変更フォーム form が残存 (BL-070 REQ-3 違反)").toBeNull();
+      expect(form, "ルーティン名称変更フォーム form が残存").toBeNull();
     });
   });
 
