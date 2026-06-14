@@ -25,7 +25,7 @@ import { ErrorNotification } from "./ui/error-notification/error-notification.js
 import { InitialSetupView } from "./ui/initial-setup-view/initial-setup-view.js";
 import { LoginView } from "./ui/login-view/login-view.js";
 import { OfflineBanner } from "./ui/offline-banner/offline-banner.js";
-import { PwaUpdateBanner } from "./ui/pwa-update-banner/pwa-update-banner.js";
+import { SwUpdateDialog } from "./ui/sw-update-dialog/sw-update-dialog.js";
 
 void NetworkError;
 
@@ -286,7 +286,7 @@ export function App({ config, repos: initialRepos, authStorage }: AppProps) {
     return (
       <>
         <OfflineBanner />
-        <PwaUpdateBanner />
+        <SwUpdateDialog />
         <ErrorNotification />
       </>
     );
@@ -296,7 +296,7 @@ export function App({ config, repos: initialRepos, authStorage }: AppProps) {
     return (
       <>
         <OfflineBanner />
-        <PwaUpdateBanner />
+        <SwUpdateDialog />
         <ErrorNotification />
         <InitialSetupView
           setupInitialPassword={handleInitialPasswordSetup}
@@ -312,7 +312,7 @@ export function App({ config, repos: initialRepos, authStorage }: AppProps) {
     return (
       <>
         <OfflineBanner />
-        <PwaUpdateBanner />
+        <SwUpdateDialog />
         <ErrorNotification />
         <LoginView login={handleLogin} onSuccess={handleLoginSuccess} />
       </>
@@ -324,7 +324,7 @@ export function App({ config, repos: initialRepos, authStorage }: AppProps) {
       {/* WQ-004: オフライン中のバナー表示 */}
       <OfflineBanner />
       {/* SW-001: PWA アップデート通知バナー */}
-      <PwaUpdateBanner />
+      <SwUpdateDialog />
       {/* BL-034: 401 / ネットワークエラー時の通知バナー */}
       <ErrorNotification />
       <AppRoutes
