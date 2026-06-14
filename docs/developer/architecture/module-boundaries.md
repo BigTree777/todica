@@ -112,6 +112,7 @@ flowchart LR
 | モジュール | 所属層 | 責務 | 依存してよい先 |
 | --- | --- | --- | --- |
 | `server/api/*` | API レイヤ | 各エンドポイント（/tasks, /today, /focus, /projects, /routines, /trash, /counter, /settings, /reset 等） | `server/app/*` |
+| `server/src/routers/*` | API レイヤ | リソース単位の HTTP ルータと入出力変換 | ドメイン層, データアクセス層のインターフェース |
 | `server/middleware/auth` | API レイヤ | 認証トークン検証 | （独立） |
 | `server/app/task-usecases` | アプリケーション | 起票・編集・期限変更・優先度変更・完了・削除（FR-001 〜 FR-009, FR-014） | `domain/*`, `server/data/*`（インターフェース） |
 | `server/app/focus-usecases` | アプリケーション | 現在のタスク選択・繰り上げ（FR-012, FR-013） | `domain/*`, `server/data/*` |
