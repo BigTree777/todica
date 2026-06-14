@@ -87,7 +87,7 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
 
       // クライアントバリデーション.
       if (!TIME_PATTERN.test(inputValue)) {
-        setError("HH:MM 形式 (00:00 - 23:59) で入力してください。");
+        setError("HH:MM 形式 (00:00 - 23:59) で入力してください");
         return;
       }
 
@@ -106,7 +106,7 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
         setLocalSettings(updated);
         setInputValue(updated.dayBoundaryTime);
         setError(null);
-        setSuccessMessage(`リセット時刻を ${updated.dayBoundaryTime} に変更しました。`);
+        setSuccessMessage(`リセット時刻を ${updated.dayBoundaryTime} に変更しました`);
         // QueryClient のキャッシュを直接更新する（invalidateQueries は追加フェッチを引き起こすため使わない）
         queryClient.setQueryData(["settings"], updated);
       } catch (err) {
@@ -115,11 +115,9 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
           // 追加の GET リクエストはしない（D-004）.
           setLocalSettings(err.settings);
           setInputValue(err.settings.dayBoundaryTime);
-          setError(
-            "設定の更新中に競合が発生しました。最新の値を表示しています。再度お試しください。",
-          );
+          setError("設定の更新中に競合が発生しました 最新の値を表示しています 再度お試しください");
         } else {
-          setError("保存に失敗しました。");
+          setError("保存に失敗しました");
         }
       }
     },
@@ -140,7 +138,7 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
       }
       try {
         await onChangePassword(currentPassword, newPassword);
-        setPasswordSuccessMessage("パスワードを変更しました。");
+        setPasswordSuccessMessage("パスワードを変更しました");
         await onPasswordChanged?.();
       } catch (err) {
         setPasswordError(
