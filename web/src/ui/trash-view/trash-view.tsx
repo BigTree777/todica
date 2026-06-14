@@ -23,11 +23,6 @@ import type { TrashRepository, TrashedTask } from "../../repositories/trash-repo
 import { RestoreConflictError } from "../../repositories/trash-repository.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
 
-interface HasBaseUrlAndToken {
-  baseUrl?: string;
-  authToken?: string;
-}
-
 function generateId(): string {
   const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
   if (c?.randomUUID) return c.randomUUID();
@@ -45,9 +40,8 @@ export function TrashView(props: TrashViewProps): JSX.Element {
   const queryClient = useQueryClient();
   const conflictDialog = useConflictDialog();
 
-  const repo = repository as unknown as HasBaseUrlAndToken;
+  const repo = repository as { baseUrl?: string };
   const baseUrl = repo.baseUrl ?? "";
-  const authToken = repo.authToken ?? "";
 
   const { data: tasksData } = useQuery({
     queryKey: ["trash"],
@@ -87,7 +81,6 @@ export function TrashView(props: TrashViewProps): JSX.Element {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
           "Idempotency-Key": idempotencyKey,
           "If-Match": String(cmd.ifMatch),
         },
@@ -121,7 +114,6 @@ export function TrashView(props: TrashViewProps): JSX.Element {
         url: `${baseUrl}/api/v1/trash`,
         method: "DELETE",
         headers: {
-          Authorization: `Bearer ${authToken}`,
           "Idempotency-Key": idempotencyKey,
         },
         body: null,

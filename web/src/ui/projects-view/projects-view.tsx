@@ -38,19 +38,12 @@ export interface ProjectsViewProps {
   repository: ProjectRepository;
 }
 
-/** repository の baseUrl/authToken を安全に取り出す型 */
-interface HasBaseUrlAndToken {
-  baseUrl?: string;
-  authToken?: string;
-}
-
 export function ProjectsView(props: ProjectsViewProps): JSX.Element {
   const { repository } = props;
   const queryClient = useQueryClient();
   const conflictDialog = useConflictDialog();
-  const repo = repository as unknown as HasBaseUrlAndToken;
+  const repo = repository as { baseUrl?: string };
   const baseUrl = repo.baseUrl ?? "";
-  const authToken = repo.authToken ?? "";
 
   const { data: projectsData } = useQuery({
     queryKey: ["projects"],
@@ -93,7 +86,6 @@ export function ProjectsView(props: ProjectsViewProps): JSX.Element {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
           "Idempotency-Key": idempotencyKey,
         },
         body: JSON.stringify({ ...cmd }),
@@ -123,7 +115,6 @@ export function ProjectsView(props: ProjectsViewProps): JSX.Element {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
           "Idempotency-Key": idempotencyKey,
           "If-Match": String(cmd.ifMatch),
         },
@@ -158,7 +149,6 @@ export function ProjectsView(props: ProjectsViewProps): JSX.Element {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
           "Idempotency-Key": idempotencyKey,
           "If-Match": String(cmd.ifMatch),
         },

@@ -16,6 +16,7 @@
  */
 import { openDB } from "idb";
 import type { IDBPDatabase } from "idb";
+import { authedFetch } from "./auth/authed-fetch.js";
 
 const DB_NAME = "todica-offline-queue";
 const DB_VERSION = 1;
@@ -191,9 +192,11 @@ export async function flush(): Promise<void> {
       continue;
     }
 
-    // リクエスト送信
+    // リクエスト送信. Authorization は authedFetch が auth-storage から都度フレッシュな
+    // token を付与するため, entry.headers に Authorization を残さないことを enqueue 側で
+    // 保証している (BL-097).
     try {
-      const response = await fetch(entry.url, {
+      const response = await authedFetch(entry.url, {
         method: entry.method,
         headers: entry.headers as HeadersInit,
         body: entry.body ?? undefined,

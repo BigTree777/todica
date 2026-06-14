@@ -49,12 +49,6 @@ function generateId(): string {
   return `${hex(8)}-${hex(4)}-4${hex(3)}-8${hex(3)}-${hex(12)}`;
 }
 
-/** repository の baseUrl/authToken を安全に取り出す型. */
-interface HasBaseUrlAndToken {
-  baseUrl?: string;
-  authToken?: string;
-}
-
 export function ProjectCreateDialog(props: ProjectCreateDialogProps): JSX.Element {
   const { repository, open, onClose, onCreated } = props;
   const queryClient = useQueryClient();
@@ -62,9 +56,8 @@ export function ProjectCreateDialog(props: ProjectCreateDialogProps): JSX.Elemen
   const inputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState("");
 
-  const repo = repository as unknown as HasBaseUrlAndToken;
+  const repo = repository as { baseUrl?: string };
   const baseUrl = repo.baseUrl ?? "";
-  const authToken = repo.authToken ?? "";
 
   // open prop と <dialog> の実 DOM 状態を同期する (spec REQ-2).
   // 閉鎖時 (成功 / キャンセル / Escape) は入力 state を破棄する (spec REQ-5).
@@ -112,7 +105,6 @@ export function ProjectCreateDialog(props: ProjectCreateDialogProps): JSX.Elemen
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
           "Idempotency-Key": idempotencyKey,
         },
         body: JSON.stringify({ ...cmd }),
