@@ -7,7 +7,7 @@
  * - get() は singleton レコードを返す. 無ければ初期値で自動生成する.
  * - update() は version 含めて全フィールド上書きする (アプリ層で version++ 済みの値を渡す).
  *
- * 本実装: `server/src/infra/persistence/drizzle/counter-repository.ts` (DrizzleCounterRepository).
+ * 本実装: `server/src/infra/persistence/drizzle/drizzle-counter-repository.ts` (DrizzleCounterRepository).
  * テスト用 in-memory 実装: `server/__tests__/helpers/in-memory-repositories.ts`.
  */
 export interface Counter {

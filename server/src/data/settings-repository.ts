@@ -7,7 +7,7 @@
  * - get() は singleton レコードを返す. 未存在時は dayBoundaryTime = "04:00" で lazy upsert して返す.
  * - update() は version 含めて全フィールド上書きする (アプリ層で dayBoundaryTime / version+ 1 / updatedAt を渡す前提).
  *
- * 本実装: `server/src/infra/persistence/drizzle/settings-repository.ts` (DrizzleSettingsRepository).
+ * 本実装: `server/src/infra/persistence/drizzle/drizzle-settings-repository.ts` (DrizzleSettingsRepository).
  * テスト用 in-memory 実装: `server/__tests__/helpers/in-memory-repositories.ts`.
  */
 
