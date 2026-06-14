@@ -62,12 +62,13 @@ describe("SettingsView 整理 (BL-094)", () => {
     expect(submit?.textContent?.trim()).toBe("変更");
   });
 
-  it("FR-4: リセット時刻ラベルが .settings-view__label を持つ (太字)", () => {
+  it("FR-4: リセット時刻ラベルが .settings-view__label を持つ (太字 + h2 サイズ)", () => {
     const css = readFileSync(
       resolve(repoRoot, "web/src/ui/settings-view/settings-view.css"),
       "utf-8",
     );
     expect(css).toMatch(/\.settings-view__label\s*\{[^}]*font-weight:\s*bold/);
+    expect(css).toMatch(/\.settings-view__label\s*\{[^}]*font-size:\s*var\(--font-size-h2\)/);
   });
 
   it("FR-4: リセット時刻 input と変更ボタンが .settings-view__field-row 内に並ぶ", async () => {
