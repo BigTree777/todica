@@ -41,6 +41,8 @@
 
 .settings-view__field-row input {
   flex: 1;
+  font-size: var(--font-size-h2);
+  padding: var(--space-xs) var(--space-sm);
 }
 
 .settings-view__section {
