@@ -66,12 +66,6 @@ function generateId(): string {
   return `${hex(8)}-${hex(4)}-4${hex(3)}-8${hex(3)}-${hex(12)}`;
 }
 
-/** repository の baseUrl/authToken を安全に取り出す型 */
-interface HasBaseUrlAndToken {
-  baseUrl?: string;
-  authToken?: string;
-}
-
 export function TodayView(props: TodayViewProps): JSX.Element {
   const { repository, projectRepository } = props;
   const queryClient = useQueryClient();
@@ -112,9 +106,8 @@ export function TodayView(props: TodayViewProps): JSX.Element {
     void queryClient.invalidateQueries({ queryKey: ["focus"] });
   }, [queryClient]);
 
-  const repo = repository as unknown as HasBaseUrlAndToken;
+  const repo = repository as { baseUrl?: string };
   const baseUrl = repo.baseUrl ?? "";
-  const authToken = repo.authToken ?? "";
 
   /** enqueue を安全に呼び出す。IDB が利用できない環境ではエラーを無視する。 */
   const safeEnqueue = async (entry: Parameters<typeof enqueue>[0]) => {
@@ -145,7 +138,6 @@ export function TodayView(props: TodayViewProps): JSX.Element {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
           "Idempotency-Key": idempotencyKey,
         },
         body: JSON.stringify({ ...cmd }),
@@ -179,7 +171,6 @@ export function TodayView(props: TodayViewProps): JSX.Element {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
           "Idempotency-Key": idempotencyKey,
           "If-Match": String(cmd.ifMatch),
         },
@@ -221,7 +212,6 @@ export function TodayView(props: TodayViewProps): JSX.Element {
         url: `${baseUrl}/api/v1/tasks/${cmd.id}`,
         method: "DELETE",
         headers: {
-          Authorization: `Bearer ${authToken}`,
           "Idempotency-Key": idempotencyKey,
           "If-Match": String(cmd.ifMatch),
         },
@@ -261,7 +251,6 @@ export function TodayView(props: TodayViewProps): JSX.Element {
         url: `${baseUrl}/api/v1/tasks/${cmd.id}/complete`,
         method: "POST",
         headers: {
-          Authorization: `Bearer ${authToken}`,
           "Idempotency-Key": idempotencyKey,
           "If-Match": String(cmd.ifMatch),
         },
@@ -306,7 +295,6 @@ export function TodayView(props: TodayViewProps): JSX.Element {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
           "Idempotency-Key": idempotencyKey,
           "If-Match": String(cmd.ifMatch),
         },

@@ -59,12 +59,6 @@ function generateId(): string {
   return `${hex(8)}-${hex(4)}-4${hex(3)}-8${hex(3)}-${hex(12)}`;
 }
 
-/** repository の baseUrl/authToken を安全に取り出す型. */
-interface HasBaseUrlAndToken {
-  baseUrl?: string;
-  authToken?: string;
-}
-
 export function TomorrowView(props: TomorrowViewProps): JSX.Element {
   const { repository, projectRepository } = props;
   const queryClient = useQueryClient();
@@ -114,9 +108,8 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
     });
   }, [queryClient, repository]);
 
-  const repo = repository as unknown as HasBaseUrlAndToken;
+  const repo = repository as { baseUrl?: string };
   const baseUrl = repo.baseUrl ?? "";
-  const authToken = repo.authToken ?? "";
 
   /** enqueue を安全に呼び出す. IDB 不可環境ではエラーを無視. */
   const safeEnqueue = async (entry: Parameters<typeof enqueue>[0]) => {
@@ -146,7 +139,6 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
           "Idempotency-Key": idempotencyKey,
         },
         body: JSON.stringify({ ...cmd }),
@@ -186,7 +178,6 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
           "Idempotency-Key": idempotencyKey,
           "If-Match": String(cmd.ifMatch),
         },
@@ -226,7 +217,6 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
         url: `${baseUrl}/api/v1/tasks/${cmd.id}`,
         method: "DELETE",
         headers: {
-          Authorization: `Bearer ${authToken}`,
           "Idempotency-Key": idempotencyKey,
           "If-Match": String(cmd.ifMatch),
         },
@@ -270,7 +260,6 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
         url: `${baseUrl}/api/v1/tasks/${cmd.id}/complete`,
         method: "POST",
         headers: {
-          Authorization: `Bearer ${authToken}`,
           "Idempotency-Key": idempotencyKey,
           "If-Match": String(cmd.ifMatch),
         },
