@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import { defineConfig } from "vitest/config";
 
 /**
@@ -8,6 +9,13 @@ import { defineConfig } from "vitest/config";
  *   ファイル名にマッチするものだけ jsdom 環境に切り替える.
  */
 export default defineConfig({
+  resolve: {
+    alias: {
+      // vite-plugin-pwa の仮想モジュール (本番ビルドでのみ生成される) を
+      // テスト時は no-op スタブで置き換える.
+      "virtual:pwa-register": resolve(__dirname, "web/__tests__/mocks/pwa-register.ts"),
+    },
+  },
   test: {
     globals: true,
     include: [
