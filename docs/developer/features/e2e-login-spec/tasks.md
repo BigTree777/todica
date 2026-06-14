@@ -16,14 +16,14 @@
 
 ### Step 1: 準備 — `E2E_TEST_PASSWORD` import 経路の確認
 
-- [ ] `playwright.config.ts` 末尾の `export { E2E_TEST_PASSWORD, E2E_TEST_PASSWORD_HASH }` が維持されていることを確認する.
-- [ ] `e2e/login.spec.ts` から `import { E2E_TEST_PASSWORD } from "../playwright.config";` (または相対パスを Playwright の ts 解決に合わせる) で参照可能であることを確認する.
-- [ ] (確認のみ. コード変更は発生しない想定)
+- [x] `playwright.config.ts` 末尾の `export { E2E_TEST_PASSWORD, E2E_TEST_PASSWORD_HASH }` が維持されていることを確認する.
+- [x] `e2e/login.spec.ts` から `import { E2E_TEST_PASSWORD } from "../playwright.config";` (または相対パスを Playwright の ts 解決に合わせる) で参照可能であることを確認する.
+- [x] (確認のみ. コード変更は発生しない想定)
 
 ### Step 2: AC-1 (未認証 → LoginView)
 
-- [ ] `e2e/login.spec.ts` を新規作成し, ヘッダコメントに「BL-077 / E2E LoginView シナリオ」と本 BL の参照を書く.
-- [ ] 最初の test を追加:
+- [x] `e2e/login.spec.ts` を新規作成し, ヘッダコメントに「BL-077 / E2E LoginView シナリオ」と本 BL の参照を書く.
+- [x] 最初の test を追加:
   - `await page.goto("/")`
   - `await expect(page.getByRole("heading", { name: "ログイン" })).toBeVisible()`
   - `await expect(page.getByLabel("パスワード")).toBeVisible()`
@@ -32,7 +32,7 @@
 
 ### Step 3: AC-2 (誤パスワード → エラー + 留まる)
 
-- [ ] 2 番目の test を追加:
+- [x] 2 番目の test を追加:
   - `await page.goto("/")`
   - `await page.getByLabel("パスワード").fill("wrong-password")`
   - `await page.getByRole("button", { name: "ログイン" }).click()`
@@ -42,7 +42,7 @@
 
 ### Step 4: AC-3 (正パスワード → 今日ビュー)
 
-- [ ] 3 番目の test を追加:
+- [x] 3 番目の test を追加:
   - `await page.goto("/")`
   - `await page.getByLabel("パスワード").fill(E2E_TEST_PASSWORD)`
   - `await page.getByRole("button", { name: "ログイン" }).click()`
@@ -52,7 +52,7 @@
 
 ### Step 5: AC-4 (ログアウト → LoginView 戻り)
 
-- [ ] 4 番目の test を追加:
+- [x] 4 番目の test を追加:
   - `await page.goto("/")` → AC-3 と同じログイン操作を行いログイン状態を作る
   - `await expect(page.getByRole("form", { name: "タスク起票フォーム" })).toBeVisible()` (ログイン確認)
   - `await page.goto("/settings")`
@@ -63,15 +63,15 @@
 
 ### Step 6: AC-5 (既存 e2e の回帰なし)
 
-- [ ] `.e2e-data/` を削除し既存 dev server を停止した clean な状態で `npx playwright test` を実行し, 全 spec (既存 25 本 + 新規 1 本) が green であることを確認する.
-- [ ] CI と同じ条件 (`CI=1 npx playwright test`) でも green であることを確認する.
+- [x] `.e2e-data/` を削除し既存 dev server を停止した clean な状態で `npx playwright test` を実行し, 全 spec (既存 25 本 + 新規 1 本) が green であることを確認する.
+- [x] CI と同じ条件 (`CI=1 npx playwright test`) でも green であることを確認する.
 
 ## テスト
 
-- [ ] 単体テスト: 追加しない (本 BL のスコープ外).
-- [ ] 結合 / E2E テスト:
-  - [ ] `npx playwright test e2e/login.spec.ts` が単体で green (Step 2 〜 Step 5 の 4 シナリオ).
-  - [ ] `npx playwright test` 全件 green (既存 25 本 + 新規 1 本 = 26 本).
+- [x] 単体テスト: 追加しない (本 BL のスコープ外).
+- [x] 結合 / E2E テスト:
+  - [x] `npx playwright test e2e/login.spec.ts` が単体で green (Step 2 〜 Step 5 の 4 シナリオ).
+  - [x] `npx playwright test` 全件 green (既存 25 本 + 新規 1 本 = 26 本).
 
 ## TDD サイクル (Step ごと)
 
@@ -85,12 +85,12 @@
 
 ## ドキュメント
 
-- [ ] `docs/developer/quality/test-catalog.md` に E2E ファイル一覧セクションが存在するか確認する.
+- [x] `docs/developer/quality/test-catalog.md` に E2E ファイル一覧セクションが存在するか確認する.
   - 存在する場合: `e2e/login.spec.ts` を追記.
   - 存在しない場合: 追記不要 (BL-077 のスコープでカタログ自体を新設はしない).
 
 ## 仕上げ
 
-- [ ] 受け入れ基準 (spec.md の AC-1 〜 AC-5) を全て満たすことを確認.
-- [ ] typecheck (`npm run typecheck`) / lint (`npm run lint`) が 0 エラー.
-- [ ] `auditor` にレビュー依頼 (spec / plan / tasks / 新規 `e2e/login.spec.ts` / Playwright green 出力をパッケージ).
+- [x] 受け入れ基準 (spec.md の AC-1 〜 AC-5) を全て満たすことを確認.
+- [x] typecheck (`npm run typecheck`) / lint (`npm run lint`) が 0 エラー.
+- [x] `auditor` にレビュー依頼 (spec / plan / tasks / 新規 `e2e/login.spec.ts` / Playwright green 出力をパッケージ).
