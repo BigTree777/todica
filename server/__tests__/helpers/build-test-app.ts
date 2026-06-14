@@ -30,6 +30,7 @@ const TEST_PASSWORD_HASH = bcrypt.hashSync(TEST_PASSWORD, 4);
 export function buildTestApp(
   options: {
     initialTime?: string;
+    allowedOrigins?: string[];
   } = {},
 ) {
   const taskRepository = new InMemoryTaskRepository();
@@ -67,6 +68,7 @@ export function buildTestApp(
     sessionRepository,
     clock,
     passwordRepository,
+    allowedOrigins: options.allowedOrigins,
   });
 
   return {

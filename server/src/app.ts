@@ -55,6 +55,8 @@ export interface AppDeps {
   db?: BetterSQLite3Database<typeof schema>;
   routineRepository?: RoutineRepository;
   testClock?: FakeClock;
+  /** CORS 許可オリジン. 未指定の場合は default (dev + Capacitor) を使う. */
+  allowedOrigins?: string[];
 }
 
 /**
@@ -62,7 +64,7 @@ export interface AppDeps {
  */
 export function createApp(deps: AppDeps): Hono {
   const app = new Hono();
-  const allowedOrigins = parseAllowedOrigins(process.env.ALLOWED_ORIGINS);
+  const allowedOrigins = deps.allowedOrigins ?? [...DEFAULT_ALLOWED_ORIGINS];
 
   app.use(
     "*",

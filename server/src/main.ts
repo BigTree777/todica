@@ -18,7 +18,7 @@ import { type Clock, FakeClock, SystemClock } from "@todica/domain/clock";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import { createApp } from "./app.js";
+import { createApp, parseAllowedOrigins } from "./app.js";
 import { schema } from "./db/schema.js";
 import { DrizzleCounterRepository } from "./infra/persistence/drizzle/counter-repository.js";
 import { DrizzleFocusRepository } from "./infra/persistence/drizzle/focus-repository.js";
@@ -34,6 +34,7 @@ import { getServerTimeZone } from "./use-cases/daily-reset.js";
 const DATABASE_PATH = process.env.DATABASE_PATH ?? "./todica.db";
 const PORT = Number.parseInt(process.env.PORT ?? "3000", 10);
 const TEST_NOW = process.env.TEST_NOW;
+const ALLOWED_ORIGINS = parseAllowedOrigins(process.env.ALLOWED_ORIGINS);
 
 const sqlite = new Database(DATABASE_PATH);
 sqlite.pragma("journal_mode = WAL");
@@ -67,6 +68,7 @@ const app = createApp({
   // BL-030: testClock が渡されると app は test-only エンドポイントを生やす.
   testClock: clock instanceof FakeClock ? clock : undefined,
   db,
+  allowedOrigins: ALLOWED_ORIGINS,
 });
 
 serve({ fetch: app.fetch, port: PORT }, (info) => {
