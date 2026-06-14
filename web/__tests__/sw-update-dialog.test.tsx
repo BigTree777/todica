@@ -127,12 +127,75 @@ describe("SwUpdateDialog", () => {
     expect(dialog.open).toBe(false);
   });
 
-  it("dialog 要素の a11y 属性 (aria-label / role=dialog) が揃う", () => {
+  it("dialog 要素の a11y 属性 (aria-label / aria-modal / role=dialog) が揃う", () => {
     mockServiceWorker({ waiting: null });
     render(<SwUpdateDialog />);
     const dialog = screen.getByLabelText("アップデート");
     expect(dialog).toHaveAttribute("aria-label", "アップデート");
-    // role=dialog は <dialog> のネイティブロール
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    // role=dialog は <dialog> 要素のネイティブ ARIA role (明示属性は不要)
     expect(dialog.tagName).toBe("DIALOG");
+  });
+
+  it("Escape (cancel イベント) で dialog が閉じる", async () => {
+    const waiting: ServiceWorkerLike = {
+      state: "installed",
+      postMessage: vi.fn(),
+      addEventListener: vi.fn(),
+    };
+    mockServiceWorker({ waiting });
+    render(<SwUpdateDialog />);
+    await vi.waitFor(() => {
+      const dialog = screen.getByLabelText("アップデート") as HTMLDialogElement;
+      expect(dialog.open).toBe(true);
+    });
+
+    const dialog = screen.getByLabelText("アップデート") as HTMLDialogElement;
+    fireEvent(dialog, new Event("cancel"));
+
+    expect((screen.getByLabelText("アップデート") as HTMLDialogElement).open).toBe(false);
+  });
+
+  it("overlay click (dialog 自体への click) で dialog が閉じる", async () => {
+    const waiting: ServiceWorkerLike = {
+      state: "installed",
+      postMessage: vi.fn(),
+      addEventListener: vi.fn(),
+    };
+    mockServiceWorker({ waiting });
+    render(<SwUpdateDialog />);
+    await vi.waitFor(() => {
+      const dialog = screen.getByLabelText("アップデート") as HTMLDialogElement;
+      expect(dialog.open).toBe(true);
+    });
+
+    const dialog = screen.getByLabelText("アップデート") as HTMLDialogElement;
+    fireEvent.click(dialog);
+
+    expect((screen.getByLabelText("アップデート") as HTMLDialogElement).open).toBe(false);
+  });
+
+  it("再読み込みボタン click では dismiss されない (overlay click 判定の誤発火防止)", async () => {
+    const waiting: ServiceWorkerLike = {
+      state: "installed",
+      postMessage: vi.fn(),
+      addEventListener: vi.fn(),
+    };
+    mockServiceWorker({ waiting });
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: { ...window.location, reload: vi.fn() },
+    });
+    render(<SwUpdateDialog />);
+    await vi.waitFor(() => {
+      const dialog = screen.getByLabelText("アップデート") as HTMLDialogElement;
+      expect(dialog.open).toBe(true);
+    });
+
+    const button = screen.getByText("再読み込み").closest("button");
+    if (!button) throw new Error("button not found");
+    fireEvent.click(button);
+
+    expect(waiting.postMessage).toHaveBeenCalledWith({ type: "SKIP_WAITING" });
   });
 });

@@ -63,6 +63,7 @@ export function SwUpdateDialog(): JSX.Element {
     <dialog
       ref={dialogRef}
       className="sw-update-dialog"
+      aria-modal="true"
       aria-label="アップデート"
       onCancel={handleDismiss}
       onClick={(event) => {
