@@ -97,6 +97,20 @@
   display: none;
 }
 
+/* 更新ボタン: 画面右上に固定 (BL-093) */
+.app-shell__reload {
+  position: fixed;
+  top: var(--space-sm);
+  right: var(--space-sm);
+  z-index: 200;
+  background: none;
+  border: none;
+  font-size: var(--font-size-h2);
+  cursor: pointer;
+  padding: var(--space-xs);
+  color: var(--color-fg);
+}
+
 /* メニュー内「閉じる」ボタン */
 .app-shell__menu-close {
   align-self: flex-end;
