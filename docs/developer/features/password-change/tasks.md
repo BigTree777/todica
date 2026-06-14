@@ -138,7 +138,7 @@
 
 ## 仕上げ
 
-- [ ] 受け入れ基準 (spec.md AC-1 〜 AC-12) を全て満たすことを確認.
-- [ ] サーバ全テスト (vitest) と Web 全テストが green.
-- [ ] typecheck / lint 0 エラー.
-- [ ] auditor にレビュー依頼.
+- [x] 受け入れ基準 (spec.md AC-1 〜 AC-12) を全て満たすことを確認.
+- [x] サーバ全テスト (vitest) と Web 全テストが green.
+- [x] typecheck / lint 0 エラー.
+- [x] auditor にレビュー依頼.
