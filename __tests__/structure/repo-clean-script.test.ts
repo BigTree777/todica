@@ -1,6 +1,7 @@
-import { readFileSync } from "node:fs";
+import { execSync } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const repoRoot = resolve(__dirname, "../..");
 
@@ -37,5 +38,43 @@ describe("repo clean script", () => {
 
   it("rimraf が devDependency に含まれる", () => {
     expect(pkg.devDependencies.rimraf).toBeDefined();
+  });
+
+  it("`clean` script が glob (`-g`) で *.tsbuildinfo を確実に消す", () => {
+    expect(pkg.scripts.clean).toMatch(/rimraf\s+-g/);
+  });
+});
+
+describe("repo clean script 実動作", () => {
+  const sentinels = [
+    "test-results/_bl089_sentinel.txt",
+    "web/dev-dist/_bl089_sentinel.txt",
+    ".e2e-data/_bl089_sentinel.txt",
+    "__bl089_sentinel.tsbuildinfo",
+  ];
+
+  beforeEach(() => {
+    for (const rel of sentinels) {
+      const abs = resolve(repoRoot, rel);
+      mkdirSync(resolve(abs, ".."), { recursive: true });
+      writeFileSync(abs, "sentinel");
+    }
+  });
+
+  afterEach(() => {
+    for (const rel of sentinels) {
+      const abs = resolve(repoRoot, rel);
+      if (existsSync(abs)) rmSync(abs, { force: true });
+    }
+  });
+
+  it("`npm run clean` が対象 4 種類を実際に削除する", () => {
+    for (const rel of sentinels) {
+      expect(existsSync(resolve(repoRoot, rel))).toBe(true);
+    }
+    execSync("npm run clean", { cwd: repoRoot, stdio: "ignore" });
+    for (const rel of sentinels) {
+      expect(existsSync(resolve(repoRoot, rel))).toBe(false);
+    }
   });
 });

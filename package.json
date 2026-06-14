@@ -21,7 +21,7 @@
     "format": "biome format --write .",
     "android:sync": "npm run build -w web && npx cap sync android",
     "android:bundle": "npm run android:sync && cd android && ./gradlew bundleRelease",
-    "clean": "rimraf test-results web/dev-dist .e2e-data \"**/*.tsbuildinfo\"",
+    "clean": "rimraf -g test-results web/dev-dist .e2e-data \"**/*.tsbuildinfo\"",
     "clean:dist": "rimraf domain/dist server/dist web/dist && npm run build -w domain"
   },
   "devDependencies": {
