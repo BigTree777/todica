@@ -6,16 +6,30 @@
  * シングルトンとして DB 接続を保持し、各 Local Repository に注入する。
  */
 
-let db: unknown = null;
+type Row = Record<string, unknown>;
 
-export async function getDb(): Promise<unknown> {
+export interface LocalDb {
+  query(sql: string, values?: unknown[]): Promise<{ values?: Row[] }>;
+  run(sql: string, values?: unknown[]): Promise<{ changes?: { changes: number; lastId: number } }>;
+  execute(sql: string): Promise<{ changes?: { changes: number } }>;
+  beginTransaction(): Promise<void>;
+  commitTransaction(): Promise<void>;
+  rollbackTransaction(): Promise<void>;
+  isTransactionActive?(): Promise<{ result: boolean }>;
+  isDBOpen?(): Promise<{ result: boolean }>;
+}
+
+let db: LocalDb | null = null;
+
+export async function getDb(): Promise<LocalDb> {
   if (db) return db;
 
   try {
     const { CapacitorSQLite, SQLiteConnection } = await import("@capacitor-community/sqlite");
     const sqlite = new SQLiteConnection(CapacitorSQLite);
-    const conn = await sqlite.createConnection("todica.db", false, "no-encryption", 1, false);
-    await conn.open();
+    const sqliteConn = await sqlite.createConnection("todica.db", false, "no-encryption", 1, false);
+    await sqliteConn.open();
+    const conn: LocalDb = sqliteConn as unknown as LocalDb;
 
     await conn.execute(`
       CREATE TABLE IF NOT EXISTS tasks (

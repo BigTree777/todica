@@ -12,16 +12,9 @@ import type {
   UpdateProjectCommand,
 } from "./project-repository.js";
 
-type Row = Record<string, unknown>;
+import type { LocalDb } from "./local-db.js";
 
-interface DBConnection {
-  query(sql: string, values?: unknown[]): Promise<{ values?: Row[] }>;
-  run(sql: string, values?: unknown[]): Promise<{ changes?: { changes: number; lastId: number } }>;
-  execute(sql: string): Promise<{ changes?: { changes: number } }>;
-  beginTransaction(): Promise<void>;
-  commitTransaction(): Promise<void>;
-  rollbackTransaction(): Promise<void>;
-}
+type Row = Record<string, unknown>;
 
 function rowToProject(row: Row): Project {
   return {
@@ -34,7 +27,7 @@ function rowToProject(row: Row): Project {
 }
 
 export class LocalProjectRepository implements ProjectRepository {
-  constructor(private readonly db: DBConnection) {}
+  constructor(private readonly db: LocalDb) {}
 
   async list(): Promise<Project[]> {
     const result = await this.db.query("SELECT * FROM projects WHERE trashed_at IS NULL");

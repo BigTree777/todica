@@ -16,16 +16,9 @@
  *      - ゴミ箱清算: trashedAt < 前回境界時刻 → DELETE
  */
 
-type Row = Record<string, unknown>;
+import type { LocalDb } from "../repositories/local-db.js";
 
-interface DBConnection {
-  query(sql: string, values?: unknown[]): Promise<{ values?: Row[] }>;
-  run(sql: string, values?: unknown[]): Promise<{ changes?: { changes: number; lastId: number } }>;
-  execute(sql: string): Promise<{ changes?: { changes: number } }>;
-  beginTransaction(): Promise<void>;
-  commitTransaction(): Promise<void>;
-  rollbackTransaction(): Promise<void>;
-}
+type Row = Record<string, unknown>;
 
 /**
  * 前回の境界時刻を計算する.
@@ -116,7 +109,7 @@ function calcPreviousBoundary(now: Date, boundaryTime: string, timezone: string)
 }
 
 export class LocalResetUsecase {
-  constructor(private readonly db: DBConnection) {}
+  constructor(private readonly db: LocalDb) {}
 
   async runIfNeeded(now: Date): Promise<void> {
     // 1. settings から境界時刻設定を取得
