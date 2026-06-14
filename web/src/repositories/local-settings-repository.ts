@@ -7,16 +7,9 @@
 
 import type { PatchSettingsCommand, Settings, SettingsRepository } from "./settings-repository.js";
 
-type Row = Record<string, unknown>;
+import type { LocalDb } from "./local-db.js";
 
-interface DBConnection {
-  query(sql: string, values?: unknown[]): Promise<{ values?: Row[] }>;
-  run(sql: string, values?: unknown[]): Promise<{ changes?: { changes: number; lastId: number } }>;
-  execute(sql: string): Promise<{ changes?: { changes: number } }>;
-  beginTransaction(): Promise<void>;
-  commitTransaction(): Promise<void>;
-  rollbackTransaction(): Promise<void>;
-}
+type Row = Record<string, unknown>;
 
 function rowToSettings(row: Row): Settings & { dayBoundaryTimezone: string } {
   return {
@@ -29,7 +22,7 @@ function rowToSettings(row: Row): Settings & { dayBoundaryTimezone: string } {
 }
 
 export class LocalSettingsRepository implements SettingsRepository {
-  constructor(private readonly db: DBConnection) {}
+  constructor(private readonly db: LocalDb) {}
 
   async getSettings(): Promise<Settings & { dayBoundaryTimezone: string }> {
     const result = await this.db.query("SELECT * FROM settings WHERE id = 'singleton'");

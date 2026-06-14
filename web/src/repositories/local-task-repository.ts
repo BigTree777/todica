@@ -1,10 +1,10 @@
 /**
  * LocalTaskRepository — SQLite ローカル実装 (BL-020 / AC-LOC-003).
  *
- * @capacitor-community/sqlite の SQLiteDBConnection を受け取り、
+ * @capacitor-community/sqlite の SQLiteLocalDb を受け取り、
  * TaskRepository インターフェースを満たす実装を提供する.
  *
- * テスト環境では SQLiteDBConnection をモックして利用する (NFR-LOC-003).
+ * テスト環境では SQLiteLocalDb をモックして利用する (NFR-LOC-003).
  */
 
 import type { DueDate, Priority, Task } from "@todica/domain/task";
@@ -22,17 +22,7 @@ import type {
 } from "./task-repository.js";
 import { OptimisticLockError } from "./task-repository.js";
 
-// SQLiteDBConnection の最小インターフェース（型のみ）
-interface DBConnection {
-  query(sql: string, values?: unknown[]): Promise<{ values?: Row[] }>;
-  run(sql: string, values?: unknown[]): Promise<{ changes?: { changes: number; lastId: number } }>;
-  execute(sql: string): Promise<{ changes?: { changes: number } }>;
-  beginTransaction(): Promise<void>;
-  commitTransaction(): Promise<void>;
-  rollbackTransaction(): Promise<void>;
-  isTransactionActive?(): Promise<{ result: boolean }>;
-  isDBOpen?(): Promise<{ result: boolean }>;
-}
+import type { LocalDb } from "./local-db.js";
 
 type Row = Record<string, unknown>;
 
@@ -62,7 +52,7 @@ function priorityOrder(priority: string): number {
 }
 
 export class LocalTaskRepository implements TaskRepository {
-  constructor(private readonly db: DBConnection) {}
+  constructor(private readonly db: LocalDb) {}
 
   async list(filter?: ListTasksFilter): Promise<Task[]> {
     // BL-038: filter.dueDate が渡されたら SQL にも条件を反映する.

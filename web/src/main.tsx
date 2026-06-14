@@ -249,16 +249,14 @@ export function App({ config, repos: initialRepos, authStorage }: AppProps) {
           );
           const { LocalResetUsecase } = await import("./usecases/local-reset-usecase.js");
           const db = await getDb();
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const anyDb = db as any;
-          await new LocalResetUsecase(anyDb).runIfNeeded(new Date());
+          await new LocalResetUsecase(db).runIfNeeded(new Date());
           setCurrentMode("local");
           setRepos({
-            task: new LocalTaskRepository(anyDb),
-            settings: new LocalSettingsRepository(anyDb),
-            trash: new LocalTrashRepository(anyDb),
-            project: new LocalProjectRepository(anyDb),
-            routine: new LocalRoutineRepository(anyDb),
+            task: new LocalTaskRepository(db),
+            settings: new LocalSettingsRepository(db),
+            trash: new LocalTrashRepository(db),
+            project: new LocalProjectRepository(db),
+            routine: new LocalRoutineRepository(db),
           });
         } catch {
           // ローカル DB の初期化に失敗した場合はそのまま
@@ -274,9 +272,7 @@ export function App({ config, repos: initialRepos, authStorage }: AppProps) {
           try {
             const { getDb, resetDbCache } = await import("./repositories/local-db.js");
             const db = await getDb();
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const anyDb = db as any;
-            await anyDb.execute(
+            await db.execute(
               "DELETE FROM tasks; DELETE FROM projects; DELETE FROM routines; " +
                 "DELETE FROM counter; DELETE FROM settings; DELETE FROM focus_selection;",
             );
@@ -323,17 +319,15 @@ export function App({ config, repos: initialRepos, authStorage }: AppProps) {
               "./repositories/local-routine-repository.js"
             );
             const db = await getDb();
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const anyDb = db as any;
             setCurrentMode("local");
             setBaseUrl("");
             setAuthToken("");
             setRepos({
-              task: new LocalTaskRepository(anyDb),
-              settings: new LocalSettingsRepository(anyDb),
-              trash: new LocalTrashRepository(anyDb),
-              project: new LocalProjectRepository(anyDb),
-              routine: new LocalRoutineRepository(anyDb),
+              task: new LocalTaskRepository(db),
+              settings: new LocalSettingsRepository(db),
+              trash: new LocalTrashRepository(db),
+              project: new LocalProjectRepository(db),
+              routine: new LocalRoutineRepository(db),
             });
           } catch {
             /* SQLite が利用できない場合はスキップ */
@@ -515,17 +509,15 @@ async function init() {
       const { LocalResetUsecase } = await import("./usecases/local-reset-usecase.js");
 
       const db = await getDb();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const anyDb = db as any;
-      await new LocalResetUsecase(anyDb).runIfNeeded(new Date());
+      await new LocalResetUsecase(db).runIfNeeded(new Date());
 
       config = { mode: "local", baseUrl: "", authToken: "", isNative: true, needsSetup: false };
       repos = {
-        task: new LocalTaskRepository(anyDb),
-        settings: new LocalSettingsRepository(anyDb),
-        trash: new LocalTrashRepository(anyDb),
-        project: new LocalProjectRepository(anyDb),
-        routine: new LocalRoutineRepository(anyDb),
+        task: new LocalTaskRepository(db),
+        settings: new LocalSettingsRepository(db),
+        trash: new LocalTrashRepository(db),
+        project: new LocalProjectRepository(db),
+        routine: new LocalRoutineRepository(db),
       };
     } else {
       // サーバモード. token は auth-storage から取得 (なければ LoginView).

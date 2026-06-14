@@ -14,16 +14,9 @@ import type {
   WebRoutineRepository,
 } from "./routine-repository.js";
 
-type Row = Record<string, unknown>;
+import type { LocalDb } from "./local-db.js";
 
-interface DBConnection {
-  query(sql: string, values?: unknown[]): Promise<{ values?: Row[] }>;
-  run(sql: string, values?: unknown[]): Promise<{ changes?: { changes: number; lastId: number } }>;
-  execute(sql: string): Promise<{ changes?: { changes: number } }>;
-  beginTransaction(): Promise<void>;
-  commitTransaction(): Promise<void>;
-  rollbackTransaction(): Promise<void>;
-}
+type Row = Record<string, unknown>;
 
 function rowToWebRoutine(row: Row): WebRoutine {
   let daysOfWeek: number[] = [];
@@ -50,7 +43,7 @@ function rowToWebRoutine(row: Row): WebRoutine {
 }
 
 export class LocalRoutineRepository implements WebRoutineRepository {
-  constructor(private readonly db: DBConnection) {}
+  constructor(private readonly db: LocalDb) {}
 
   async list(): Promise<WebRoutine[]> {
     const result = await this.db.query("SELECT * FROM routines WHERE trashed_at IS NULL");
