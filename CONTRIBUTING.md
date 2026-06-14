@@ -4,7 +4,7 @@ Todica へのコントリビューションを歓迎します。
 
 ## 開発環境のセットアップ
 
-Node.js 20 以上をインストールしてから、以下を実行してください。
+Node.js 24.x（手元の動作確認バージョン。他バージョンは未検証）をインストールしてから、以下を実行してください。
 
 ```bash
 git clone https://github.com/BigTree777/todica.git

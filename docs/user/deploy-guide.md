@@ -39,7 +39,7 @@ sudo apt update && sudo apt upgrade -y
 
 ### 1-2. Node.js 24.x（NodeSource 経由）
 
-開発側の動作確認バージョンに合わせて 24.x を入れる（他バージョンは未検証）。
+Node.js 24.x（手元の動作確認バージョン。他バージョンは未検証）を入れる。
 
 ```bash
 curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
