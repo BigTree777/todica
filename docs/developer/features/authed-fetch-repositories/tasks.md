@@ -20,8 +20,8 @@
 
 > 4 ファイルそれぞれを `setAuthStorage` seed パターンに揃え, constructor 呼び出しを `new HttpXxxRepository(BASE_URL)` に変更する. この時点で本体が constructor 第 2 引数を要求しているため typecheck が落ちる (= red). [AC-5 / AC-6]
 
-- [x] `web/__tests__/http-task-repository.test.ts` の `new HttpTaskRepository(BASE_URL, AUTH_TOKEN)` を `new HttpTaskRepository(BASE_URL)` に置換 (seed パターンは既に統一済み).
-- [x] `web/src/repositories/project-repository.test.ts` の `beforeEach` を `WebAuthStorage` + `setAuthStorage` 4 ステップ seed に書き換え, `afterEach` で `setAuthStorage(null)` + `localStorage.clear()` を呼ぶ. `new HttpProjectRepository(BASE_URL, AUTH_TOKEN)` を `new HttpProjectRepository(BASE_URL)` に置換.
+- [x] `web/__tests__/http-task-repository.test.ts` の `new HttpTaskRepository(BASE_URL, TEST_TOKEN)` を `new HttpTaskRepository(BASE_URL)` に置換 (seed パターンは既に統一済み).
+- [x] `web/src/repositories/project-repository.test.ts` の `beforeEach` を `WebAuthStorage` + `setAuthStorage` 4 ステップ seed に書き換え, `afterEach` で `setAuthStorage(null)` + `localStorage.clear()` を呼ぶ. `new HttpProjectRepository(BASE_URL, TEST_TOKEN)` を `new HttpProjectRepository(BASE_URL)` に置換.
 - [x] `web/src/repositories/routine-repository.test.ts` を同様のパターンで書き換え.
 - [x] `web/src/repositories/trash-repository.test.ts` を同様のパターンで書き換え.
 

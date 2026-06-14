@@ -5,8 +5,8 @@
 ## 方針概要
 
 - **パスワードハッシュを単一行 singleton として SQLite に永続化する**. drizzle テーブル `app_password` を新設し, `id = "current"` を PK とする 1 行に bcrypt ハッシュと更新時刻を持つ.
-- **`PasswordRepository` を新設**. `app.ts` および起動 seed ロジックから DB へのアクセスを単一の Repository に集約する.
-- **環境変数 `APP_PASSWORD_HASH` は初期 seed 専用に縮退**. 起動時に `app_password` テーブルが空のときだけ INSERT のソースとして使う. 既に行があるなら一切読まない (= 値が異なっても DB 優先).
+- **`PasswordRepository` を新設**. `app.ts` および初期設定経路から DB へのアクセスを単一の Repository に集約する.
+- **初回設定も DB に統合**. `app_password` テーブルが空のときは `auth-state` と初期設定 API を通じてブラウザから最初のハッシュを保存する.
 - **認証経路を統一**. `POST /api/v1/login` および `POST /api/v1/password` のいずれも DB の現在ハッシュを `PasswordRepository.getHash()` で都度取得して bcrypt.compare する.
 - **`POST /api/v1/password` を新規実装**. 現在パスワード照合 → 新パスワードを bcrypt.hashSync(12) → DB UPDATE → sessions 全削除 → 200 OK の順.
 - **SettingsView にパスワード変更セクションを追加**. 既存の境界時刻フォーム / モード切替 / ログアウトと同じ DOM 階層に並べる. 成功時はコールバック (`onPasswordChanged`) を呼び, `main.tsx` 側の `App` が token を破棄して LoginView に遷移する (既存の `handleLogout` と同じ後始末).
@@ -15,13 +15,13 @@
 
 | 項目 | 現状 | 本実装で変更 |
 | --- | --- | --- |
-| パスワードハッシュ供給源 | `process.env.APP_PASSWORD_HASH` を `main.ts` で読み, `AppDeps.passwordHash: string` として注入 | 起動時 seed → DB 永続化に移行. `AppDeps.passwordHash` を `AppDeps.passwordRepository` に置換 |
+| パスワードハッシュ供給源 | サーバ設定から `AppDeps.passwordHash: string` として注入 | DB 永続化に移行. `AppDeps.passwordHash` を `AppDeps.passwordRepository` に置換 |
 | `POST /api/v1/login` | `bcrypt.compare(password, deps.passwordHash)` で静的ハッシュと照合 | `bcrypt.compare(password, await deps.passwordRepository.getHash())` に置換 |
 | `POST /api/v1/password` | 未実装 | 新規実装 (Bearer 必須 / Idempotency-Key 不要) |
 | `app_password` テーブル | 存在しない | 新設 (`id` PK, `password_hash` TEXT, `updated_at` INTEGER) |
 | sessions の一括削除 | 未実装 (`deleteByToken` のみ) | `SessionRepository.deleteAll()` を新設 |
 | `PasswordRepository` | 存在しない | 新設 (interface + Drizzle 実装) |
-| 初期 seed ロジック | なし (env をそのまま `AppDeps.passwordHash` に渡すだけ) | `main.ts` で「DB 空のとき env で INSERT」ロジックを追加 |
+| 初期設定 | 未実装 | DB が空なら `auth-state` で未設定を返し、初期設定 API で最初のハッシュを保存 |
 | Web `SettingsView` | 境界時刻フォーム + モード切替 + ログアウト | 「パスワード変更」セクションを追加 |
 | Web `password-client.ts` | 存在しない | 新規 (`changePassword(baseUrl, token, currentPassword, newPassword)`) |
 | Web `main.tsx` `App` 内のセッション破棄処理 | `handleLogout` が `logoutRequest` + `clearToken` を実行 | パスワード変更成功時のコールバック (`onPasswordChanged`) も同等の後始末を行う |
@@ -38,9 +38,9 @@
 | --- | --- |
 | API | 新規実装 `POST /api/v1/password`. 既存 `POST /api/v1/login` の照合元を `deps.passwordHash` 文字列から `deps.passwordRepository.getHash()` に置き換え. エラーコード `INVALID_PASSWORD` は既存の login と同じ値を流用. |
 | DB | 新規テーブル `app_password` (drizzle スキーマ + マイグレーション 1 本). 既存テーブルへの変更なし. |
-| サーバ | `server/src/data/password-repository.ts` を新設. `server/src/infra/persistence/drizzle/password-repository.ts` を新設. `server/src/app.ts` の `AppDeps` から `passwordHash: string` を削除し `passwordRepository: PasswordRepository` を追加. `POST /api/v1/password` ハンドラを追加. `SessionRepository.deleteAll()` を追加 (interface + Drizzle 実装). `server/src/main.ts` に起動時 seed (DB 空チェック + env による INSERT) を追加. |
+| サーバ | `server/src/data/password-repository.ts` を新設. `server/src/infra/persistence/drizzle/password-repository.ts` を新設. `server/src/app.ts` の `AppDeps` から `passwordHash: string` を削除し `passwordRepository: PasswordRepository` を追加. `POST /api/v1/password` ハンドラを追加. `SessionRepository.deleteAll()` を追加 (interface + Drizzle 実装). DB 空時は `auth-state` と初期設定 API で扱う. |
 | Web UI | `web/src/auth/password-client.ts` を新設. `web/src/ui/settings-view/settings-view.tsx` にパスワード変更セクションを追加. `web/src/main.tsx` で SettingsView に `onPasswordChanged` コールバックを渡し, 成功時に token を破棄して LoginView 状態に戻す. |
-| ドキュメント | `docs/developer/architecture/database/schema.md` / `docs/developer/architecture/api/openapi.yaml` に `app_password` テーブルと `POST /api/v1/password` を追記. setup / deploy 系のユーザードキュメントは `APP_PASSWORD_HASH` の役割を「初期 seed」へ書き換える. (本計画では feature ドキュメント 3 本の作成のみを範囲とし, 共有ドキュメントの編集は tasks.md でフォローする). |
+| ドキュメント | `docs/developer/architecture/database/schema.md` / `docs/developer/architecture/api/openapi.yaml` に `app_password` テーブルと `POST /api/v1/password` を追記. setup / deploy 系のユーザードキュメントはブラウザからの初回設定とパスワード変更を案内する. |
 
 ## 設計詳細
 
@@ -73,7 +73,7 @@ export interface PasswordRepository {
 }
 ```
 
-- 起動時 seed (`main.ts`) は `getHash()` で空かどうかを判定し, 空のときだけ `setHash(envHash, now)` を呼ぶ.
+- 初期設定 API は `getHash()` で空かどうかを判定し, 空のときだけ `setHash(newHash, now)` を呼ぶ.
 - `POST /api/v1/password` ハンドラは `getHash()` で現行ハッシュを引いて bcrypt.compare し, 成功時に `setHash(newHash, now)` で更新する.
 - 既存 `SessionRepository` には `deleteAll()` を追加する.
 
@@ -112,16 +112,14 @@ export interface SessionRepository {
 
 > 5〜7 のアトミック性については, 実装段階で `deps.db.transaction(...)` でラップしてもよい (BL-016 / `DELETE /api/v1/projects/:id` のカスケード削除と同じパターン). ただし bcrypt.hashSync の所要時間 (cost 12 で数百 ms) を考えると, hash 計算はトランザクション外で行ったうえで, DB 更新 + sessions DELETE のみをトランザクション内にまとめるのが望ましい (D-4).
 
-### 処理フロー — 起動時 seed
+### 処理フロー — 初期設定
 
-1. `main.ts` で drizzle migrate を実行 (既存どおり).
-2. `PasswordRepository` を Drizzle 実装で構築.
-3. `passwordRepository.getHash()` を await.
-4. 結果が `null` のとき:
-   - `APP_PASSWORD_HASH` 環境変数が空文字なら従来どおり `process.exit(1)`.
-   - 空でなければ `passwordRepository.setHash(envHash, Date.now())`.
-5. 結果が非 `null` のとき: 環境変数を一切参照しない (DB 優先 / D-1 / D-2).
-6. `createApp({ ..., passwordRepository })` を呼ぶ.
+1. `main.ts` で drizzle migrate を実行し、`PasswordRepository` を構築する.
+2. `GET /api/v1/auth-state` が `passwordRepository.getHash()` を呼ぶ.
+3. 結果が `null` なら初期設定未完了、非 `null` なら初期設定済みを返す.
+4. 初期設定未完了時に `POST /api/v1/password` が新しいパスワードを受け取る.
+5. bcrypt ハッシュを生成し、`passwordRepository.setHash(hash, Date.now())` で保存する.
+6. opaque token を発行して sessions テーブルへ保存し、クライアントをログイン済みにする.
 
 ### Web クライアント設計
 
@@ -174,12 +172,12 @@ export async function changePassword(
 
 ## 重要な決定
 
-- **D-1: env による seed と DB の優先順位 (DB > env).**
-  - サーバ起動時に DB の `app_password` が空であれば `APP_PASSWORD_HASH` 環境変数で seed する. 既に行があれば環境変数を一切読まない.
-  - 理由: 「DB を更新してもサーバ再起動で環境変数の値に戻る」という挙動を避けるため. ユーザーが SettingsView から変更したパスワードが永続化された世界観を保つ.
-- **D-2: env と DB の値が異なる場合の挙動 (DB 優先, env 無視).**
-  - DB に行があるが内容が `APP_PASSWORD_HASH` と一致しない状況 (古い env を消し忘れている等) でも, 起動時には DB が真として扱われる.
-  - 理由: D-1 と同じ. env はあくまで初期 seed であり, 運用中の真は DB.
+- **D-1: 初期設定と DB の優先順位.**
+  - サーバ起動時に DB の `app_password` が空であれば初期設定未完了として扱い、ブラウザから最初のパスワードを登録する.
+  - 理由: ユーザーが SettingsView から変更したパスワードを DB に永続化し、サーバ再起動後も同じ認証情報を使うため.
+- **D-2: DB に値がある場合の挙動.**
+  - DB に行がある場合は初期設定済みとして扱い、その値を認証の真とする.
+  - 理由: D-1 と同じ. 運用中の真を DB に一本化する.
 - **D-3: bcrypt cost factor は 12.**
   - 既存 `bcrypt.compare` 呼び出しが想定するハッシュも同じ cost で生成されている前提を継続する.
   - hashSync(newPassword, 12) を採用する.
@@ -193,12 +191,12 @@ export async function changePassword(
 - **D-6: `AppDeps.passwordHash: string` の置き換え方針.**
   - `AppDeps` から `passwordHash: string` を削除し, `passwordRepository: PasswordRepository` に置き換える. これにより `app.ts` のハンドラが「都度 DB から最新ハッシュを読む」形に統一される.
   - 既存テスト (login 系) は new ハッシュを `PasswordRepository` 実装にセットする形に書き換える. Fake 実装 (`InMemoryPasswordRepository`) を test-designer 段階で用意する.
-- **D-7: テスト時の env と DB の使い分け.**
-  - サーバ単体テストでは `APP_PASSWORD_HASH` env を使わない. `createApp({ passwordRepository: new InMemoryPasswordRepository("<hash>") })` の形で直接注入する.
-  - 起動時 seed のテストは `main.ts` の seed ロジックを切り出した関数 (例: `seedPasswordIfEmpty(repo, envHash, now)`) に対して単体テストを書く.
-- **D-8: `APP_PASSWORD_HASH` env の維持と廃止.**
-  - 本 feature では env を **維持する** (初回起動時 seed の手段として残す). 完全廃止は次回以降の課題.
-  - ドキュメント上は「初回起動の seed 用途のみ. 起動後の真は DB」と明確化する.
+- **D-7: テスト時の DB 注入.**
+  - サーバ単体テストでは `createApp({ passwordRepository: new InMemoryPasswordRepository("<hash>") })` の形で直接注入する.
+  - 初期設定のテストは空の Repository と `auth-state` / password API の組み合わせで行う.
+- **D-8: 初回設定経路.**
+  - 初回パスワードはブラウザの InitialSetupView から登録する.
+  - ドキュメント上は「初回アクセスで設定し、起動後の真は DB」と明確化する.
 
 ## リスク / 代替案
 
@@ -225,9 +223,9 @@ export async function changePassword(
   - 既存テスト (login 系) を `passwordRepository` 注入に書き換える (test-designer がテストを書く前提で, ここではテスト整理方針のみ計画する).
 - **Step 3: `POST /api/v1/password` ハンドラの新設.**
   - app.ts にハンドラ追加. AC-2 〜 AC-3 / AC-11 / AC-12 / AC-6 をカバー.
-- **Step 4: `main.ts` の起動時 seed.**
-  - DB 空チェック → env で INSERT.
-  - DB に行があれば env を読まない. AC-8 / AC-9 をカバー.
+- **Step 4: 初期設定経路.**
+  - DB 空チェック → `auth-state` で初期設定未完了を返す.
+  - 初期設定 API で最初のパスワードを保存する. AC-8 / AC-9 をカバー.
 - **Step 5: Web `password-client.ts` の新設と SettingsView 拡張.**
   - フォーム実装 + クライアントバリデーション (AC-1 / AC-4 / AC-5).
   - 401 / その他エラーの表示.
@@ -247,7 +245,7 @@ export async function changePassword(
 | `server/src/data/session-repository.ts` | 編集 | `deleteAll()` シグネチャを追加 |
 | `server/src/infra/persistence/drizzle/session-repository.ts` | 編集 | `deleteAll()` 実装 |
 | `server/src/app.ts` | 編集 | `AppDeps.passwordHash` 削除 / `passwordRepository` 追加 / `/login` の照合元差し替え / `POST /api/v1/password` ハンドラ追加 |
-| `server/src/main.ts` | 編集 | 起動時 seed (DB 空 → env で INSERT) を追加 / `passwordRepository` を `createApp` に渡す |
+| `server/src/main.ts` | 編集 | `passwordRepository` を構築して `createApp` に渡す |
 | `web/src/auth/password-client.ts` | 新規 | `changePassword` 関数 + エラークラス |
 | `web/src/ui/settings-view/settings-view.tsx` | 編集 | パスワード変更セクション追加 / props に `changePassword` / `onPasswordChanged` を追加 |
 | `web/src/ui/settings-view/settings-view.css` | 編集 (必要に応じて) | 新セクション用の最小スタイル |
@@ -304,9 +302,9 @@ export async function changePassword(
   - AC-6: パスワード変更成功後, sessions テーブルが空である (= 全削除されている) ことを確認する.
   - AC-11: Authorization なしのリクエストで 401 (authMiddleware が拒否).
   - AC-12: ボディが不正で 400.
-- **起動時 seed ロジック**.
-  - AC-8: 空 DB + env ありで seed される.
-  - AC-9: DB に既存行がある状態で env を別値にしても DB が変わらない / login は DB 値で通る.
+- **初期設定経路**.
+  - AC-8: 空 DB では `auth-state` が未設定を返し、初期設定 API でパスワードを保存できる.
+  - AC-9: DB に既存行がある状態では初期設定済みを返し、login は DB 値で通る.
 
 ### サーバ統合テスト (E2E に近い in-process)
 

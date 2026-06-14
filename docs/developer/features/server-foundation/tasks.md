@@ -32,20 +32,20 @@
 ### 5. 運用ドキュメント作成
 
 - [ ] `docs/operations/` ディレクトリを作成する
-- [ ] `docs/operations/env-reference.md` を作成し、環境変数（AUTH_TOKEN / DATABASE_PATH / PORT）を説明する
+- [ ] `docs/operations/env-reference.md` を作成し、環境変数（DATABASE_PATH / PORT）を説明する
 - [ ] `docs/operations/deploy-guide.md` を作成し、以下を記載する
   - 前提（Node.js バージョン、npm install 手順）
   - ビルド手順（`npm run build`）
-  - 起動手順（`AUTH_TOKEN=... npm start`）
+  - 起動手順（`npm start`）
   - nginx / Caddy による HTTPS reverse proxy のサンプル設定
-  - AUTH_TOKEN の生成方法例（`openssl rand -hex 32` 等）
+  - 初回設定と `POST /api/v1/login` による認証手順
 
 ## テスト
 
 - [ ] `/healthz` エンドポイントの単体テストを追加する（`app.request("GET", "/healthz")`）
   - HTTP 200 を返すこと
   - 認証ヘッダなしでも 200 を返すこと（認証不要の確認）
-- [ ] `AUTH_TOKEN` 未設定時のプロセス終了を確認する手動テスト手順をドキュメントに記載する
+- [ ] 空 DB でサーバが起動し、`/api/v1/auth-state` が初期設定未完了を返すことを確認する
 - [ ] 既存の結合テストが引き続き green であることを確認する（`npm test`）
 
 ## ドキュメント
@@ -55,6 +55,11 @@
 
 ## 仕上げ
 
-- [ ] `npm run build && AUTH_TOKEN=test npm start` でサーバが起動し、curl で `/healthz` が 200 を返すことを手動確認する
+- [ ] `npm run build && npm start` でサーバが起動し、curl で `/healthz` が 200 を返すことを手動確認する
 - [ ] 受け入れ基準（[spec.md](spec.md)）を全て満たすことを確認する
 - [ ] レビュー依頼
+
+## 経緯
+
+- 初期のサーバ起動手順では固定 Bearer token を必須環境変数として渡していた。
+- 当時の確認コマンドは `AUTH_TOKEN=test npm start` で、運用ガイドには `AUTH_TOKEN=... npm start` と token 生成手順を記載していた。

@@ -13,8 +13,8 @@
 | AC-5 (必須項目空で送信されない) | Step 5 |
 | AC-6 (全 sessions 削除) | Step 3 |
 | AC-7 (成功時 LoginView 強制遷移) | Step 6 |
-| AC-8 (DB 空時に env で seed) | Step 4 |
-| AC-9 (DB に値があれば env 無視) | Step 4 |
+| AC-8 (DB 空時に初期設定可能) | Step 4 |
+| AC-9 (DB に値があれば初期設定済み) | Step 4 |
 | AC-10 (新パスワードでログイン可) | Step 3 + Step 4 (E2E) |
 | AC-11 (未認証は 401) | Step 3 |
 | AC-12 (リクエスト形式不正は 400) | Step 3 |
@@ -42,7 +42,7 @@
 
 - [x] `server/src/app.ts` の `AppDeps` から `passwordHash: string` を削除し, `passwordRepository: PasswordRepository` を追加する.
 - [x] `POST /api/v1/login` の照合元を `await deps.passwordRepository.getHash()` に切り替える.
-- [x] `passwordRepository.getHash()` が `null` を返した場合の防御 (500 INTERNAL_ERROR) を入れる (理論上は seed 済みのため起きないが安全策).
+- [x] `passwordRepository.getHash()` が `null` を返した場合は初期設定未完了として扱う.
 
 ### テスト
 
@@ -70,22 +70,20 @@
 - [x] AC-12: `newPassword` 欠落 / 型不正 で 400.
 - [x] AC-10 (in-process E2E): パスワード変更 → 旧 token での `/today` が 401 → 新パスワードで `/login` → 200 + 新 token → `/today` が 200.
 
-## Step 4: main.ts の起動時 seed
+## Step 4: 初期設定経路
 
 ### 実装
 
-- [x] `server/src/main.ts` で `PasswordRepository` を構築する.
-- [x] `passwordRepository.getHash()` を await し, `null` のとき `APP_PASSWORD_HASH` env を読んで `setHash(envHash, Date.now())` を呼ぶ.
-- [x] `null` でないときは env を一切参照しない.
-- [x] env が空 かつ DB も空 のケースは従来どおり `console.error` + `process.exit(1)`.
-- [x] seed ロジックを単体テスト可能な関数 (例: `seedPasswordIfEmpty(repo, envHash, now)`) に切り出す.
-- [x] `createApp({ ..., passwordRepository })` に渡す (旧 `passwordHash: APP_PASSWORD_HASH` を削除).
+- [x] `server/src/main.ts` で `PasswordRepository` を構築して `createApp` に渡す.
+- [x] `GET /api/v1/auth-state` で DB 空なら初期設定未完了を返す.
+- [x] 初期設定未完了時の `POST /api/v1/password` で最初のハッシュを保存する.
+- [x] DB に値があるときは初期設定済みとして既存値を認証に使用する.
 
 ### テスト
 
-- [x] AC-8: 空 Repository + env "H_ENV" を渡すと `setHash("H_ENV", ...)` が呼ばれる.
-- [x] AC-9: `getHash()` が "H_DB" を返す状態で env "H_ENV" を渡しても `setHash` は呼ばれない.
-- [x] AC-9 続き: 起動後の `/login` は "P_DB" (DB 値の元) で 200, "P_ENV" (env 値の元) で 401.
+- [x] AC-8: 空 Repository では `auth-state` が初期設定未完了を返し、初期設定 API が `setHash` を呼ぶ.
+- [x] AC-9: `getHash()` が既存値を返す状態では `auth-state` が初期設定済みを返す.
+- [x] AC-9 続き: 起動後の `/login` は DB に保存したパスワードで 200 を返す.
 
 ## Step 5: Web password-client.ts と SettingsView 拡張
 
@@ -133,8 +131,8 @@
 - [x] `docs/developer/architecture/database/schema.md` に `app_password` テーブルを追記.
 - [x] `docs/developer/architecture/api/openapi.yaml` に `POST /api/v1/password` を追記 (Bearer / 200 / 401 / 400).
 - [x] setup / deploy / faq 系のユーザードキュメントを更新.
-  - `APP_PASSWORD_HASH` env を「初回起動時の seed 用途のみ. 起動後の真は DB. SettingsView から変更可能」と書き換える.
-  - パスワードを忘れた場合の復旧手順 (DB ファイルの `app_password` を直接書き換える / DELETE して env を再設定 + 再起動) を FAQ に追記.
+  - 初回アクセス時の設定と、起動後は DB を真として SettingsView から変更できることを案内する.
+  - パスワードを忘れた場合の復旧手順は `app_password` を削除して初期設定画面から再登録する形で FAQ に追記する.
 
 ## 仕上げ
 
@@ -142,3 +140,9 @@
 - [x] サーバ全テスト (vitest) と Web 全テストが green.
 - [x] typecheck / lint 0 エラー.
 - [x] auditor にレビュー依頼.
+
+## 経緯
+
+- 実装途中では `APP_PASSWORD_HASH` env を初回 seed に使い、DB が空のとき `setHash(envHash, Date.now())` を呼ぶ構成だった。
+- `createApp` への Repository 注入へ移行する際、旧 `passwordHash: APP_PASSWORD_HASH` の直接注入を削除した。
+- 共有ドキュメントには `APP_PASSWORD_HASH` env を初回 seed 用途として案内する中間状態があった。

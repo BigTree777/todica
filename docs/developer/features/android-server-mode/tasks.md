@@ -50,21 +50,21 @@
 
 - [ ] `web/src/main.tsx` にプラットフォーム検出ロジックを追加する:
   - `Capacitor.isNativePlatform()` で実行環境を判定する
-  - ネイティブの場合は `@capacitor/preferences` の `Preferences.get({ key: 'serverUrl' })` と `Preferences.get({ key: 'authToken' })` を `await` して値を取得する
-  - Web の場合は `import.meta.env.VITE_API_BASE_URL`・`import.meta.env.VITE_AUTH_TOKEN` を使用する（従来通り）
-- [ ] 取得した `serverUrl`・`authToken` を Repository インスタンスの構築に使用する
+  - ネイティブの場合は `@capacitor/preferences` の `Preferences.get({ key: 'serverUrl' })` を `await` して値を取得する
+  - Web の場合は `import.meta.env.VITE_API_BASE_URL` を使用する
+  - Web / Android とも現行の `authStorage` から opaque token を読み取る
+- [ ] 取得した `serverUrl` を Repository インスタンスの構築に使用し、token は `authedFetch` から付与する
 - [ ] `serverUrl` が空文字または null の場合に初期ルートを `/setup` にするロジックを追加する
 - [ ] `App` コンポーネントのルートを `/setup` または `/today` に動的に設定できるようにする
 
 ### T-08: SetupView の実装
 
 - [ ] `web/src/ui/setup-view/setup-view.tsx` を新規作成する
-  - `SetupViewProps` インターフェース（`onSetupComplete: (serverUrl: string, authToken: string) => void`）を定義する
+  - `SetupViewProps` インターフェース（`onSetupComplete: (serverUrl: string) => void`）を定義する
   - サーバ URL の `<input type="url">` フィールドを実装する
-  - 認証トークンの `<input type="password">` フィールドを実装する
   - 「接続する」ボタンを実装する
-  - ボタンクリック時に `Preferences.set({ key: 'serverUrl', value: ... })` と `Preferences.set({ key: 'authToken', value: ... })` を呼び出す
-  - 保存完了後に `onSetupComplete(serverUrl, authToken)` を呼び出す
+  - ボタンクリック時に `Preferences.set({ key: 'serverUrl', value: ... })` を呼び出す
+  - 保存完了後に `onSetupComplete(serverUrl)` を呼び出し、LoginView を表示する
   - `<h1>サーバ設定</h1>` を持つ構造にする
   - 入力値が空のとき「接続する」ボタンを無効化する
 
@@ -77,8 +77,8 @@
 
 - [ ] `web/src/ui/settings-view/settings-view.tsx` に「サーバ接続設定」セクションを追加する:
   - `Capacitor.isNativePlatform()` が `true` の場合のみセクションを表示する
-  - 初期表示時に `Preferences.get({ key: 'serverUrl' })` と `Preferences.get({ key: 'authToken' })` で現在値を読み取る
-  - サーバ URL（`type="url"`）と認証トークン（`type="password"`）の入力フィールドを表示する
+  - 初期表示時に `Preferences.get({ key: 'serverUrl' })` で現在値を読み取る
+  - サーバ URL（`type="url"`）の入力フィールドを表示する
   - 「保存」ボタンクリックで `Preferences.set()` に書き込む
   - 保存後に `window.location.reload()` を呼び出して設定を反映させる
 
@@ -92,7 +92,7 @@
 - [ ] Android エミュレーター（API 34）を起動する
 - [ ] `npx cap run android` または Android Studio で実機インストール・起動を確認する
 - [ ] 初回起動時に SetupView が表示されることを確認する（AC-AND-003）
-- [ ] サーバ URL と認証トークンを入力して「接続する」をタップし、TodayView に遷移することを確認する
+- [ ] サーバ URL を入力して「接続する」をタップし、LoginView でログイン後に TodayView へ遷移することを確認する
 - [ ] タスクの一覧表示・作成・完了が動作することを確認する（AC-AND-004）
 - [ ] アプリを再起動したとき SetupView がスキップされ TodayView が表示されることを確認する
 
@@ -134,7 +134,7 @@
 
 - [ ] `web/src/ui/setup-view/setup-view.test.tsx` を新規作成する:
   - `@capacitor/preferences` の `Preferences.set` を `vi.mock` でモックする
-  - サーバ URL と認証トークンを入力して「接続する」ボタンをクリックしたとき `Preferences.set` が正しいキー・値で呼ばれることを検証する
+  - サーバ URL を入力して「接続する」ボタンをクリックしたとき `Preferences.set` が正しいキー・値で呼ばれることを検証する
   - `onSetupComplete` コールバックが入力値を引数として呼ばれることを検証する
   - URL が空のとき「接続する」ボタンが無効化されていることを検証する
 

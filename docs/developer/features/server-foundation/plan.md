@@ -75,16 +75,16 @@ app.get("/healthz", (c) => c.json({ status: "ok" }));
 
 | 変数名 | 必須 | デフォルト | 説明 |
 | --- | --- | --- | --- |
-| `AUTH_TOKEN` | 必須 | なし | Bearer 認証トークン。未設定時はプロセスが exit(1) |
 | `DATABASE_PATH` | 任意 | `./todica.db` | SQLite ファイルの絶対パスまたは相対パス |
 | `PORT` | 任意 | `3000` | HTTP リスニングポート |
+
+認証 token は環境変数ではなく、`POST /api/v1/login` が発行して sessions テーブルに保存する。
 
 ### 処理フロー（起動シーケンス）
 
 ```
 npm start
   → node dist/main.js
-      → 環境変数検証（AUTH_TOKEN 未設定 → exit(1)）
       → SQLite ファイルを開く（DATABASE_PATH）
       → WAL モード設定
       → マイグレーション適用（drizzle/*.sql）
@@ -97,7 +97,6 @@ npm start
 
 | 状況 | 挙動 |
 | --- | --- |
-| `AUTH_TOKEN` 未設定 | `console.error` + `process.exit(1)` |
 | SQLite ファイルのオープン失敗 | Node.js の uncaught exception としてプロセスが終了 |
 | マイグレーション適用失敗 | 例外がスローされプロセスが終了 |
 | PORT が非数値 | `NaN` になり `serve()` がエラーをスロー |
@@ -133,6 +132,6 @@ Todica server (Node.js)
 ## テスト方針
 
 - 自動テスト（vitest）: `/healthz` エンドポイントの単体テストを `server/__tests__/integration/startup.test.ts` に追加する。
-- 手動確認（E2E）: `npm run build && npm start` を実行し、curl で `/healthz` と認証付き API エンドポイントを確認する。
+- 手動確認（E2E）: `npm run build && npm start` を実行し、curl で `/healthz` とログイン後の認証付き API エンドポイントを確認する。
 - 既存の結合テスト（Hono の `app.request` を使ったもの）で API ロジック全体は担保済みであり、本 feature で追加するテストは起動・ヘルスチェック・環境変数検証に絞る。
-- AUTH_TOKEN 未設定時の exit(1) については: main.ts のトップレベルコードで担保する。vitest からモジュールインポート時に process.exit が走るため自動テストは困難であり、自動テスト対象外とする（実装コードによる担保）。
+- 初期設定前の起動については、空 DB で `/healthz` と `/api/v1/auth-state` が応答することを起動テストで担保する。

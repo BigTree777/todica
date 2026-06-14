@@ -88,8 +88,8 @@ grep -rE "(password|secret|token|api_key|apikey|private_key)\s*=\s*['\"][^'\"]{8
 <MIT License と LICENSE ファイルへのリンク>
 ```
 
-環境変数（`AUTH_TOKEN` / `DATABASE_PATH` / `PORT`）の説明は
-`docs/operations/env-reference.md`（server-foundation feature で作成予定）へ参照リンクを貼る形とし、README には最小限の手順のみ記載する。
+サーバ起動時の環境変数と初回設定の説明は
+`docs/user/deploy-guide.md` へ参照リンクを貼る形とし、README には最小限の手順のみ記載する。
 
 ### package.json の追加フィールド
 

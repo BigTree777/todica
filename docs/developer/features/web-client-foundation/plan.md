@@ -33,7 +33,7 @@ BrowserRouter
 ```
 
 各 View に注入する Repository インスタンスは `main.tsx` 内で一括構築する。
-環境変数（`VITE_API_BASE_URL`・`VITE_AUTH_TOKEN`）の読み取りも同ファイルに集約する。
+環境変数（`VITE_API_BASE_URL`）の読み取りも同ファイルに集約する。認証 token は実行時に `auth-storage` から取得する。
 
 ### D-002: TrashRepository インターフェース
 
@@ -126,7 +126,7 @@ export interface TrashViewProps {
 - `HttpSettingsRepository` — SettingsView に渡す（新規）
 - `HttpTrashRepository` — TrashView に渡す（新規）
 
-3 つのインスタンスはすべて同じ `BASE_URL` と `AUTH_TOKEN` を使う。
+3 つのインスタンスはすべて同じ `BASE_URL` を共有する。認証 token は `authedFetch` 経由で `auth-storage` から実行時に取得する (Repository が token を保持しない)。
 
 ## 重要な決定
 

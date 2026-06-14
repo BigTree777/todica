@@ -45,7 +45,7 @@ BL-074 で導入した `web/src/auth/authed-fetch.ts` は 401 応答を捕捉し
 ### 非機能要件
 
 - **NFR-1 / テスト**: 4 本それぞれに 401 捕捉の単体テストを 1 件ずつ追加 (合計 4 件以上の追加). `app-login-production-path.test.tsx` の `vi.spyOn(global, "fetch")` で 401 を返す mock パターンを踏襲し, 「token が auth-storage から消えること」と「`todica:auth-expired` Custom Event が dispatch されること」を assert する.
-- **NFR-2 / 既存テスト互換**: 既存の 4 本の Repository 単体テスト (`web/src/repositories/{project,routine,trash}-repository.test.ts` + 新規追加する `web/src/repositories/settings-repository.test.ts`) の auth seed パターンを, `http-task-repository.test.ts` と同じ `beforeEach` で `WebAuthStorage` + `setAuthStorage` を使う形に統一する. `Authorization: Bearer ${AUTH_TOKEN}` の assertion 観点は維持する (= seed した token がそのまま `Authorization` ヘッダに乗ることを担保する).
+- **NFR-2 / 既存テスト互換**: 既存の 4 本の Repository 単体テスト (`web/src/repositories/{project,routine,trash}-repository.test.ts` + 新規追加する `web/src/repositories/settings-repository.test.ts`) の auth seed パターンを, `http-task-repository.test.ts` と同じ `beforeEach` で `WebAuthStorage` + `setAuthStorage` を使う形に統一する. `Authorization: Bearer ${TEST_TOKEN}` の assertion 観点は維持する (= seed した token がそのまま `Authorization` ヘッダに乗ることを担保する).
 - **NFR-3 / 緑維持**: 全件テスト (既存 1662 件 + 追加分) が green を保つ. typecheck / lint は 0 エラー.
 - **NFR-4 / 非機能影響なし**: UI 変更が無いため a11y / NFR-NO-SHADOW / トークン定義 / レスポンシブ表示は維持で済む.
 
@@ -99,16 +99,16 @@ BL-074 で導入した `web/src/auth/authed-fetch.ts` は 401 応答を捕捉し
 シナリオ AC-6: Repository API 互換 — 既存単体テストが全件 green
   Given 既存の web/src/repositories/{project,routine,trash}-repository.test.ts と
         web/__tests__/http-task-repository.test.ts の assertion 観点
-        (Authorization: Bearer ${AUTH_TOKEN} / Idempotency-Key / If-Match / 412 → *ConflictError 等)
+        (Authorization: Bearer ${TEST_TOKEN} / Idempotency-Key / If-Match / 412 → *ConflictError 等)
   When  既存テスト群を「beforeEach で WebAuthStorage + setAuthStorage で token を seed する」
         パターンに統一して実行する
   Then  全件 green を維持する
-  And   送信される Authorization ヘッダの値は seed した AUTH_TOKEN と一致する
+  And   送信される Authorization ヘッダの値は seed した TEST_TOKEN と一致する
 
 シナリオ AC-7: settings-repository の単体テスト新規追加
   Given web/src/repositories/settings-repository.test.ts が存在しない
   When  本 BL で AC-6 と同じ seed パターンで「getSettings が GET /api/v1/settings に
-        Authorization: Bearer ${AUTH_TOKEN} を付ける」「patchSettings が PATCH /api/v1/settings に
+        Authorization: Bearer ${TEST_TOKEN} を付ける」「patchSettings が PATCH /api/v1/settings に
         Idempotency-Key と If-Match を付ける」「412 で PatchConflictError を throw する」を
         観点とする単体テストを追加する
   Then  追加テストはいずれも実装移行後に green になる

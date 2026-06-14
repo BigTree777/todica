@@ -4,7 +4,7 @@
 
 ## 方針概要
 
-新規 `e2e/login.spec.ts` を 1 ファイル追加し, Playwright で BL-074 の往復シナリオ (AC-1 / AC-2 / AC-3 / AC-5) を実ブラウザ経由で検証する. `playwright.config.ts` の `webServer` 設定 (`APP_PASSWORD_HASH` を渡す) は BL-074 で更新済みのため流用し, server / web の本体コードは無改修. 既存 `e2e/smoke.spec.ts` および `e2e/today-view-create-form.spec.ts` の構成 (`role` / `aria-label` 中心の locator, `expect(...).toBeVisible()` 中心の assertion) をそのまま踏襲する.
+新規 `e2e/login.spec.ts` を 1 ファイル追加し, Playwright で BL-074 の往復シナリオ (AC-1 / AC-2 / AC-3 / AC-5) を実ブラウザ経由で検証する. `playwright.config.ts` の `webServer` 設定は空の E2E 用 DB を起動し, Web 起動前に初期設定 API でテスト用パスワードを登録するため流用し, server / web の本体コードは無改修. 既存 `e2e/smoke.spec.ts` および `e2e/today-view-create-form.spec.ts` の構成 (`role` / `aria-label` 中心の locator, `expect(...).toBeVisible()` 中心の assertion) をそのまま踏襲する.
 
 ## 影響範囲
 
@@ -52,7 +52,7 @@
 
 ## リスク / 代替案
 
-- リスク R-1: `webServer.reuseExistingServer` が CI 以外で true のため, 既に server が走っていると `APP_PASSWORD_HASH` が反映されない可能性. 対策: 本 spec は新規追加なので影響は限定的だが, 「ローカルで失敗したら `.e2e-data/` を削除 + 既存 dev server を停止して再実行する」旨を tasks.md に手順として記載しておく.
+- リスク R-1: `webServer.reuseExistingServer` が CI 以外で true のため, 既に server が走っていると E2E 用 DB と初期設定 API の実行対象がずれる可能性. 対策: 本 spec は新規追加なので影響は限定的だが, 「ローカルで失敗したら `.e2e-data/` を削除 + 既存 dev server を停止して再実行する」旨を tasks.md に手順として記載しておく.
 - リスク R-2: `page.goto("/")` 直後の `LoginView` 表示は `main.tsx` の `useEffect` / `auth-storage` 読み出しに依存し, 初期描画で一瞬今日ビュー側の DOM が混在する可能性 (= レース). 対策: assertion を `await expect(...).toBeVisible()` で待機させ, レンダリングの収束を Playwright の auto-waiting に委ねる. flakey が観測されたら fixture で `await page.waitForLoadState("networkidle")` を追加する.
 - 代替案 A-1 (採用しない): 4 シナリオを `test.describe.serial()` で連結し AC-4 で AC-3 の state を継承する案. 採用しない理由は flakey 発生時のデバッグコストが上がるため. 各 test を独立にした方が再現性が高い.
 - 代替案 A-2 (採用しない): server を直接叩いて token を発行 → localStorage に注入 → 今日ビューから始める案. UI 経路の検証範囲が縮むため非採用 (BL-077 のゴールは「LoginView 自体の往復」).
@@ -78,7 +78,7 @@
 
 - 触る: `e2e/login.spec.ts` 新規追加.
 - 触らない: server (`/api/v1/login` / `/logout` の実装) / web (`LoginView` / `SettingsView` / `main.tsx` / `auth-storage`) / 既存 e2e spec (25 本) / vitest 系テスト / `playwright.config.ts` の本体ロジック (re-export 確認のみ).
-- 触らない (BL-077 範囲外): AC-4 期限切れ / AC-6 Android 2 ステップ / AC-7 旧 AUTH_TOKEN. これらは vitest および server integration テストでカバー済み.
+- 触らない (BL-077 範囲外): AC-4 期限切れ / AC-6 Android 2 ステップ / AC-7 旧固定トークン拒否. これらは vitest および server integration テストでカバー済み.
 
 ## テスト方針
 
