@@ -25,6 +25,20 @@ import { tasksRouter } from "./routers/tasks.js";
 import { todayRouter } from "./routers/today.js";
 import { trashRouter } from "./routers/trash.js";
 
+const DEFAULT_ALLOWED_ORIGINS = ["http://localhost:5173", "capacitor://localhost"];
+
+/**
+ * ALLOWED_ORIGINS のカンマ区切り値を CORS 許可リストへ変換する.
+ */
+export function parseAllowedOrigins(envValue: string | undefined): string[] {
+  const origins = envValue
+    ?.split(",")
+    .map((origin) => origin.trim())
+    .filter((origin) => origin.length > 0);
+
+  return origins?.length ? origins : [...DEFAULT_ALLOWED_ORIGINS];
+}
+
 /**
  * テストおよびアプリ起動の双方で使う依存性の束.
  */
@@ -41,6 +55,8 @@ export interface AppDeps {
   db?: BetterSQLite3Database<typeof schema>;
   routineRepository?: RoutineRepository;
   testClock?: FakeClock;
+  /** CORS 許可オリジン. 未指定の場合は default (dev + Capacitor) を使う. */
+  allowedOrigins?: string[];
 }
 
 /**
@@ -48,11 +64,12 @@ export interface AppDeps {
  */
 export function createApp(deps: AppDeps): Hono {
   const app = new Hono();
+  const allowedOrigins = deps.allowedOrigins ?? [...DEFAULT_ALLOWED_ORIGINS];
 
   app.use(
     "*",
     cors({
-      origin: "*",
+      origin: (origin) => (allowedOrigins.includes(origin) ? origin : null),
       allowHeaders: ["Content-Type", "Authorization", "Idempotency-Key", "If-Match"],
       exposeHeaders: ["ETag"],
       maxAge: 600,
