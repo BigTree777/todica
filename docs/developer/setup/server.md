@@ -27,6 +27,7 @@ cp .env.example .env
 | `PORT` | `3000` | リッスンポート |
 | `DATABASE_PATH` | `./todica.db` | SQLite データベースファイルのパス |
 | `ALLOWED_ORIGINS` | `http://localhost:5173,capacitor://localhost` | CORS で許可するオリジンのカンマ区切りリスト |
+| `TZ` | OS の `/etc/localtime` から推定 | サーバプロセスの IANA タイムゾーン。日次リセット (`dayBoundaryTime` HH:MM) の解釈に使う。`/etc/localtime` がシンボリックリンクでない環境 (WSL2 / 一部 Docker イメージ) では Node が `UTC` にフォールバックするため明示推奨 (例: `Asia/Tokyo`) |
 | `VITE_API_BASE_URL` | `http://localhost:3000` | Web から呼び出すサーバ URL |
 
 `ALLOWED_ORIGINS` はオリジンを完全一致で判定する。複数指定する場合はカンマで区切り、本番では Web クライアントを配信するオリジンを指定する。
