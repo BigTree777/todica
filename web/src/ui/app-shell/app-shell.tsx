@@ -9,6 +9,7 @@
  *   - D-002: `/setup` は AppShell の外 (main.tsx 側で別ルート).
  *   - D-006: <NavLink> のデフォルト挙動で `aria-current="page"` を付与する.
  */
+import type { JSX } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import "./app-shell.css";

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { DueDate, Priority, Task } from "@todica/domain/task";
+import type { JSX } from "react";
 /**
  * 今日ビュー (BL-005 本実装 + BL-001 / BL-002 / BL-003 / BL-006 を統合).
  *

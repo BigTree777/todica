@@ -13,6 +13,7 @@
  *
  * TanStack Query (useQuery / useMutation) + 書込キュー統合.
  */
+import type { JSX } from "react";
 import { useCallback } from "react";
 import "./trash-view.css";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";

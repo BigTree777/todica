@@ -9,6 +9,7 @@
  *   - docs/developer/features/app-login/plan.md §「Android 初回起動 (SetupView)」/ D-10
  *   - docs/developer/features/android-server-mode/spec.md §「AC-AND-003: SetupView（初回起動）」(URL 部分のみ流用)
  */
+import type { JSX } from "react";
 import { useState } from "react";
 
 export interface SetupViewProps {

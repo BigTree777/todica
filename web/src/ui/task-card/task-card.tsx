@@ -18,7 +18,9 @@
  *   - D-010: `task.origin === "routine"` のとき期限切替 button を出さない.
  *   - P-010: PriorityStars の groupLabel に「${task.name} の優先度」を渡す.
  */
+
 import type { Priority, Task } from "@todica/domain/task";
+import type { JSX } from "react";
 import type { Project } from "../../repositories/project-repository.js";
 import { PriorityStars } from "../priority-stars/priority-stars.js";
 import "./task-card.css";

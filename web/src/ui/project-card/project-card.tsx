@@ -20,6 +20,7 @@
  *   - D-009: input id は `project-name-{project.id}` で起票側 `project-name` と衝突回避.
  *     visually-hidden label を付与し getByLabelText("プロジェクト名") で a11y を維持.
  */
+import type { JSX } from "react";
 import type { Project } from "../../repositories/project-repository.js";
 import "./project-card.css";
 

@@ -8,6 +8,7 @@
  *   - docs/developer/features/sw-update-dialog/spec.md
  *   - docs/developer/features/sw-update-dialog/plan.md
  */
+import type { JSX } from "react";
 import { useEffect, useRef, useState } from "react";
 import "./sw-update-dialog.css";
 

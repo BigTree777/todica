@@ -12,6 +12,7 @@
  *   - submit 中は `aria-busy="true"` で二重押下抑止.
  *   - 初回マウント / 失敗後に password input へ focus.
  */
+import type { JSX } from "react";
 import { useEffect, useRef, useState } from "react";
 import "./login-view.css";
 

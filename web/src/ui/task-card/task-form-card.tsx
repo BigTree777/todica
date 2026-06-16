@@ -23,7 +23,9 @@
  *     `<label htmlFor={`${idPrefix}-project`}>プロジェクト</label>` + `<select>` で表現.
  *     先頭 option は `value=""` (= 未分類) / textContent「プロジェクトなし」.
  */
+
 import type { Priority } from "@todica/domain/task";
+import type { JSX } from "react";
 import type { Project } from "../../repositories/project-repository.js";
 import { PriorityStars } from "../priority-stars/priority-stars.js";
 import "./task-card.css";

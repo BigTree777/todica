@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { JSX } from "react";
 /**
  * 境界時刻の設定ビュー (BL-009 / FR-041 / FR-042).
  *

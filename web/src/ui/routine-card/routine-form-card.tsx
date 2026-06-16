@@ -33,7 +33,9 @@
  *     - 4 段目 (.routine-card__actions): 「追加」 submit button (右端配置 / D-007).
  *   - input には placeholder「ルーティン名」を `--color-fg-subtle` で薄く描画 (V-2).
  */
+
 import type { Priority } from "@todica/domain/task";
+import type { JSX } from "react";
 import { PriorityStars } from "../priority-stars/priority-stars.js";
 import "./routine-card.css";
 
