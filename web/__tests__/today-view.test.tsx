@@ -2802,3 +2802,115 @@ describe("BL-050 テスト資産の整合性 (meta)", () => {
     expect(pattern.test(self)).toBe(true);
   });
 });
+
+// ============================================================
+// BL-105: 今日の完了タスク数カウンタを中央配置 + アクセント色で強調する.
+//
+// 仕様参照:
+//   docs/developer/features/completion-counter-emphasis/spec.md
+//   §「受け入れ基準」配置 (REQ-1 / REQ-5 / REQ-6).
+//
+// 本 describe は TDD の "red" を作るためのテスト群.
+//   - 現状の today-view.tsx は <header className="day-view__header"> として描画され,
+//     "day-view__header--today" modifier は付与されていない. よって以下のテストは red になる.
+//   - implementer が today-view.tsx の <header> className を
+//     "day-view__header day-view__header--today" に書き換えると green 化する.
+//
+// 既存規約 (BL-008 / BL-047 / BL-050 / BL-051) は本 BL でも維持される:
+//   - header の直接の子要素は h1 + カウンタ <span> の 2 要素のまま.
+//   - aria-label / マークアップ / 文言は変更しない.
+// ============================================================
+
+describe("TodayView (BL-105 完了タスク数カウンタの中央配置 + アクセント色強調)", () => {
+  it("シナリオ AC-配置: today header の className に 'day-view__header' と 'day-view__header--today' modifier の両方が付与されている (REQ-5 / REQ-6)", async () => {
+    // spec.md §「配置 (REQ-1 / REQ-5 / REQ-6)」:
+    //   Given ユーザーが今日ビュー（/today）を開いた
+    //   When  ページを描画した
+    //   Then  最初の <header> 要素は class に "day-view__header" を含む
+    //   And   同じ <header> 要素は class に "day-view__header--today" を含む
+    //
+    // 現状: today-view.tsx の <header> は className="day-view__header" のみ.
+    // → "day-view__header--today" を含む assertion で red.
+    const repo = makeMockRepository();
+    renderWithQueryClient(
+      <TodayView repository={repo} projectRepository={makeMockProjectRepository()} />,
+    );
+
+    await screen.findByRole("heading", { name: "今日" });
+
+    const header = document.querySelector("header");
+    expect(header).not.toBeNull();
+
+    // ベースクラスは BL-051 / AC-2 の互換のため残る.
+    expect(header!.classList.contains("day-view__header")).toBe(true);
+    // 本 BL の本体: today 専用 modifier が付く.
+    expect(header!.classList.contains("day-view__header--today")).toBe(true);
+  });
+
+  it("シナリオ AC-配置: today header の直接の子は h1「今日」とカウンタ <span> の 2 要素のままで, modifier 追加で 3 要素に増えていない (REQ-1)", async () => {
+    // spec.md §「配置 (REQ-1)」:
+    //   header の直接の子要素は <h1> と <span> の 2 要素のみ.
+    //   本 BL の「2 段構造化」は CSS で縦並びにする手段で実現し,
+    //   子要素数を 3 以上に増やしてはならない (BL-050 / BL-051 の規約).
+    //
+    // 本 BL での回帰ガード: modifier 追加に伴いラッパー <div> 等を挿入していないこと
+    // を 2 要素の構造で固定する.
+    const repo = makeMockRepository();
+    renderWithQueryClient(
+      <TodayView repository={repo} projectRepository={makeMockProjectRepository()} />,
+    );
+
+    await screen.findByRole("heading", { name: "今日" });
+
+    const header = document.querySelector("header");
+    expect(header).not.toBeNull();
+
+    const children = Array.from(header!.children);
+    expect(children).toHaveLength(2);
+
+    // 1 要素目: <h1>今日</h1>.
+    expect(children[0]?.tagName).toBe("H1");
+    expect(children[0]?.textContent).toBe("今日");
+
+    // 2 要素目: <span aria-label="今日の完了タスク数"> (= カウンタ).
+    expect(children[1]?.tagName).toBe("SPAN");
+    expect(children[1]?.getAttribute("aria-label")).toBe("今日の完了タスク数");
+    expect(children[1]?.classList.contains("today-view__completion-count")).toBe(true);
+  });
+
+  it("シナリオ AC-カウンタ識別子: カウンタは today header 内の 2 段目 (= h1 と兄弟) として配置され, 既存 className/aria-label/文言を維持する (REQ-6)", async () => {
+    // spec.md §「既存規約の維持」:
+    //   aria-label="今日の完了タスク数" を持つ <span> がちょうど 1 個存在する.
+    //   その要素は最初の <header> 要素の子孫である.
+    //   className は "today-view__completion-count" のまま.
+    //   textContent は「今日の完了: {N}」(N は 0 以上の整数) のパターンに一致する.
+    //
+    // 本 BL では JSX のマークアップ自体は変えない. CSS 側の 2 段化で兄弟関係を
+    // 物理的にも 2 段目として見せる. ここでは「カウンタが header 直下で h1 の
+    // すぐ次の sibling である」ことを DOM 構造で固定する.
+    const repo = makeMockRepository();
+    renderWithQueryClient(
+      <TodayView repository={repo} projectRepository={makeMockProjectRepository()} />,
+    );
+
+    await screen.findByRole("heading", { name: "今日" });
+
+    const header = document.querySelector("header");
+    expect(header).not.toBeNull();
+
+    const counter = screen.queryByLabelText("今日の完了タスク数");
+    expect(counter).not.toBeNull();
+
+    // カウンタが header の直接の子であること (深い子孫ではない).
+    expect(counter!.parentElement).toBe(header);
+
+    // カウンタが h1 の「次」の兄弟であること (= 2 段目).
+    const h1 = header!.querySelector("h1");
+    expect(h1).not.toBeNull();
+    expect(h1!.nextElementSibling).toBe(counter);
+
+    // 既存規約: className / 文言は維持.
+    expect(counter!.classList.contains("today-view__completion-count")).toBe(true);
+    expect(counter!.textContent ?? "").toMatch(/^今日の完了:\s*\d+$/);
+  });
+});

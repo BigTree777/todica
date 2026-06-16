@@ -494,7 +494,7 @@ export function TodayView(props: TodayViewProps): JSX.Element {
           (BL-044 で導入したインライン「＋プロジェクトの追加」button は撤去).
           BL-047 / REQ-1 / REQ-2: カウンタは header 内に置く.
           BL-051 / REQ-2: header の className を共通 day-view__header に統一. */}
-      <header className="day-view__header">
+      <header className="day-view__header day-view__header--today">
         <h1>今日</h1>
         {/* BL-008 / FR-040 / NFR-013: 今日の完了タスク数を画面上部に常時表示する.
             BL-047 / REQ-2: <div> から <span> に変更し, header 内に配置する.
