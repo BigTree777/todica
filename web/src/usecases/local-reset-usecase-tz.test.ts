@@ -45,13 +45,7 @@ const NOW_JST_0401 = new Date("2026-06-07T19:01:00.000Z");
 
 type Row = Record<string, unknown>;
 
-function makeMockDb(
-  initialData: {
-    settings?: Row[];
-    tasks?: Row[];
-    counter?: Row[];
-  } = {},
-) {
+function makeMockDb(initialData: { settings?: Row[]; tasks?: Row[]; counter?: Row[] } = {}) {
   const data = {
     settings: initialData.settings ?? [
       {

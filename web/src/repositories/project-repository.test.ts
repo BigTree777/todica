@@ -1,4 +1,4 @@
-import { http, HttpResponse } from "msw";
+import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 /**
  * 単体テスト: HttpProjectRepository (BL-016 / project-crud).
@@ -27,8 +27,8 @@ import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { WebAuthStorage } from "../auth/auth-storage.js";
 import { setAuthStorage } from "../auth/authed-fetch.js";
-import { HttpProjectRepository } from "./project-repository.js";
 import type { Project } from "./project-repository.js";
+import { HttpProjectRepository } from "./project-repository.js";
 
 const BASE_URL = "http://localhost:3000";
 const AUTH_TOKEN = "test-token";

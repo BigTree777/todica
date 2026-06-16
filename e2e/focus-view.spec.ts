@@ -18,7 +18,7 @@
  *     「サイドバーから /today に戻った際にゴミ箱送りされている」「ゴミ箱に入っている」
  *     方向 (= 確実に検証できる側) を主に確認する.
  */
-import { type Page, expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 const API_BASE = "http://localhost:3000";
 const AUTH_HEADER = { Authorization: "Bearer dev-token" };

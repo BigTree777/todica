@@ -24,8 +24,8 @@
  */
 import "fake-indexeddb/auto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ConflictError, dequeue, enqueue, flush, getAll } from "./offline-queue.js";
 import type { QueueEntry } from "./offline-queue.js";
+import { ConflictError, dequeue, enqueue, flush, getAll } from "./offline-queue.js";
 
 // fetch をグローバルモックとして使う
 const mockFetch = vi.fn();

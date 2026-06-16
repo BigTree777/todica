@@ -19,7 +19,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { notifyError } from "../../error-notification.js";
 import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
 import { ConflictError, dequeue, enqueue, getAll, mapConflict } from "../../offline-queue.js";
-import type { TrashRepository, TrashedTask } from "../../repositories/trash-repository.js";
+import type { TrashedTask, TrashRepository } from "../../repositories/trash-repository.js";
 import { RestoreConflictError } from "../../repositories/trash-repository.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
 

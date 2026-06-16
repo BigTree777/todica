@@ -6,6 +6,7 @@
  * 読み出し時に JSON.parse して配列として返す.
  */
 
+import type { LocalDb } from "./local-db.js";
 import type {
   CreateRoutineCommand,
   DeleteRoutineCommand,
@@ -13,8 +14,6 @@ import type {
   WebRoutine,
   WebRoutineRepository,
 } from "./routine-repository.js";
-
-import type { LocalDb } from "./local-db.js";
 
 type Row = Record<string, unknown>;
 

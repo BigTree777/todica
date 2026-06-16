@@ -32,7 +32,7 @@
  *   - 要素の特定はテスト固有の名前 (`Date.now()` suffix) で行い, FakeClock 凍結下の
  *     並び順 tie-break (BL-043 の教訓) に依存しない.
  */
-import { type APIRequestContext, type Locator, expect, test } from "@playwright/test";
+import { type APIRequestContext, expect, type Locator, test } from "@playwright/test";
 
 const API_BASE = "http://localhost:3000";
 const AUTH_HEADER = { Authorization: "Bearer dev-token" };

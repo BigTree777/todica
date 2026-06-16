@@ -11,7 +11,7 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { type AuthStorage, WebAuthStorage } from "./auth/auth-storage.js";
 import { AUTH_EXPIRED_EVENT, setAuthStorage } from "./auth/authed-fetch.js";
-import { InvalidPasswordError, NetworkError, login as loginRequest } from "./auth/login-client.js";
+import { InvalidPasswordError, login as loginRequest, NetworkError } from "./auth/login-client.js";
 import { LoginView } from "./ui/login-view/login-view.js";
 
 void NetworkError; // keep export reachable for type narrowing in callers

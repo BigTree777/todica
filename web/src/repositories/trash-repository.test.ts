@@ -1,4 +1,4 @@
-import { http, HttpResponse } from "msw";
+import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 /**
  * 単体テスト: HttpTrashRepository (BL-014 / web-client-foundation).
@@ -28,8 +28,8 @@ import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { WebAuthStorage } from "../auth/auth-storage.js";
 import { setAuthStorage } from "../auth/authed-fetch.js";
-import { HttpTrashRepository, RestoreConflictError } from "./trash-repository.js";
 import type { TrashedTask } from "./trash-repository.js";
+import { HttpTrashRepository, RestoreConflictError } from "./trash-repository.js";
 
 const BASE_URL = "http://localhost:3000";
 const AUTH_TOKEN = "test-token";

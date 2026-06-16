@@ -5,9 +5,8 @@
  * trashedAt IS NOT NULL のレコードを操作する.
  */
 
-import type { RestoreTaskCommand, TrashRepository, TrashedTask } from "./trash-repository.js";
-
 import type { LocalDb } from "./local-db.js";
+import type { RestoreTaskCommand, TrashedTask, TrashRepository } from "./trash-repository.js";
 
 type Row = Record<string, unknown>;
 

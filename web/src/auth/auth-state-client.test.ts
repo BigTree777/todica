@@ -16,10 +16,10 @@
  *
  * 現状: `web/src/auth/auth-state-client.ts` は未実装. インポート不能で red.
  */
-import { http, HttpResponse } from "msw";
+import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { NetworkError, fetchAuthState } from "./auth-state-client.js";
+import { fetchAuthState, NetworkError } from "./auth-state-client.js";
 
 const BASE_URL = "http://localhost:3000";
 

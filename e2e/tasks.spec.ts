@@ -14,7 +14,7 @@
  * `taskRow` は両セクション共通で動くよう, タスク名 input からカード本体
  * (class="task-card" の li または section) を遡って取る.
  */
-import { type Page, expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 /**
  * タスク名から, そのタスクのボタン群を含む親コンテナを返す.

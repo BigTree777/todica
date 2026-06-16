@@ -10,7 +10,7 @@
  *   3. プロジェクト削除 (DELETE /api/v1/projects/:id)
  *   4. カスケード null: 紐付いたタスクは削除されず, projectId が null になる. 一覧から消えない.
  */
-import { type Page, expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 function taskRow(page: Page, taskName: string) {
   // BL-070 追従: タスク名は <input aria-label="{name} の名前"> の value に入る.

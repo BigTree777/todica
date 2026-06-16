@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { Priority } from "@todica/domain/task";
 /**
  * 単体テスト: `<PriorityStars />` .
  *
@@ -27,8 +28,6 @@ import userEvent from "@testing-library/user-event";
  *   - キーボード操作は今回テスト対象外 (REQ-4 最低要件は <button> + Tab + Enter/Space で自然に満たす).
  */
 import { describe, expect, it, vi } from "vitest";
-
-import type { Priority } from "@todica/domain/task";
 // PriorityStars 本体はまだ存在しない. implementer が web/src/ui/priority-stars/priority-stars.tsx を
 // 作るまでこの import で red になる.
 import { PriorityStars } from "./priority-stars.js";

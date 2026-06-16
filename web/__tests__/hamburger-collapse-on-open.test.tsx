@@ -100,7 +100,7 @@ function extractBlock(css: string, selector: string): string | null {
   // セレクタ直後の `{` から対応する `}` までを greedy ではなく非貪欲で取る.
   // セレクタ末尾の境界として後続が `\s*\{` であることを要求し,
   // `.app-shell__hamburger` で `.app-shell__hamburger--hidden` に誤マッチしないようにする.
-  const escaped = selector.replace(/[.\-]/g, (m) => `\\${m}`);
+  const escaped = selector.replace(/[.-]/g, (m) => `\\${m}`);
   const re = new RegExp(`${escaped}\\s*\\{([^}]*)\\}`);
   const m = css.match(re);
   return m?.[1] ?? null;

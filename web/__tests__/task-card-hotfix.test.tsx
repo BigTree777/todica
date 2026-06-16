@@ -1145,13 +1145,10 @@ describe("TaskCard / TaskFormCard 実機遺漏の一括 hotfix (BL-063 / task-ca
       "idPrefix",
       "inputId",
       "formAriaLabel",
-    ])(
-      "task-form-card.tsx に TaskFormCardProps の prop 名 '%s' が含まれる (BL-059 で確定)",
-      (propName) => {
-        const tsx = readFileSync(taskFormCardTsxPath, "utf-8");
-        expect(tsx).toContain(propName);
-      },
-    );
+    ])("task-form-card.tsx に TaskFormCardProps の prop 名 '%s' が含まれる (BL-059 で確定)", (propName) => {
+      const tsx = readFileSync(taskFormCardTsxPath, "utf-8");
+      expect(tsx).toContain(propName);
+    });
   });
 
   // ----------------------------------------------------------
@@ -1165,13 +1162,15 @@ describe("TaskCard / TaskFormCard 実機遺漏の一括 hotfix (BL-063 / task-ca
       expect(tsx).toMatch(/export\s+interface\s+PriorityStarsProps\b/);
     });
 
-    it.each(["value", "onChange", "idPrefix", "groupLabel"])(
-      "priority-stars.tsx に prop 名 '%s' が含まれる (BL-040 で確定)",
-      (propName) => {
-        const tsx = readFileSync(priorityStarsTsxPath, "utf-8");
-        expect(tsx).toContain(propName);
-      },
-    );
+    it.each([
+      "value",
+      "onChange",
+      "idPrefix",
+      "groupLabel",
+    ])("priority-stars.tsx に prop 名 '%s' が含まれる (BL-040 で確定)", (propName) => {
+      const tsx = readFileSync(priorityStarsTsxPath, "utf-8");
+      expect(tsx).toContain(propName);
+    });
 
     it(".project-chip ルール本文の BL-056 確定 5 宣言がすべて残っている (NFR-CHIP-PRESERVE)", () => {
       const css = readFileSync(dayViewCssPath, "utf-8");

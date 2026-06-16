@@ -5,9 +5,9 @@ import type { AuthStorage } from "./auth/auth-storage.js";
 import { AUTH_EXPIRED_EVENT } from "./auth/authed-fetch.js";
 import {
   InvalidPasswordError,
-  NetworkError,
   login as loginRequest,
   logout as logoutRequest,
+  NetworkError,
 } from "./auth/login-client.js";
 import {
   changePassword as changePasswordRequest,

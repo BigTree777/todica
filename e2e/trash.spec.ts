@@ -5,7 +5,7 @@
  *   1. ゴミ箱から復元: タスクを削除 → /trash で「復元」 → /today に戻る
  *   2. ゴミ箱を空にする: タスクを削除 → /trash で「ゴミ箱を空にする」 → 「ゴミ箱は空です」
  */
-import { type Page, expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 function taskRow(page: Page, taskName: string) {
   // BL-057: タスクカードが 3 段ゾーン化されたため ancestor::li で <li> を取得.

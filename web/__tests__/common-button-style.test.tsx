@@ -68,10 +68,9 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { fireEvent, render } from "@testing-library/react";
+import type { Task } from "@todica/domain/task";
 import type { ComponentType } from "react";
 import { describe, expect, it, vi } from "vitest";
-
-import type { Task } from "@todica/domain/task";
 import type { Project } from "../src/repositories/project-repository.js";
 import type { WebRoutine } from "../src/repositories/routine-repository.js";
 
@@ -546,7 +545,7 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
           expect(btn, `TaskCard の「${label}」 button が見つからない`).toBeDefined();
           expect(
             btn?.className.split(/\s+/).includes("button"),
-            `TaskCard の「${label}」 button に \"button\" className が無い`,
+            `TaskCard の「${label}」 button に "button" className が無い`,
           ).toBe(true);
         }
       });
@@ -994,7 +993,7 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
         expect(btn, `TaskCard の「${label}」 button が無い`).toBeDefined();
         expect(
           btn?.className.split(/\s+/).includes("button--primary"),
-          `TaskCard の「${label}」 button に \"button--primary\" が無い (D-008 違反)`,
+          `TaskCard の「${label}」 button に "button--primary" が無い (D-008 違反)`,
         ).toBe(true);
       }
     });

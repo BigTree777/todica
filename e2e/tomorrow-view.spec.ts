@@ -16,7 +16,7 @@
  *   - 既存テストとの分離のため, タスク名は `Date.now()` suffix を含めて衝突しないようにする.
  *   - サーバ初期状態には既存テストの残骸が含まれうるため, テスト由来のタスク名のみで assert する.
  */
-import { type Page, expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 const API_BASE = "http://localhost:3000";
 const AUTH_HEADER = { Authorization: "Bearer dev-token" };

@@ -9,7 +9,7 @@
  * 単体・統合テストでは「ページリロード」というブラウザの全 React state リセット
  * イベントを再現できず, サーバ側 state からの初期化経路が壊れていても検出できない.
  */
-import { type Page, expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 function taskRow(page: Page, taskName: string) {
   // BL-057: タスクカードが 3 段ゾーン化されたため ancestor::li で <li> を取得.

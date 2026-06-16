@@ -24,14 +24,14 @@
  *
  * 現状: `web/src/auth/password-client.ts` の setupInitialPassword は未実装. 追加分は red.
  */
-import { http, HttpResponse } from "msw";
+import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import {
   BadRequestError,
+  changePassword,
   InvalidPasswordError,
   NetworkError,
-  changePassword,
   setupInitialPassword,
 } from "./password-client.js";
 

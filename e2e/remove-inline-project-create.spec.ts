@@ -22,7 +22,7 @@
  * セットアップは inline-project-create.spec.ts の慣行に従い API 直叩きで行う.
  * プロジェクト名 / タスク名は `Date.now()` suffix で他テストと衝突させない.
  */
-import { type APIRequestContext, type Page, expect, test } from "@playwright/test";
+import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 
 const API_BASE = "http://localhost:3000";
 const AUTH_HEADER = { Authorization: "Bearer dev-token" };

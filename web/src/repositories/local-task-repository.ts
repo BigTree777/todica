@@ -8,6 +8,7 @@
  */
 
 import type { DueDate, Priority, Task } from "@todica/domain/task";
+import type { LocalDb } from "./local-db.js";
 import type {
   CompleteTaskCommand,
   Counter,
@@ -21,8 +22,6 @@ import type {
   UpdateTaskCommand,
 } from "./task-repository.js";
 import { OptimisticLockError } from "./task-repository.js";
-
-import type { LocalDb } from "./local-db.js";
 
 type Row = Record<string, unknown>;
 

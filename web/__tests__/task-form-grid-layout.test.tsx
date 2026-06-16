@@ -377,14 +377,13 @@ describe("起票フォームのレイアウト (BL-058, BL-059 で 3 段 flex co
       ".day-view__form__submit",
     ] as const;
 
-    it.each(REMOVED_FORM_CHILD_SELECTORS)(
-      "%s ルールが day-view.css に定義されていない",
-      (selector) => {
-        const css = readFileSync(dayViewCssPath, "utf-8");
-        const body = extractRuleBody(css, selector);
-        expect(body, `${selector} ルールが残存している (BL-059 で撤去)`).toBeNull();
-      },
-    );
+    it.each(
+      REMOVED_FORM_CHILD_SELECTORS,
+    )("%s ルールが day-view.css に定義されていない", (selector) => {
+      const css = readFileSync(dayViewCssPath, "utf-8");
+      const body = extractRuleBody(css, selector);
+      expect(body, `${selector} ルールが残存している (BL-059 で撤去)`).toBeNull();
+    });
   });
 
   // ----------------------------------------------------------
@@ -503,13 +502,15 @@ describe("起票フォームのレイアウト (BL-058, BL-059 で 3 段 flex co
       expect(tsx).toMatch(/export\s+interface\s+PriorityStarsProps\b/);
     });
 
-    it.each(["value", "onChange", "idPrefix", "groupLabel"])(
-      "priority-stars.tsx に prop 名 '%s' が含まれる (BL-040 で確定)",
-      (propName) => {
-        const tsx = readFileSync(priorityStarsTsxPath, "utf-8");
-        expect(tsx).toContain(propName);
-      },
-    );
+    it.each([
+      "value",
+      "onChange",
+      "idPrefix",
+      "groupLabel",
+    ])("priority-stars.tsx に prop 名 '%s' が含まれる (BL-040 で確定)", (propName) => {
+      const tsx = readFileSync(priorityStarsTsxPath, "utf-8");
+      expect(tsx).toContain(propName);
+    });
 
     it("priority-stars.tsx に role='radiogroup' が含まれる", () => {
       const tsx = readFileSync(priorityStarsTsxPath, "utf-8");

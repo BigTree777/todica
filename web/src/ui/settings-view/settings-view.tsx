@@ -17,12 +17,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import "./settings-view.css";
 import { InvalidPasswordError } from "../../auth/password-client.js";
-import { PatchConflictError } from "../../repositories/settings-repository.js";
 import type {
   PatchSettingsCommand,
   Settings,
   SettingsRepository,
 } from "../../repositories/settings-repository.js";
+import { PatchConflictError } from "../../repositories/settings-repository.js";
 
 /** dayBoundaryTime の形式バリデーション: HH:MM (00:00 - 23:59). */
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;

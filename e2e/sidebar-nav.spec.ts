@@ -26,7 +26,7 @@
  *   - AC-3 のとおりリンク click でメニューは自動的に閉じるため, 連続遷移する
  *     ケース (「アクティブが追従する」テスト) では遷移ごとに改めて open し直す.
  */
-import { type Page, expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 /**
  * ハンバーガーボタン (`aria-label="メニューを開く"`) を click し,

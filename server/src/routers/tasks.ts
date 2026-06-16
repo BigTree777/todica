@@ -1,8 +1,8 @@
 import {
-  type UpdateTaskInput,
   completeTask,
   createTask,
   trashTask,
+  type UpdateTaskInput,
   updateTask,
 } from "@todica/domain/task";
 import { Hono } from "hono";

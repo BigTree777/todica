@@ -1378,17 +1378,16 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
       expect(body, `${selector} ルールが focus-view.css に残存している`).toBeNull();
     });
 
-    it.each(KEPT)(
-      "%s ルールが引き続き focus-view.css に定義されている (枠 / 空状態維持)",
-      (selector) => {
-        const css = readFileSync(focusViewCssPath, "utf-8");
-        const body = extractRuleBody(css, selector);
-        expect(
-          body,
-          `${selector} ルールが focus-view.css から消えている (D-007 違反)`,
-        ).not.toBeNull();
-      },
-    );
+    it.each(
+      KEPT,
+    )("%s ルールが引き続き focus-view.css に定義されている (枠 / 空状態維持)", (selector) => {
+      const css = readFileSync(focusViewCssPath, "utf-8");
+      const body = extractRuleBody(css, selector);
+      expect(
+        body,
+        `${selector} ルールが focus-view.css から消えている (D-007 違反)`,
+      ).not.toBeNull();
+    });
   });
 
   // ============================================================
@@ -1450,13 +1449,15 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
       expect(tsx).toMatch(/export\s+interface\s+PriorityStarsProps\b/);
     });
 
-    it.each(["value", "onChange", "idPrefix", "groupLabel"])(
-      "priority-stars.tsx に prop 名 '%s' が含まれる (BL-040 で確定)",
-      (propName) => {
-        const tsx = readFileSync(priorityStarsTsxPath, "utf-8");
-        expect(tsx).toContain(propName);
-      },
-    );
+    it.each([
+      "value",
+      "onChange",
+      "idPrefix",
+      "groupLabel",
+    ])("priority-stars.tsx に prop 名 '%s' が含まれる (BL-040 で確定)", (propName) => {
+      const tsx = readFileSync(priorityStarsTsxPath, "utf-8");
+      expect(tsx).toContain(propName);
+    });
 
     it("priority-stars.tsx に role='radiogroup' が含まれる (内部 logic 無改修の軽量スポット)", () => {
       const tsx = readFileSync(priorityStarsTsxPath, "utf-8");

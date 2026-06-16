@@ -16,10 +16,10 @@ import type { Hono } from "hono";
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  TEST_AUTH_TOKEN,
-  TEST_INITIAL_TIME,
   authHeaders,
   buildTestApp,
+  TEST_AUTH_TOKEN,
+  TEST_INITIAL_TIME,
 } from "../helpers/build-test-app.js";
 import type {
   InMemoryCounterRepository,
@@ -768,37 +768,40 @@ describe("補助確認", () => {
 // ============================================================
 
 describe("GET /api/v1/today (BL-010 自動リセット統合)", () => {
-  it("シナリオ: 境界時刻を超えた状態で GET /today を叩くと自動リセットが実行される " +
-    "(spec.md §「GET /api/v1/today のアクセス時にリセット条件を満たす場合は自動でリセットが実行される」)", async () => {
-    // Given counter.completedCount = 3（リセット前）
-    // And   "tomorrow" のタスクが 1 件ある
-    // And   現在時刻が境界時刻を超えている（lastResetExecutedAt は null）
-    // When  GET /api/v1/today を叩く
-    // Then  200 OK が返る
-    // And   レスポンスの completionCount = 0 になっている（completedCount がリセットされた）
+  it(
+    "シナリオ: 境界時刻を超えた状態で GET /today を叩くと自動リセットが実行される " +
+      "(spec.md §「GET /api/v1/today のアクセス時にリセット条件を満たす場合は自動でリセットが実行される」)",
+    async () => {
+      // Given counter.completedCount = 3（リセット前）
+      // And   "tomorrow" のタスクが 1 件ある
+      // And   現在時刻が境界時刻を超えている（lastResetExecutedAt は null）
+      // When  GET /api/v1/today を叩く
+      // Then  200 OK が返る
+      // And   レスポンスの completionCount = 0 になっている（completedCount がリセットされた）
 
-    // 境界時刻（"04:00"）を超えた状態で初期化する。
-    // InMemorySettingsRepository の初期 dayBoundaryTime は "04:00"。
-    // 初期 clock = "2026-06-07T09:00:00.000Z" は境界時刻（04:00）を超えている（09:00 > 04:00）ので
-    // デフォルトの buildTestApp() を使って lastResetExecutedAt = null にすればリセット条件を満たす。
+      // 境界時刻（"04:00"）を超えた状態で初期化する。
+      // InMemorySettingsRepository の初期 dayBoundaryTime は "04:00"。
+      // 初期 clock = "2026-06-07T09:00:00.000Z" は境界時刻（04:00）を超えている（09:00 > 04:00）ので
+      // デフォルトの buildTestApp() を使って lastResetExecutedAt = null にすればリセット条件を満たす。
 
-    counterRepo.seed({ completedCount: 3, lastResetExecutedAt: null });
-    taskRepo.seed(makeTask({ id: ID_001, dueDate: "tomorrow" }));
+      counterRepo.seed({ completedCount: 3, lastResetExecutedAt: null });
+      taskRepo.seed(makeTask({ id: ID_001, dueDate: "tomorrow" }));
 
-    const res = await app.request("/api/v1/today", {
-      method: "GET",
-      headers: authHeaders(),
-    });
+      const res = await app.request("/api/v1/today", {
+        method: "GET",
+        headers: authHeaders(),
+      });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
-      tasks: Array<{ id: string; dueDate: string }>;
-      completionCount: number;
-    };
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        tasks: Array<{ id: string; dueDate: string }>;
+        completionCount: number;
+      };
 
-    // 自動リセット後: completionCount = 0 になっている
-    expect(body.completionCount).toBe(0);
-  });
+      // 自動リセット後: completionCount = 0 になっている
+      expect(body.completionCount).toBe(0);
+    },
+  );
 
   it('シナリオ: "tomorrow" タスクがリセット後に今日ビューで表示される（dueDate = "today"）', async () => {
     // 監査指摘 [中] 3-b:
