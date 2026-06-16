@@ -6,6 +6,7 @@
  *   2. ゴミ箱を空にする: タスクを削除 → /trash で「ゴミ箱を空にする」 → 「ゴミ箱は空です」
  */
 import { expect, type Page, test } from "@playwright/test";
+import { openCreateForm } from "./helpers/floating-create-button.js";
 
 function taskRow(page: Page, taskName: string) {
   // BL-057: タスクカードが 3 段ゾーン化されたため ancestor::li で <li> を取得.
@@ -15,6 +16,7 @@ function taskRow(page: Page, taskName: string) {
 
 async function createAndDelete(page: Page, taskName: string): Promise<void> {
   await page.goto("/today");
+  await openCreateForm(page, "today");
   await page.getByLabel("タスク名").fill(taskName);
   await page.getByRole("button", { name: "追加", exact: true }).click();
   await taskRow(page, taskName).getByRole("button", { name: "削除" }).click();

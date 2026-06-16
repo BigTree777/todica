@@ -23,10 +23,10 @@
  * プロジェクト名 / タスク名は `Date.now()` suffix で他テストと衝突させない.
  */
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import { getApiAuthHeader } from "./helpers/api-auth.js";
 import { openCreateForm } from "./helpers/floating-create-button.js";
 
 const API_BASE = "http://localhost:3000";
-const AUTH_HEADER = { Authorization: "Bearer dev-token" };
 
 interface ProjectDto {
   id: string;
@@ -35,9 +35,12 @@ interface ProjectDto {
 }
 
 /** GET /api/v1/projects でプロジェクト一覧 (サーバ正本) を取得する. */
-async function listProjects(request: APIRequestContext): Promise<ProjectDto[]> {
+async function listProjects(
+  request: APIRequestContext,
+  authHeader: { Authorization: string },
+): Promise<ProjectDto[]> {
   const res = await request.get(`${API_BASE}/api/v1/projects`, {
-    headers: AUTH_HEADER,
+    headers: authHeader,
   });
   expect(res.status()).toBe(200);
   const body = (await res.json()) as { projects: ProjectDto[] };
@@ -45,12 +48,15 @@ async function listProjects(request: APIRequestContext): Promise<ProjectDto[]> {
 }
 
 /** 全プロジェクトを API 直叩きで削除し, 「プロジェクト 0 件」の前提状態を作る. */
-async function clearProjects(request: APIRequestContext): Promise<void> {
-  const projects = await listProjects(request);
+async function clearProjects(
+  request: APIRequestContext,
+  authHeader: { Authorization: string },
+): Promise<void> {
+  const projects = await listProjects(request, authHeader);
   for (const project of projects) {
     const res = await request.delete(`${API_BASE}/api/v1/projects/${project.id}`, {
       headers: {
-        ...AUTH_HEADER,
+        ...authHeader,
         "Idempotency-Key": crypto.randomUUID(),
         "If-Match": String(project.version),
       },
@@ -189,7 +195,8 @@ test.describe("remove-inline-project-create (BL-050) のシナリオ", () => {
     // 既存の hamburger-nav (BL-049) と project-crud (BL-016) の実装が green な前提で
     // 動作するため, 本 BL の実装変更とは独立して成立する (= 実装前から green になりうる).
     // ここでは「BL-050 が /projects 起点の経路を維持していること」を新規回帰ガードとして固定する.
-    await clearProjects(request);
+    const authHeader = await getApiAuthHeader(request, API_BASE);
+    await clearProjects(request, authHeader);
     const stamp = Date.now();
     const projectName = `仕事 ${stamp}`;
 
@@ -215,7 +222,7 @@ test.describe("remove-inline-project-create (BL-050) のシナリオ", () => {
     await expect(page.locator(`.project-card input[value="${projectName}"]`)).toBeVisible();
 
     // サーバ正本にも反映.
-    const projects = await listProjects(request);
+    const projects = await listProjects(request, authHeader);
     expect(projects.some((p) => p.name === projectName)).toBe(true);
   });
 
@@ -230,7 +237,8 @@ test.describe("remove-inline-project-create (BL-050) のシナリオ", () => {
     //
     // 既存の ["projects"] キャッシュ共有 (BL-016) を BL-050 が壊さないことの回帰ガード.
     // 旧 BL-041 トグル巡回経路から BL-065 の <select> + <option> 一覧経路へ書き換えた.
-    await clearProjects(request);
+    const authHeader = await getApiAuthHeader(request, API_BASE);
+    await clearProjects(request, authHeader);
     const stamp = Date.now();
     const projectName = `個人 ${stamp}`;
 

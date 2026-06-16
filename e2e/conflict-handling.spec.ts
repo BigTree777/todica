@@ -11,9 +11,10 @@
  *     を要するため別 BL に切り出し済み.
  */
 import { expect, test } from "@playwright/test";
+import { getApiAuthHeader } from "./helpers/api-auth.js";
+import { openCreateForm } from "./helpers/floating-create-button.js";
 
 const API_BASE = "http://localhost:3000";
-const AUTH_HEADER = { Authorization: "Bearer dev-token" };
 
 // BL-070 (inline-edit-all-cards) 追従 (spec AC-25):
 //   BL-042 で撤去された task の「編集」 button → 編集フォーム経路は, BL-070 のインライン
@@ -24,6 +25,7 @@ test("2 タブ同時編集で後勝ち側に ConflictDialog が表示される (
   browser,
   request,
 }) => {
+  const AUTH_HEADER = await getApiAuthHeader(request, API_BASE);
   // API で task を 1 件作成 (version 1).
   const taskId = crypto.randomUUID();
   const taskName = `衝突テスト ${Date.now()}`;
@@ -79,6 +81,7 @@ test("2 タブ同時編集でプロジェクト名衝突時にも ConflictDialog
   browser,
   request,
 }) => {
+  const AUTH_HEADER = await getApiAuthHeader(request, API_BASE);
   const projectId = crypto.randomUUID();
   const projectName = `P衝突 ${Date.now()}`;
   await request.post(`${API_BASE}/api/v1/projects`, {
@@ -124,7 +127,10 @@ test("2 タブ同時編集でプロジェクト名衝突時にも ConflictDialog
 });
 
 test("401 が返るとエラー通知バナーが表示される (BL-034)", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/today");
+
+  // BL-104: 起票フォームは + ボタンで展開する. route 介入前に開いておく.
+  await openCreateForm(page, "today");
 
   // POST /api/v1/tasks を route 介入で 401 にする.
   await page.route("**/api/v1/tasks", (route) => {
@@ -155,6 +161,7 @@ test("オフラインで編集した PATCH がオンライン復帰で flush さ
   context,
   request,
 }) => {
+  const AUTH_HEADER = await getApiAuthHeader(request, API_BASE);
   // API で task を 1 件作成.
   const originalName = `オフライン編集元 ${Date.now()}`;
   const updatedName = `オフライン編集後 ${Date.now() + 1}`;
@@ -165,7 +172,7 @@ test("オフラインで編集した PATCH がオンライン復帰で flush さ
   });
 
   // ブラウザで開いて task を表示.
-  await page.goto("/");
+  await page.goto("/today");
   const nameInput = page.getByLabel(`${originalName} の名前`).first();
   await expect(nameInput).toBeVisible();
 

@@ -17,10 +17,10 @@
  *   - サーバ初期状態には既存テストの残骸が含まれうるため, テスト由来のタスク名のみで assert する.
  */
 import { expect, type Page, test } from "@playwright/test";
+import { getApiAuthHeader } from "./helpers/api-auth.js";
 import { createFormLocator, openCreateForm } from "./helpers/floating-create-button.js";
 
 const API_BASE = "http://localhost:3000";
-const AUTH_HEADER = { Authorization: "Bearer dev-token" };
 
 /**
  * AppShell のハンバーガーメニューから「明日のタスク」リンクで /tomorrow に遷移する.
@@ -81,11 +81,12 @@ test.describe("tomorrow-view (/tomorrow) のシナリオ", () => {
     page,
     request,
   }) => {
+    const authHeader = await getApiAuthHeader(request, API_BASE);
     // API 直叩きで dueDate=tomorrow のタスクを 1 件作成.
     const taskName = `TOMORROW移送 ${Date.now()}`;
     const taskId = crypto.randomUUID();
     await request.post(`${API_BASE}/api/v1/tasks`, {
-      headers: { ...AUTH_HEADER, "Idempotency-Key": crypto.randomUUID() },
+      headers: { ...authHeader, "Idempotency-Key": crypto.randomUUID() },
       data: { id: taskId, name: taskName, dueDate: "tomorrow", priority: "highest" },
     });
 
@@ -120,7 +121,7 @@ test.describe("tomorrow-view (/tomorrow) のシナリオ", () => {
 
     // サーバ side: dueDate=today になっている (= サーバ側で正しく移送されている).
     const after = await request.get(`${API_BASE}/api/v1/tasks?dueDate=today`, {
-      headers: AUTH_HEADER,
+      headers: authHeader,
     });
     const afterBody = (await after.json()) as {
       tasks: Array<{ id: string; dueDate: string }>;
@@ -134,11 +135,12 @@ test.describe("tomorrow-view (/tomorrow) のシナリオ", () => {
     page,
     request,
   }) => {
+    const authHeader = await getApiAuthHeader(request, API_BASE);
     // API 直叩きで dueDate=tomorrow のタスクを 1 件作成.
     const taskName = `TOMORROW削除 ${Date.now()}`;
     const taskId = crypto.randomUUID();
     await request.post(`${API_BASE}/api/v1/tasks`, {
-      headers: { ...AUTH_HEADER, "Idempotency-Key": crypto.randomUUID() },
+      headers: { ...authHeader, "Idempotency-Key": crypto.randomUUID() },
       data: { id: taskId, name: taskName, dueDate: "tomorrow", priority: "highest" },
     });
 
@@ -161,7 +163,7 @@ test.describe("tomorrow-view (/tomorrow) のシナリオ", () => {
 
     // サーバ side: trashedReason = "deleted" でゴミ箱送りされている.
     const trashed = await request.get(`${API_BASE}/api/v1/tasks?trashed=true`, {
-      headers: AUTH_HEADER,
+      headers: authHeader,
     });
     const trashedBody = (await trashed.json()) as {
       tasks: Array<{ id: string; trashedReason: string | null }>;

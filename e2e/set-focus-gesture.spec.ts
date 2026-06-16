@@ -24,13 +24,14 @@
  * 明示 focus を解除して前提状態 (currentTaskId = null) を作る.
  */
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import { getApiAuthHeader } from "./helpers/api-auth.js";
 
 const API_BASE = "http://localhost:3000";
-const AUTH_HEADER = { Authorization: "Bearer dev-token" };
 
 /** API 直叩きでタスクを 1 件作成し, その id を返す. */
 async function createTask(
   request: APIRequestContext,
+  authHeader: { Authorization: string },
   params: {
     name: string;
     priority?: "highest" | "normal" | "later";
@@ -39,7 +40,7 @@ async function createTask(
 ): Promise<string> {
   const id = crypto.randomUUID();
   const res = await request.post(`${API_BASE}/api/v1/tasks`, {
-    headers: { ...AUTH_HEADER, "Idempotency-Key": crypto.randomUUID() },
+    headers: { ...authHeader, "Idempotency-Key": crypto.randomUUID() },
     data: {
       id,
       name: params.name,
@@ -54,9 +55,10 @@ async function createTask(
 /** GET /api/v1/focus で FocusSelection の現状を取得する. */
 async function getFocus(
   request: APIRequestContext,
+  authHeader: { Authorization: string },
 ): Promise<{ currentTaskId: string | null; version: number }> {
   const res = await request.get(`${API_BASE}/api/v1/focus`, {
-    headers: AUTH_HEADER,
+    headers: authHeader,
   });
   expect(res.status()).toBe(200);
   const body = (await res.json()) as {
@@ -66,11 +68,15 @@ async function getFocus(
 }
 
 /** PUT /api/v1/focus { taskId } を API 直叩きで実行する (セットアップ用). */
-async function putFocus(request: APIRequestContext, taskId: string | null): Promise<void> {
-  const focus = await getFocus(request);
+async function putFocus(
+  request: APIRequestContext,
+  authHeader: { Authorization: string },
+  taskId: string | null,
+): Promise<void> {
+  const focus = await getFocus(request, authHeader);
   const res = await request.put(`${API_BASE}/api/v1/focus`, {
     headers: {
-      ...AUTH_HEADER,
+      ...authHeader,
       "Idempotency-Key": crypto.randomUUID(),
       "If-Match": String(focus.version),
     },
@@ -88,9 +94,12 @@ async function putFocus(request: APIRequestContext, taskId: string | null): Prom
  * 決定論的に小さく収まる. workers = 1 (直列実行) のため他テストと競合しない
  * (後続テストは自前でタスクを作る. 残骸への依存は無い).
  */
-async function clearTodayTasks(request: APIRequestContext): Promise<void> {
+async function clearTodayTasks(
+  request: APIRequestContext,
+  authHeader: { Authorization: string },
+): Promise<void> {
   const res = await request.get(`${API_BASE}/api/v1/tasks?trashed=false`, {
-    headers: AUTH_HEADER,
+    headers: authHeader,
   });
   expect(res.status()).toBe(200);
   const body = (await res.json()) as {
@@ -99,7 +108,7 @@ async function clearTodayTasks(request: APIRequestContext): Promise<void> {
   for (const task of body.tasks.filter((t) => t.dueDate === "today")) {
     const del = await request.delete(`${API_BASE}/api/v1/tasks/${task.id}`, {
       headers: {
-        ...AUTH_HEADER,
+        ...authHeader,
         "Idempotency-Key": crypto.randomUUID(),
         "If-Match": String(task.version),
       },
@@ -109,10 +118,13 @@ async function clearTodayTasks(request: APIRequestContext): Promise<void> {
 }
 
 /** 明示 focus を解除して currentTaskId = null の前提状態を作る. */
-async function resetFocus(request: APIRequestContext): Promise<void> {
-  const focus = await getFocus(request);
+async function resetFocus(
+  request: APIRequestContext,
+  authHeader: { Authorization: string },
+): Promise<void> {
+  const focus = await getFocus(request, authHeader);
   if (focus.currentTaskId === null) return;
-  await putFocus(request, null);
+  await putFocus(request, authHeader, null);
 }
 
 /**
@@ -155,15 +167,16 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
     page,
     request,
   }) => {
-    await resetFocus(request);
+    const authHeader = await getApiAuthHeader(request, API_BASE);
+    await resetFocus(request, authHeader);
     const stamp = Date.now();
     const headName = `AC1強調 ${stamp}`;
     const nameB = `AC1一覧B ${stamp + 1}`;
     const nameC = `AC1一覧C ${stamp + 2}`;
     // 強調対象候補 (highest) 1 件 + 一覧側 (later) 2 件.
-    await createTask(request, { name: headName, priority: "highest" });
-    await createTask(request, { name: nameB, priority: "later" });
-    await createTask(request, { name: nameC, priority: "later" });
+    await createTask(request, authHeader, { name: headName, priority: "highest" });
+    await createTask(request, authHeader, { name: nameB, priority: "later" });
+    await createTask(request, authHeader, { name: nameC, priority: "later" });
 
     await gotoToday(page);
     await expect(listRow(page, nameB)).toBeVisible();
@@ -199,16 +212,17 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
     page,
     request,
   }) => {
-    await resetFocus(request);
+    const authHeader = await getApiAuthHeader(request, API_BASE);
+    await resetFocus(request, authHeader);
     const stamp = Date.now();
     const nameA = `AC2タスクA ${stamp}`;
     const nameB = `AC2タスクB ${stamp + 1}`;
     // A は強調対象候補 (highest), B は一覧側 (later で並び先頭にならない).
-    await createTask(request, { name: nameA, priority: "highest" });
-    const idB = await createTask(request, { name: nameB, priority: "later" });
+    await createTask(request, authHeader, { name: nameA, priority: "highest" });
+    const idB = await createTask(request, authHeader, { name: nameB, priority: "later" });
 
     // クライアントがロードする FocusSelection.version を控えておく (If-Match 検証用).
-    const focusBefore = await getFocus(request);
+    const focusBefore = await getFocus(request, authHeader);
     expect(focusBefore.currentTaskId).toBeNull();
 
     await gotoToday(page);
@@ -231,19 +245,20 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
     await expect(listRow(page, nameA)).toBeVisible();
 
     // サーバ正本: GET /api/v1/focus の currentTaskId が B.id になっている.
-    await expect.poll(async () => (await getFocus(request)).currentTaskId).toBe(idB);
+    await expect.poll(async () => (await getFocus(request, authHeader)).currentTaskId).toBe(idB);
   });
 
   test("AC-3: 設定した focus が focus-view (/focus) に反映され, focus-view は 2 ボタンのまま", async ({
     page,
     request,
   }) => {
-    await resetFocus(request);
+    const authHeader = await getApiAuthHeader(request, API_BASE);
+    await resetFocus(request, authHeader);
     const stamp = Date.now();
     const nameA = `AC3タスクA ${stamp}`;
     const nameB = `AC3タスクB ${stamp + 1}`;
-    await createTask(request, { name: nameA, priority: "highest" });
-    await createTask(request, { name: nameB, priority: "later" });
+    await createTask(request, authHeader, { name: nameA, priority: "highest" });
+    await createTask(request, authHeader, { name: nameB, priority: "later" });
 
     await gotoToday(page);
     await expect(listRow(page, nameB)).toBeVisible();
@@ -269,9 +284,10 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
   });
 
   test("AC-5: キーボードのみ (Tab + Enter) で focus 設定が完結する", async ({ page, request }) => {
+    const authHeader = await getApiAuthHeader(request, API_BASE);
     // 残骸タスクを掃除して Tab 手数を決定論的に小さく保つ (clearTodayTasks の docstring 参照).
-    await clearTodayTasks(request);
-    await resetFocus(request);
+    await clearTodayTasks(request, authHeader);
+    await resetFocus(request, authHeader);
     const stamp = Date.now();
     const nameA = `AC5タスクA ${stamp}`;
     const nameB = `AC5タスクB ${stamp + 1}`;
@@ -281,8 +297,8 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
     // 「どちらが並び先頭 = 暗黙の現在のタスクか」が非決定的になり flaky.
     // → B を normal にすれば highest の A (または既存 highest タスク) が必ず
     //   並び先頭になり, B は決定論的に一覧側に来る.
-    await createTask(request, { name: nameA, priority: "highest" });
-    const idB = await createTask(request, { name: nameB, priority: "normal" });
+    await createTask(request, authHeader, { name: nameA, priority: "highest" });
+    const idB = await createTask(request, authHeader, { name: nameB, priority: "normal" });
 
     await gotoToday(page);
     await expect(listRow(page, nameB)).toBeVisible();
@@ -326,18 +342,19 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
   });
 
   test("AC-6: routine 由来タスクも focus に昇格できる", async ({ page, request }) => {
+    const authHeader = await getApiAuthHeader(request, API_BASE);
     // テスト用 FakeClock (BL-030) で 24h 進めて日次リセットを発火させ,
     // origin="routine" のタスクを自動生成する (boundary-time.spec.ts のパターン).
     const ONE_DAY_MS = 24 * 60 * 60 * 1000;
     const clockRes = await request.get(`${API_BASE}/api/v1/test/clock`, {
-      headers: AUTH_HEADER,
+      headers: authHeader,
     });
     const { now: nowIso } = (await clockRes.json()) as { now: string };
     const tomorrowDayOfWeek = new Date(new Date(nowIso).getTime() + ONE_DAY_MS).getUTCDay();
 
     const routineName = `AC6ルーティン ${Date.now()}`;
     const routineRes = await request.post(`${API_BASE}/api/v1/routines`, {
-      headers: { ...AUTH_HEADER, "Idempotency-Key": crypto.randomUUID() },
+      headers: { ...authHeader, "Idempotency-Key": crypto.randomUUID() },
       data: {
         id: crypto.randomUUID(),
         name: routineName,
@@ -349,23 +366,23 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
     expect(routineRes.status()).toBe(201);
 
     // 強調対象候補のダミー (highest) を用意してから 24h 進め, /today でリセット発火.
-    await createTask(request, {
+    await createTask(request, authHeader, {
       name: `AC6ダミー ${Date.now()}`,
       priority: "highest",
     });
     const advanceRes = await request.post(`${API_BASE}/api/v1/test/clock/advance`, {
-      headers: AUTH_HEADER,
+      headers: authHeader,
       data: { ms: ONE_DAY_MS },
     });
     expect(advanceRes.status()).toBe(200);
     const todayRes = await request.get(`${API_BASE}/api/v1/today`, {
-      headers: AUTH_HEADER,
+      headers: authHeader,
     });
     expect(todayRes.status()).toBe(200);
 
     // 生成されたタスク R が origin="routine" であることをサーバ側で確認.
     const tasksRes = await request.get(`${API_BASE}/api/v1/tasks?trashed=false`, {
-      headers: AUTH_HEADER,
+      headers: authHeader,
     });
     const tasksBody = (await tasksRes.json()) as {
       tasks: Array<{ id: string; name: string; dueDate: string; origin: string }>;
@@ -376,7 +393,7 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
     expect(routineTask).toBeDefined();
     expect(routineTask?.origin).toBe("routine");
 
-    await resetFocus(request);
+    await resetFocus(request, authHeader);
     await gotoToday(page);
     await expect(listRow(page, routineName)).toBeVisible();
 
@@ -385,15 +402,18 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
     await expect(focusedRegion(page).getByLabel(`${routineName} の名前`)).toBeVisible();
 
     // サーバ正本でも R が currentTaskId になっている.
-    await expect.poll(async () => (await getFocus(request)).currentTaskId).toBe(routineTask?.id);
+    await expect
+      .poll(async () => (await getFocus(request, authHeader)).currentTaskId)
+      .toBe(routineTask?.id);
   });
 
   test("AC-7: tomorrow ビューには「現在のタスクにする」button が存在しない", async ({
     page,
     request,
   }) => {
+    const authHeader = await getApiAuthHeader(request, API_BASE);
     const taskName = `AC7明日タスク ${Date.now()}`;
-    await createTask(request, { name: taskName, dueDate: "tomorrow" });
+    await createTask(request, authHeader, { name: taskName, dueDate: "tomorrow" });
 
     await page.goto("/tomorrow");
     // BL-051 で旧 <section aria-label="明日のタスク"> ランドマークは <main> に統合された.
@@ -420,12 +440,13 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
     page,
     request,
   }) => {
-    await resetFocus(request);
+    const authHeader = await getApiAuthHeader(request, API_BASE);
+    await resetFocus(request, authHeader);
     const stamp = Date.now();
     const nameA = `AC8タスクA ${stamp}`;
     const nameB = `AC8タスクB ${stamp + 1}`;
-    await createTask(request, { name: nameA, priority: "highest" });
-    const idB = await createTask(request, { name: nameB, priority: "later" });
+    await createTask(request, authHeader, { name: nameA, priority: "highest" });
+    const idB = await createTask(request, authHeader, { name: nameB, priority: "later" });
 
     // B を UI から明示 focus に設定する.
     await gotoToday(page);
@@ -449,7 +470,7 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
     await focusedRegion(page).getByRole("button", { name: "完了" }).click();
 
     // サーバ側で FocusSelection.currentTaskId が null に自動解除される (FR-013).
-    await expect.poll(async () => (await getFocus(request)).currentTaskId).toBeNull();
+    await expect.poll(async () => (await getFocus(request, authHeader)).currentTaskId).toBeNull();
 
     // 再フェッチ後, B は強調セクションから消え, 暗黙フォールバックにより
     // 並び先頭のタスクが強調セクションに表示される (他テストの残骸タスクが
@@ -463,12 +484,13 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
     page,
     request,
   }) => {
-    await resetFocus(request);
+    const authHeader = await getApiAuthHeader(request, API_BASE);
+    await resetFocus(request, authHeader);
     const stamp = Date.now();
     const nameA = `AC9タスクA ${stamp}`;
     const nameB = `AC9タスクB ${stamp + 1}`;
-    await createTask(request, { name: nameA, priority: "highest" });
-    const idB = await createTask(request, { name: nameB, priority: "later" });
+    await createTask(request, authHeader, { name: nameA, priority: "highest" });
+    const idB = await createTask(request, authHeader, { name: nameB, priority: "later" });
 
     // クライアントに FocusSelection (version v) をロードさせる.
     await gotoToday(page);
@@ -476,7 +498,7 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
 
     // サーバ側で version を進めて, クライアントのキャッシュを stale にする
     // (多タブで focus が更新された状況の再現. 次の PUT は本物の 412 を返す).
-    await putFocus(request, null);
+    await putFocus(request, authHeader, null);
 
     // 失敗後の ["focus"] 再フェッチ (spec REQ-7 / plan D-005) を待ち受ける.
     const refetchPromise = page.waitForResponse(
@@ -505,6 +527,6 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
     // 最新 version で再度「現在のタスクにする」を実行すると成功する.
     await listRow(page, nameB).getByRole("button", { name: "現在のタスクにする" }).click();
     await expect(focusedRegion(page).getByLabel(`${nameB} の名前`)).toBeVisible();
-    await expect.poll(async () => (await getFocus(request)).currentTaskId).toBe(idB);
+    await expect.poll(async () => (await getFocus(request, authHeader)).currentTaskId).toBe(idB);
   });
 });

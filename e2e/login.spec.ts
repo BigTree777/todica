@@ -30,6 +30,11 @@ import { E2E_TEST_PASSWORD } from "../playwright.config";
 /** auth-storage が `localStorage` に保存するキー. `web/src/auth/auth-storage.ts` の `STORAGE_KEY` と揃える. */
 const AUTH_TOKEN_STORAGE_KEY = "todica.auth.token";
 
+// global-setup で発行された storageState を本 spec では使わず, 全テストを未認証から開始する.
+// LoginView の往復は「未認証 → ログイン → 認証済」を直接検証するため, storageState で
+// 持ち回す token を破棄して independent reproducible flow を確保する.
+test.use({ storageState: { cookies: [], origins: [] } });
+
 test.describe("LoginView 往復シナリオ", () => {
   // D-4: 各 test を独立 reproducible にするため, 開始時点で必ず未認証状態にする.
   // localStorage の token と cookie をクリアして各 test を未認証状態から開始する.
@@ -86,8 +91,11 @@ test.describe("LoginView 往復シナリオ", () => {
     await page.getByLabel("パスワード").fill(E2E_TEST_PASSWORD);
     await page.getByRole("button", { name: "ログイン" }).click();
 
-    // Then: 今日ビューに遷移し起票フォームが表示される.
-    await expect(page.getByRole("form", { name: "タスク起票フォーム" })).toBeVisible();
+    // Then: 今日ビューに遷移し <h1>今日</h1> が描画される.
+    // 起票フォームは + ボタン展開式 (floating-create-button) のため初期非表示.
+    // 今日ビュー到達の sentinel は h1「今日」と + ボタン「タスクを追加」とする.
+    await expect(page.getByRole("heading", { name: "今日", level: 1 })).toBeVisible();
+    await expect(page.getByRole("button", { name: "タスクを追加" })).toBeVisible();
 
     // And: LoginView は表示されていない.
     await expect(page.getByRole("heading", { name: "ログイン" })).toHaveCount(0);
@@ -106,7 +114,8 @@ test.describe("LoginView 往復シナリオ", () => {
     await page.goto("/");
     await page.getByLabel("パスワード").fill(E2E_TEST_PASSWORD);
     await page.getByRole("button", { name: "ログイン" }).click();
-    await expect(page.getByRole("form", { name: "タスク起票フォーム" })).toBeVisible();
+    // 今日ビュー到達 sentinel は h1「今日」 (起票フォームは + 展開式のため初期非表示).
+    await expect(page.getByRole("heading", { name: "今日", level: 1 })).toBeVisible();
 
     // When: 設定ビューへ直接遷移 (D-8: ハンバーガー経由ではなく goto で固定) し,
     //   ログアウトボタンを押す.

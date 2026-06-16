@@ -31,9 +31,9 @@
  *     本テストは実装後の回帰防止 + 視覚的同値確認を主目的とする.
  */
 import { type APIRequestContext, expect, type Locator, test } from "@playwright/test";
+import { getApiAuthHeader } from "./helpers/api-auth.js";
 
 const API_BASE = "http://localhost:3000";
-const AUTH_HEADER = { Authorization: "Bearer dev-token" };
 
 /** locator の computed style から指定プロパティを取得する. */
 async function computedStyle(
@@ -50,10 +50,14 @@ async function computedStyle(
 }
 
 /** API 直叩きでタスクを 1 件作成し ID を返す. */
-async function seedTask(request: APIRequestContext, name: string): Promise<string> {
+async function seedTask(
+  request: APIRequestContext,
+  authHeader: { Authorization: string },
+  name: string,
+): Promise<string> {
   const id = crypto.randomUUID();
   const res = await request.post(`${API_BASE}/api/v1/tasks`, {
-    headers: { ...AUTH_HEADER, "Idempotency-Key": crypto.randomUUID() },
+    headers: { ...authHeader, "Idempotency-Key": crypto.randomUUID() },
     data: { id, name, dueDate: "today", priority: "normal" },
   });
   expect(res.ok()).toBe(true);
@@ -61,10 +65,15 @@ async function seedTask(request: APIRequestContext, name: string): Promise<strin
 }
 
 /** API 直叩きでタスクを削除する. */
-async function deleteTask(request: APIRequestContext, id: string, version: number): Promise<void> {
+async function deleteTask(
+  request: APIRequestContext,
+  authHeader: { Authorization: string },
+  id: string,
+  version: number,
+): Promise<void> {
   const res = await request.delete(`${API_BASE}/api/v1/tasks/${id}`, {
     headers: {
-      ...AUTH_HEADER,
+      ...authHeader,
       "Idempotency-Key": crypto.randomUUID(),
       "If-Match": String(version),
     },
@@ -86,9 +95,10 @@ test.describe("デザイントークン / CSS 基盤の整備 (BL-046) の視覚
     request,
   }) => {
     // Given: focus-view に表示するタスクを 1 件用意する.
+    const authHeader = await getApiAuthHeader(request, API_BASE);
     const suffix = Date.now();
     const taskName = `DT-AC6-フォーカスカード ${suffix}`;
-    const taskId = await seedTask(request, taskName);
+    const taskId = await seedTask(request, authHeader, taskName);
 
     // When: /focus を開く.
     await page.goto("/focus");
@@ -112,9 +122,10 @@ test.describe("デザイントークン / CSS 基盤の整備 (BL-046) の視覚
     // --radius-lg: 16px → border-radius が 16px であること.
     expect(style["border-radius"], "__card の border-radius").toBe("16px");
 
-    // --color-border: #ccc → rgb(204, 204, 204) であること.
-    expect(style["border-top-color"], "__card の border-color").toBe("rgb(204, 204, 204)");
-    // BL-059 V-1 追従: 強調 variant の border-width は 3px に変更 (旧: 1px 継承).
+    // task-card--focus は border-color を var(--color-accent) = #B45309 で上書きする
+    // (.task-card 基底の border-color: var(--color-border) より specificity が高い宣言).
+    // #B45309 → rgb(180, 83, 9). 強調 variant の border-width は 3px.
+    expect(style["border-top-color"], "__card の border-color").toBe("rgb(180, 83, 9)");
     expect(style["border-top-width"], "__card の border 幅").toBe("3px");
     expect(style["border-top-style"], "__card の border スタイル").toBe("solid");
 
@@ -127,13 +138,13 @@ test.describe("デザイントークン / CSS 基盤の整備 (BL-046) の視覚
 
     // 後片付け: 作成したタスクを削除する.
     const listRes = await request.get(`${API_BASE}/api/v1/tasks`, {
-      headers: AUTH_HEADER,
+      headers: authHeader,
     });
     if (listRes.ok()) {
       const body = (await listRes.json()) as { tasks: Array<{ id: string; version: number }> };
       const task = body.tasks.find((t) => t.id === taskId);
       if (task) {
-        await deleteTask(request, taskId, task.version);
+        await deleteTask(request, authHeader, taskId, task.version);
       }
     }
   });
@@ -143,9 +154,10 @@ test.describe("デザイントークン / CSS 基盤の整備 (BL-046) の視覚
     request,
   }) => {
     // Given: focus-view に表示するタスクを 1 件用意する.
+    const authHeader = await getApiAuthHeader(request, API_BASE);
     const suffix = Date.now();
     const taskName = `DT-AC6-サニティ ${suffix}`;
-    await seedTask(request, taskName);
+    await seedTask(request, authHeader, taskName);
 
     // When: /focus を開く.
     await page.goto("/focus");

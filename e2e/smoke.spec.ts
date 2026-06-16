@@ -13,12 +13,14 @@
  *   - POST /api/v1/tasks → DB 永続化 → GET /api/v1/today → UI 反映の経路全部
  */
 import { expect, test } from "@playwright/test";
+import { openCreateForm } from "./helpers/floating-create-button.js";
 
 test("タスクを追加すると今日の一覧に表示される", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/today");
 
   const taskName = `スモーク ${Date.now()}`;
 
+  await openCreateForm(page, "today");
   await page.getByLabel("タスク名").fill(taskName);
   await page.getByRole("button", { name: "追加", exact: true }).click();
 

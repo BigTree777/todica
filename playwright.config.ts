@@ -13,6 +13,7 @@ import { mkdirSync, readdirSync, rmSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
+import { AUTH_STATE_PATH_DEV, AUTH_STATE_PATH_PROD } from "./e2e/global-setup.js";
 
 const E2E_DATA_DIR = "./.e2e-data";
 const E2E_DB_PATH = `${E2E_DATA_DIR}/e2e.db`;
@@ -55,6 +56,9 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: 1, // DB 共有のため
   reporter: process.env.CI ? "github" : "list",
+  // BL-106: webServer 起動後に 1 回だけ login して storageState を吐く.
+  // 各 spec は use.storageState 経由で認証済み状態から start する.
+  globalSetup: "./e2e/global-setup.ts",
 
   use: {
     baseURL: "http://localhost:5173",
@@ -66,7 +70,11 @@ export default defineConfig({
       name: "chromium",
       // 通常テスト. デフォルト (chromium-headless-shell) で動く. dev server (5173) を見る.
       testIgnore: /pwa-prod\.spec\.ts/,
-      use: { ...devices["Desktop Chrome"], baseURL: "http://localhost:5173" },
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: "http://localhost:5173",
+        storageState: AUTH_STATE_PATH_DEV,
+      },
     },
     {
       // BL-032: PWA 系テストは prod build (`vite build` + `vite preview`) を full Chromium で見る.
@@ -79,6 +87,7 @@ export default defineConfig({
         ...devices["Desktop Chrome"],
         baseURL: "http://localhost:4173",
         launchOptions: FULL_CHROMIUM_PATH ? { executablePath: FULL_CHROMIUM_PATH } : undefined,
+        storageState: AUTH_STATE_PATH_PROD,
       },
     },
   ],
