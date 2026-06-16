@@ -15,7 +15,8 @@
 
 ## マージ前チェック（マージゲート）
 
-- [ ] テストがすべて green（「テストが通る == 機能が実装されている」）
+このリポジトリでは GitHub Actions の CI ゲート (typecheck / lint / vitest / playwright) が green であることがマージ条件です.
+
 - [ ] 仕様（spec.md）の受け入れ基準を満たす
 - [ ] `auditor` による検証・承認を得た
 - [ ] コミットメッセージが Conventional Commits 準拠（説明・本文は日本語）
