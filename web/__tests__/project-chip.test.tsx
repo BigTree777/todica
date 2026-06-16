@@ -53,6 +53,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import type { Task } from "@todica/domain/task";
 import type { ReactNode } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import type { Project, ProjectRepository } from "../src/repositories/project-repository.js";
@@ -132,7 +133,16 @@ function createTestQueryClient(): QueryClient {
 
 function renderWithQueryClient(ui: ReactNode): ReturnType<typeof render> {
   const queryClient = createTestQueryClient();
-  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+  // BL-104 追従: TodayView / TomorrowView が `useSearchParams` を使うため Router context が必要.
+  // 本ファイルは起票フォームを検証しないので `?create=1` は付けない.
+  return render(
+    <MemoryRouter
+      initialEntries={["/today"]}
+      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+    >
+      <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+    </MemoryRouter>,
+  );
 }
 
 function makeTask(overrides: Partial<Task> = {}): Task {

@@ -111,6 +111,24 @@
   color: var(--color-fg);
 }
 
+/* + ボタン: 画面右上 fixed, 更新ボタンの左側 (BL-104 / D-003).
+   right オフセット = 更新ボタンの占有幅 (`font-size-h2` + `space-xs` *2 = 内側 padding)
+                       + 余白 (`space-sm`) + 既存右余白 (`space-sm`) を加算する.
+   共通スタイル (background / border / font-size / cursor / padding / color) は
+   `.app-shell__reload` と同じトークン値を再利用する (REQ-14 / NFR-NO-SHADOW). */
+.app-shell__create {
+  position: fixed;
+  top: var(--space-sm);
+  right: calc(var(--space-sm) + var(--font-size-h2) + var(--space-xs) * 2 + var(--space-sm));
+  z-index: 200;
+  background: none;
+  border: none;
+  font-size: var(--font-size-h2);
+  cursor: pointer;
+  padding: var(--space-xs);
+  color: var(--color-fg);
+}
+
 /* メニュー内「閉じる」ボタン */
 .app-shell__menu-close {
   align-self: flex-end;

@@ -17,6 +17,7 @@
  *   - サーバ初期状態には既存テストの残骸が含まれうるため, テスト由来のタスク名のみで assert する.
  */
 import { expect, type Page, test } from "@playwright/test";
+import { createFormLocator, openCreateForm } from "./helpers/floating-create-button.js";
 
 const API_BASE = "http://localhost:3000";
 const AUTH_HEADER = { Authorization: "Bearer dev-token" };
@@ -60,23 +61,17 @@ test.describe("tomorrow-view (/tomorrow) のシナリオ", () => {
     // 見出し <h1>明日のタスク</h1> が描画されている (placeholder と新実装で共通の文言).
     await expect(page.getByRole("heading", { name: "明日のタスク", level: 1 })).toBeVisible();
 
-    // 起票フォームの入力欄 (タスク名) があり, 期限 UI は無い (REQ-2).
+    // BL-104 追従: 起票フォームは + ボタンで初めて開く.
     const taskName = `TOMORROW起票 ${Date.now()}`;
-    // BL-070 追従: 表示モードにも aria-label="{name} の名前" の input が並ぶため
-    // /タスク名/ 全 page match だと strict 違反 + 表示 input を拾ってしまう.
-    // 起票 form scope に絞る.
-    const createForm = page.getByRole("form", {
-      name: /タスク起票フォーム|明日のタスク起票フォーム/,
-    });
+    await openCreateForm(page, "tomorrow");
+    const createForm = createFormLocator(page, "tomorrow");
     const nameInput = createForm.getByLabel(/タスク名/);
     await expect(nameInput).toBeVisible();
-    // 期限 UI は無いことの確認 (label / combobox いずれも). 同じく form scope.
-    // BL-070 で task name input の aria-label が「{name} の名前」になり,
-    // 既存タスク名に「期限」を含むと page 全体だと match してしまう (例: 期限切替テスト).
+    // 期限 UI は無いことの確認 (REQ-2 of BL-039). 同じく form scope.
     await expect(createForm.getByLabel(/期限/)).toHaveCount(0);
 
     await nameInput.fill(taskName);
-    await page.getByRole("button", { name: /追加|起票|登録|送信/ }).click();
+    await createForm.getByRole("button", { name: /追加|起票|登録|送信/ }).click();
 
     // BL-070 追従: タスク名は <input aria-label="{name} の名前" value={name}> として表示される.
     await expect(tomorrowRegion(page).getByLabel(`${taskName} の名前`)).toHaveValue(taskName);

@@ -15,7 +15,8 @@ import type { JSX } from "react";
  *
  * TanStack Query (useQuery / useMutation) でデータ取得・書込みを管理.
  */
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import "./projects-view.css";
 import { notifyError } from "../../error-notification.js";
 import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
@@ -54,6 +55,50 @@ export function ProjectsView(props: ProjectsViewProps): JSX.Element {
   const projects: Project[] = projectsData ?? [];
 
   const [newName, setNewName] = useState("");
+
+  // BL-104: 起票フォーム開閉は URL クエリ `?create=1` を単一情報源とする (D-001).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const formOpen = searchParams.get("create") === "1";
+
+  const closeForm = useCallback(() => {
+    setSearchParams(
+      (prev) => {
+        prev.delete("create");
+        return prev;
+      },
+      { replace: false },
+    );
+    setNewName("");
+  }, [setSearchParams]);
+
+  const focusCreateButton = useCallback(() => {
+    const el = document.querySelector<HTMLButtonElement>("button.app-shell__create");
+    el?.focus();
+  }, []);
+
+  const handleCancel = useCallback(() => {
+    closeForm();
+    focusCreateButton();
+  }, [closeForm, focusCreateButton]);
+
+  useEffect(() => {
+    if (!formOpen) return;
+    const el = document.getElementById("project-name") as HTMLInputElement | null;
+    el?.focus();
+  }, [formOpen]);
+
+  useEffect(() => {
+    if (!formOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      closeForm();
+      focusCreateButton();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [formOpen, closeForm, focusCreateButton]);
 
   const invalidateProjects = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ["projects"] });
@@ -181,10 +226,16 @@ export function ProjectsView(props: ProjectsViewProps): JSX.Element {
       e.preventDefault();
       if (!newName) return;
       const id = generateId();
-      await createMutation.mutateAsync({ id, name: newName });
-      setNewName("");
+      try {
+        await createMutation.mutateAsync({ id, name: newName });
+      } catch {
+        // BL-104 / REQ-8: 失敗時はフォームを閉じない (入力値も保持).
+        return;
+      }
+      // BL-104 / REQ-7 / D-004: 成功時のみ自動 close.
+      closeForm();
     },
-    [newName, createMutation],
+    [newName, createMutation, closeForm],
   );
 
   // BL-070 REQ-9 / D-001 / D-002: name 編集は input blur 経由.
@@ -221,7 +272,15 @@ export function ProjectsView(props: ProjectsViewProps): JSX.Element {
     <main className="projects-view">
       <h1>プロジェクト</h1>
 
-      <ProjectFormCard name={newName} onNameChange={setNewName} onSubmit={handleCreate} />
+      {/* BL-104 / REQ-4: `?create=1` のときのみ条件付き描画 (D-001). */}
+      {formOpen && (
+        <ProjectFormCard
+          name={newName}
+          onNameChange={setNewName}
+          onSubmit={handleCreate}
+          onCancel={handleCancel}
+        />
+      )}
 
       <ul className="projects-view__list">
         {projects.map((project) => (

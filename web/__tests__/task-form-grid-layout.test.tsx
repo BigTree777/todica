@@ -47,6 +47,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
 import type { Task } from "@todica/domain/task";
 import type { ReactNode } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import type { Project, ProjectRepository } from "../src/repositories/project-repository.js";
@@ -112,9 +113,21 @@ function createTestQueryClient(): QueryClient {
   });
 }
 
+/**
+ * BL-104 追従: 起票フォームは `?create=1` 付き URL でのみ描画される.
+ *   AC-10 / AC-11 等で `getByLabelText("タスク名")` を確認するため
+ *   MemoryRouter で `/today?create=1` を初期 URL として渡す.
+ */
 function renderWithQueryClient(ui: ReactNode): ReturnType<typeof render> {
   const queryClient = createTestQueryClient();
-  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+  return render(
+    <MemoryRouter
+      initialEntries={["/today?create=1"]}
+      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+    >
+      <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+    </MemoryRouter>,
+  );
 }
 
 function makeTask(overrides: Partial<Task> = {}): Task {

@@ -32,7 +32,8 @@ import type { JSX } from "react";
  *
  * TanStack Query (useQuery / useMutation) でデータ取得・書込みを管理.
  */
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { notifyError } from "../../error-notification.js";
 import "./today-view.css";
 import "../day-view/day-view.css";
@@ -100,6 +101,61 @@ export function TodayView(props: TodayViewProps): JSX.Element {
   const [name, setName] = useState("");
   const [projectId, setProjectId] = useState("");
   const [priority, setPriority] = useState<Priority>("normal");
+
+  // BL-104: 起票フォーム開閉は URL クエリ `?create=1` を単一情報源とする (D-001).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const formOpen = searchParams.get("create") === "1";
+
+  /**
+   * BL-104 (D-001 / D-004 / D-005): フォームを閉じる共通処理.
+   * `?create=1` を URL から外し, 入力 state をクリアする (REQ-9).
+   * キャンセル / Escape 経路では呼び出し側で + ボタン focus 復帰を行う (D-005).
+   */
+  const closeForm = useCallback(() => {
+    setSearchParams(
+      (prev) => {
+        prev.delete("create");
+        return prev;
+      },
+      { replace: false },
+    );
+    setName("");
+    setProjectId("");
+    setPriority("normal");
+  }, [setSearchParams]);
+
+  /** + ボタンへ focus を戻す (REQ-13 / D-005). */
+  const focusCreateButton = useCallback(() => {
+    const el = document.querySelector<HTMLButtonElement>("button.app-shell__create");
+    el?.focus();
+  }, []);
+
+  /** キャンセル経路: フォーム close + + ボタンへ focus 復帰. */
+  const handleCancel = useCallback(() => {
+    closeForm();
+    focusCreateButton();
+  }, [closeForm, focusCreateButton]);
+
+  // BL-104 / REQ-10: 開いた直後に先頭 input (タスク名) へ focus を移す.
+  useEffect(() => {
+    if (!formOpen) return;
+    const el = document.getElementById("task-name") as HTMLInputElement | null;
+    el?.focus();
+  }, [formOpen]);
+
+  // BL-104 / REQ-6: Escape でフォームを閉じ, + へ focus を戻す.
+  useEffect(() => {
+    if (!formOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      closeForm();
+      focusCreateButton();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [formOpen, closeForm, focusCreateButton]);
 
   /** mutation 成功時に today / focus を再フェッチする */
   const invalidateAll = useCallback(() => {
@@ -328,12 +384,18 @@ export function TodayView(props: TodayViewProps): JSX.Element {
         dueDate: "today",
         priority,
       };
-      await createMutation.mutateAsync(cmd);
-      setName("");
-      setProjectId("");
-      setPriority("normal");
+      try {
+        await createMutation.mutateAsync(cmd);
+      } catch {
+        // BL-104 / REQ-8: 起票失敗時はフォームを閉じない (入力値も保持する).
+        // 通知は onError で処理済み. ここでは return して以降の close 処理を抑止する.
+        return;
+      }
+      // BL-104 / REQ-7 / D-004: 成功時のみ自動 close (入力値クリアもまとめて行う).
+      // 自動 close 経路では + へ focus を戻さない (D-005).
+      closeForm();
     },
-    [name, projectId, priority, createMutation],
+    [name, projectId, priority, createMutation, closeForm],
   );
 
   const handleToggleDueDate = useCallback(
@@ -472,20 +534,24 @@ export function TodayView(props: TodayViewProps): JSX.Element {
           );
         })()}
 
-      {/* BL-059 / REQ-4-4: 起票フォームを <TaskFormCard> に置換 (V-6 / V-7 反映). */}
-      <TaskFormCard
-        projects={projects}
-        projectId={projectId}
-        onProjectIdChange={setProjectId}
-        priority={priority}
-        onPriorityChange={setPriority}
-        name={name}
-        onNameChange={setName}
-        onSubmit={handleCreate}
-        idPrefix="create"
-        inputId="task-name"
-        formAriaLabel="タスク起票フォーム"
-      />
+      {/* BL-059 / REQ-4-4: 起票フォームを <TaskFormCard> に置換 (V-6 / V-7 反映).
+          BL-104 / REQ-4: `?create=1` のときのみ条件付き描画 (D-001). */}
+      {formOpen && (
+        <TaskFormCard
+          projects={projects}
+          projectId={projectId}
+          onProjectIdChange={setProjectId}
+          priority={priority}
+          onPriorityChange={setPriority}
+          name={name}
+          onNameChange={setName}
+          onSubmit={handleCreate}
+          onCancel={handleCancel}
+          idPrefix="create"
+          inputId="task-name"
+          formAriaLabel="タスク起票フォーム"
+        />
+      )}
 
       <ul aria-label="タスク一覧" className="day-view__list">
         {otherTasks.map((task) => {

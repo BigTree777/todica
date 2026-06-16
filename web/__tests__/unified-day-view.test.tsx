@@ -38,6 +38,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
 import type { Task } from "@todica/domain/task";
 import type { ReactNode } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import type { Project, ProjectRepository } from "../src/repositories/project-repository.js";
 import type {
@@ -75,9 +76,22 @@ function createTestQueryClient(): QueryClient {
   });
 }
 
+/**
+ * BL-104 (floating-create-button) 追従:
+ *   day-view のレイアウト (header → form → ul) を検証する都合上,
+ *   form が描画されている状態 (= `?create=1` 付き URL) で render する.
+ *   path 自体は構造アサーションに影響しないので /today?create=1 で十分.
+ */
 function renderWithQueryClient(ui: ReactNode): ReturnType<typeof render> {
   const queryClient = createTestQueryClient();
-  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+  return render(
+    <MemoryRouter
+      initialEntries={["/today?create=1"]}
+      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+    >
+      <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+    </MemoryRouter>,
+  );
 }
 
 // ============================================================

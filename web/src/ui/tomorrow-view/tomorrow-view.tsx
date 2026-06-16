@@ -28,7 +28,8 @@ import type { JSX } from "react";
  *   - その他のエラー → `notifyError("通信に失敗しました")` .
  *   - offline → 書込キューに enqueue し楽観成功 .
  */
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { notifyError } from "../../error-notification.js";
 import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
 import { ConflictError, dequeue, enqueue, findEntryByKey, getAll } from "../../offline-queue.js";
@@ -85,6 +86,57 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
   const [name, setName] = useState("");
   const [projectId, setProjectId] = useState("");
   const [priority, setPriority] = useState<Priority>("normal");
+
+  // BL-104: 起票フォーム開閉は URL クエリ `?create=1` を単一情報源とする (D-001).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const formOpen = searchParams.get("create") === "1";
+
+  /** BL-104: フォーム close + 入力 state クリア (REQ-9). */
+  const closeForm = useCallback(() => {
+    setSearchParams(
+      (prev) => {
+        prev.delete("create");
+        return prev;
+      },
+      { replace: false },
+    );
+    setName("");
+    setProjectId("");
+    setPriority("normal");
+  }, [setSearchParams]);
+
+  /** + ボタンへ focus を戻す (REQ-13 / D-005). */
+  const focusCreateButton = useCallback(() => {
+    const el = document.querySelector<HTMLButtonElement>("button.app-shell__create");
+    el?.focus();
+  }, []);
+
+  /** キャンセル経路: フォーム close + + ボタンへ focus 復帰. */
+  const handleCancel = useCallback(() => {
+    closeForm();
+    focusCreateButton();
+  }, [closeForm, focusCreateButton]);
+
+  // BL-104 / REQ-10: 開いた直後に先頭 input (タスク名) へ focus を移す.
+  useEffect(() => {
+    if (!formOpen) return;
+    const el = document.getElementById("tomorrow-task-name") as HTMLInputElement | null;
+    el?.focus();
+  }, [formOpen]);
+
+  // BL-104 / REQ-6: Escape でフォームを閉じ, + へ focus を戻す.
+  useEffect(() => {
+    if (!formOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      closeForm();
+      focusCreateButton();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [formOpen, closeForm, focusCreateButton]);
 
   // 起票成功時: ["tomorrow"] のみ invalidate (D-005).
   const invalidateTomorrow = useCallback(() => {
@@ -308,13 +360,13 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
       try {
         await createMutation.mutateAsync(cmd);
       } catch {
-        // 失敗時の通知は onError で処理済み. unhandled rejection を抑制する.
+        // BL-104 / REQ-8: 失敗時はフォームを閉じない (入力値も保持).
+        return;
       }
-      setName("");
-      setProjectId("");
-      setPriority("normal");
+      // BL-104 / REQ-7 / D-004: 成功時のみ自動 close.
+      closeForm();
     },
-    [name, projectId, priority, createMutation],
+    [name, projectId, priority, createMutation, closeForm],
   );
 
   const handleMoveToToday = useCallback(
@@ -382,20 +434,24 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
         <h1>明日のタスク</h1>
       </header>
 
-      {/* BL-059 / REQ-5-2: 起票フォームを <TaskFormCard> に置換 (V-6 / V-7 反映). */}
-      <TaskFormCard
-        projects={projects}
-        projectId={projectId}
-        onProjectIdChange={setProjectId}
-        priority={priority}
-        onPriorityChange={setPriority}
-        name={name}
-        onNameChange={setName}
-        onSubmit={handleCreate}
-        idPrefix="tomorrow-create"
-        inputId="tomorrow-task-name"
-        formAriaLabel="明日のタスク起票フォーム"
-      />
+      {/* BL-059 / REQ-5-2: 起票フォームを <TaskFormCard> に置換 (V-6 / V-7 反映).
+          BL-104 / REQ-4: `?create=1` のときのみ条件付き描画 (D-001). */}
+      {formOpen && (
+        <TaskFormCard
+          projects={projects}
+          projectId={projectId}
+          onProjectIdChange={setProjectId}
+          priority={priority}
+          onPriorityChange={setPriority}
+          name={name}
+          onNameChange={setName}
+          onSubmit={handleCreate}
+          onCancel={handleCancel}
+          idPrefix="tomorrow-create"
+          inputId="tomorrow-task-name"
+          formAriaLabel="明日のタスク起票フォーム"
+        />
+      )}
 
       {/* REQ-6: 空状態は <ul> の外に出し, listitem role と分離する.
           (テストは tasks > 0 のときだけ listitem 数を assert する想定.)

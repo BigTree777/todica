@@ -11,6 +11,7 @@
  *   4. カスケード null: 紐付いたタスクは削除されず, projectId が null になる. 一覧から消えない.
  */
 import { expect, type Page, test } from "@playwright/test";
+import { createFormLocator, openCreateForm } from "./helpers/floating-create-button.js";
 
 function taskRow(page: Page, taskName: string) {
   // BL-070 追従: タスク名は <input aria-label="{name} の名前"> の value に入る.
@@ -43,15 +44,13 @@ test("プロジェクトを削除すると紐付いていたタスクは残る (
 
   // 1. プロジェクト作成
   await page.goto("/projects");
-  // BL-070 (inline-edit-all-cards) 追従:
-  //   表示モードに常時 input + visually-hidden label "プロジェクト名" が追加されるため,
-  //   page.getByLabel("プロジェクト名") は複数マッチで strict violation になる可能性がある.
-  //   起票 form は <form aria-label="プロジェクト作成フォーム"> でスコープを絞る.
-  await page
-    .getByRole("form", { name: "プロジェクト作成フォーム" })
-    .getByLabel("プロジェクト名")
-    .fill(projectName);
-  await page.getByRole("button", { name: "追加", exact: true }).click();
+  // BL-104 (floating-create-button) 追従: 起票フォームは初期非表示.
+  // + ボタンを押して開く. + に対応する form aria-label でスコープを絞る (BL-070 と同様).
+  await openCreateForm(page, "projects");
+  await createFormLocator(page, "projects").getByLabel("プロジェクト名").fill(projectName);
+  await createFormLocator(page, "projects")
+    .getByRole("button", { name: "追加", exact: true })
+    .click();
   // BL-070 追従: プロジェクト名は表示モードの input.value で表示される.
   // Playwright には getByDisplayValue が無いため input[value="..."] で取得する.
   await expect(page.locator(`.project-card input[value="${projectName}"]`)).toBeVisible();
@@ -59,8 +58,10 @@ test("プロジェクトを削除すると紐付いていたタスクは残る (
   // 2. タスクに紐付けて起票
   //    BL-065 (project-toggle-removal): <select> から「目的のプロジェクト」を直接選ぶ.
   //    旧 BL-041 トグル button 連打方式 (= maxIterations ループ) は不要.
+  //    BL-104 追従: + ボタンで起票フォームを開いてから入力する.
   await page.goto("/today");
-  await page.getByLabel("タスク名").fill(taskName);
+  await openCreateForm(page, "today");
+  await createFormLocator(page, "today").getByLabel("タスク名").fill(taskName);
 
   const select = projectSelect(page);
   await expect(select).toBeVisible();
@@ -69,7 +70,7 @@ test("プロジェクトを削除すると紐付いていたタスクは残る (
   // 選択直後, `<select>` の表示テキスト (= 選択中 option) が projectName を含む.
   await expect(select).toHaveValue(/.+/); // 非空 (= プロジェクトなしから外れた).
 
-  await page.getByRole("button", { name: "追加", exact: true }).click();
+  await createFormLocator(page, "today").getByRole("button", { name: "追加", exact: true }).click();
   await expect(taskRow(page, taskName)).toBeVisible();
 
   // 3. プロジェクト削除

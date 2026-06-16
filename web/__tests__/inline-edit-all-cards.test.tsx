@@ -63,6 +63,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Priority, Task } from "@todica/domain/task";
 import type { ComponentType, ReactNode } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Project, ProjectRepository } from "../src/repositories/project-repository.js";
@@ -434,9 +435,24 @@ function createTestQueryClient(): QueryClient {
   });
 }
 
+/**
+ * BL-104 追従: 起票フォームは `?create=1` 付き URL でのみ描画される.
+ *   本ファイルは TodayView / TomorrowView / ProjectsView / RoutinesView を
+ *   横断的に検証するため, クエリ部分のみを `?create=1` 固定にして
+ *   どのビュー実装も「起票フォームが開いた状態」になる用に MemoryRouter で wrap する.
+ *   起票フォームを使わないシナリオ (= 既存カード編集系) は ?create=1 の有無で
+ *   挙動が変わらないので影響しない.
+ */
 function renderWithQueryClient(ui: ReactNode): ReturnType<typeof render> {
   const queryClient = createTestQueryClient();
-  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+  return render(
+    <MemoryRouter
+      initialEntries={["/today?create=1"]}
+      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+    >
+      <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+    </MemoryRouter>,
+  );
 }
 
 // ============================================================

@@ -11,31 +11,23 @@
  * (BL-027 クロスレイヤ整合性枠の「日次リセット連動」サブ項目).
  */
 import { expect, test } from "@playwright/test";
+import { createFormLocator, openCreateForm } from "./helpers/floating-create-button.js";
 
 test.describe("ルーティン", () => {
   test("ルーティンを作成すると一覧に表示される", async ({ page }) => {
     await page.goto("/routines");
     const routineName = `R作成 ${Date.now()}`;
 
-    // BL-061 (routine-card-component) 追従: name input の label を「名前」→「ルーティン名」に変更
-    // (= placeholder と一致させ, visually-hidden 化したときも文脈が明確になる NFR-NAME-LABEL-CHANGE).
-    // BL-070 追従: 表示モードに同名 visually-hidden label が追加されるため form でスコープを絞る.
-    await page
-      .getByRole("form", { name: "ルーティン作成フォーム" })
-      .getByLabel("ルーティン名")
-      .fill(routineName);
+    // BL-104 追従: 起票フォームは + ボタンで開く折りたたみ式.
+    await openCreateForm(page, "routines");
+    const form = createFormLocator(page, "routines");
+
+    // BL-061 (routine-card-component) / BL-070 追従: form scope で取得する.
+    await form.getByLabel("ルーティン名").fill(routineName);
     // 月曜・火曜にチェック (任意の選択).
-    // BL-070 追従: 表示モードにも曜日 checkbox が常時表示されるため
-    // form scope 内の checkbox を明示的に取得する.
-    await page
-      .getByRole("form", { name: "ルーティン作成フォーム" })
-      .getByLabel("月", { exact: true })
-      .check();
-    await page
-      .getByRole("form", { name: "ルーティン作成フォーム" })
-      .getByLabel("火", { exact: true })
-      .check();
-    await page.getByRole("button", { name: "追加" }).click();
+    await form.getByLabel("月", { exact: true }).check();
+    await form.getByLabel("火", { exact: true }).check();
+    await form.getByRole("button", { name: "追加" }).click();
 
     // BL-070 (inline-edit-all-cards) 追従: ルーティン名は input.value で表示される.
     // Playwright には getByDisplayValue が無いため input[value="..."] で取得する.
@@ -46,19 +38,13 @@ test.describe("ルーティン", () => {
     await page.goto("/routines");
     const routineName = `R削除 ${Date.now()}`;
 
-    // BL-061 (routine-card-component) 追従: 「名前」→「ルーティン名」.
-    // BL-070 追従: 表示モードに同名 visually-hidden label が追加されるため form でスコープを絞る.
-    await page
-      .getByRole("form", { name: "ルーティン作成フォーム" })
-      .getByLabel("ルーティン名")
-      .fill(routineName);
-    // BL-070 追従: 表示モードにも曜日 checkbox が常時表示されるため
-    // form scope 内の checkbox を明示的に取得する.
-    await page
-      .getByRole("form", { name: "ルーティン作成フォーム" })
-      .getByLabel("月", { exact: true })
-      .check();
-    await page.getByRole("button", { name: "追加" }).click();
+    // BL-104 追従: + ボタンで起票フォームを開く.
+    await openCreateForm(page, "routines");
+    const form = createFormLocator(page, "routines");
+
+    await form.getByLabel("ルーティン名").fill(routineName);
+    await form.getByLabel("月", { exact: true }).check();
+    await form.getByRole("button", { name: "追加" }).click();
     // BL-070 追従: routine 名は input.value で表示される.
     // Playwright には getByDisplayValue が無いため input[value="..."] で取得する.
     await expect(page.locator(`.routine-card input[value="${routineName}"]`)).toBeVisible();

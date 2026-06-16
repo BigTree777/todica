@@ -30,6 +30,12 @@ export interface ProjectFormCardProps {
   inputId?: string;
   /** form の aria-label (default: "プロジェクト作成フォーム"). */
   formAriaLabel?: string;
+  /**
+   * 「キャンセル」 button の押下ハンドラ (BL-104 / REQ-5).
+   * 親 view が `?create=1` クエリを削除してフォームを閉じる経路に接続する.
+   * 単体テスト向けの直接 render 時は省略可能 (default: no-op).
+   */
+  onCancel?: () => void;
 }
 
 export function ProjectFormCard(props: ProjectFormCardProps): JSX.Element {
@@ -39,6 +45,7 @@ export function ProjectFormCard(props: ProjectFormCardProps): JSX.Element {
     onSubmit,
     inputId = "project-name",
     formAriaLabel = "プロジェクト作成フォーム",
+    onCancel,
   } = props;
 
   return (
@@ -59,6 +66,9 @@ export function ProjectFormCard(props: ProjectFormCardProps): JSX.Element {
         onChange={(e) => onNameChange(e.target.value)}
         required
       />
+      <button type="button" className="button project-card__cancel" onClick={onCancel}>
+        キャンセル
+      </button>
       <button type="submit" className="button button--primary project-card__submit">
         追加
       </button>
