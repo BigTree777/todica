@@ -11,14 +11,15 @@
  *   AC-2: /tomorrow / /projects / /routines で aria-label がそれぞれ
  *         「タスクを追加」「プロジェクトを追加」「ルーティンを追加」になる.
  *   AC-3: /focus, /settings, /trash, /setup, /login で + ボタンが DOM 上に存在しない.
- *   AC-6: + 押下時に `?create=1` が URL に追加され, aria-expanded が true に変わる.
- *   AC-7: 同じ + ボタン取得経路 (.app-shell__create) で他クエリ保持を機械的に確認する.
+ *   REQ-3 / D-001: + 押下時に `?create=1` が URL に追加され, aria-expanded が true に変わる.
+ *   REQ-3 / D-001: 同じ + ボタン取得経路 (.app-shell__create) で他クエリ保持を機械的に確認する.
  *   AC-10: + ボタンの DOM 順序が「ハンバーガー → + → 更新」になっている.
  *
  * 本ファイルで扱わない受け入れ基準:
- *   AC-4 / AC-5 / AC-8 / AC-9 / AC-11: フォーム描画 / 起票成功 / 起票失敗 等は
- *     各 view (today / tomorrow / projects / routines) の本体テストおよび E2E に任せる.
- *     本ファイルは AppShell 単体の責務 (+ ボタンの表示判定とクエリ書き換え) に絞る.
+ *   AC-4 / AC-5 / AC-6 / AC-7 / AC-8 / AC-9 / AC-11: フォーム描画 / 起票成功 / 起票失敗 /
+ *     キャンセル / Escape は各 view (today / tomorrow / projects / routines) の本体テスト
+ *     および E2E (BL-106 で login 共通化後に有効化) に任せる. 本ファイルは AppShell 単体の
+ *     責務 (+ ボタンの表示判定とクエリ書き換え) に絞る.
  *
  * 設計意図:
  *   - <MemoryRouter initialEntries={...}> で route を切り替えれば AppShell 内の
@@ -269,10 +270,10 @@ describe("BL-104 AC-3: + ボタンが描画されないルート (REQ-2 / D-002)
 });
 
 // ============================================================
-// AC-6 / D-001 / D-004: + 押下で ?create=1 が URL に追加される
+// REQ-3 / D-001 / D-004: + 押下で ?create=1 が URL に追加される
 // ============================================================
 
-describe("BL-104 AC-6 / D-001: + 押下で ?create=1 が URL に追加され aria-expanded が true に変わる", () => {
+describe("BL-104 REQ-3 / D-001: + 押下で ?create=1 が URL に追加され aria-expanded が true に変わる", () => {
   /**
    * シナリオ:
    *   Given /today を表示している かつ ?create クエリが付いていない
@@ -314,10 +315,10 @@ describe("BL-104 AC-6 / D-001: + 押下で ?create=1 が URL に追加され ari
 });
 
 // ============================================================
-// AC-7 / D-001: 既存の他クエリを保持する
+// REQ-3 / D-001: 既存の他クエリを保持する
 // ============================================================
 
-describe("BL-104 AC-7 / D-001: + 押下時に他クエリを保持する (REQ-3)", () => {
+describe("BL-104 REQ-3 / D-001: + 押下時に他クエリを保持する", () => {
   /**
    * シナリオ:
    *   Given /today?foo=bar を表示している

@@ -41,38 +41,28 @@ const API_BASE = "http://localhost:3000";
 // ============================================================
 
 test.describe("BL-104 AC-11: 起票フォームの初期描画", () => {
-  test.each([
-    {
-      path: "/today",
-      formName: /^タスク起票フォーム$/,
-    },
-    {
-      path: "/tomorrow",
-      formName: /^(明日のタスク起票フォーム|タスク起票フォーム)$/,
-    },
-    {
-      path: "/projects",
-      formName: /^プロジェクト(作成|起票)フォーム$/,
-    },
-    {
-      path: "/routines",
-      formName: /^ルーティン(作成|起票)フォーム$/,
-    },
-  ])("$path の初期状態では起票フォーム ($formName) が DOM 上に存在しない", async ({
-    page,
-    path,
-    formName,
-  }) => {
-    await page.goto(path);
+  // path ごとに明示展開する (Playwright には Vitest の test.each が無い).
+  const cases = [
+    { path: "/today", formName: /^タスク起票フォーム$/ },
+    { path: "/tomorrow", formName: /^(明日のタスク起票フォーム|タスク起票フォーム)$/ },
+    { path: "/projects", formName: /^プロジェクト(作成|起票)フォーム$/ },
+    { path: "/routines", formName: /^ルーティン(作成|起票)フォーム$/ },
+  ];
+  for (const { path, formName } of cases) {
+    test(`${path} の初期状態では起票フォーム (${formName}) が DOM 上に存在しない`, async ({
+      page,
+    }) => {
+      await page.goto(path);
 
-    // + ボタンは存在する (= ルートは表示対象).
-    await expect(
-      page.getByRole("button", { name: /タスクを追加|プロジェクトを追加|ルーティンを追加/ }),
-    ).toBeVisible();
+      // + ボタンは存在する (= ルートは表示対象).
+      await expect(
+        page.getByRole("button", { name: /タスクを追加|プロジェクトを追加|ルーティンを追加/ }),
+      ).toBeVisible();
 
-    // 起票フォームは描画されていない.
-    await expect(page.getByRole("form", { name: formName })).toHaveCount(0);
-  });
+      // 起票フォームは描画されていない.
+      await expect(page.getByRole("form", { name: formName })).toHaveCount(0);
+    });
+  }
 });
 
 // ============================================================
