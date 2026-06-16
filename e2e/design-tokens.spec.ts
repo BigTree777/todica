@@ -30,7 +30,7 @@
  *   - 実際の red は vitest 側 (web/__tests__/design-tokens.test.ts) で起きる.
  *     本テストは実装後の回帰防止 + 視覚的同値確認を主目的とする.
  */
-import { type APIRequestContext, type Locator, expect, test } from "@playwright/test";
+import { type APIRequestContext, expect, type Locator, test } from "@playwright/test";
 
 const API_BASE = "http://localhost:3000";
 const AUTH_HEADER = { Authorization: "Bearer dev-token" };

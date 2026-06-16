@@ -13,8 +13,8 @@ import { useQueryClient } from "@tanstack/react-query";
  *   CR-004: 「サーバの値を採用」選択時のコールバック。
  */
 import { useCallback, useState } from "react";
-import { dequeue } from "../offline-queue.js";
 import type { QueueEntry } from "../offline-queue.js";
+import { dequeue } from "../offline-queue.js";
 
 export interface ConflictDialogState {
   open: boolean;

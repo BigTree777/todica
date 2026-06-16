@@ -18,7 +18,7 @@
  *     Then  exit 0 で完了し、TS エラーが出力されない
  *
  *   シナリオ 3: Capacitor ビルド成果物が lint 対象から除外される
- *     Given biome.json の files.ignore に android/app/src/main/assets/public/ が含まれている
+ *     Given biome.json の files.includes に android/app/src/main/assets/public/ が含まれている
  *     When  npm run lint を実行する
  *     Then  android/app/src/main/assets/public/ 配下のファイルへの診断が出力されない
  *
@@ -119,24 +119,25 @@ describe("lint / typecheck 修復 (BL-048)", () => {
   /**
    * シナリオ 3: Capacitor ビルド成果物が lint 対象から除外される
    *   spec.md 受け入れ基準:
-   *     Given biome.json の files.ignore に android/app/src/main/assets/public/ が含まれている
+   *     Given biome.json の files.includes に android/app/src/main/assets/public/ が含まれている
    *     Then  android/app/src/main/assets/public/ 配下のファイルへの診断が出力されない
    *
    * このシナリオはコマンド実行前に biome.json の設定内容を静的検証する
    */
   describe("シナリオ 3: Capacitor ビルド成果物が lint 対象から除外される", () => {
-    it("biome.json の files.ignore に android/app/src/main/assets/public が含まれている", () => {
+    it("biome.json の files.includes に android/app/src/main/assets/public が含まれている", () => {
       const biomeJsonPath = resolve(repoRoot, "biome.json");
       const biomeConfig = JSON.parse(readFileSync(biomeJsonPath, "utf-8"));
 
-      // files.ignore は配列形式で定義されている
-      const ignorePatterns: string[] = biomeConfig?.files?.ignore ?? [];
-      const hasCapacitorPath = ignorePatterns.some((pattern) =>
-        pattern.includes("android/app/src/main/assets/public"),
+      // biome 2 では files.includes の負のグロブ ("!...") で除外を表現する
+      const includesPatterns: string[] = biomeConfig?.files?.includes ?? [];
+      const hasCapacitorPath = includesPatterns.some(
+        (pattern) =>
+          pattern.startsWith("!") && pattern.includes("android/app/src/main/assets/public"),
       );
       expect(
         hasCapacitorPath,
-        `biome.json の files.ignore に android/app/src/main/assets/public が含まれていません。現在の files.ignore: ${JSON.stringify(ignorePatterns)}`,
+        `biome.json の files.includes に android/app/src/main/assets/public の除外パターンが含まれていません。現在の files.includes: ${JSON.stringify(includesPatterns)}`,
       ).toBe(true);
     });
 

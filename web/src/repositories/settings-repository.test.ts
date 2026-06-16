@@ -1,4 +1,4 @@
-import { http, HttpResponse } from "msw";
+import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 /**
  * 単体テスト: HttpSettingsRepository (BL-009 / settings-day-boundary).
@@ -29,8 +29,8 @@ import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { WebAuthStorage } from "../auth/auth-storage.js";
 import { setAuthStorage } from "../auth/authed-fetch.js";
-import { HttpSettingsRepository, PatchConflictError } from "./settings-repository.js";
 import type { Settings } from "./settings-repository.js";
+import { HttpSettingsRepository, PatchConflictError } from "./settings-repository.js";
 
 const BASE_URL = "http://localhost:3000";
 const AUTH_TOKEN = "test-token";

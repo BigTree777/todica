@@ -437,6 +437,7 @@ export function TodayView(props: TodayViewProps): JSX.Element {
             BL-047 / REQ-2: <div> から <span> に変更し, header 内に配置する.
             plan.md §UI 設計 D-008: 楽観 UI を持たず, サーバ正本値 (completionCount) を
             再フェッチで反映する. */}
+        {/* biome-ignore lint/a11y/useAriaPropsSupportedByRole: span に aria-label を当ててカウンタの意味を SR に伝える */}
         <span className="today-view__completion-count" aria-label="今日の完了タスク数">
           今日の完了: {completionCount}
         </span>

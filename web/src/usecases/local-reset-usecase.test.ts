@@ -48,13 +48,7 @@ const BOUNDARY_UTC = "2026-06-07T19:00:00.000Z"; // 前回の境界時刻 UTC
 
 type Row = Record<string, unknown>;
 
-function makeMockDb(
-  initialData: {
-    settings?: Row[];
-    tasks?: Row[];
-    counter?: Row[];
-  } = {},
-) {
+function makeMockDb(initialData: { settings?: Row[]; tasks?: Row[]; counter?: Row[] } = {}) {
   const data = {
     settings: initialData.settings ?? [
       {

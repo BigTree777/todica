@@ -5,9 +5,8 @@
  * レコードが存在しない場合はデフォルト値を挿入して返す.
  */
 
-import type { PatchSettingsCommand, Settings, SettingsRepository } from "./settings-repository.js";
-
 import type { LocalDb } from "./local-db.js";
+import type { PatchSettingsCommand, Settings, SettingsRepository } from "./settings-repository.js";
 
 type Row = Record<string, unknown>;
 

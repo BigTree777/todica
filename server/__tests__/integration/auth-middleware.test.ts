@@ -20,7 +20,7 @@ import type { FakeClock } from "@todica/domain/clock";
 import type { Hono } from "hono";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { InMemorySessionRepository } from "../helpers/login-for-test.js";
-import { TEST_PASSWORD, buildAuthTestApp, loginForTest } from "../helpers/login-for-test.js";
+import { buildAuthTestApp, loginForTest, TEST_PASSWORD } from "../helpers/login-for-test.js";
 
 let app: Hono;
 let sessionRepo: InMemorySessionRepository;

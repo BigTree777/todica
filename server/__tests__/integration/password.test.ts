@@ -49,13 +49,13 @@ import {
   InMemoryTaskRepository,
 } from "../helpers/in-memory-repositories.js";
 import {
-  InMemoryPasswordRepository,
-  InMemorySessionRepository,
-  TEST_INITIAL_TIME,
-  TEST_PASSWORD,
   authHeadersForToken,
   buildAuthTestApp,
+  InMemoryPasswordRepository,
+  InMemorySessionRepository,
   loginForTest,
+  TEST_INITIAL_TIME,
+  TEST_PASSWORD,
 } from "../helpers/login-for-test.js";
 
 const NEW_PASSWORD = "new-password-1";

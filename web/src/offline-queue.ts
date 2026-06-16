@@ -14,8 +14,9 @@
  *   NFR-SW-03: retryCount が 5 以上のエントリはキューから除外する。
  *   CR-001: 412 Precondition Failed 時は ConflictError を throw する。
  */
-import { openDB } from "idb";
+
 import type { IDBPDatabase } from "idb";
+import { openDB } from "idb";
 import { authedFetch } from "./auth/authed-fetch.js";
 
 const DB_NAME = "todica-offline-queue";

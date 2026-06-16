@@ -120,6 +120,7 @@ export function AppShell(): JSX.Element {
       {/* オーバーレイ背景: メニューが開いているときのみ表示 (REQ-3) */}
       {menuOpen && (
         // biome-ignore lint/a11y/useKeyWithClickEvents: オーバーレイ背景はクリック専用の半透明幕
+        // biome-ignore lint/a11y/noStaticElementInteractions: オーバーレイ背景はクリック専用の半透明幕
         <div className="app-shell__overlay" onClick={closeMenu} />
       )}
 
@@ -131,6 +132,7 @@ export function AppShell(): JSX.Element {
         - menuOpen=true: role="dialog", aria-modal="true", aria-label="ナビゲーションメニュー"
           → BL-049 テストの getByRole("dialog") で取得可能
       */}
+      {/* biome-ignore lint/a11y/useAriaPropsSupportedByRole: menuOpen=true 時のみ role="dialog" になるため aria-modal は条件付きで有効 */}
       <nav
         className={`app-shell__menu${menuOpen ? " app-shell__menu--open" : ""}`}
         role={menuOpen ? "dialog" : undefined}

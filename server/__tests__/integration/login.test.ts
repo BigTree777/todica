@@ -33,11 +33,11 @@ import {
   InMemoryTaskRepository,
 } from "../helpers/in-memory-repositories.js";
 import {
+  buildAuthTestApp,
   InMemoryPasswordRepository,
   InMemorySessionRepository,
   TEST_INITIAL_TIME,
   TEST_PASSWORD,
-  buildAuthTestApp,
 } from "../helpers/login-for-test.js";
 
 let app: Hono;

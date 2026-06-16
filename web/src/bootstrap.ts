@@ -1,6 +1,6 @@
 import type { AppConfig, Repositories } from "./app.js";
-import { CapacitorAuthStorage, WebAuthStorage } from "./auth/auth-storage.js";
 import type { AuthStorage } from "./auth/auth-storage.js";
+import { CapacitorAuthStorage, WebAuthStorage } from "./auth/auth-storage.js";
 import { setAuthStorage } from "./auth/authed-fetch.js";
 import { HttpProjectRepository } from "./repositories/project-repository.js";
 import { HttpRoutineRepository } from "./repositories/routine-repository.js";

@@ -4,6 +4,7 @@
  * ProjectRepository インターフェースを実装し、SQLite の projects テーブルを操作する.
  */
 
+import type { LocalDb } from "./local-db.js";
 import type {
   CreateProjectCommand,
   DeleteProjectCommand,
@@ -11,8 +12,6 @@ import type {
   ProjectRepository,
   UpdateProjectCommand,
 } from "./project-repository.js";
-
-import type { LocalDb } from "./local-db.js";
 
 type Row = Record<string, unknown>;
 

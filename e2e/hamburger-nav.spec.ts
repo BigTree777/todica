@@ -19,7 +19,7 @@
  * 既に BL-049 の仕様どおりに実装済み. 本テストは「無改修で全件 pass する」状態を
  * 維持するための回帰ガード.
  */
-import { type Page, expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 /**
  * ハンバーガーボタンを押してメニュー (`role="dialog"`) を開く. 開いたメニューを返す.

@@ -21,7 +21,7 @@ import type { Hono } from "hono";
  *   - Idempotency-Key 再送による二重カウント防止 (NFR-020)
  */
 import { beforeEach, describe, expect, it } from "vitest";
-import { TEST_INITIAL_TIME, authHeaders, buildTestApp } from "../helpers/build-test-app.js";
+import { authHeaders, buildTestApp, TEST_INITIAL_TIME } from "../helpers/build-test-app.js";
 import type {
   InMemoryCounterRepository,
   InMemoryTaskRepository,

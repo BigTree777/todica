@@ -23,7 +23,7 @@
  * FocusSelection はサーバ全体で単一 (singleton) のため, 各テスト冒頭で
  * 明示 focus を解除して前提状態 (currentTaskId = null) を作る.
  */
-import { type APIRequestContext, type Page, expect, test } from "@playwright/test";
+import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 
 const API_BASE = "http://localhost:3000";
 const AUTH_HEADER = { Authorization: "Bearer dev-token" };

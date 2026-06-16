@@ -9,7 +9,7 @@
  * (best practice は dev チームの優先度判断に委ねる)
  */
 import AxeBuilder from "@axe-core/playwright";
-import { type Page, expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 async function scanWcag(page: Page) {
   return new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();

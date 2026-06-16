@@ -32,11 +32,10 @@ describe("obsolete skip guard", () => {
     expect(source.match(/\b(?:describe|it)\.skip\b/g) ?? []).toHaveLength(0);
   });
 
-  it.each(targetFiles.filter((p) => !retiredFiles.has(p)))(
-    "%s に BL-XXX 履歴表現が存在しない",
-    (relativePath) => {
-      const source = readFileSync(resolve(repoRoot, relativePath), "utf8");
-      expect(source.match(/BL-\d{3}/g) ?? []).toHaveLength(0);
-    },
-  );
+  it.each(
+    targetFiles.filter((p) => !retiredFiles.has(p)),
+  )("%s に BL-XXX 履歴表現が存在しない", (relativePath) => {
+    const source = readFileSync(resolve(repoRoot, relativePath), "utf8");
+    expect(source.match(/BL-\d{3}/g) ?? []).toHaveLength(0);
+  });
 });

@@ -20,8 +20,8 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   RestoreTaskCommand,
-  TrashRepository,
   TrashedTask,
+  TrashRepository,
 } from "../../repositories/trash-repository.js";
 import { TrashView } from "./trash-view.js";
 

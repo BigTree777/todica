@@ -33,7 +33,9 @@ self.addEventListener("sync", (event: { tag: string; waitUntil: (p: Promise<void
       self.clients
         .matchAll({ includeUncontrolled: true })
         .then((clients: Array<{ postMessage: (msg: unknown) => void }>) => {
-          clients.forEach((client) => client.postMessage({ type: "SYNC_QUEUE" }));
+          clients.forEach((client) => {
+            client.postMessage({ type: "SYNC_QUEUE" });
+          });
         }),
     );
   }
