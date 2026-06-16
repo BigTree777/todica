@@ -11,6 +11,8 @@
  *   CR-004: 「サーバの値を採用」選択時のコールバック。
  */
 
+import type { JSX } from "react";
+
 export interface ConflictDialogProps {
   open: boolean;
   localValue: Record<string, unknown>;

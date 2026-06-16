@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { JSX } from "react";
 /**
  * ルーティン管理ビュー .
  *

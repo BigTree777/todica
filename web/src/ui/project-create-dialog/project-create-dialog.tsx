@@ -20,7 +20,9 @@
  *   - 成功時: ["projects"] invalidate + 入力クリア + onClose(). オンライン成功時
  *     (result が Project) のみ onCreated(result) で親へ自動選択を伝える (plan D-003).
  */
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { JSX } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { notifyError } from "../../error-notification.js";
 import { dequeue, enqueue, getAll } from "../../offline-queue.js";

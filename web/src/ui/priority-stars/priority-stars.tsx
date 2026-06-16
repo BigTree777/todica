@@ -1,4 +1,5 @@
 import type { Priority } from "@todica/domain/task";
+import type { JSX } from "react";
 /**
  * `<PriorityStars />` .
  *

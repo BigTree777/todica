@@ -16,6 +16,7 @@
  *   - D-004: input id default = "project-name" (既存テスト互換).
  *   - NFR-FORM-ARIA-LABEL-PRESERVE: aria-label default = "プロジェクト作成フォーム".
  */
+import type { JSX } from "react";
 import "./project-card.css";
 
 export interface ProjectFormCardProps {

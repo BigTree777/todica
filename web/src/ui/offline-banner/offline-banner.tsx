@@ -7,6 +7,7 @@
  * 仕様:
  *   WQ-004: オフライン時は UI に「オフライン中」を示す表示を出す。
  */
+import type { JSX } from "react";
 import { useNetworkStatus } from "../../hooks/use-network-status.js";
 
 export function OfflineBanner(): JSX.Element | null {

@@ -23,7 +23,9 @@
  *   - D-009: input id は `routine-name-{routine.id}` で起票側 `routine-name` と衝突回避.
  *   - P-003: PriorityStars idPrefix は `routine-{routine.id}` で起票側 `routine-create` と衝突回避.
  */
+
 import type { Priority } from "@todica/domain/task";
+import type { JSX } from "react";
 import type { WebRoutine } from "../../repositories/routine-repository.js";
 import { PriorityStars } from "../priority-stars/priority-stars.js";
 import "./routine-card.css";

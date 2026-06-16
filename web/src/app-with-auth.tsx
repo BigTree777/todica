@@ -8,6 +8,7 @@
  *
  * children は任意の React node. main.tsx から既存ルート (`<Routes>...</Routes>`) を渡す.
  */
+import type { JSX } from "react";
 import { type ReactNode, useEffect, useState } from "react";
 import { type AuthStorage, WebAuthStorage } from "./auth/auth-storage.js";
 import { AUTH_EXPIRED_EVENT, setAuthStorage } from "./auth/authed-fetch.js";
