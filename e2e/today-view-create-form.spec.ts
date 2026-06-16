@@ -17,14 +17,14 @@
  *   - サーバ初期状態には既存テストの残骸が含まれうるため, テスト由来の id でのみ assert する.
  */
 import { expect, test } from "@playwright/test";
+import { getApiAuthHeader } from "./helpers/api-auth.js";
 import { createFormLocator, openCreateForm } from "./helpers/floating-create-button.js";
 
 const API_BASE = "http://localhost:3000";
-const AUTH_HEADER = { Authorization: "Bearer dev-token" };
 
 test.describe("BL-039 今日ビュー起票フォームのスコープ", () => {
   test("シナリオ: 起票フォーム内に「期限」UI が存在しない (REQ-1)", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/today");
 
     // BL-104 追従: 起票フォームは初期非表示. + ボタンを押して展開する.
     await openCreateForm(page, "today");
@@ -48,7 +48,8 @@ test.describe("BL-039 今日ビュー起票フォームのスコープ", () => {
     page,
     request,
   }) => {
-    await page.goto("/");
+    const authHeader = await getApiAuthHeader(request, API_BASE);
+    await page.goto("/today");
 
     const taskName = `BL039起票 ${Date.now()}`;
 
@@ -63,7 +64,7 @@ test.describe("BL-039 今日ビュー起票フォームのスコープ", () => {
 
     // サーバ側でも dueDate=today で永続化されていることを確認する.
     const response = await request.get(`${API_BASE}/api/v1/tasks?dueDate=today`, {
-      headers: AUTH_HEADER,
+      headers: authHeader,
     });
     expect(response.ok()).toBe(true);
     const body = (await response.json()) as {

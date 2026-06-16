@@ -19,9 +19,9 @@
  *     方向 (= 確実に検証できる側) を主に確認する.
  */
 import { expect, type Page, test } from "@playwright/test";
+import { getApiAuthHeader } from "./helpers/api-auth.js";
 
 const API_BASE = "http://localhost:3000";
-const AUTH_HEADER = { Authorization: "Bearer dev-token" };
 
 /**
  * AppShell のハンバーガーメニューから「現在のタスク」リンクで /focus に遷移する.
@@ -48,25 +48,26 @@ test.describe("focus-view (/focus) のシナリオ", () => {
     page,
     request,
   }) => {
+    const authHeader = await getApiAuthHeader(request, API_BASE);
     // API 直叩きで今日のタスクを 1 件作成 (priority=highest にして並び先頭に来ることを保証).
     const taskName = `FOCUSビュー表示 ${Date.now()}`;
     const taskId = crypto.randomUUID();
     await request.post(`${API_BASE}/api/v1/tasks`, {
-      headers: { ...AUTH_HEADER, "Idempotency-Key": crypto.randomUUID() },
+      headers: { ...authHeader, "Idempotency-Key": crypto.randomUUID() },
       data: { id: taskId, name: taskName, priority: "highest" },
     });
     // 起票したタスクを明示的に「現在のタスク」として設定する.
     // (他テストが残した既存 task が並び先頭になっていると nextTaskId 経由のフォールバックが
     //  本テスト由来の task を選ばないため.)
     const focusGet = await request.get(`${API_BASE}/api/v1/focus`, {
-      headers: AUTH_HEADER,
+      headers: authHeader,
     });
     const focusBody = (await focusGet.json()) as {
       focus: { version: number };
     };
     await request.put(`${API_BASE}/api/v1/focus`, {
       headers: {
-        ...AUTH_HEADER,
+        ...authHeader,
         "Idempotency-Key": crypto.randomUUID(),
         "If-Match": String(focusBody.focus.version),
       },
@@ -91,27 +92,28 @@ test.describe("focus-view (/focus) のシナリオ", () => {
     page,
     request,
   }) => {
+    const authHeader = await getApiAuthHeader(request, API_BASE);
     // 今日のタスクを 2 件 (current + next) 用意して current 側を完了させる.
     const currentName = `FOCUS完了 ${Date.now()}`;
     const nextName = `FOCUS次 ${Date.now() + 1}`;
     const currentId = crypto.randomUUID();
     const nextId = crypto.randomUUID();
     await request.post(`${API_BASE}/api/v1/tasks`, {
-      headers: { ...AUTH_HEADER, "Idempotency-Key": crypto.randomUUID() },
+      headers: { ...authHeader, "Idempotency-Key": crypto.randomUUID() },
       data: { id: currentId, name: currentName, priority: "highest" },
     });
     await request.post(`${API_BASE}/api/v1/tasks`, {
-      headers: { ...AUTH_HEADER, "Idempotency-Key": crypto.randomUUID() },
+      headers: { ...authHeader, "Idempotency-Key": crypto.randomUUID() },
       data: { id: nextId, name: nextName, priority: "normal" },
     });
     // current を明示 focus に.
     const focusGet = await request.get(`${API_BASE}/api/v1/focus`, {
-      headers: AUTH_HEADER,
+      headers: authHeader,
     });
     const focusBody = (await focusGet.json()) as { focus: { version: number } };
     await request.put(`${API_BASE}/api/v1/focus`, {
       headers: {
-        ...AUTH_HEADER,
+        ...authHeader,
         "Idempotency-Key": crypto.randomUUID(),
         "If-Match": String(focusBody.focus.version),
       },
@@ -120,7 +122,7 @@ test.describe("focus-view (/focus) のシナリオ", () => {
 
     // 完了前の counter を控える.
     const counterBefore = await request.get(`${API_BASE}/api/v1/counter`, {
-      headers: AUTH_HEADER,
+      headers: authHeader,
     });
     const counterBeforeBody = (await counterBefore.json()) as {
       counter: { completedCount: number };
@@ -148,7 +150,7 @@ test.describe("focus-view (/focus) のシナリオ", () => {
     await expect
       .poll(async () => {
         const r = await request.get(`${API_BASE}/api/v1/counter`, {
-          headers: AUTH_HEADER,
+          headers: authHeader,
         });
         const b = (await r.json()) as { counter: { completedCount: number } };
         return b.counter.completedCount;
@@ -157,7 +159,7 @@ test.describe("focus-view (/focus) のシナリオ", () => {
 
     // サーバ side: current task が trashed (= completed) 扱いになっている.
     const trashed = await request.get(`${API_BASE}/api/v1/tasks?trashed=true`, {
-      headers: AUTH_HEADER,
+      headers: authHeader,
     });
     const trashedBody = (await trashed.json()) as {
       tasks: Array<{ id: string; trashedReason: string }>;
@@ -171,26 +173,27 @@ test.describe("focus-view (/focus) のシナリオ", () => {
     page,
     request,
   }) => {
+    const authHeader = await getApiAuthHeader(request, API_BASE);
     const currentName = `FOCUS削除 ${Date.now()}`;
     const nextName = `FOCUS削除次 ${Date.now() + 1}`;
     const currentId = crypto.randomUUID();
     const nextId = crypto.randomUUID();
     await request.post(`${API_BASE}/api/v1/tasks`, {
-      headers: { ...AUTH_HEADER, "Idempotency-Key": crypto.randomUUID() },
+      headers: { ...authHeader, "Idempotency-Key": crypto.randomUUID() },
       data: { id: currentId, name: currentName, priority: "highest" },
     });
     await request.post(`${API_BASE}/api/v1/tasks`, {
-      headers: { ...AUTH_HEADER, "Idempotency-Key": crypto.randomUUID() },
+      headers: { ...authHeader, "Idempotency-Key": crypto.randomUUID() },
       data: { id: nextId, name: nextName, priority: "normal" },
     });
     // current を明示 focus に.
     const focusGet = await request.get(`${API_BASE}/api/v1/focus`, {
-      headers: AUTH_HEADER,
+      headers: authHeader,
     });
     const focusBody = (await focusGet.json()) as { focus: { version: number } };
     await request.put(`${API_BASE}/api/v1/focus`, {
       headers: {
-        ...AUTH_HEADER,
+        ...authHeader,
         "Idempotency-Key": crypto.randomUUID(),
         "If-Match": String(focusBody.focus.version),
       },
@@ -199,7 +202,7 @@ test.describe("focus-view (/focus) のシナリオ", () => {
 
     // 削除前の counter.
     const counterBefore = await request.get(`${API_BASE}/api/v1/counter`, {
-      headers: AUTH_HEADER,
+      headers: authHeader,
     });
     const counterBeforeBody = (await counterBefore.json()) as {
       counter: { completedCount: number };
@@ -228,7 +231,7 @@ test.describe("focus-view (/focus) のシナリオ", () => {
     await expect
       .poll(async () => {
         const r = await request.get(`${API_BASE}/api/v1/counter`, {
-          headers: AUTH_HEADER,
+          headers: authHeader,
         });
         const b = (await r.json()) as { counter: { completedCount: number } };
         return b.counter.completedCount;
@@ -237,7 +240,7 @@ test.describe("focus-view (/focus) のシナリオ", () => {
 
     // サーバ side: current task が trashedReason = "deleted" 扱い.
     const trashed = await request.get(`${API_BASE}/api/v1/tasks?trashed=true`, {
-      headers: AUTH_HEADER,
+      headers: authHeader,
     });
     const trashedBody = (await trashed.json()) as {
       tasks: Array<{ id: string; trashedReason: string }>;

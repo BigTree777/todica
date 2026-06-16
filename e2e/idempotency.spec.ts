@@ -9,20 +9,21 @@
  * 2 回目が DB に再書込しない」ことを保証するには実 HTTP 往復が必要.
  */
 import { expect, test } from "@playwright/test";
+import { getApiAuthHeader } from "./helpers/api-auth.js";
 
 const API_BASE = "http://localhost:3000";
-const AUTH_HEADER = { Authorization: "Bearer dev-token" };
 
 test("同じ Idempotency-Key の 2 回目 POST は 1 回目と同じ応答を返し DB には 1 件しか作らない", async ({
   request,
 }) => {
+  const authHeader = await getApiAuthHeader(request, API_BASE);
   const idempotencyKey = crypto.randomUUID();
   const taskId = crypto.randomUUID();
   const taskName = `冪等テスト ${Date.now()}`;
 
   // 1 回目: 通常通り 201 で task が作成される.
   const first = await request.post(`${API_BASE}/api/v1/tasks`, {
-    headers: { ...AUTH_HEADER, "Idempotency-Key": idempotencyKey },
+    headers: { ...authHeader, "Idempotency-Key": idempotencyKey },
     data: { id: taskId, name: taskName },
   });
   expect(first.status()).toBe(201);
@@ -31,7 +32,7 @@ test("同じ Idempotency-Key の 2 回目 POST は 1 回目と同じ応答を返
   // 2 回目: 同じ Idempotency-Key で body を変えても, 1 回目の応答が再生されるはず.
   // (`name` を別文字列にしても無視されて元の `taskName` が返る)
   const second = await request.post(`${API_BASE}/api/v1/tasks`, {
-    headers: { ...AUTH_HEADER, "Idempotency-Key": idempotencyKey },
+    headers: { ...authHeader, "Idempotency-Key": idempotencyKey },
     data: { id: crypto.randomUUID(), name: `差替テスト ${Date.now()}` },
   });
   expect(second.status()).toBe(201);
@@ -41,7 +42,7 @@ test("同じ Idempotency-Key の 2 回目 POST は 1 回目と同じ応答を返
   // DB 側にも 1 件しか作られていないことを確認.
   // `差替テスト` のタスクは作成されていないはず.
   const listRes = await request.get(`${API_BASE}/api/v1/tasks?trashed=false`, {
-    headers: AUTH_HEADER,
+    headers: authHeader,
   });
   const list = (await listRes.json()) as { tasks: Array<{ id: string; name: string }> };
   const matches = list.tasks.filter((t) => t.name === taskName || t.name.startsWith("差替テスト"));

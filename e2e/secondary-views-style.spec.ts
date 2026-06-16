@@ -33,9 +33,9 @@
  *     並び順 tie-break (BL-043 の教訓) に依存しない.
  */
 import { type APIRequestContext, expect, type Locator, test } from "@playwright/test";
+import { getApiAuthHeader } from "./helpers/api-auth.js";
 
 const API_BASE = "http://localhost:3000";
-const AUTH_HEADER = { Authorization: "Bearer dev-token" };
 
 /** 4 view の一覧 (AC-2 / AC-3 で共用). */
 const VIEWS = [
@@ -62,17 +62,21 @@ async function computedStyle(
 // BL-061 (routine-card-component) 追従: /routines は AC-5 から除外したため seedRoutine ヘルパは撤去.
 
 /** API 直叩きでタスクを起票し, すぐ削除してゴミ箱送りの状態を作る. */
-async function seedTrashedTask(request: APIRequestContext, name: string): Promise<void> {
+async function seedTrashedTask(
+  request: APIRequestContext,
+  authHeader: { Authorization: string },
+  name: string,
+): Promise<void> {
   const id = crypto.randomUUID();
   const created = await request.post(`${API_BASE}/api/v1/tasks`, {
-    headers: { ...AUTH_HEADER, "Idempotency-Key": crypto.randomUUID() },
+    headers: { ...authHeader, "Idempotency-Key": crypto.randomUUID() },
     data: { id, name, dueDate: "today", priority: "normal" },
   });
   expect(created.ok()).toBe(true);
   const body = (await created.json()) as { task: { version: number } };
   const deleted = await request.delete(`${API_BASE}/api/v1/tasks/${id}`, {
     headers: {
-      ...AUTH_HEADER,
+      ...authHeader,
       "Idempotency-Key": crypto.randomUUID(),
       "If-Match": String(body.task.version),
     },
@@ -81,9 +85,12 @@ async function seedTrashedTask(request: APIRequestContext, name: string): Promis
 }
 
 /** API 直叩きでゴミ箱を空にする (AC-7 の前提: 空状態を確実に作る). */
-async function emptyTrash(request: APIRequestContext): Promise<void> {
+async function emptyTrash(
+  request: APIRequestContext,
+  authHeader: { Authorization: string },
+): Promise<void> {
   const res = await request.delete(`${API_BASE}/api/v1/trash`, {
-    headers: { ...AUTH_HEADER, "Idempotency-Key": crypto.randomUUID() },
+    headers: { ...authHeader, "Idempotency-Key": crypto.randomUUID() },
   });
   expect(res.ok()).toBe(true);
 }
@@ -160,9 +167,10 @@ test.describe("secondary-views-shell (BL-045) のスタイル統一", () => {
     // 本テストは secondary-views リスト項目同士が引き続き --radius-md = 12px で
     // 揃っていることの確認に再設計する (現時点では trash のみ対象).
     // Given: 各 view に 1 件以上の項目を API 直叩きで用意する.
+    const authHeader = await getApiAuthHeader(request, API_BASE);
     const suffix = Date.now();
     const trashedName = `STYLEゴミ箱カード ${suffix}`;
-    await seedTrashedTask(request, trashedName);
+    await seedTrashedTask(request, authHeader, trashedName);
 
     const targets = [{ path: "/trash", itemText: trashedName }] as const;
 
@@ -195,8 +203,9 @@ test.describe("secondary-views-shell (BL-045) のスタイル統一", () => {
     request,
   }) => {
     // Given: ゴミ箱にタスクが 1 件以上ある状態で /trash を開く.
+    const authHeader = await getApiAuthHeader(request, API_BASE);
     const trashedName = `STYLEヘッダ ${Date.now()}`;
-    await seedTrashedTask(request, trashedName);
+    await seedTrashedTask(request, authHeader, trashedName);
     await page.goto("/trash");
     await expect(
       page
@@ -221,7 +230,8 @@ test.describe("secondary-views-shell (BL-045) のスタイル統一", () => {
     request,
   }) => {
     // Given: ゴミ箱が空の状態で /trash を開く (前のテストの残骸を API で確実に除去する).
-    await emptyTrash(request);
+    const authHeader = await getApiAuthHeader(request, API_BASE);
+    await emptyTrash(request, authHeader);
     await page.goto("/trash");
     const emptyText = page.getByText("ゴミ箱は空です");
     await expect(emptyText).toBeVisible();

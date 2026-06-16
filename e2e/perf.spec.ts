@@ -8,18 +8,19 @@
  * セットアップに数十秒を要するため本テスト単体のタイムアウトを 5 分に設定.
  */
 import { expect, test } from "@playwright/test";
+import { getApiAuthHeader } from "./helpers/api-auth.js";
 
 const API_BASE = "http://localhost:3000";
-const AUTH_HEADER = { Authorization: "Bearer dev-token" };
 
 test.setTimeout(300_000);
 
 test("1000 件タスク投入下で /today が 1 秒以内に返る", async ({ request }) => {
+  const authHeader = await getApiAuthHeader(request, API_BASE);
   const TARGET_COUNT = 1000;
 
   for (let i = 0; i < TARGET_COUNT; i++) {
     const res = await request.post(`${API_BASE}/api/v1/tasks`, {
-      headers: { ...AUTH_HEADER, "Idempotency-Key": crypto.randomUUID() },
+      headers: { ...authHeader, "Idempotency-Key": crypto.randomUUID() },
       data: { id: crypto.randomUUID(), name: `perf-${i}` },
     });
     expect(res.status()).toBe(201);
@@ -28,7 +29,7 @@ test("1000 件タスク投入下で /today が 1 秒以内に返る", async ({ r
   // 応答時間を計測.
   const t0 = Date.now();
   const res = await request.get(`${API_BASE}/api/v1/today`, {
-    headers: AUTH_HEADER,
+    headers: authHeader,
   });
   const elapsed = Date.now() - t0;
 

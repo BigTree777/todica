@@ -14,9 +14,10 @@
  * 修正は別 BL に切り出すべき.
  */
 import { expect, test } from "@playwright/test";
+import { getApiAuthHeader } from "./helpers/api-auth.js";
+import { openCreateForm } from "./helpers/floating-create-button.js";
 
 const API_BASE = "http://localhost:3000";
-const AUTH_HEADER = { Authorization: "Bearer dev-token" };
 
 test("オフラインでタスクを起票 → オンライン復帰でキューが flush され server に作成される", async ({
   page,
@@ -24,8 +25,12 @@ test("オフラインでタスクを起票 → オンライン復帰でキュー
   request,
 }) => {
   const taskName = `オフライン起票 ${Date.now()}`;
+  const AUTH_HEADER = await getApiAuthHeader(request, API_BASE);
 
-  await page.goto("/");
+  await page.goto("/today");
+
+  // BL-104: 起票フォームは + ボタンで展開する. オフライン化前に開いておく.
+  await openCreateForm(page, "today");
 
   // オフラインに切替.
   await context.setOffline(true);
