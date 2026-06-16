@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
+import { MemoryRouter } from "react-router-dom";
 /**
  * 単体テスト: ProjectsView .
  *
@@ -28,6 +29,12 @@ import { ProjectsView } from "./projects-view.js";
 // QueryClientProvider ラッパー
 // ============================================================
 
+/**
+ * BL-104 (floating-create-button) 追従:
+ *   起票フォームは初期非表示 / `?create=1` クエリで開く. 既存テストは
+ *   フォームを使うシナリオが多いため, MemoryRouter で `/projects?create=1` を
+ *   初期 URL として渡す.
+ */
 function renderWithQueryClient(ui: ReactNode): ReturnType<typeof render> {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -35,7 +42,14 @@ function renderWithQueryClient(ui: ReactNode): ReturnType<typeof render> {
       mutations: { retry: false, networkMode: "offlineFirst" },
     },
   });
-  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+  return render(
+    <MemoryRouter
+      initialEntries={["/projects?create=1"]}
+      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+    >
+      <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+    </MemoryRouter>,
+  );
 }
 
 // ============================================================

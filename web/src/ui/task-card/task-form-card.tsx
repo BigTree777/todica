@@ -53,6 +53,12 @@ export interface TaskFormCardProps {
   inputId: "task-name" | "tomorrow-task-name";
   /** form の aria-label. */
   formAriaLabel: "タスク起票フォーム" | "明日のタスク起票フォーム";
+  /**
+   * 「キャンセル」 button の押下ハンドラ (BL-104 / REQ-5).
+   * 親 view が `?create=1` クエリを削除してフォームを閉じる経路に接続する.
+   * 単体テスト向けの直接 render 時は省略可能 (default: no-op).
+   */
+  onCancel?: () => void;
 }
 
 export function TaskFormCard(props: TaskFormCardProps): JSX.Element {
@@ -68,6 +74,7 @@ export function TaskFormCard(props: TaskFormCardProps): JSX.Element {
     idPrefix,
     inputId,
     formAriaLabel,
+    onCancel,
   } = props;
 
   return (
@@ -109,6 +116,9 @@ export function TaskFormCard(props: TaskFormCardProps): JSX.Element {
         />
       </div>
       <div className="task-card__actions">
+        <button type="button" className="button" onClick={onCancel}>
+          キャンセル
+        </button>
         <button type="submit" className="button button--primary">
           追加
         </button>

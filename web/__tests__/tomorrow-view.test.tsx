@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Task } from "@todica/domain/task";
 import type { ReactNode } from "react";
+import { MemoryRouter } from "react-router-dom";
 /**
  * Web クライアント単体テスト: 「明日のタスク」独立ビュー (tomorrow-view) (BL-038).
  *
@@ -57,9 +58,22 @@ function createTestQueryClient(): QueryClient {
   });
 }
 
+/**
+ * BL-104 (floating-create-button) 追従:
+ *   起票フォームは初期非表示になり, `?create=1` 付き URL でのみ formOpen=true.
+ *   既存テストは「起票フォームの内容」を検証するシナリオが大半なので,
+ *   MemoryRouter で `/tomorrow?create=1` を初期 URL として渡しておく.
+ */
 function renderWithQueryClient(ui: ReactNode): ReturnType<typeof render> {
   const queryClient = createTestQueryClient();
-  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+  return render(
+    <MemoryRouter
+      initialEntries={["/tomorrow?create=1"]}
+      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+    >
+      <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+    </MemoryRouter>,
+  );
 }
 
 function makeTask(overrides: Partial<Task> = {}): Task {

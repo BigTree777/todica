@@ -55,6 +55,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import type { Task } from "@todica/domain/task";
 import type { ComponentType, ReactNode } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import type { Project, ProjectRepository } from "../src/repositories/project-repository.js";
@@ -134,7 +135,16 @@ function createTestQueryClient(): QueryClient {
 
 function renderWithQueryClient(ui: ReactNode): ReturnType<typeof render> {
   const queryClient = createTestQueryClient();
-  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+  // BL-104 追従: TodayView / TomorrowView が `useSearchParams` を使うため Router context が必要.
+  // 起票フォーム関連 AC (AC-21 等) も同 renderer から読むので `?create=1` を付けてフォームを開いておく.
+  return render(
+    <MemoryRouter
+      initialEntries={["/today?create=1"]}
+      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+    >
+      <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+    </MemoryRouter>,
+  );
 }
 
 function makeTask(overrides: Partial<Task> = {}): Task {
@@ -1000,11 +1010,18 @@ describe("TaskCard / TaskFormCard 実機遺漏の一括 hotfix (BL-063 / task-ca
       const actions = container.querySelector(".task-card__actions");
       expect(actions, ".task-card__actions が見つからない").not.toBeNull();
       const buttons = Array.from(actions?.querySelectorAll("button") ?? []);
-      expect(buttons.length, `actions 内の button 数が 1 ではない (実際: ${buttons.length})`).toBe(
-        1,
+      // BL-104 / REQ-5 追従: .task-card__actions には「キャンセル」 (type="button") と
+      // 「追加」 (type="submit") の 2 ボタンが並ぶ.
+      expect(buttons.length, `actions 内の button 数が 2 ではない (実際: ${buttons.length})`).toBe(
+        2,
       );
-      expect(buttons[0]?.getAttribute("type")).toBe("submit");
-      expect(buttons[0]?.textContent ?? "").toContain("追加");
+      const submitButton = buttons.find((b) => b.getAttribute("type") === "submit");
+      expect(submitButton).not.toBeUndefined();
+      expect(submitButton?.textContent ?? "").toContain("追加");
+      const cancelButton = buttons.find(
+        (b) => b.getAttribute("type") === "button" && (b.textContent ?? "").includes("キャンセル"),
+      );
+      expect(cancelButton).not.toBeUndefined();
     });
   });
 

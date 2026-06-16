@@ -17,6 +17,7 @@
  *   - サーバ初期状態には既存テストの残骸が含まれうるため, テスト由来の id でのみ assert する.
  */
 import { expect, test } from "@playwright/test";
+import { createFormLocator, openCreateForm } from "./helpers/floating-create-button.js";
 
 const API_BASE = "http://localhost:3000";
 const AUTH_HEADER = { Authorization: "Bearer dev-token" };
@@ -25,8 +26,9 @@ test.describe("BL-039 今日ビュー起票フォームのスコープ", () => {
   test("シナリオ: 起票フォーム内に「期限」UI が存在しない (REQ-1)", async ({ page }) => {
     await page.goto("/");
 
-    // 起票フォーム自体は表示されている.
-    const form = page.getByRole("form", { name: "タスク起票フォーム" });
+    // BL-104 追従: 起票フォームは初期非表示. + ボタンを押して展開する.
+    await openCreateForm(page, "today");
+    const form = createFormLocator(page, "today");
     await expect(form).toBeVisible();
 
     // 起票フォーム scope 内に「期限」label / combobox / input は存在しない.
@@ -50,9 +52,11 @@ test.describe("BL-039 今日ビュー起票フォームのスコープ", () => {
 
     const taskName = `BL039起票 ${Date.now()}`;
 
-    // 起票フォームに入力 → 「追加」.
-    await page.getByLabel("タスク名").fill(taskName);
-    await page.getByRole("button", { name: "追加", exact: true }).click();
+    // BL-104 追従: + で起票フォームを開いてから入力する.
+    await openCreateForm(page, "today");
+    const form = createFormLocator(page, "today");
+    await form.getByLabel("タスク名").fill(taskName);
+    await form.getByRole("button", { name: "追加", exact: true }).click();
 
     // BL-070 追従: タスク名は <input aria-label="{name} の名前" value={name}> として表示される.
     await expect(page.getByLabel(`${taskName} の名前`).first()).toHaveValue(taskName);

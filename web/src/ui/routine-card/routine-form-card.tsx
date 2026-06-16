@@ -61,6 +61,12 @@ export interface RoutineFormCardProps {
   inputId?: string;
   /** form の aria-label (default: "ルーティン作成フォーム"). */
   formAriaLabel?: string;
+  /**
+   * 「キャンセル」 button の押下ハンドラ (BL-104 / REQ-5).
+   * 親 view が `?create=1` クエリを削除してフォームを閉じる経路に接続する.
+   * 単体テスト向けの直接 render 時は省略可能 (default: no-op).
+   */
+  onCancel?: () => void;
 }
 
 export function RoutineFormCard(props: RoutineFormCardProps): JSX.Element {
@@ -74,6 +80,7 @@ export function RoutineFormCard(props: RoutineFormCardProps): JSX.Element {
     onSubmit,
     inputId = "routine-name",
     formAriaLabel = "ルーティン作成フォーム",
+    onCancel,
   } = props;
 
   return (
@@ -117,6 +124,9 @@ export function RoutineFormCard(props: RoutineFormCardProps): JSX.Element {
         ))}
       </div>
       <div className="routine-card__actions">
+        <button type="button" className="button routine-card__cancel" onClick={onCancel}>
+          キャンセル
+        </button>
         <button type="submit" className="button button--primary routine-card__submit">
           追加
         </button>

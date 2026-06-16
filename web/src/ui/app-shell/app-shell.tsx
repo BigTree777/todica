@@ -1,5 +1,6 @@
 /**
- * AppShell コンポーネント (BL-036 / ui-sidebar-nav, BL-049 / hamburger-nav).
+ * AppShell コンポーネント (BL-036 / ui-sidebar-nav, BL-049 / hamburger-nav,
+ *   BL-104 / floating-create-button).
  *
  * ハンバーガーボタンで開閉するオーバーレイメニュー + メイン領域 (`<Outlet />`)
  * の構成を持つ共通レイアウトコンポーネント.
@@ -8,11 +9,37 @@
  *   - D-001: presentational only (props なし). リポジトリは個別 view が受ける.
  *   - D-002: `/setup` は AppShell の外 (main.tsx 側で別ルート).
  *   - D-006: <NavLink> のデフォルト挙動で `aria-current="page"` を付与する.
+ *
+ * BL-104 (floating-create-button):
+ *   - 画面右上 fixed エリアに + ボタン (`.app-shell__create`) を配置する.
+ *   - 表示判定は `useLocation().pathname` を基に
+ *     `/today` / `/tomorrow` / `/projects` / `/routines` の 4 ルートに限定する (D-002).
+ *   - + ボタンの aria-label はルート依存で
+ *     「タスクを追加」「プロジェクトを追加」「ルーティンを追加」を出し分ける (D-006).
+ *   - 押下時は `useSearchParams` で `?create=1` を追加する (他クエリ保持 / D-001).
+ *   - DOM 順: ハンバーガー (☰) → + → 更新 (↻) (D-003).
  */
 import type { JSX } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useSearchParams } from "react-router-dom";
 import "./app-shell.css";
+
+/**
+ * + ボタンの表示対象ルートと aria-label のマッピング (D-006).
+ *
+ * - `/today` / `/tomorrow` → 「タスクを追加」 (タスク entity を扱うため共通)
+ * - `/projects` → 「プロジェクトを追加」
+ * - `/routines` → 「ルーティンを追加」
+ *
+ * 上記以外の pathname (`/focus`, `/settings`, `/trash`, `/setup`, `/login` 等) では
+ * 戻り値が null となり, + ボタンは render しない (D-002).
+ */
+function createButtonAriaLabel(pathname: string): string | null {
+  if (pathname === "/today" || pathname === "/tomorrow") return "タスクを追加";
+  if (pathname === "/projects") return "プロジェクトを追加";
+  if (pathname === "/routines") return "ルーティンを追加";
+  return null;
+}
 
 /**
  * NavLink の className を計算するヘルパ.
@@ -26,6 +53,23 @@ export function AppShell(): JSX.Element {
   const [menuOpen, setMenuOpen] = useState(false);
   const hamburgerRef = useRef<HTMLButtonElement>(null);
   const firstLinkRef = useRef<HTMLAnchorElement>(null);
+  const { pathname } = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  // BL-104: + ボタンの aria-label をルートから導出. null なら DOM に出さない (D-002).
+  const createLabel = createButtonAriaLabel(pathname);
+  // BL-104: + ボタンの aria-expanded を URL クエリ `?create=1` から導出 (D-001).
+  const createExpanded = searchParams.get("create") === "1";
+
+  const handleCreateClick = useCallback(() => {
+    setSearchParams(
+      (prev) => {
+        // 他クエリ保持で create のみを上書き (D-001 / REQ-3).
+        prev.set("create", "1");
+        return prev;
+      },
+      { replace: false },
+    );
+  }, [setSearchParams]);
   /**
    * close 経路で「ハンバーガーへ focus を戻したい」リクエストを表すフラグ.
    * BL-062 で menuOpen=true 中はハンバーガーが `display: none` (退避) のため,
@@ -94,6 +138,25 @@ export function AppShell(): JSX.Element {
       >
         ☰
       </button>
+
+      {/*
+        + ボタン (BL-104 / floating-create-button).
+        - 表示対象ルートでのみ render する (D-002).
+        - aria-label はルート依存 (D-006).
+        - 押下で `?create=1` を立てる (D-001).
+        - DOM 順: ハンバーガー → + → 更新 (D-003).
+      */}
+      {createLabel && (
+        <button
+          type="button"
+          className="app-shell__create"
+          aria-label={createLabel}
+          aria-expanded={createExpanded}
+          onClick={handleCreateClick}
+        >
+          +
+        </button>
+      )}
 
       <button
         type="button"

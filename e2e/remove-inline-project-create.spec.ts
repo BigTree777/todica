@@ -23,6 +23,7 @@
  * プロジェクト名 / タスク名は `Date.now()` suffix で他テストと衝突させない.
  */
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import { openCreateForm } from "./helpers/floating-create-button.js";
 
 const API_BASE = "http://localhost:3000";
 const AUTH_HEADER = { Authorization: "Bearer dev-token" };
@@ -71,10 +72,17 @@ function projectSelect(page: Page) {
     .getByLabel("プロジェクト");
 }
 
-/** /today を開き, 起票フォームの描画完了まで待つ. */
+/** /today を開き, ビュー描画完了まで待つ.
+ *
+ * BL-104 (floating-create-button) 追従:
+ *   起票フォームは初期非表示 (folded). 描画完了の sentinel は h1「今日」と
+ *   + ボタン (`aria-label="タスクを追加"`) で代替する. これらが見えるなら
+ *   ビューはマウントされており, フォームが必要なテストは個別に + を押せばよい.
+ */
 async function gotoToday(page: Page): Promise<void> {
   await page.goto("/today");
-  await expect(page.getByRole("form", { name: "タスク起票フォーム" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "今日", level: 1 })).toBeVisible();
+  await expect(page.getByRole("button", { name: "タスクを追加" })).toBeVisible();
 }
 
 /** ハンバーガーメニューを開いて「プロジェクト」リンクを押す → /projects 遷移. */
@@ -188,6 +196,8 @@ test.describe("remove-inline-project-create (BL-050) のシナリオ", () => {
     await gotoToday(page);
     await openProjectsViaHamburger(page);
 
+    // BL-104 追従: /projects 側でも起票フォームは折りたたみ. + を押して開く.
+    await openCreateForm(page, "projects");
     // 作成フォームに入力して送信.
     const createForm = page.getByRole("form", { name: "プロジェクト作成フォーム" });
     await createForm.getByLabel("プロジェクト名").fill(projectName);
@@ -227,6 +237,8 @@ test.describe("remove-inline-project-create (BL-050) のシナリオ", () => {
     // /projects から作成.
     await page.goto("/projects");
     await expect(page.getByRole("heading", { name: "プロジェクト" })).toBeVisible();
+    // BL-104 追従: + ボタンを押して起票フォームを開く.
+    await openCreateForm(page, "projects");
     const createForm = page.getByRole("form", { name: "プロジェクト作成フォーム" });
     await createForm.getByLabel("プロジェクト名").fill(projectName);
     await createForm.getByRole("button", { name: "追加" }).click();
@@ -238,6 +250,8 @@ test.describe("remove-inline-project-create (BL-050) のシナリオ", () => {
     await expect(page.getByRole("dialog", { name: "ナビゲーションメニュー" })).toBeVisible();
     await page.getByRole("link", { name: "今日のタスク" }).click();
     await expect(page).toHaveURL(/\/today$/);
+    // BL-104 追従: 起票フォームは + ボタンで開いてから select を見る.
+    await openCreateForm(page, "today");
     await expect(page.getByRole("form", { name: "タスク起票フォーム" })).toBeVisible();
 
     // <select> の option ラベルを列挙し「個人」と「プロジェクトなし」が含まれることを確認.

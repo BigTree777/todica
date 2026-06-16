@@ -16,7 +16,8 @@ import type { JSX } from "react";
  *
  * TanStack Query (useQuery / useMutation) でデータ取得・書込みを管理.
  */
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import "./routines-view.css";
 import type { Priority } from "@todica/domain/task";
 import { notifyError } from "../../error-notification.js";
@@ -58,6 +59,52 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
   const [newName, setNewName] = useState("");
   const [newDaysOfWeek, setNewDaysOfWeek] = useState<number[]>([1]); // デフォルト: 月曜
   const [newDefaultPriority, setNewDefaultPriority] = useState<Priority>("normal");
+
+  // BL-104: 起票フォーム開閉は URL クエリ `?create=1` を単一情報源とする (D-001).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const formOpen = searchParams.get("create") === "1";
+
+  const closeForm = useCallback(() => {
+    setSearchParams(
+      (prev) => {
+        prev.delete("create");
+        return prev;
+      },
+      { replace: false },
+    );
+    setNewName("");
+    setNewDaysOfWeek([1]);
+    setNewDefaultPriority("normal");
+  }, [setSearchParams]);
+
+  const focusCreateButton = useCallback(() => {
+    const el = document.querySelector<HTMLButtonElement>("button.app-shell__create");
+    el?.focus();
+  }, []);
+
+  const handleCancel = useCallback(() => {
+    closeForm();
+    focusCreateButton();
+  }, [closeForm, focusCreateButton]);
+
+  useEffect(() => {
+    if (!formOpen) return;
+    const el = document.getElementById("routine-name") as HTMLInputElement | null;
+    el?.focus();
+  }, [formOpen]);
+
+  useEffect(() => {
+    if (!formOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      closeForm();
+      focusCreateButton();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [formOpen, closeForm, focusCreateButton]);
 
   const invalidateRoutines = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ["routines"] });
@@ -201,17 +248,21 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
       if (!newName) return;
       if (newDaysOfWeek.length === 0) return;
       const id = generateId();
-      await createMutation.mutateAsync({
-        id,
-        name: newName,
-        daysOfWeek: newDaysOfWeek,
-        defaultPriority: newDefaultPriority,
-      });
-      setNewName("");
-      setNewDaysOfWeek([1]);
-      setNewDefaultPriority("normal");
+      try {
+        await createMutation.mutateAsync({
+          id,
+          name: newName,
+          daysOfWeek: newDaysOfWeek,
+          defaultPriority: newDefaultPriority,
+        });
+      } catch {
+        // BL-104 / REQ-8: 失敗時はフォームを閉じない (入力値も保持).
+        return;
+      }
+      // BL-104 / REQ-7 / D-004: 成功時のみ自動 close.
+      closeForm();
     },
-    [newName, newDaysOfWeek, newDefaultPriority, createMutation],
+    [newName, newDaysOfWeek, newDefaultPriority, createMutation, closeForm],
   );
 
   const toggleDay = useCallback((day: number) => {
@@ -295,15 +346,19 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
     <main className="routines-view">
       <h1>ルーティン</h1>
 
-      <RoutineFormCard
-        name={newName}
-        onNameChange={setNewName}
-        daysOfWeek={newDaysOfWeek}
-        onToggleDay={toggleDay}
-        defaultPriority={newDefaultPriority}
-        onDefaultPriorityChange={setNewDefaultPriority}
-        onSubmit={handleCreate}
-      />
+      {/* BL-104 / REQ-4: `?create=1` のときのみ条件付き描画 (D-001). */}
+      {formOpen && (
+        <RoutineFormCard
+          name={newName}
+          onNameChange={setNewName}
+          daysOfWeek={newDaysOfWeek}
+          onToggleDay={toggleDay}
+          defaultPriority={newDefaultPriority}
+          onDefaultPriorityChange={setNewDefaultPriority}
+          onSubmit={handleCreate}
+          onCancel={handleCancel}
+        />
+      )}
 
       <ul className="routines-view__list">
         {routines.map((routine) => (

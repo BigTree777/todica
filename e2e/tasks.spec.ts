@@ -15,6 +15,7 @@
  * (class="task-card" の li または section) を遡って取る.
  */
 import { expect, type Page, test } from "@playwright/test";
+import { createFormLocator, openCreateForm } from "./helpers/floating-create-button.js";
 
 /**
  * タスク名から, そのタスクのボタン群を含む親コンテナを返す.
@@ -35,9 +36,15 @@ function taskRow(page: Page, taskName: string) {
     );
 }
 
+/**
+ * BL-104 (floating-create-button) 追従: 起票フォームは常時表示ではなくなり,
+ * + ボタン押下で初めて開く折りたたみ式になった. 各テストの最初に呼び出す.
+ */
 async function createTask(page: Page, taskName: string): Promise<void> {
-  await page.getByLabel("タスク名").fill(taskName);
-  await page.getByRole("button", { name: "追加", exact: true }).click();
+  await openCreateForm(page, "today");
+  const form = createFormLocator(page, "today");
+  await form.getByLabel("タスク名").fill(taskName);
+  await form.getByRole("button", { name: "追加", exact: true }).click();
 }
 
 test.describe("タスク基本操作", () => {
