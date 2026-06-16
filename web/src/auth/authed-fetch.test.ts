@@ -27,36 +27,39 @@ import { AUTH_EXPIRED_EVENT, authedFetch, setAuthStorage } from "./authed-fetch.
 /**
  * テストで注入する AuthStorage モック.
  * 各テストで getToken の返り値を mockResolvedValue で個別に上書きする.
+ *
+ * vitest 4 で vi.fn の戻り型が MockInstance<Procedure | Constructable> 化したため,
+ * AuthStorage の各 method シグネチャを generic で明示して代入互換性を保つ.
  */
 type MockAuthStorage = {
-  getToken: ReturnType<typeof vi.fn>;
-  setToken: ReturnType<typeof vi.fn>;
-  clearToken: ReturnType<typeof vi.fn>;
-  subscribe: ReturnType<typeof vi.fn>;
+  getToken: ReturnType<typeof vi.fn<AuthStorage["getToken"]>>;
+  setToken: ReturnType<typeof vi.fn<AuthStorage["setToken"]>>;
+  clearToken: ReturnType<typeof vi.fn<AuthStorage["clearToken"]>>;
+  subscribe: ReturnType<typeof vi.fn<AuthStorage["subscribe"]>>;
 };
 
 function makeMockStorage(token: string | null = "tkn-1"): MockAuthStorage {
   return {
-    getToken: vi.fn().mockResolvedValue(token),
-    setToken: vi.fn().mockResolvedValue(undefined),
-    clearToken: vi.fn().mockResolvedValue(undefined),
-    subscribe: vi.fn().mockReturnValue(() => {
+    getToken: vi.fn<AuthStorage["getToken"]>().mockResolvedValue(token),
+    setToken: vi.fn<AuthStorage["setToken"]>().mockResolvedValue(undefined),
+    clearToken: vi.fn<AuthStorage["clearToken"]>().mockResolvedValue(undefined),
+    subscribe: vi.fn<AuthStorage["subscribe"]>().mockReturnValue(() => {
       /* noop unsubscribe */
     }),
   };
 }
 
-let fetchMock: ReturnType<typeof vi.fn>;
-let authExpiredListener: ReturnType<typeof vi.fn>;
+let fetchMock: ReturnType<typeof vi.fn<typeof fetch>>;
+let authExpiredListener: ReturnType<typeof vi.fn<EventListener>>;
 
 beforeEach(() => {
   vi.restoreAllMocks();
   // global.fetch を vi.fn で差し替える. 各テストで mockResolvedValue を上書きする.
-  fetchMock = vi.fn();
+  fetchMock = vi.fn<typeof fetch>();
   vi.stubGlobal("fetch", fetchMock);
 
   // auth-expired event の dispatch を観測する listener を仕掛ける.
-  authExpiredListener = vi.fn();
+  authExpiredListener = vi.fn<EventListener>();
   window.addEventListener(AUTH_EXPIRED_EVENT, authExpiredListener);
 });
 
