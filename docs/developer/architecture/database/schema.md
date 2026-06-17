@@ -81,7 +81,7 @@ PWA + オフライン書込キュー + 楽観ロック（[ADR-0008](../../adr/00
 | --- | --- | --- | --- |
 | `id` | string | PK, 必須 | ルーティン ID |
 | `name` | string | 必須, 編集可（FR-035） | ルーティン名 |
-| `generateOnWeekdays` | ("mon" \| "tue" \| "wed" \| "thu" \| "fri" \| "sat" \| "sun")[] | 必須（1 つ以上）, 編集可（FR-035） | 生成する曜日（FR-030, FR-031） |
+| `daysOfWeek` | number[] | 必須（1 つ以上）, 編集可（FR-035） | 生成する曜日（FR-030, FR-031）. 0=日, 1=月, ..., 6=土. 重複排除済み, 昇順. |
 | `defaultPriority` | "highest" \| "normal" \| "later" | 必須, 編集可（FR-035） | 生成時の既定優先度（FR-030） |
 | `lastGeneratedForDate` | string (YYYY-MM-DD) \| null | 任意 | 最後にタスクを生成した「Todica 上の日付」. 二重生成を防ぐ運用フラグ |
 | `createdAt` | string (ISO 8601) | 必須 | 作成日時 |
