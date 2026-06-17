@@ -18,8 +18,6 @@
 
 import type { LocalDb } from "../repositories/local-db.js";
 
-type Row = Record<string, unknown>;
-
 /**
  * 前回の境界時刻を計算する.
  *
@@ -68,9 +66,7 @@ function calcPreviousBoundary(now: Date, boundaryTime: string, timezone: string)
   }
 
   // targetDay の境界時刻を UTC に変換する
-  // Intl.DateTimeFormat を使って、その日のタイムゾーンオフセットを逆算する
-  const candidateLocal = `${String(targetYear).padStart(4, "0")}-${String(targetMonth).padStart(2, "0")}-${String(targetDay).padStart(2, "0")}T${String(boundaryHour).padStart(2, "0")}:${String(boundaryMinute).padStart(2, "0")}:00`;
-
+  // Intl.DateTimeFormat を使って、その日のタイムゾーンオフセットを逆算する.
   // 二分探索でオフセットを求める代わりに、単純アプローチ:
   // UTC 時刻 = ローカル時刻 - UTC オフセット
   // オフセットを推定するために候補日の正午で計算

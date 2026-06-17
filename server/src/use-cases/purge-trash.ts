@@ -9,7 +9,7 @@ import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type { SettingsRepository } from "../data/settings-repository.js";
 import type { TaskRepository } from "../data/task-repository.js";
 import type { schema } from "../db/schema.js";
-import { calcTodayBoundaryAt } from "./daily-reset.js";
+import { calcTodayBoundaryAt, getServerTimeZone } from "./daily-reset.js";
 
 /**
  * 境界時刻より古いゴミ箱タスクを物理削除する.
@@ -26,6 +26,13 @@ export async function purgeTrash(
   if (!settingsRepository || !taskRepository) return;
 
   const settings = await settingsRepository.get();
-  const boundaryAt = calcTodayBoundaryAt(clock.now(), settings.dayBoundaryTime);
+  // BL-112: maybeRunDailyReset と同じ境界を計算するため server timezone を必ず渡す.
+  // 渡さないと UTC default で清算境界が計算され, 非 UTC TZ ではリセット境界とズレて
+  // リセット時刻直前に削除したタスクが purge をすり抜けてゴミ箱に残るバグになる.
+  const boundaryAt = calcTodayBoundaryAt(
+    clock.now(),
+    settings.dayBoundaryTime,
+    getServerTimeZone(),
+  );
   await taskRepository.deleteTrashOlderThan(boundaryAt);
 }
