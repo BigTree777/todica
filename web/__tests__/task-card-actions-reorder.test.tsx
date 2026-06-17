@@ -145,7 +145,9 @@ function readActionButtons(container: HTMLElement): {
   if (!actions) return [];
   const buttons = Array.from(actions.querySelectorAll("button")) as HTMLButtonElement[];
   return buttons.map((b) => ({
-    text: (b.textContent ?? "").trim(),
+    // BL-114: button の text は SVG icon 化に伴い textContent から aria-label に移った.
+    // aria-label 優先 + 旧 textContent fallback で textLabel 検査の互換を維持する.
+    text: (b.getAttribute("aria-label") ?? b.textContent ?? "").trim(),
     classes: Array.from(b.classList),
     element: b,
   }));

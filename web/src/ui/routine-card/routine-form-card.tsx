@@ -35,6 +35,7 @@
  */
 
 import type { Priority } from "@todica/domain/task";
+import { Plus, X } from "lucide-react";
 import type { JSX } from "react";
 import { PriorityStars } from "../priority-stars/priority-stars.js";
 import "./routine-card.css";
@@ -89,6 +90,14 @@ export function RoutineFormCard(props: RoutineFormCardProps): JSX.Element {
       aria-label={formAriaLabel}
       className="routine-card routine-card--form"
     >
+      <button
+        type="button"
+        className="button card-action-button routine-card__close"
+        aria-label="閉じる"
+        onClick={onCancel}
+      >
+        <X size={18} aria-hidden="true" />
+      </button>
       <div className="routine-card__header">
         <PriorityStars
           value={defaultPriority}
@@ -124,11 +133,12 @@ export function RoutineFormCard(props: RoutineFormCardProps): JSX.Element {
         ))}
       </div>
       <div className="routine-card__actions">
-        <button type="button" className="button routine-card__cancel" onClick={onCancel}>
-          キャンセル
-        </button>
-        <button type="submit" className="button button--primary routine-card__submit">
-          追加
+        <button
+          type="submit"
+          className="button button--primary card-action-button routine-card__submit"
+          aria-label="追加"
+        >
+          <Plus size={18} aria-hidden="true" />
         </button>
       </div>
     </form>

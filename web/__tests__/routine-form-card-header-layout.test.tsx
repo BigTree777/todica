@@ -291,10 +291,11 @@ describe("RoutineFormCard レイアウト刷新", () => {
       );
       const form = container.querySelector("form.routine-card.routine-card--form");
       expect(form, "form.routine-card.routine-card--form が無い").not.toBeNull();
+      // form 直下に右上 ✕ button (.routine-card__close) を含む 5 要素になる.
       expect(
         form?.children.length,
-        `form 直下の子が 4 個ではない (実際: ${form?.children.length}) (AC-3 / REQ-1 違反)`,
-      ).toBe(4);
+        `form 直下の子が 5 個ではない (実際: ${form?.children.length}) (AC-3 / REQ-1 違反)`,
+      ).toBe(5);
     });
 
     it("form 直下の子は順に __header / __title / __day-checkboxes / __actions である", async () => {
@@ -316,21 +317,26 @@ describe("RoutineFormCard レイアウト刷新", () => {
       expect(form, "form.routine-card.routine-card--form が無い").not.toBeNull();
       if (!form) return;
       const childClasses = Array.from(form.children).map((el) => el.className);
+      // form 直下第一子は右上 ✕ button (.routine-card__close).
       expect(
-        childClasses[0]?.includes("routine-card__header"),
-        `1 番目が .routine-card__header ではない (実際: "${childClasses[0]}")`,
+        childClasses[0]?.includes("routine-card__close"),
+        `1 番目が .routine-card__close ではない (実際: "${childClasses[0]}")`,
       ).toBe(true);
       expect(
-        childClasses[1]?.includes("routine-card__title"),
-        `2 番目が .routine-card__title ではない (実際: "${childClasses[1]}")`,
+        childClasses[1]?.includes("routine-card__header"),
+        `2 番目が .routine-card__header ではない (実際: "${childClasses[1]}")`,
       ).toBe(true);
       expect(
-        childClasses[2]?.includes("routine-card__day-checkboxes"),
-        `3 番目が .routine-card__day-checkboxes ではない (実際: "${childClasses[2]}")`,
+        childClasses[2]?.includes("routine-card__title"),
+        `3 番目が .routine-card__title ではない (実際: "${childClasses[2]}")`,
       ).toBe(true);
       expect(
-        childClasses[3]?.includes("routine-card__actions"),
-        `4 番目が .routine-card__actions ではない (実際: "${childClasses[3]}")`,
+        childClasses[3]?.includes("routine-card__day-checkboxes"),
+        `4 番目が .routine-card__day-checkboxes ではない (実際: "${childClasses[3]}")`,
+      ).toBe(true);
+      expect(
+        childClasses[4]?.includes("routine-card__actions"),
+        `5 番目が .routine-card__actions ではない (実際: "${childClasses[4]}")`,
       ).toBe(true);
     });
   });
@@ -448,7 +454,7 @@ describe("RoutineFormCard レイアウト刷新", () => {
         (el) =>
           el.tagName.toLowerCase() === "button" &&
           el.getAttribute("type") === "submit" &&
-          (el.textContent ?? "").trim() === "追加" &&
+          (el.getAttribute("aria-label") ?? el.textContent ?? "").trim() === "追加" &&
           el.classList.contains("routine-card__submit"),
       );
       expect(
@@ -475,7 +481,7 @@ describe("RoutineFormCard レイアウト刷新", () => {
       const title = container.querySelector(".routine-card__title") as HTMLElement | null;
       expect(title, ".routine-card__title が無い (AC-5 関連)").not.toBeNull();
       const submit = Array.from(container.querySelectorAll("button[type='submit']")).find(
-        (b) => (b.textContent ?? "").trim() === "追加",
+        (b) => (b.getAttribute("aria-label") ?? b.textContent ?? "").trim() === "追加",
       );
       expect(submit, "「追加」 submit button が無い").toBeDefined();
       // title 段の子孫として「追加」 button が含まれていないこと.
@@ -561,7 +567,7 @@ describe("RoutineFormCard レイアウト刷新", () => {
         (el) =>
           el.tagName.toLowerCase() === "button" &&
           el.getAttribute("type") === "submit" &&
-          (el.textContent ?? "").trim() === "追加",
+          (el.getAttribute("aria-label") ?? el.textContent ?? "").trim() === "追加",
       );
       expect(submit, "header 直下に「追加」 button がある (AC-23 違反)").toBeUndefined();
     });
@@ -799,7 +805,7 @@ describe("RoutineFormCard レイアウト刷新", () => {
         />,
       );
       const submit = Array.from(container.querySelectorAll("button[type='submit']")).find(
-        (b) => (b.textContent ?? "").trim() === "追加",
+        (b) => (b.getAttribute("aria-label") ?? b.textContent ?? "").trim() === "追加",
       ) as HTMLButtonElement | undefined;
       expect(submit, "「追加」 submit button が無い").toBeDefined();
       submit?.click();

@@ -313,7 +313,10 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
       reached = await page.evaluate((targetName) => {
         const el = document.activeElement as HTMLElement | null;
         if (!el || el.tagName !== "BUTTON") return false;
-        if ((el.textContent ?? "").trim() !== "現在のタスクにする") return false;
+        // BL-114 追従: button は Lucide アイコン + aria-label に置換されたため
+        // accessibleName は aria-label 属性から取る.
+        const accName = (el.getAttribute("aria-label") ?? el.textContent ?? "").trim();
+        if (accName !== "現在のタスクにする") return false;
         // B のカード (listitem) 内の button であること.
         // BL-070 追従: name は input value に入るため textContent で判定できない.
         // closest li 内の input.value を観察する.

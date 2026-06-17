@@ -25,6 +25,7 @@
  */
 
 import type { Priority } from "@todica/domain/task";
+import { Trash2 } from "lucide-react";
 import type { JSX } from "react";
 import type { WebRoutine } from "../../repositories/routine-repository.js";
 import { PriorityStars } from "../priority-stars/priority-stars.js";
@@ -120,10 +121,11 @@ export function RoutineCard(props: RoutineCardProps): JSX.Element {
       <div className="routine-card__actions">
         <button
           type="button"
-          className="button button--danger routine-card__actions__delete"
+          className="button button--danger card-action-button routine-card__actions__delete"
+          aria-label="削除"
           onClick={onDelete}
         >
-          削除
+          <Trash2 size={18} aria-hidden="true" />
         </button>
       </div>
     </Tag>

@@ -237,11 +237,14 @@ async function importConflictDialog(): Promise<ConflictDialogModule> {
  * 単純な /className="([^"]+)"/ では同 button 内の他属性と一致する可能性があるため,
  * `<button` から最初の `>` までを限定的にスキャンする.
  *
- * - 文字列ラベル (例: 「削除」) が button 内 textContent に含まれているかでマッチを決める.
- *   button 開始タグ 〜 `</button>` までの一塊を切り出し, className 属性をその中から取り出す.
+ * - 文字列ラベル (例: 「削除」) が次のいずれかで一致する button を hit させる:
+ *   (a) button 開始タグの属性に `aria-label="<textLabel>"` を含む
+ *   (b) button 内 textContent (= 開始 〜 終了タグ間の本文) に textLabel を含む
+ *   BL-114 (card-buttons-iconify) で carded button が SVG icon + aria-label のみになるため,
+ *   textContent でのみ hit していた旧 helper では取りこぼしが出る. aria-label にも対応する.
  *
  * @param tsxText readFileSync 結果.
- * @param textLabel button textContent に含まれているはずの日本語ラベル.
+ * @param textLabel button textContent / aria-label に含まれているはずの日本語ラベル.
  * @returns マッチした button の className 文字列. 見つからない場合は null.
  */
 function findButtonClassNameByLabel(tsxText: string, textLabel: string): string | null {
@@ -253,7 +256,12 @@ function findButtonClassNameByLabel(tsxText: string, textLabel: string): string 
     if (m === null) return null;
     const attrs = m[1] ?? "";
     const body = m[2] ?? "";
-    if (!body.includes(textLabel)) continue;
+    // (a) aria-label 属性値が textLabel に一致 or 包含, (b) body に textLabel を含む.
+    const ariaLabelMatch = attrs.match(/aria-label\s*=\s*"([^"]*)"/);
+    const ariaLabel = ariaLabelMatch?.[1] ?? "";
+    const hitByAriaLabel = ariaLabel.includes(textLabel);
+    const hitByText = body.includes(textLabel);
+    if (!hitByAriaLabel && !hitByText) continue;
     const cnMatch = attrs.match(/className\s*=\s*"([^"]*)"/);
     if (cnMatch) return cnMatch[1] ?? "";
     // className 属性が無い場合も「button タグは見つかった」ことを区別するため空文字を返す.
@@ -543,7 +551,9 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
         const buttons = Array.from(container.querySelectorAll("button"));
         const labels = ["削除", "現在のタスクにする", "明日にする", "完了"] as const;
         for (const label of labels) {
-          const btn = buttons.find((b) => (b.textContent ?? "").includes(label));
+          const btn = buttons.find((b) =>
+            (b.getAttribute("aria-label") ?? b.textContent ?? "").includes(label),
+          );
           expect(btn, `TaskCard の「${label}」 button が見つからない`).toBeDefined();
           expect(
             btn?.className.split(/\s+/).includes("button"),
@@ -575,7 +585,7 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
           />,
         );
         const btn = Array.from(container.querySelectorAll("button")).find((b) =>
-          (b.textContent ?? "").includes("追加"),
+          (b.getAttribute("aria-label") ?? b.textContent ?? "").includes("追加"),
         );
         expect(btn, "TaskFormCard の「追加」 button が見つからない").toBeDefined();
         expect(
@@ -595,7 +605,7 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
           <ProjectCard project={makeProject()} onNameBlur={() => {}} onDelete={() => {}} />,
         );
         const btn = Array.from(container.querySelectorAll("button")).find((b) =>
-          (b.textContent ?? "").includes("削除"),
+          (b.getAttribute("aria-label") ?? b.textContent ?? "").includes("削除"),
         );
         expect(btn, "ProjectCard の「削除」 button が見つからない").toBeDefined();
         expect(
@@ -619,7 +629,7 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
           />,
         );
         const btn = Array.from(container.querySelectorAll("button")).find((b) =>
-          (b.textContent ?? "").includes("追加"),
+          (b.getAttribute("aria-label") ?? b.textContent ?? "").includes("追加"),
         );
         expect(btn, "ProjectFormCard の「追加」 button が見つからない").toBeDefined();
         expect(
@@ -645,7 +655,7 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
           />,
         );
         const btn = Array.from(container.querySelectorAll("button")).find((b) =>
-          (b.textContent ?? "").includes("削除"),
+          (b.getAttribute("aria-label") ?? b.textContent ?? "").includes("削除"),
         );
         expect(btn, "RoutineCard の「削除」 button が見つからない").toBeDefined();
         expect(
@@ -673,7 +683,7 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
           />,
         );
         const btn = Array.from(container.querySelectorAll("button")).find((b) =>
-          (b.textContent ?? "").includes("追加"),
+          (b.getAttribute("aria-label") ?? b.textContent ?? "").includes("追加"),
         );
         expect(btn, "RoutineFormCard の「追加」 button が見つからない").toBeDefined();
         expect(
@@ -894,7 +904,7 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
         />,
       );
       const btn = Array.from(container.querySelectorAll("button")).find(
-        (b) => (b.textContent ?? "").trim() === "削除",
+        (b) => (b.getAttribute("aria-label") ?? b.textContent ?? "").trim() === "削除",
       );
       expect(btn, "TaskCard の「削除」 button が無い").toBeDefined();
       expect(
@@ -909,7 +919,7 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
         <ProjectCard project={makeProject()} onNameBlur={() => {}} onDelete={() => {}} />,
       );
       const btn = Array.from(container.querySelectorAll("button")).find(
-        (b) => (b.textContent ?? "").trim() === "削除",
+        (b) => (b.getAttribute("aria-label") ?? b.textContent ?? "").trim() === "削除",
       );
       expect(btn, "ProjectCard の「削除」 button が無い").toBeDefined();
       expect(
@@ -930,7 +940,7 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
         />,
       );
       const btn = Array.from(container.querySelectorAll("button")).find(
-        (b) => (b.textContent ?? "").trim() === "削除",
+        (b) => (b.getAttribute("aria-label") ?? b.textContent ?? "").trim() === "削除",
       );
       expect(btn, "RoutineCard の「削除」 button が無い").toBeDefined();
       expect(
@@ -994,7 +1004,7 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
       const labels = ["現在のタスクにする", "明日にする", "完了"] as const;
       for (const label of labels) {
         const btn = Array.from(container.querySelectorAll("button")).find(
-          (b) => (b.textContent ?? "").trim() === label,
+          (b) => (b.getAttribute("aria-label") ?? b.textContent ?? "").trim() === label,
         );
         expect(btn, `TaskCard の「${label}」 button が無い`).toBeDefined();
         expect(
@@ -1022,7 +1032,7 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
         />,
       );
       const btn = Array.from(container.querySelectorAll("button")).find(
-        (b) => (b.textContent ?? "").trim() === "追加",
+        (b) => (b.getAttribute("aria-label") ?? b.textContent ?? "").trim() === "追加",
       );
       expect(btn, "TaskFormCard の「追加」 button が無い").toBeDefined();
       expect(
@@ -1041,7 +1051,7 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
         />,
       );
       const btn = Array.from(container.querySelectorAll("button")).find(
-        (b) => (b.textContent ?? "").trim() === "追加",
+        (b) => (b.getAttribute("aria-label") ?? b.textContent ?? "").trim() === "追加",
       );
       expect(btn, "ProjectFormCard の「追加」 button が無い").toBeDefined();
       expect(
@@ -1064,7 +1074,7 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
         />,
       );
       const btn = Array.from(container.querySelectorAll("button")).find(
-        (b) => (b.textContent ?? "").trim() === "追加",
+        (b) => (b.getAttribute("aria-label") ?? b.textContent ?? "").trim() === "追加",
       );
       expect(btn, "RoutineFormCard の「追加」 button が無い").toBeDefined();
       expect(
@@ -1270,7 +1280,7 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
         />,
       );
       const btn = Array.from(container.querySelectorAll("button")).find(
-        (b) => (b.textContent ?? "").trim() === "削除",
+        (b) => (b.getAttribute("aria-label") ?? b.textContent ?? "").trim() === "削除",
       );
       const classes = btn?.className.split(/\s+/) ?? [];
       expect(classes, 'TaskCard 削除 button に "button" が無い').toContain("button");
@@ -1296,7 +1306,7 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
         />,
       );
       const btn = Array.from(container.querySelectorAll("button")).find(
-        (b) => (b.textContent ?? "").trim() === "完了",
+        (b) => (b.getAttribute("aria-label") ?? b.textContent ?? "").trim() === "完了",
       );
       const classes = btn?.className.split(/\s+/) ?? [];
       expect(classes, 'TaskCard 完了 button に "button" が無い').toContain("button");
@@ -1312,7 +1322,7 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
         <ProjectCard project={makeProject()} onNameBlur={() => {}} onDelete={() => {}} />,
       );
       const btn = Array.from(container.querySelectorAll("button")).find(
-        (b) => (b.textContent ?? "").trim() === "削除",
+        (b) => (b.getAttribute("aria-label") ?? b.textContent ?? "").trim() === "削除",
       );
       const classes = btn?.className.split(/\s+/) ?? [];
       expect(classes, 'ProjectCard 削除 button に "button" が無い').toContain("button");
@@ -1332,7 +1342,7 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
         />,
       );
       const btn = Array.from(container.querySelectorAll("button")).find(
-        (b) => (b.textContent ?? "").trim() === "追加",
+        (b) => (b.getAttribute("aria-label") ?? b.textContent ?? "").trim() === "追加",
       );
       const classes = btn?.className.split(/\s+/) ?? [];
       expect(classes, 'ProjectFormCard 追加 button に "button" が無い').toContain("button");
@@ -1354,7 +1364,7 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
         />,
       );
       const btn = Array.from(container.querySelectorAll("button")).find(
-        (b) => (b.textContent ?? "").trim() === "削除",
+        (b) => (b.getAttribute("aria-label") ?? b.textContent ?? "").trim() === "削除",
       );
       const classes = btn?.className.split(/\s+/) ?? [];
       expect(classes, 'RoutineCard 削除 button に "button" が無い').toContain("button");
@@ -1378,7 +1388,7 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
         />,
       );
       const btn = Array.from(container.querySelectorAll("button")).find(
-        (b) => (b.textContent ?? "").trim() === "追加",
+        (b) => (b.getAttribute("aria-label") ?? b.textContent ?? "").trim() === "追加",
       );
       const classes = btn?.className.split(/\s+/) ?? [];
       expect(classes, 'RoutineFormCard 追加 button に "button" が無い').toContain("button");
@@ -1492,7 +1502,7 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
         />,
       );
       const btn = Array.from(container.querySelectorAll("button")).find(
-        (b) => (b.textContent ?? "").trim() === "削除",
+        (b) => (b.getAttribute("aria-label") ?? b.textContent ?? "").trim() === "削除",
       );
       expect(btn, "TaskCard 削除 button が無い").toBeDefined();
       btn?.click();
@@ -1506,7 +1516,7 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
         <ProjectFormCard name="新規" onNameChange={() => {}} onSubmit={onSubmit} />,
       );
       const btn = Array.from(container.querySelectorAll("button")).find(
-        (b) => (b.textContent ?? "").trim() === "追加",
+        (b) => (b.getAttribute("aria-label") ?? b.textContent ?? "").trim() === "追加",
       );
       expect(btn, "ProjectFormCard 追加 button が無い").toBeDefined();
       const form = container.querySelector("form") as HTMLFormElement | null;

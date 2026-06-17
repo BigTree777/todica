@@ -430,7 +430,9 @@ describe("RoutineCard 表示カードのレイアウト刷新", () => {
       expect(dayGroup, "header 直下に曜日 group がある (AC-4 違反)").toBeUndefined();
       // 「削除」 button が直下子に無い.
       const deleteButton = directChildren.find(
-        (el) => el.tagName.toLowerCase() === "button" && (el.textContent ?? "").trim() === "削除",
+        (el) =>
+          el.tagName.toLowerCase() === "button" &&
+          (el.getAttribute("aria-label") ?? el.textContent ?? "").trim() === "削除",
       );
       expect(deleteButton, "header 直下に「削除」 button がある (AC-4 違反)").toBeUndefined();
     });
@@ -469,7 +471,7 @@ describe("RoutineCard 表示カードのレイアウト刷新", () => {
         (el) =>
           el.tagName.toLowerCase() === "button" &&
           el.getAttribute("type") === "button" &&
-          (el.textContent ?? "").trim() === "削除" &&
+          (el.getAttribute("aria-label") ?? el.textContent ?? "").trim() === "削除" &&
           el.classList.contains("routine-card__actions__delete"),
       );
       expect(
@@ -493,7 +495,7 @@ describe("RoutineCard 表示カードのレイアウト刷新", () => {
       const title = container.querySelector(".routine-card__title") as HTMLElement | null;
       const header = container.querySelector(".routine-card__header") as HTMLElement | null;
       const deleteButton = Array.from(container.querySelectorAll("button")).find(
-        (b) => (b.textContent ?? "").trim() === "削除",
+        (b) => (b.getAttribute("aria-label") ?? b.textContent ?? "").trim() === "削除",
       );
       expect(deleteButton, "「削除」 button が無い").toBeDefined();
       expect(
@@ -1006,15 +1008,17 @@ describe("RoutineCard 表示カードのレイアウト刷新", () => {
       const form = container.querySelector("form.routine-card.routine-card--form");
       expect(form, "form.routine-card.routine-card--form が無い").not.toBeNull();
       if (!form) return;
+      // form 直下に右上 ✕ button (.routine-card__close) を含む 5 要素になる.
       expect(
         form.children.length,
-        `form 直下の子が 4 個ではない (実際: ${form.children.length})`,
-      ).toBe(4);
+        `form 直下の子が 5 個ではない (実際: ${form.children.length})`,
+      ).toBe(5);
       const childClasses = Array.from(form.children).map((el) => el.className);
-      expect(childClasses[0]?.includes("routine-card__header")).toBe(true);
-      expect(childClasses[1]?.includes("routine-card__title")).toBe(true);
-      expect(childClasses[2]?.includes("routine-card__day-checkboxes")).toBe(true);
-      expect(childClasses[3]?.includes("routine-card__actions")).toBe(true);
+      expect(childClasses[0]?.includes("routine-card__close")).toBe(true);
+      expect(childClasses[1]?.includes("routine-card__header")).toBe(true);
+      expect(childClasses[2]?.includes("routine-card__title")).toBe(true);
+      expect(childClasses[3]?.includes("routine-card__day-checkboxes")).toBe(true);
+      expect(childClasses[4]?.includes("routine-card__actions")).toBe(true);
     });
 
     it("header 直下に PriorityStars のみ / title に label + input / actions に「追加」 button", async () => {
@@ -1050,7 +1054,7 @@ describe("RoutineCard 表示カードのレイアウト刷新", () => {
         (el) =>
           el.tagName.toLowerCase() === "button" &&
           el.getAttribute("type") === "submit" &&
-          (el.textContent ?? "").trim() === "追加",
+          (el.getAttribute("aria-label") ?? el.textContent ?? "").trim() === "追加",
       );
       expect(submit, "actions 段に「追加」 submit button が無い").toBeDefined();
     });

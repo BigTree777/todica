@@ -596,8 +596,8 @@ describe("BL-070 inline-edit-all-cards / 全カードのインライン常時編
       const { container } = render(
         <ProjectCard project={project} onNameBlur={() => {}} onDelete={() => {}} />,
       );
-      const labels = Array.from(container.querySelectorAll("button")).map(
-        (b) => b.textContent?.trim() ?? "",
+      const labels = Array.from(container.querySelectorAll("button")).map((b) =>
+        (b.getAttribute("aria-label") ?? b.textContent ?? "").trim(),
       );
       expect(labels, "「変更」 button が残存 (BL-070 REQ-2 違反)").not.toContain("変更");
     });
@@ -608,8 +608,8 @@ describe("BL-070 inline-edit-all-cards / 全カードのインライン常時編
       const { container } = render(
         <ProjectCard project={project} onNameBlur={() => {}} onDelete={() => {}} />,
       );
-      const labels = Array.from(container.querySelectorAll("button")).map(
-        (b) => b.textContent?.trim() ?? "",
+      const labels = Array.from(container.querySelectorAll("button")).map((b) =>
+        (b.getAttribute("aria-label") ?? b.textContent ?? "").trim(),
       );
       expect(labels, "「保存」 button が残存 (BL-070 REQ-2 違反)").not.toContain("保存");
       expect(labels, "「キャンセル」 button が残存 (BL-070 REQ-2 違反)").not.toContain(
@@ -623,8 +623,8 @@ describe("BL-070 inline-edit-all-cards / 全カードのインライン常時編
       const { container } = render(
         <ProjectCard project={project} onNameBlur={() => {}} onDelete={() => {}} />,
       );
-      const labels = Array.from(container.querySelectorAll("button")).map(
-        (b) => b.textContent?.trim() ?? "",
+      const labels = Array.from(container.querySelectorAll("button")).map((b) =>
+        (b.getAttribute("aria-label") ?? b.textContent ?? "").trim(),
       );
       expect(labels.filter((t) => t === "削除").length, "「削除」 button が 1 個ではない").toBe(1);
     });
@@ -731,8 +731,8 @@ describe("BL-070 inline-edit-all-cards / 全カードのインライン常時編
           onDelete={() => {}}
         />,
       );
-      const labels = Array.from(container.querySelectorAll("button")).map(
-        (b) => b.textContent?.trim() ?? "",
+      const labels = Array.from(container.querySelectorAll("button")).map((b) =>
+        (b.getAttribute("aria-label") ?? b.textContent ?? "").trim(),
       );
       expect(labels, "「変更」 button が残存").not.toContain("変更");
       expect(labels, "「保存」 button が残存").not.toContain("保存");
@@ -982,7 +982,7 @@ describe("BL-070 inline-edit-all-cards / 全カードのインライン常時編
         />,
       );
       const submit = Array.from(container.querySelectorAll('button[type="submit"]')).find(
-        (b) => (b.textContent ?? "").trim() === "追加",
+        (b) => (b.getAttribute("aria-label") ?? b.textContent ?? "").trim() === "追加",
       );
       expect(submit, "TaskFormCard に「追加」 submit button が無い (AC-11 違反)").toBeDefined();
     });
@@ -999,7 +999,7 @@ describe("BL-070 inline-edit-all-cards / 全カードのインライン常時編
         />,
       );
       const submit = Array.from(container.querySelectorAll('button[type="submit"]')).find(
-        (b) => (b.textContent ?? "").trim() === "追加",
+        (b) => (b.getAttribute("aria-label") ?? b.textContent ?? "").trim() === "追加",
       );
       expect(submit, "ProjectFormCard に「追加」 submit button が無い (AC-11 違反)").toBeDefined();
     });
@@ -1020,7 +1020,7 @@ describe("BL-070 inline-edit-all-cards / 全カードのインライン常時編
         />,
       );
       const submit = Array.from(container.querySelectorAll('button[type="submit"]')).find(
-        (b) => (b.textContent ?? "").trim() === "追加",
+        (b) => (b.getAttribute("aria-label") ?? b.textContent ?? "").trim() === "追加",
       );
       expect(submit, "RoutineFormCard に「追加」 submit button が無い (AC-11 違反)").toBeDefined();
     });

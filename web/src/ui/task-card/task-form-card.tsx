@@ -25,6 +25,7 @@
  */
 
 import type { Priority } from "@todica/domain/task";
+import { Plus, X } from "lucide-react";
 import type { JSX } from "react";
 import type { Project } from "../../repositories/project-repository.js";
 import { PriorityStars } from "../priority-stars/priority-stars.js";
@@ -79,6 +80,14 @@ export function TaskFormCard(props: TaskFormCardProps): JSX.Element {
 
   return (
     <form onSubmit={onSubmit} aria-label={formAriaLabel} className="task-card task-card--form">
+      <button
+        type="button"
+        className="button card-action-button task-card__close"
+        aria-label="閉じる"
+        onClick={onCancel}
+      >
+        <X size={18} aria-hidden="true" />
+      </button>
       <div className="task-card__header">
         <label htmlFor={`${idPrefix}-project`} className="visually-hidden">
           プロジェクト
@@ -116,11 +125,12 @@ export function TaskFormCard(props: TaskFormCardProps): JSX.Element {
         />
       </div>
       <div className="task-card__actions">
-        <button type="button" className="button" onClick={onCancel}>
-          キャンセル
-        </button>
-        <button type="submit" className="button button--primary">
-          追加
+        <button
+          type="submit"
+          className="button button--primary card-action-button"
+          aria-label="追加"
+        >
+          <Plus size={18} aria-hidden="true" />
         </button>
       </div>
     </form>

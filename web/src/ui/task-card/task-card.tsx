@@ -20,6 +20,7 @@
  */
 
 import type { Priority, Task } from "@todica/domain/task";
+import { Check, Pin, SkipBack, SkipForward, Trash2 } from "lucide-react";
 import type { JSX } from "react";
 import type { Project } from "../../repositories/project-repository.js";
 import { PriorityStars } from "../priority-stars/priority-stars.js";
@@ -164,27 +165,43 @@ export function TaskCard(props: TaskCardProps): JSX.Element {
       <div className="task-card__actions">
         <button
           type="button"
-          className="button button--danger task-card__actions__delete"
+          className="button button--danger card-action-button task-card__actions__delete"
+          aria-label="削除"
           onClick={onDelete}
         >
-          削除
+          <Trash2 size={18} aria-hidden="true" />
         </button>
         {showSetFocus && onSetFocus && (
-          <button type="button" className="button button--primary" onClick={onSetFocus}>
-            現在のタスクにする
+          <button
+            type="button"
+            className="button button--primary card-action-button"
+            aria-label="現在のタスクにする"
+            onClick={onSetFocus}
+          >
+            <Pin size={18} aria-hidden="true" />
           </button>
         )}
         {showDueDateBtn && onToggleDueDate && (
-          <button type="button" className="button button--primary" onClick={onToggleDueDate}>
-            {dueDateMode === "today" ? "明日にする" : "今日にする"}
+          <button
+            type="button"
+            className="button button--primary card-action-button"
+            aria-label={dueDateMode === "today" ? "明日にする" : "今日にする"}
+            onClick={onToggleDueDate}
+          >
+            {dueDateMode === "today" ? (
+              <SkipForward size={18} aria-hidden="true" />
+            ) : (
+              <SkipBack size={18} aria-hidden="true" />
+            )}
           </button>
         )}
         <button
           type="button"
-          className="button button--primary task-card__actions__complete"
+          className="button button--primary card-action-button task-card__actions__complete"
+          aria-label="完了"
           onClick={onComplete}
         >
-          完了
+          <Check size={18} aria-hidden="true" />
         </button>
       </div>
     </Tag>

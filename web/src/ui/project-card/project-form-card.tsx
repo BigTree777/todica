@@ -16,6 +16,7 @@
  *   - D-004: input id default = "project-name" (既存テスト互換).
  *   - NFR-FORM-ARIA-LABEL-PRESERVE: aria-label default = "プロジェクト作成フォーム".
  */
+import { Plus, X } from "lucide-react";
 import type { JSX } from "react";
 import "./project-card.css";
 
@@ -54,6 +55,14 @@ export function ProjectFormCard(props: ProjectFormCardProps): JSX.Element {
       aria-label={formAriaLabel}
       className="project-card project-card--form"
     >
+      <button
+        type="button"
+        className="button card-action-button project-card__close"
+        aria-label="閉じる"
+        onClick={onCancel}
+      >
+        <X size={18} aria-hidden="true" />
+      </button>
       <label htmlFor={inputId} className="visually-hidden">
         プロジェクト名
       </label>
@@ -66,11 +75,12 @@ export function ProjectFormCard(props: ProjectFormCardProps): JSX.Element {
         onChange={(e) => onNameChange(e.target.value)}
         required
       />
-      <button type="button" className="button project-card__cancel" onClick={onCancel}>
-        キャンセル
-      </button>
-      <button type="submit" className="button button--primary project-card__submit">
-        追加
+      <button
+        type="submit"
+        className="button button--primary card-action-button project-card__submit"
+        aria-label="追加"
+      >
+        <Plus size={18} aria-hidden="true" />
       </button>
     </form>
   );
