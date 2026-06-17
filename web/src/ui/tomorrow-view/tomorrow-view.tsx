@@ -413,6 +413,28 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
     [updateMutation],
   );
 
+  // BL-108 (task-card-project-change) REQ-5 / REQ-6 / REQ-7:
+  //   - 明日タスクのプロジェクト変更で PATCH /api/v1/tasks/:id { projectId } を発行.
+  //   - 同値短絡 (next === task.projectId) は親側で行う.
+  //   - 既存 updateMutation (onSuccess: invalidateAfterMoveToToday) を流用するため,
+  //     成功時の invalidate 先は ["tomorrow"] / ["today"] / ["focus"] になる.
+  const handleChangeProject = useCallback(
+    async (task: Task, next: string | null) => {
+      if (task.projectId === next) return;
+      const cmd: UpdateTaskCommand = {
+        id: task.id,
+        ifMatch: task.version,
+        patch: { projectId: next },
+      };
+      try {
+        await updateMutation.mutateAsync(cmd);
+      } catch {
+        // onError で処理済み.
+      }
+    },
+    [updateMutation],
+  );
+
   // 「完了」クリックで complete API を呼ぶ.
   const handleComplete = useCallback(
     (task: Task) => {
@@ -476,6 +498,8 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
                   variant="default"
                   task={task}
                   project={project}
+                  projects={projects}
+                  onChangeProject={(next) => handleChangeProject(task, next)}
                   showPriority={false}
                   showSetFocus={false}
                   actionSet="full"

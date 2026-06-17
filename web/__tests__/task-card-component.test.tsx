@@ -644,6 +644,8 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
         <TaskCard
           task={task}
           project={project}
+          projects={[project]}
+          onChangeProject={() => {}}
           showPriority
           showSetFocus={false}
           actionSet="full"
@@ -668,10 +670,15 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
       expect(title, ".task-card__title が root 内に存在しない").not.toBeNull();
       expect(actions, ".task-card__actions が root 内に存在しない").not.toBeNull();
 
-      // header に chip + radiogroup.
-      const chip = header?.querySelector(".project-chip");
-      expect(chip, "header 段に .project-chip が無い").not.toBeNull();
-      expect(chip?.textContent ?? "").toContain(PROJECT_NAME_P1);
+      // BL-108 追従: header の chip span は `<select>` に置換された.
+      // selected option (= project name) が header 内に表示されることを assert.
+      const select = header?.querySelector("select") as HTMLSelectElement | null;
+      expect(select, "header 段に <select> が無い (BL-108 違反)").not.toBeNull();
+      expect(select?.value, "<select>.value が project id でない").toBe(PROJECT_ID_P1);
+      const selectedOption = select?.querySelector(
+        `option[value="${PROJECT_ID_P1}"]`,
+      ) as HTMLOptionElement | null;
+      expect(selectedOption?.textContent ?? "").toContain(PROJECT_NAME_P1);
       const radiogroup = header?.querySelector('[role="radiogroup"]');
       expect(
         radiogroup,
@@ -699,6 +706,8 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
         <TaskCard
           task={task}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           actionSet="full"
           dueDateMode="tomorrow"
@@ -738,6 +747,8 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
           aria-label="現在のタスク"
           task={task}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           actionSet="full"
           dueDateMode="today"
@@ -762,6 +773,8 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
           variant="focus"
           task={makeTask()}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           actionSet="minimal"
           onDelete={() => {}}
@@ -789,6 +802,8 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
         <TaskCard
           task={makeTask()}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           actionSet="full"
           dueDateMode="today"
@@ -817,6 +832,8 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
         <TaskCard
           task={makeTask()}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           showSetFocus
           actionSet="full"
@@ -844,6 +861,8 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
         <TaskCard
           task={makeTask()}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           actionSet="full"
           dueDateMode="today"
@@ -877,6 +896,8 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
         <TaskCard
           task={makeTask()}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           showSetFocus={false}
           actionSet="minimal"
@@ -915,6 +936,8 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
         <TaskCard
           task={task}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           actionSet="full"
           dueDateMode="today"

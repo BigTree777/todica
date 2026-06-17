@@ -71,7 +71,10 @@ test("プロジェクトを削除すると紐付いていたタスクは残る (
   await expect(select).toHaveValue(/.+/); // 非空 (= プロジェクトなしから外れた).
 
   await createFormLocator(page, "today").getByRole("button", { name: "追加", exact: true }).click();
-  await expect(taskRow(page, taskName)).toBeVisible();
+  // BL-108 (task-card-project-change) で TaskCard 表示側にも `<select>` が描画されるようになり,
+  // perf.spec.ts 等で 1000 件規模のタスクが DB に残った状態だと初期描画が 5 秒の default
+  // timeout を超える. 起票したタスクが見えるまでの待ちを 30 秒に伸ばす.
+  await expect(taskRow(page, taskName)).toBeVisible({ timeout: 30_000 });
 
   // 3. プロジェクト削除
   await page.goto("/projects");
@@ -86,5 +89,6 @@ test("プロジェクトを削除すると紐付いていたタスクは残る (
 
   // 4. タスクは依然として今日ビューに残っている
   await page.goto("/today");
-  await expect(taskRow(page, taskName)).toBeVisible();
+  // 同上 BL-108 起因の描画コスト増を吸収.
+  await expect(taskRow(page, taskName)).toBeVisible({ timeout: 30_000 });
 });

@@ -608,6 +608,8 @@ describe("TaskCard / TaskFormCard 実機遺漏の一括 hotfix (BL-063 / task-ca
         <TaskCard
           task={makeTask()}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority
           showSetFocus={false}
           actionSet="full"
@@ -633,6 +635,8 @@ describe("TaskCard / TaskFormCard 実機遺漏の一括 hotfix (BL-063 / task-ca
         <TaskCard
           task={makeTask()}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority
           showSetFocus={false}
           actionSet="full"
@@ -658,6 +662,8 @@ describe("TaskCard / TaskFormCard 実機遺漏の一括 hotfix (BL-063 / task-ca
         <TaskCard
           task={makeTask()}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority
           showSetFocus={false}
           actionSet="full"
@@ -689,6 +695,8 @@ describe("TaskCard / TaskFormCard 実機遺漏の一括 hotfix (BL-063 / task-ca
         <TaskCard
           task={makeTask()}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority
           showSetFocus={false}
           actionSet="full"
@@ -728,6 +736,8 @@ describe("TaskCard / TaskFormCard 実機遺漏の一括 hotfix (BL-063 / task-ca
         <TaskCard
           task={makeTask()}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           showSetFocus
           actionSet="full"
@@ -753,6 +763,8 @@ describe("TaskCard / TaskFormCard 実機遺漏の一括 hotfix (BL-063 / task-ca
         <TaskCard
           task={makeTask()}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           showSetFocus
           actionSet="full"
@@ -778,6 +790,8 @@ describe("TaskCard / TaskFormCard 実機遺漏の一括 hotfix (BL-063 / task-ca
         <TaskCard
           task={makeTask()}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           showSetFocus
           actionSet="full"
@@ -830,6 +844,8 @@ describe("TaskCard / TaskFormCard 実機遺漏の一括 hotfix (BL-063 / task-ca
         <TaskCard
           task={makeTask()}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           showSetFocus={false}
           actionSet="minimal"

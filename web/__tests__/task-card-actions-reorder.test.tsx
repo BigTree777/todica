@@ -182,6 +182,8 @@ describe("TaskCard actions DOM 順入れ替え (BL-064 / task-card-actions-reord
         <TaskCard
           task={makeTask({ origin: "manual" })}
           project={makeProject()}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority
           showSetFocus
           actionSet="full"
@@ -221,6 +223,8 @@ describe("TaskCard actions DOM 順入れ替え (BL-064 / task-card-actions-reord
         <TaskCard
           task={makeTask({ origin: "manual" })}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           showSetFocus
           actionSet="full"
@@ -258,6 +262,8 @@ describe("TaskCard actions DOM 順入れ替え (BL-064 / task-card-actions-reord
         <TaskCard
           task={makeTask({ origin: "manual" })}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           showSetFocus
           actionSet="full"
@@ -297,6 +303,8 @@ describe("TaskCard actions DOM 順入れ替え (BL-064 / task-card-actions-reord
         <TaskCard
           task={makeTask({ origin: "manual" })}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           showSetFocus
           actionSet="full"
@@ -346,6 +354,8 @@ describe("TaskCard actions DOM 順入れ替え (BL-064 / task-card-actions-reord
         <TaskCard
           task={makeTask({ origin: "manual", dueDate: "tomorrow" })}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           showSetFocus
           actionSet="full"
@@ -393,6 +403,8 @@ describe("TaskCard actions DOM 順入れ替え (BL-064 / task-card-actions-reord
         <TaskCard
           task={makeTask({ origin: "manual" })}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           showSetFocus={false}
           actionSet="full"
@@ -436,6 +448,8 @@ describe("TaskCard actions DOM 順入れ替え (BL-064 / task-card-actions-reord
         <TaskCard
           task={makeTask({ origin: "routine", routineId: "routine-1" })}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           showSetFocus
           actionSet="full"
@@ -486,6 +500,8 @@ describe("TaskCard actions DOM 順入れ替え (BL-064 / task-card-actions-reord
         <TaskCard
           task={makeTask()}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           showSetFocus={false}
           actionSet="minimal"
@@ -539,6 +555,8 @@ describe("TaskCard actions DOM 順入れ替え (BL-064 / task-card-actions-reord
         <TaskCard
           task={makeTask({ origin: "manual" })}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           showSetFocus={false}
           actionSet="full"
@@ -559,6 +577,8 @@ describe("TaskCard actions DOM 順入れ替え (BL-064 / task-card-actions-reord
         <TaskCard
           task={makeTask()}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           showSetFocus={false}
           actionSet="minimal"
@@ -587,6 +607,8 @@ describe("TaskCard actions DOM 順入れ替え (BL-064 / task-card-actions-reord
         <TaskCard
           task={makeTask({ origin: "manual" })}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           showSetFocus={false}
           actionSet="full"
@@ -608,6 +630,8 @@ describe("TaskCard actions DOM 順入れ替え (BL-064 / task-card-actions-reord
         <TaskCard
           task={makeTask()}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           showSetFocus={false}
           actionSet="minimal"

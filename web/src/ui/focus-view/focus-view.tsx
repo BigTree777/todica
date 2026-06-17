@@ -271,6 +271,28 @@ export function FocusView(props: FocusViewProps): JSX.Element {
     [focusedTask, updateMutation],
   );
 
+  // BL-108 (task-card-project-change) REQ-5 / REQ-6 / REQ-7:
+  //   - focusedTask のプロジェクト変更で PATCH /api/v1/tasks/:id { projectId } を発行.
+  //   - 同値短絡 (next === focusedTask.projectId) は親側で行う.
+  //   - 既存 updateMutation (onSuccess: invalidateAll = ["today"] / ["focus"]) を流用.
+  const handleChangeProject = useCallback(
+    async (next: string | null) => {
+      if (!focusedTask) return;
+      if (focusedTask.projectId === next) return;
+      const cmd: UpdateTaskCommand = {
+        id: focusedTask.id,
+        ifMatch: focusedTask.version,
+        patch: { projectId: next },
+      };
+      try {
+        await updateMutation.mutateAsync(cmd);
+      } catch {
+        // onError で処理済み.
+      }
+    },
+    [focusedTask, updateMutation],
+  );
+
   const handleDelete = useCallback(() => {
     if (!focusedTask) return;
     const cmd: DeleteTaskCommand = {
@@ -291,6 +313,8 @@ export function FocusView(props: FocusViewProps): JSX.Element {
           variant="focus"
           task={focusedTask}
           project={project}
+          projects={projectsData ?? []}
+          onChangeProject={handleChangeProject}
           showPriority={false}
           showSetFocus={false}
           actionSet="minimal"
