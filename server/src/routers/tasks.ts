@@ -1,3 +1,4 @@
+import { incrementCompletedCount } from "@todica/domain/counter";
 import {
   completeTask,
   createTask,
@@ -265,14 +266,8 @@ export function tasksRouter(deps: AppDeps): Hono {
     // 通常状態 → 完了の遷移が起きた直後だけ counter を +1 する.
     // 既ゴミ箱状態への no-op 再 complete は上の `current.trashedAt !== null` 経路で
     // 早期 return されるため, ここに到達した時点で「通常 → 完了」の遷移が確定している.
-    // version + 1, updatedAt は clock.now() で更新する.
     const currentCounter = await deps.counterRepository.get();
-    const updatedCounter = {
-      ...currentCounter,
-      completedCount: currentCounter.completedCount + 1,
-      version: currentCounter.version + 1,
-      updatedAt: deps.clock.now(),
-    };
+    const updatedCounter = incrementCompletedCount(currentCounter, deps.clock.now());
     await deps.counterRepository.update(updatedCounter);
     // BL-006 / FR-013: 現在のタスクを完了したら focus を解除.
     await clearFocusIfMatches(deps, id);

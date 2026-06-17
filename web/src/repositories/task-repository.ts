@@ -106,20 +106,14 @@ export interface FocusSelection {
 }
 
 /**
- * BL-008 / FR-040: Counter エンティティ (Web 側ミラー).
+ * BL-008 / FR-040: Counter エンティティ.
  *
+ * Counter 型は `@todica/domain/counter` に集約済み (server / web 共通).
  * 仕様: docs/developer/features/completion-counter/spec.md.
- * 単一レコード前提 (id = "singleton"). サーバ Counter と同形.
- * 本型は test-designer が追加した「型のみのスタブ」.
- * HttpTaskRepository.getCounter / UI 連携は implementer が green 化する.
  */
-export interface Counter {
-  id: string;
-  completedCount: number;
-  lastResetExecutedAt: string | null;
-  version: number;
-  updatedAt: string;
-}
+import type { Counter } from "@todica/domain/counter";
+
+export type { Counter };
 
 /**
  * BL-006 / FR-012: 現在のタスクを設定 / 解除するコマンド.

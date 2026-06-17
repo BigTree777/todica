@@ -5,6 +5,7 @@
  * 設計: docs/developer/features/daily-reset/plan.md
  */
 import type { Clock } from "@todica/domain/clock";
+import { resetCompletedCount } from "@todica/domain/counter";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type { CounterRepository } from "../data/counter-repository.js";
 import type { RoutineRepository } from "../data/routine-repository.js";
@@ -174,13 +175,7 @@ export async function maybeRunDailyReset(deps: DailyResetDeps): Promise<DailyRes
   }
 
   // counter.completedCount を 0 にリセットし、lastResetExecutedAt を now にする（FR-051）.
-  const updatedCounter = {
-    ...counter,
-    completedCount: 0,
-    lastResetExecutedAt: now,
-    updatedAt: now,
-    version: counter.version + 1,
-  };
+  const updatedCounter = resetCompletedCount(counter, now, now);
   await deps.counterRepository.update(updatedCounter);
 
   // purgeTrash を呼び出す（plan.md D-002 d / D-005）.

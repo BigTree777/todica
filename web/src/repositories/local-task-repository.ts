@@ -7,11 +7,11 @@
  * テスト環境では SQLiteLocalDb をモックして利用する (NFR-LOC-003).
  */
 
+import { type Counter, incrementCompletedCount } from "@todica/domain/counter";
 import type { DueDate, Priority, Task } from "@todica/domain/task";
 import type { LocalDb } from "./local-db.js";
 import type {
   CompleteTaskCommand,
-  Counter,
   CreateTaskCommand,
   DeleteTaskCommand,
   FocusSelection,
@@ -165,11 +165,17 @@ export class LocalTaskRepository implements TaskRepository {
       );
 
       if (counterRow) {
-        const newCount = (counterRow.completed_count as number) + 1;
-        const counterVersion = (counterRow.version as number) + 1;
+        const currentCounter: Counter = {
+          id: counterRow.id as string,
+          completedCount: counterRow.completed_count as number,
+          lastResetExecutedAt: (counterRow.last_reset_executed_at as string | null) ?? null,
+          updatedAt: counterRow.updated_at as string,
+          version: counterRow.version as number,
+        };
+        const updated = incrementCompletedCount(currentCounter, now);
         await this.db.run(
           `UPDATE counter SET completed_count = ?, updated_at = ?, version = ? WHERE id = 'singleton'`,
-          [newCount, now, counterVersion],
+          [updated.completedCount, updated.updatedAt, updated.version],
         );
       }
 

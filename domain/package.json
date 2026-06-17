@@ -34,6 +34,10 @@
       "types": "./dist/routine/index.d.ts",
       "import": "./dist/routine/index.js"
     },
+    "./counter": {
+      "types": "./dist/counter/index.d.ts",
+      "import": "./dist/counter/index.js"
+    },
     "./trash": {
       "types": "./dist/trash/index.d.ts",
       "import": "./dist/trash/index.js"

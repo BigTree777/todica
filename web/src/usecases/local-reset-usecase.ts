@@ -16,6 +16,7 @@
  *      - ゴミ箱清算: trashedAt < 前回境界時刻 → DELETE
  */
 
+import { type Counter, resetCompletedCount } from "@todica/domain/counter";
 import type { LocalDb } from "../repositories/local-db.js";
 
 /**
@@ -153,11 +154,23 @@ export class LocalResetUsecase {
 
       // 5-3. Counter: completedCount=0, lastResetExecutedAt=境界時刻
       // local-db.ts の getDb() が INSERT OR IGNORE でシングルトンレコードを保証する
-      const counterVersion = ((counterRow?.version as number | undefined) ?? 0) + 1;
+      const currentCounter: Counter = {
+        id: (counterRow?.id as string | undefined) ?? "singleton",
+        completedCount: (counterRow?.completed_count as number | undefined) ?? 0,
+        lastResetExecutedAt: lastResetExecutedAt,
+        updatedAt: (counterRow?.updated_at as string | undefined) ?? nowIso,
+        version: (counterRow?.version as number | undefined) ?? 0,
+      };
+      const updatedCounter = resetCompletedCount(currentCounter, previousBoundaryIso, nowIso);
       await this.db.run(
-        `UPDATE counter SET completed_count = 0, last_reset_executed_at = ?, updated_at = ?, version = ?
+        `UPDATE counter SET completed_count = ?, last_reset_executed_at = ?, updated_at = ?, version = ?
          WHERE id = 'singleton'`,
-        [previousBoundaryIso, nowIso, counterVersion],
+        [
+          updatedCounter.completedCount,
+          updatedCounter.lastResetExecutedAt,
+          updatedCounter.updatedAt,
+          updatedCounter.version,
+        ],
       );
 
       // 5-4. ゴミ箱清算: trashedAt IS NOT NULL AND trashedAt < 前回境界時刻 → DELETE

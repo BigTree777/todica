@@ -9,19 +9,12 @@
  *
  * 本実装: `server/src/infra/persistence/drizzle/drizzle-counter-repository.ts` (DrizzleCounterRepository).
  * テスト用 in-memory 実装: `server/__tests__/helpers/in-memory-repositories.ts`.
+ *
+ * Counter 型は `@todica/domain/counter` に集約済み (server / web 共通).
  */
-export interface Counter {
-  /** 単一レコードを示す固定値 "singleton". */
-  id: string;
-  /** 通常状態のタスクが完了に遷移した累計回数 (FR-040). 日次リセットで 0 に戻る (BL-010 責務). */
-  completedCount: number;
-  /** 最後にリセットを実行した時刻. BL-010 で使う. 本 feature では値を書き込まない. */
-  lastResetExecutedAt: string | null;
-  /** ISO 8601. 最後に update された時刻. */
-  updatedAt: string;
-  /** 楽観ロック用. update のたびに +1. */
-  version: number;
-}
+import type { Counter } from "@todica/domain/counter";
+
+export type { Counter };
 
 export interface CounterRepository {
   /**
