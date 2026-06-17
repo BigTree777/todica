@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { JSX } from "react";
 /**
  * 境界時刻の設定ビュー (BL-009 / FR-041 / FR-042).
@@ -23,7 +23,7 @@ import type {
   Settings,
   SettingsRepository,
 } from "../../repositories/settings-repository.js";
-import { PatchConflictError } from "../../repositories/settings-repository.js";
+import { useSettingsMutations } from "../../usecases/settings-usecases.js";
 
 /** dayBoundaryTime の形式バリデーション: HH:MM (00:00 - 23:59). */
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -75,9 +75,15 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
     }
   }, [fetchedSettings]);
 
-  const patchMutation = useMutation({
-    mutationFn: (cmd: PatchSettingsCommand) => repository.patchSettings(cmd),
-    networkMode: "offlineFirst",
+  // BL-118 / Q-7: 412 (PatchConflictError) 判定はユースケース層 (settings-usecases) に閉じ,
+  //   view へは onConflict で「最新サーバ値」だけが渡る (PatchConflictError 型には触れない).
+  //   onConflict は mutationFn 内で reject 直前に発火するため, ref で最新値を捕捉し
+  //   handleSave の catch 節から読む.
+  const conflictSettingsRef = useRef<Settings | null>(null);
+  const { patch: patchMutation } = useSettingsMutations(repository, {
+    onConflict: (serverSettings) => {
+      conflictSettingsRef.current = serverSettings;
+    },
   });
 
   const handleSave = useCallback(
@@ -100,6 +106,7 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
         ifMatch: currentSettings.version,
       };
 
+      conflictSettingsRef.current = null;
       try {
         await patchMutation.mutateAsync(cmd);
         // PATCH 成功後に再フェッチしてサーバ正本値を反映する（getSettings 2 回目）.
@@ -110,12 +117,13 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
         setSuccessMessage(`リセット時刻を ${updated.dayBoundaryTime} に変更しました`);
         // QueryClient のキャッシュを直接更新する（invalidateQueries は追加フェッチを引き起こすため使わない）
         queryClient.setQueryData(["settings"], updated);
-      } catch (err) {
-        if (err instanceof PatchConflictError) {
-          // 412: PatchConflictError.settings（412 ボディから取得した最新値）を直接 state に反映する.
+      } catch {
+        const conflictSettings = conflictSettingsRef.current as Settings | null;
+        if (conflictSettings) {
+          // 412: usecase が onConflict で渡した最新サーバ値を直接 state に反映する.
           // 追加の GET リクエストはしない（D-004）.
-          setLocalSettings(err.settings);
-          setInputValue(err.settings.dayBoundaryTime);
+          setLocalSettings(conflictSettings);
+          setInputValue(conflictSettings.dayBoundaryTime);
           setError("設定の更新中に競合が発生しました 最新の値を表示しています 再度お試しください");
         } else {
           setError("保存に失敗しました");

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import type { JSX } from "react";
 /**
  * ルーティン管理ビュー .
@@ -20,23 +20,13 @@ import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import "./routines-view.css";
 import type { Priority } from "@todica/domain/task";
-import { notifyError } from "../../error-notification.js";
 import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
-import { ConflictError, dequeue, enqueue, getAll, mapConflict } from "../../offline-queue.js";
 import type { WebRoutine, WebRoutineRepository } from "../../repositories/routine-repository.js";
-import { RoutineConflictError } from "../../repositories/routine-repository.js";
+import { generateId } from "../../usecases/mutation-helpers.js";
+import { useRoutineMutations } from "../../usecases/routine-usecases.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
 import { RoutineCard } from "../routine-card/routine-card.js";
 import { RoutineFormCard } from "../routine-card/routine-form-card.js";
-
-/** UUID v4 風の文字列を生成する. crypto.randomUUID が無い jsdom 環境向けのフォールバック. */
-function generateId(): string {
-  const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
-  if (c?.randomUUID) return c.randomUUID();
-  const random = (n: number) => Math.floor(Math.random() * n);
-  const hex = (n: number) => Array.from({ length: n }, () => random(16).toString(16)).join("");
-  return `${hex(8)}-${hex(4)}-4${hex(3)}-8${hex(3)}-${hex(12)}`;
-}
 
 export interface RoutinesViewProps {
   repository: WebRoutineRepository;
@@ -44,10 +34,7 @@ export interface RoutinesViewProps {
 
 export function RoutinesView(props: RoutinesViewProps): JSX.Element {
   const { repository } = props;
-  const queryClient = useQueryClient();
   const conflictDialog = useConflictDialog();
-  const repo = repository as { baseUrl?: string };
-  const baseUrl = repo.baseUrl ?? "";
 
   const { data: routinesData } = useQuery({
     queryKey: ["routines"],
@@ -106,141 +93,14 @@ export function RoutinesView(props: RoutinesViewProps): JSX.Element {
     };
   }, [formOpen, closeForm, focusCreateButton]);
 
-  const invalidateRoutines = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ["routines"] });
-  }, [queryClient]);
-
-  /** enqueue を安全に呼び出す。IDB が利用できない環境ではエラーを無視する。 */
-  const safeEnqueue = async (entry: Parameters<typeof enqueue>[0]) => {
-    try {
-      await enqueue(entry);
-    } catch {
-      // IDB が利用できない環境ではキューへの保存をスキップ
-    }
-  };
-
-  /** dequeue を安全に呼び出す。IDB が利用できない環境ではエラーを無視する。 */
-  const safeDequeueByKey = async (idempotencyKey: string) => {
-    try {
-      const all = await getAll();
-      const match = all.find((e) => e.idempotencyKey === idempotencyKey);
-      if (match?.id !== undefined) await dequeue(match.id);
-    } catch {
-      // IDB が利用できない環境ではスキップ
-    }
-  };
-
-  const createMutation = useMutation({
-    mutationFn: async (cmd: {
-      id: string;
-      name: string;
-      daysOfWeek: number[];
-      defaultPriority: string;
-    }) => {
-      const idempotencyKey = generateId();
-      void safeEnqueue({
-        url: `${baseUrl}/api/v1/routines`,
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Idempotency-Key": idempotencyKey,
-        },
-        body: JSON.stringify({ ...cmd }),
-        idempotencyKey,
-      });
-      if (!navigator.onLine) return undefined;
-      const result = await repository.create(cmd);
-      void safeDequeueByKey(idempotencyKey);
-      return result;
-    },
-    onSuccess: invalidateRoutines,
-    onError: (error) => {
-      if (error instanceof ConflictError) {
-        conflictDialog.openDialog(error.entry, error.serverValue);
-        return;
-      }
-      notifyError("通信に失敗しました");
-    },
-    networkMode: "offlineFirst",
+  // BL-118: routine mutation 群はアプリケーション層 (routine-usecases) へ集約.
+  //   - 標準 invalidate は ["routines"]. 衝突時は conflictDialog を起動する.
+  const routineMutations = useRoutineMutations(repository, {
+    onConflict: conflictDialog.openDialog,
   });
-
-  const updateMutation = useMutation({
-    mutationFn: async (cmd: {
-      id: string;
-      ifMatch: number;
-      name: string;
-      daysOfWeek: number[];
-      defaultPriority: Priority;
-    }) => {
-      const idempotencyKey = generateId();
-      void safeEnqueue({
-        url: `${baseUrl}/api/v1/routines/${cmd.id}`,
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Idempotency-Key": idempotencyKey,
-          "If-Match": String(cmd.ifMatch),
-        },
-        body: JSON.stringify({
-          name: cmd.name,
-          daysOfWeek: cmd.daysOfWeek,
-          defaultPriority: cmd.defaultPriority,
-        }),
-        idempotencyKey,
-      });
-      if (!navigator.onLine) return undefined;
-      const result = await mapConflict(
-        idempotencyKey,
-        () => repository.update(cmd),
-        (err) => (err instanceof RoutineConflictError ? err.currentRoutine : undefined),
-      );
-      void safeDequeueByKey(idempotencyKey);
-      return result;
-    },
-    onSuccess: invalidateRoutines,
-    onError: (error) => {
-      if (error instanceof ConflictError) {
-        conflictDialog.openDialog(error.entry, error.serverValue);
-        return;
-      }
-      notifyError("通信に失敗しました");
-    },
-    networkMode: "offlineFirst",
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (cmd: { id: string; ifMatch: number }) => {
-      const idempotencyKey = generateId();
-      void safeEnqueue({
-        url: `${baseUrl}/api/v1/routines/${cmd.id}`,
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          "Idempotency-Key": idempotencyKey,
-          "If-Match": String(cmd.ifMatch),
-        },
-        body: null,
-        idempotencyKey,
-      });
-      if (!navigator.onLine) return undefined;
-      const result = await mapConflict(
-        idempotencyKey,
-        () => repository.delete(cmd),
-        (err) => (err instanceof RoutineConflictError ? err.currentRoutine : undefined),
-      );
-      void safeDequeueByKey(idempotencyKey);
-      return result;
-    },
-    onSuccess: invalidateRoutines,
-    onError: (error) => {
-      if (error instanceof ConflictError) {
-        conflictDialog.openDialog(error.entry, error.serverValue);
-        return;
-      }
-      notifyError("通信に失敗しました");
-    },
-    networkMode: "offlineFirst",
-  });
+  const createMutation = routineMutations.create;
+  const updateMutation = routineMutations.update;
+  const deleteMutation = routineMutations.delete;
 
   const handleCreate = useCallback(
     async (e: React.FormEvent) => {

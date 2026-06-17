@@ -16,21 +16,11 @@
 import type { JSX } from "react";
 import { useCallback } from "react";
 import "./trash-view.css";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { notifyError } from "../../error-notification.js";
+import { useQuery } from "@tanstack/react-query";
 import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
-import { ConflictError, dequeue, enqueue, getAll, mapConflict } from "../../offline-queue.js";
 import type { TrashedTask, TrashRepository } from "../../repositories/trash-repository.js";
-import { RestoreConflictError } from "../../repositories/trash-repository.js";
+import { useTrashMutations } from "../../usecases/trash-usecases.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
-
-function generateId(): string {
-  const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
-  if (c?.randomUUID) return c.randomUUID();
-  const random = (n: number) => Math.floor(Math.random() * n);
-  const hex = (n: number) => Array.from({ length: n }, () => random(16).toString(16)).join("");
-  return `${hex(8)}-${hex(4)}-4${hex(3)}-8${hex(3)}-${hex(12)}`;
-}
 
 export interface TrashViewProps {
   repository: TrashRepository;
@@ -38,11 +28,7 @@ export interface TrashViewProps {
 
 export function TrashView(props: TrashViewProps): JSX.Element {
   const { repository } = props;
-  const queryClient = useQueryClient();
   const conflictDialog = useConflictDialog();
-
-  const repo = repository as { baseUrl?: string };
-  const baseUrl = repo.baseUrl ?? "";
 
   const { data: tasksData } = useQuery({
     queryKey: ["trash"],
@@ -51,92 +37,32 @@ export function TrashView(props: TrashViewProps): JSX.Element {
   });
   const tasks: TrashedTask[] = tasksData ?? [];
 
-  const invalidateTrash = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ["trash"] });
-    void queryClient.invalidateQueries({ queryKey: ["today"] });
-  }, [queryClient]);
-
-  const safeEnqueue = async (entry: Parameters<typeof enqueue>[0]) => {
-    try {
-      await enqueue(entry);
-    } catch {
-      // IDB が利用できない環境ではスキップ
-    }
-  };
-
-  const safeDequeueByKey = async (idempotencyKey: string) => {
-    try {
-      const all = await getAll();
-      const match = all.find((e) => e.idempotencyKey === idempotencyKey);
-      if (match?.id !== undefined) await dequeue(match.id);
-    } catch {
-      // IDB が利用できない環境ではスキップ
-    }
-  };
-
-  const restoreMutation = useMutation({
-    mutationFn: async (cmd: { id: string; ifMatch: number }) => {
-      const idempotencyKey = generateId();
-      void safeEnqueue({
-        url: `${baseUrl}/api/v1/trash/${cmd.id}/restore`,
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Idempotency-Key": idempotencyKey,
-          "If-Match": String(cmd.ifMatch),
-        },
-        body: null,
-        idempotencyKey,
-      });
-      if (!navigator.onLine) return undefined;
-      const result = await mapConflict(
-        idempotencyKey,
-        () => repository.restore(cmd),
-        (err) => (err instanceof RestoreConflictError ? err.currentTask : undefined),
-      );
-      void safeDequeueByKey(idempotencyKey);
-      return result;
-    },
-    onSuccess: invalidateTrash,
-    onError: (error) => {
-      if (error instanceof ConflictError) {
-        conflictDialog.openDialog(error.entry, error.serverValue);
-        return;
-      }
-      notifyError("通信に失敗しました");
-    },
-    networkMode: "offlineFirst",
+  // BL-118: restore / empty mutation はアプリケーション層 (trash-usecases) へ集約.
+  //   - 標準 invalidate は ["trash"] / ["today"]. 衝突時は conflictDialog を起動する.
+  const { restore: restoreMutation, empty: emptyMutation } = useTrashMutations(repository, {
+    onConflict: conflictDialog.openDialog,
   });
 
-  const emptyMutation = useMutation({
-    mutationFn: async () => {
-      const idempotencyKey = generateId();
-      void safeEnqueue({
-        url: `${baseUrl}/api/v1/trash`,
-        method: "DELETE",
-        headers: {
-          "Idempotency-Key": idempotencyKey,
-        },
-        body: null,
-        idempotencyKey,
-      });
-      if (!navigator.onLine) return undefined;
-      await repository.empty();
-      void safeDequeueByKey(idempotencyKey);
-    },
-    onSuccess: invalidateTrash,
-    networkMode: "offlineFirst",
-  });
-
+  // 失敗時の通知 / ConflictDialog は onError (usecase 内) で処理済み.
+  // mutateAsync の reject を try/catch で握り unhandled rejection を防ぐ
+  // (他 view の handleNameBlur 等と同じパターン).
   const handleRestore = useCallback(
     async (task: TrashedTask) => {
-      await restoreMutation.mutateAsync({ id: task.id, ifMatch: task.version });
+      try {
+        await restoreMutation.mutateAsync({ id: task.id, ifMatch: task.version });
+      } catch {
+        // onError で処理済み.
+      }
     },
     [restoreMutation],
   );
 
   const handleEmpty = useCallback(async () => {
-    await emptyMutation.mutateAsync();
+    try {
+      await emptyMutation.mutateAsync();
+    } catch {
+      // onError で処理済み.
+    }
   }, [emptyMutation]);
 
   return (
