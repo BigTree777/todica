@@ -9,6 +9,7 @@ import type { LocalDb } from "./local-db.js";
 import type {
   RestoreTaskCommand,
   TrashedProject,
+  TrashedRoutine,
   TrashedTask,
   TrashRepository,
 } from "./trash-repository.js";
@@ -34,6 +35,15 @@ function rowToTrashedProject(row: Row): TrashedProject {
   };
 }
 
+function rowToTrashedRoutine(row: Row): TrashedRoutine {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    trashedAt: row.trashed_at as string | null,
+    version: row.version as number,
+  };
+}
+
 export class LocalTrashRepository implements TrashRepository {
   constructor(private readonly db: LocalDb) {}
 
@@ -49,6 +59,13 @@ export class LocalTrashRepository implements TrashRepository {
       "SELECT * FROM projects WHERE trashed_at IS NOT NULL ORDER BY trashed_at DESC",
     );
     return (result.values ?? []).map(rowToTrashedProject);
+  }
+
+  async listRoutines(): Promise<TrashedRoutine[]> {
+    const result = await this.db.query(
+      "SELECT * FROM routines WHERE trashed_at IS NOT NULL ORDER BY trashed_at DESC",
+    );
+    return (result.values ?? []).map(rowToTrashedRoutine);
   }
 
   async restore(cmd: RestoreTaskCommand): Promise<TrashedTask> {
@@ -81,26 +98,47 @@ export class LocalTrashRepository implements TrashRepository {
     // Project 復元 (trashed_at を NULL に戻す. trashed_reason は持たない D-6).
     const projectResult = await this.db.query("SELECT * FROM projects WHERE id = ?", [cmd.id]);
     const projectRow = (projectResult.values ?? [])[0];
-    if (!projectRow) throw new Error(`Trash entry not found: ${cmd.id}`);
+    if (projectRow) {
+      const now = new Date().toISOString();
+      const newVersion = (projectRow.version as number) + 1;
+      await this.db.run(
+        "UPDATE projects SET trashed_at = NULL, updated_at = ?, version = ? WHERE id = ?",
+        [now, newVersion, cmd.id],
+      );
+
+      const afterUpdate = await this.db.query("SELECT * FROM projects WHERE id = ?", [cmd.id]);
+      const updatedRow = (afterUpdate.values ?? [])[0];
+      const restoredProject = updatedRow
+        ? rowToTrashedProject(updatedRow)
+        : { ...rowToTrashedProject(projectRow), trashedAt: null, version: newVersion };
+      // 戻り値型は Task/Project/Routine で共用 (呼び出し側はサーバ判別前提).
+      return restoredProject as unknown as TrashedTask;
+    }
+
+    // Routine 復元 (trashed_at を NULL に戻す. trashed_reason は持たない D-6).
+    const routineResult = await this.db.query("SELECT * FROM routines WHERE id = ?", [cmd.id]);
+    const routineRow = (routineResult.values ?? [])[0];
+    if (!routineRow) throw new Error(`Trash entry not found: ${cmd.id}`);
 
     const now = new Date().toISOString();
-    const newVersion = (projectRow.version as number) + 1;
+    const newVersion = (routineRow.version as number) + 1;
     await this.db.run(
-      "UPDATE projects SET trashed_at = NULL, updated_at = ?, version = ? WHERE id = ?",
+      "UPDATE routines SET trashed_at = NULL, updated_at = ?, version = ? WHERE id = ?",
       [now, newVersion, cmd.id],
     );
 
-    const afterUpdate = await this.db.query("SELECT * FROM projects WHERE id = ?", [cmd.id]);
+    const afterUpdate = await this.db.query("SELECT * FROM routines WHERE id = ?", [cmd.id]);
     const updatedRow = (afterUpdate.values ?? [])[0];
-    const restoredProject = updatedRow
-      ? rowToTrashedProject(updatedRow)
-      : { ...rowToTrashedProject(projectRow), trashedAt: null, version: newVersion };
-    // 戻り値型は Task/Project で共用 (呼び出し側はサーバ判別前提).
-    return restoredProject as unknown as TrashedTask;
+    const restoredRoutine = updatedRow
+      ? rowToTrashedRoutine(updatedRow)
+      : { ...rowToTrashedRoutine(routineRow), trashedAt: null, version: newVersion };
+    // 戻り値型は Task/Project/Routine で共用 (呼び出し側はサーバ判別前提).
+    return restoredRoutine as unknown as TrashedTask;
   }
 
   async empty(): Promise<void> {
     await this.db.run("DELETE FROM tasks WHERE trashed_at IS NOT NULL", []);
     await this.db.run("DELETE FROM projects WHERE trashed_at IS NOT NULL", []);
+    await this.db.run("DELETE FROM routines WHERE trashed_at IS NOT NULL", []);
   }
 }

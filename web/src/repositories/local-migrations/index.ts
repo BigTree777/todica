@@ -11,6 +11,7 @@
 
 import type { LocalDb } from "../local-db.js";
 import { v001Initial } from "./v001-initial.js";
+import { v002RoutinesTrashedAt } from "./v002-routines-trashed-at.js";
 
 /** マイグレーション定義 (UD-3 確定: { version, name, up }). */
 export interface LocalMigration {
@@ -22,10 +23,9 @@ export interface LocalMigration {
 /**
  * 本番のマイグレーション登録一覧.
  *
- * 死蔵の v002 は置かない (UD-2 案X). v001 のみを本番一覧とする.
- * v002 (routines.trashed_at 追加) は BL-120 の責務.
+ * v001 (初期スキーマ) / v002 (routines.trashed_at 追加) を昇順に登録する.
  */
-export const migrations: LocalMigration[] = [v001Initial];
+export const migrations: LocalMigration[] = [v001Initial, v002RoutinesTrashedAt];
 
 /** __local_migrations の現在の適用済み最大バージョンを取得する (不在/NULL → 0). */
 async function currentVersion(db: LocalDb): Promise<number> {

@@ -14,6 +14,8 @@ export interface Routine {
   version: number;
   createdAt: string;
   updatedAt: string;
+  /** ゴミ箱化された時刻 (ISO8601). 通常状態は null. */
+  trashedAt: string | null;
 }
 
 const MAX_NAME_LENGTH = 200;
@@ -136,6 +138,7 @@ export function createRoutine(input: CreateRoutineInput, clock: Clock): CreateRo
       version: 1,
       createdAt: now,
       updatedAt: now,
+      trashedAt: null,
     },
   };
 }
@@ -201,4 +204,40 @@ export function updateRoutine(
       updatedAt: now,
     },
   };
+}
+
+/**
+ * ルーティンをゴミ箱に入れる (DELETE = 論理削除). trashedAt をセットし version+1.
+ * 既にゴミ箱状態の場合は no-op (同じ値を返す) で冪等とする (trashProject と同型).
+ * Routine は trashedReason を持たない (D-6).
+ */
+export function trashRoutine(current: Routine, clock: Clock): Routine {
+  if (current.trashedAt !== null) {
+    return { ...current };
+  }
+  const now = clock.now();
+  return {
+    ...current,
+    trashedAt: now,
+    updatedAt: now,
+    version: current.version + 1,
+  };
+}
+
+/**
+ * ゴミ箱ルーティンを復元する. trashedAt を null に戻し version+1, updatedAt 更新.
+ * カスケード復元はしない (D-4).
+ */
+export function restoreRoutine(current: Routine, clock: Clock): Routine {
+  return {
+    ...current,
+    trashedAt: null,
+    updatedAt: clock.now(),
+    version: current.version + 1,
+  };
+}
+
+/** 既にゴミ箱状態か判定するヘルパ. */
+export function isTrashed(routine: Routine): boolean {
+  return routine.trashedAt !== null;
 }

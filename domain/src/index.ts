@@ -7,9 +7,9 @@
 export * from "./clock/index.js";
 export * from "./counter/index.js";
 export * from "./focus-selection/index.js";
-// project と task はともに isTrashed を export するためバレルの二重 export を避ける.
-// project 側は isTrashed を named 除外して再 export する (project の isTrashed は
-// project モジュールから直接 import する). バレルの isTrashed は task のものを指す.
+// project / routine / task はいずれも isTrashed を export するためバレルの二重 export を避ける.
+// project / routine 側は isTrashed を named 除外して再 export する (それぞれの isTrashed は
+// 各モジュールから直接 import する). バレルの isTrashed は task のものを指す.
 export {
   createProject,
   type Project,
@@ -18,7 +18,16 @@ export {
   updateProject,
   validateProjectName,
 } from "./project/index.js";
-export * from "./routine/index.js";
+export {
+  createRoutine,
+  type Routine,
+  restoreRoutine,
+  trashRoutine,
+  updateRoutine,
+  validateDaysOfWeek,
+  validateDefaultPriority,
+  validateRoutineName,
+} from "./routine/index.js";
 export * from "./settings/index.js";
 export * from "./task/index.js";
 export * from "./trash/index.js";

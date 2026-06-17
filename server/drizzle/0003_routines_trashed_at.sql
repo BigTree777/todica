@@ -1,0 +1,1 @@
+ALTER TABLE `routines` ADD `trashed_at` text;

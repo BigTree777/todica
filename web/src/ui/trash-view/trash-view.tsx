@@ -21,6 +21,7 @@ import { RotateCcw } from "lucide-react";
 import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
 import type {
   TrashedProject,
+  TrashedRoutine,
   TrashedTask,
   TrashRepository,
 } from "../../repositories/trash-repository.js";
@@ -50,6 +51,15 @@ export function TrashView(props: TrashViewProps): JSX.Element {
     networkMode: "offlineFirst",
   });
   const trashedProjects: TrashedProject[] = projectsData ?? [];
+
+  // BL-120: ゴミ箱内 Routine の一覧. queryKey は ["trash", ...] のサブキーにして
+  // restore mutation の invalidate(["trash"]) で再取得されるようにする.
+  const { data: routinesData } = useQuery({
+    queryKey: ["trash", "routines"],
+    queryFn: () => repository.listRoutines(),
+    networkMode: "offlineFirst",
+  });
+  const trashedRoutines: TrashedRoutine[] = routinesData ?? [];
 
   // BL-118: restore / empty mutation はアプリケーション層 (trash-usecases) へ集約.
   //   - 標準 invalidate は ["trash"] / ["today"]. 衝突時は conflictDialog を起動する.
@@ -83,6 +93,18 @@ export function TrashView(props: TrashViewProps): JSX.Element {
     [restoreMutation],
   );
 
+  // Routine 復元も restore({ id, ifMatch }) で呼ぶ (サーバが Task/Project/Routine を判別する D-3).
+  const handleRestoreRoutine = useCallback(
+    async (routine: TrashedRoutine) => {
+      try {
+        await restoreMutation.mutateAsync({ id: routine.id, ifMatch: routine.version });
+      } catch {
+        // onError で処理済み.
+      }
+    },
+    [restoreMutation],
+  );
+
   const handleEmpty = useCallback(async () => {
     try {
       await emptyMutation.mutateAsync();
@@ -100,7 +122,7 @@ export function TrashView(props: TrashViewProps): JSX.Element {
         </button>
       </header>
 
-      {tasks.length === 0 && trashedProjects.length === 0 ? (
+      {tasks.length === 0 && trashedProjects.length === 0 && trashedRoutines.length === 0 ? (
         <p className="trash-view__empty">ゴミ箱は空です</p>
       ) : null}
 
@@ -131,6 +153,24 @@ export function TrashView(props: TrashViewProps): JSX.Element {
                 className="button button--ghost"
                 aria-label="復元"
                 onClick={() => handleRestoreProject(project)}
+              >
+                <RotateCcw aria-hidden="true" size={16} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {trashedRoutines.length > 0 ? (
+        <ul aria-label="ゴミ箱のルーティン一覧" className="trash-view__list">
+          {trashedRoutines.map((routine) => (
+            <li key={routine.id} className="trash-view__item">
+              <span>{routine.name}</span>
+              <button
+                type="button"
+                className="button button--ghost"
+                aria-label="復元"
+                onClick={() => handleRestoreRoutine(routine)}
               >
                 <RotateCcw aria-hidden="true" size={16} />
               </button>

@@ -7,6 +7,7 @@
 import type { Routine } from "@todica/domain/routine";
 import {
   createRoutine as domainCreateRoutine,
+  trashRoutine as domainTrashRoutine,
   updateRoutine as domainUpdateRoutine,
   validateDaysOfWeek,
   validateDefaultPriority,
@@ -98,9 +99,11 @@ export interface DeleteRoutineInput {
 }
 
 /**
- * ルーティンを削除する.
+ * ルーティンを削除する (ゴミ箱化 = soft delete).
  *   - findById → 楽観ロック.
- *   - 配下の未ゴミ箱タスク削除 + ルーティン削除を同一トランザクション境界で実行する.
+ *   - 配下の未ゴミ箱タスクの routineId NULL 化 (デタッチ = カスケード NULL 固定) +
+ *     ルーティンの trashedAt セットを同一トランザクション境界で実行する. Routine 自体は物理削除しない.
+ *   - ゴミ箱状態のタスクには触れない (FR-2 / D-4).
  *   - deps.db がない場合は Repository の順次呼び出しでフォールバックする.
  */
 export async function deleteRoutine(
@@ -116,18 +119,29 @@ export async function deleteRoutine(
     return { kind: "conflict", current };
   }
 
-  // カスケード削除: 紐付く未ゴミ箱タスクを先に削除してからルーティンを削除する.
-  // deps.db が存在する場合はトランザクション内でアトミックに実行する.
+  // ドメイン純関数でゴミ箱化後の状態を算出する (trashedAt=now, version+1, updatedAt 更新).
+  const trashed = domainTrashRoutine(current, deps.clock);
+
+  // デタッチ (カスケード NULL): 紐付く未ゴミ箱タスクの routineId を null に更新する (タスクはゴミ箱化しない).
+  // deps.db が存在する場合はトランザクション内で実行してアトミック性を保証する.
   if (deps.db) {
     deps.db.transaction((tx) => {
-      tx.delete(tasksTable)
+      tx.update(tasksTable)
+        .set({ routineId: null })
         .where(and(eq(tasksTable.routineId, input.id), isNull(tasksTable.trashedAt)))
         .run();
-      tx.delete(routinesTable).where(eq(routinesTable.id, input.id)).run();
+      tx.update(routinesTable)
+        .set({
+          trashedAt: trashed.trashedAt,
+          version: trashed.version,
+          updatedAt: trashed.updatedAt,
+        })
+        .where(eq(routinesTable.id, input.id))
+        .run();
     });
   } else {
-    await deps.taskRepository.deleteByRoutineId(input.id);
-    await routineRepo.delete(input.id);
+    await deps.taskRepository.nullifyRoutineId(input.id);
+    await routineRepo.update(trashed);
   }
-  return { kind: "ok", value: current };
+  return { kind: "ok", value: trashed };
 }

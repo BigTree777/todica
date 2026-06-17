@@ -353,6 +353,45 @@ describe("GET /api/v1/routines (ルーティン一覧取得 FR-030)", () => {
     expect(body.routines[2]?.name).toBe("C");
   });
 
+  it("シナリオ (AC-4): ゴミ箱化された Routine は通常一覧から除外される", async () => {
+    // BL-120 (routine-soft-delete) AC-4:
+    //   Given ゴミ箱化された Routine R (trashedAt != null) と通常状態の Routine S が存在する
+    //   When  GET /api/v1/routines を実行する
+    //   Then  レスポンスの routines に R は含まれない
+    //   And   S は含まれる
+    routineRepo.seed({
+      id: ROUTINE_ID_1,
+      name: "ゴミ箱の運動",
+      daysOfWeek: [1],
+      defaultPriority: "normal",
+      version: 2,
+      createdAt: TEST_INITIAL_TIME,
+      updatedAt: TEST_INITIAL_TIME,
+      trashedAt: "2026-06-07T08:00:00.000Z",
+    });
+    routineRepo.seed({
+      id: ROUTINE_ID_2,
+      name: "通常の運動",
+      daysOfWeek: [2],
+      defaultPriority: "normal",
+      version: 1,
+      createdAt: TEST_INITIAL_TIME,
+      updatedAt: TEST_INITIAL_TIME,
+      trashedAt: null,
+    });
+
+    const res = await app.request("/api/v1/routines", {
+      method: "GET",
+      headers: authHeaders(),
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { routines: Array<{ id: string }> };
+    const ids = body.routines.map((r) => r.id);
+    expect(ids).not.toContain(ROUTINE_ID_1);
+    expect(ids).toContain(ROUTINE_ID_2);
+  });
+
   it("シナリオ: ルーティンが 0 件のとき空配列が返る", async () => {
     // Given ルーティンが 1 件も存在しない
     // When  GET /api/v1/routines を送信する
@@ -498,12 +537,14 @@ describe("PATCH /api/v1/routines/:id (ルーティン編集 FR-035)", () => {
 // ============================================================
 
 describe("DELETE /api/v1/routines/:id (ルーティン削除 FR-030 補足)", () => {
-  it("シナリオ: ルーティンを削除すると紐付くタスクも削除される", async () => {
-    // Given ルーティン（id=R1）が存在し、そのルーティンに紐付く今日のタスク T1 が存在する
-    // When  DELETE /api/v1/routines/R1 に If-Match="1" を送る
-    // Then  HTTP 204 が返る
-    // And   GET /api/v1/routines にルーティン R1 が含まれない
-    // And   GET /api/v1/tasks?trashed=false にタスク T1 が含まれない
+  it("シナリオ (AC-1): ルーティン削除はゴミ箱化される (204 + 物理削除されない + trashedAt!=null + version+1)", async () => {
+    // BL-120 (routine-soft-delete) AC-1:
+    //   Given 通常状態の Routine R (version=1) が存在する
+    //   When  DELETE /api/v1/routines/{R.id} を If-Match: 1 で実行する
+    //   Then  HTTP 204 が返る
+    //   And   R は物理削除されず trashed_at != null になる
+    //   And   R の version は 2 に増える
+    //   And   GET /api/v1/routines に R が含まれない (AC-4)
     routineRepo.seed({
       id: ROUTINE_ID_1,
       name: "朝の運動",
@@ -512,6 +553,51 @@ describe("DELETE /api/v1/routines/:id (ルーティン削除 FR-030 補足)", ()
       version: 1,
       createdAt: TEST_INITIAL_TIME,
       updatedAt: TEST_INITIAL_TIME,
+      trashedAt: null,
+    });
+
+    const res = await app.request(`/api/v1/routines/${ROUTINE_ID_1}`, {
+      method: "DELETE",
+      headers: authHeaders({
+        "If-Match": "1",
+        "Idempotency-Key": "delete-routine-1",
+      }),
+    });
+
+    expect(res.status).toBe(204);
+
+    // 通常一覧から消えている (ゴミ箱化されたため除外される / AC-4).
+    const listRes = await app.request("/api/v1/routines", {
+      method: "GET",
+      headers: authHeaders(),
+    });
+    const list = (await listRes.json()) as { routines: Array<{ id: string }> };
+    expect(list.routines.find((r) => r.id === ROUTINE_ID_1)).toBeUndefined();
+
+    // 物理削除されず、ストアに trashedAt != null / version=2 で残っている.
+    const stored = await routineRepo.findById(ROUTINE_ID_1);
+    expect(stored).not.toBeNull();
+    expect((stored as unknown as { trashedAt: string | null })?.trashedAt).not.toBeNull();
+    expect(stored?.version).toBe(2);
+  });
+
+  it("シナリオ (AC-2): デタッチ (カスケード NULL) - 削除した Routine に紐付く未ゴミ箱タスクの routineId が null になる (タスクはゴミ箱化されない)", async () => {
+    // BL-120 (routine-soft-delete) AC-2:
+    //   Given Routine R と, R に紐付く未ゴミ箱のルーティンタスク T (routineId = R.id, trashedAt = null)
+    //   When  R を削除する
+    //   Then  T は削除されず残る
+    //   And   T.routineId が null になる
+    //   And   T.origin は変化しない (routine のまま)
+    //   And   R 自身はゴミ箱化されて残る (trashedAt != null)
+    routineRepo.seed({
+      id: ROUTINE_ID_1,
+      name: "朝の運動",
+      daysOfWeek: [1],
+      defaultPriority: "normal",
+      version: 1,
+      createdAt: TEST_INITIAL_TIME,
+      updatedAt: TEST_INITIAL_TIME,
+      trashedAt: null,
     });
     taskRepo.seed({
       id: TASK_ID_1,
@@ -532,27 +618,77 @@ describe("DELETE /api/v1/routines/:id (ルーティン削除 FR-030 補足)", ()
       method: "DELETE",
       headers: authHeaders({
         "If-Match": "1",
-        "Idempotency-Key": "delete-routine-1",
+        "Idempotency-Key": "delete-routine-detach",
       }),
     });
 
     expect(res.status).toBe(204);
 
-    // ルーティン一覧から消えている
-    const listRes = await app.request("/api/v1/routines", {
-      method: "GET",
-      headers: authHeaders(),
+    // タスクは物理削除されず routineId が null になっている.
+    const task = await taskRepo.findById(TASK_ID_1);
+    expect(task).not.toBeNull();
+    expect(task?.routineId).toBeNull();
+    // origin は変化しない.
+    expect(task?.origin).toBe("routine");
+    // タスクはゴミ箱に移動していない.
+    expect(task?.trashedAt).toBeNull();
+
+    // Routine R 自身はゴミ箱化されて残る (物理削除されない).
+    const routine = await routineRepo.findById(ROUTINE_ID_1);
+    expect(routine).not.toBeNull();
+    expect((routine as unknown as { trashedAt: string | null })?.trashedAt).not.toBeNull();
+  });
+
+  it("シナリオ (AC-3): ルーティン削除はゴミ箱状態のタスクに触れない", async () => {
+    // BL-120 (routine-soft-delete) AC-3:
+    //   Given Routine R と, R に紐付く既にゴミ箱状態のタスク T (routineId = R.id, trashedAt != null)
+    //   When  R を削除する
+    //   Then  T の routineId は変化しない (NULL 化されない)
+    //   And   T は引き続きゴミ箱状態のまま残る
+    const TRASHED_AT = "2026-06-07T08:00:00.000Z";
+    routineRepo.seed({
+      id: ROUTINE_ID_1,
+      name: "朝の運動",
+      daysOfWeek: [1],
+      defaultPriority: "normal",
+      version: 1,
+      createdAt: TEST_INITIAL_TIME,
+      updatedAt: TEST_INITIAL_TIME,
+      trashedAt: null,
     });
-    const list = (await listRes.json()) as { routines: Array<{ id: string }> };
-    expect(list.routines.find((r) => r.id === ROUTINE_ID_1)).toBeUndefined();
+    // 既にゴミ箱状態 (完了済み相当) のルーティンタスク.
+    taskRepo.seed({
+      id: TASK_ID_1,
+      name: "完了済み朝の運動",
+      projectId: null,
+      dueDate: "today",
+      priority: "normal",
+      origin: "routine",
+      routineId: ROUTINE_ID_1,
+      createdAt: TEST_INITIAL_TIME,
+      updatedAt: TRASHED_AT,
+      trashedAt: TRASHED_AT,
+      trashedReason: "completed",
+      version: 2,
+    });
 
-    // ストアからも消えている
-    const storedRoutine = await routineRepo.findById(ROUTINE_ID_1);
-    expect(storedRoutine).toBeNull();
+    const res = await app.request(`/api/v1/routines/${ROUTINE_ID_1}`, {
+      method: "DELETE",
+      headers: authHeaders({
+        "If-Match": "1",
+        "Idempotency-Key": "delete-routine-skip-trashed",
+      }),
+    });
 
-    // 紐付くタスクも物理削除されている
-    const storedTask = await taskRepo.findById(TASK_ID_1);
-    expect(storedTask).toBeNull();
+    expect(res.status).toBe(204);
+
+    // ゴミ箱状態のタスクの routineId は変化しない (NULL 化されない).
+    const task = await taskRepo.findById(TASK_ID_1);
+    expect(task).not.toBeNull();
+    expect(task?.routineId).toBe(ROUTINE_ID_1);
+    // 引き続きゴミ箱状態.
+    expect(task?.trashedAt).toBe(TRASHED_AT);
+    expect(task?.trashedReason).toBe("completed");
   });
 
   it("シナリオ: 認証なしは拒否される（401）", async () => {

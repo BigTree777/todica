@@ -7,7 +7,7 @@ import type { Routine } from "@todica/domain/routine";
  * - list(): ORDER BY name ASC.
  * - findByDayOfWeek(day): 全件取得してアプリケーション層でフィルタ.
  */
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, isNotNull, isNull } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type { RoutineRepository } from "../../../data/routine-repository.js";
 import { routines, type schema } from "../../../db/schema.js";
@@ -24,6 +24,7 @@ function rowToRoutine(row: {
   version: number;
   createdAt: string;
   updatedAt: string;
+  trashedAt: string | null;
 }): Routine {
   return {
     id: row.id,
@@ -33,6 +34,7 @@ function rowToRoutine(row: {
     version: row.version,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+    trashedAt: row.trashedAt,
   };
 }
 
@@ -46,6 +48,7 @@ function routineToValues(routine: Routine) {
     version: routine.version,
     createdAt: routine.createdAt,
     updatedAt: routine.updatedAt,
+    trashedAt: routine.trashedAt,
   };
 }
 
@@ -61,7 +64,24 @@ export class DrizzleRoutineRepository implements RoutineRepository {
   }
 
   async list(): Promise<Routine[]> {
-    const rows = this.db.select().from(routines).orderBy(asc(routines.name)).all();
+    // 通常状態 (trashed_at IS NULL) のみを name 昇順で返す.
+    const rows = this.db
+      .select()
+      .from(routines)
+      .where(isNull(routines.trashedAt))
+      .orderBy(asc(routines.name))
+      .all();
+    return rows.map(rowToRoutine);
+  }
+
+  async listTrashed(): Promise<Routine[]> {
+    // ゴミ箱状態 (trashed_at IS NOT NULL) を name 昇順で返す.
+    const rows = this.db
+      .select()
+      .from(routines)
+      .where(isNotNull(routines.trashedAt))
+      .orderBy(asc(routines.name))
+      .all();
     return rows.map(rowToRoutine);
   }
 
@@ -82,6 +102,7 @@ export class DrizzleRoutineRepository implements RoutineRepository {
         defaultPriority: vals.defaultPriority,
         version: vals.version,
         updatedAt: vals.updatedAt,
+        trashedAt: vals.trashedAt,
       })
       .where(eq(routines.id, routine.id))
       .run();
@@ -89,6 +110,10 @@ export class DrizzleRoutineRepository implements RoutineRepository {
 
   async delete(id: string): Promise<void> {
     this.db.delete(routines).where(eq(routines.id, id)).run();
+  }
+
+  async deleteAllTrashed(): Promise<void> {
+    this.db.delete(routines).where(isNotNull(routines.trashedAt)).run();
   }
 
   async findByDayOfWeek(day: number): Promise<Routine[]> {

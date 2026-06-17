@@ -108,10 +108,16 @@ export class LocalRoutineRepository implements WebRoutineRepository {
   }
 
   async delete(cmd: DeleteRoutineCommand): Promise<void> {
+    // BL-120 / AC-15: 物理削除ではなく論理削除 (ゴミ箱送り). trashed_at をセットし version+1.
     const result = await this.db.query("SELECT * FROM routines WHERE id = ?", [cmd.id]);
     const row = (result.values ?? [])[0];
     if (!row) throw new Error(`Routine not found: ${cmd.id}`);
 
-    await this.db.run("DELETE FROM routines WHERE id = ?", [cmd.id]);
+    const now = new Date().toISOString();
+    const newVersion = (row.version as number) + 1;
+    await this.db.run(
+      "UPDATE routines SET trashed_at = ?, updated_at = ?, version = ? WHERE id = ?",
+      [now, now, newVersion, cmd.id],
+    );
   }
 }

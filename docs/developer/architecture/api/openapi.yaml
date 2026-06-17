@@ -364,6 +364,11 @@ paths:
     delete:
       tags: [routines]
       summary: ルーティン削除（ゴミ箱へ）
+      description: |
+        Routine をゴミ箱化（soft delete: `trashedAt = now`, `version + 1`）する. 物理削除はしない.
+        配下の未ゴミ箱 Task（`routineId = {id}` かつ `trashedAt = null`）の `routineId` を `null` 化
+        する（デタッチ = カスケード NULL 固定）. Task 自体はゴミ箱化も削除もしない. 既にゴミ箱状態の
+        Task には触れない. Routine は `trashedReason` を持たない.
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/IfMatch"
@@ -380,7 +385,7 @@ paths:
       tags: [trash]
       summary: ゴミ箱一覧
       description: |
-        ゴミ箱内の Task と Project を `{ tasks, projects }` の 2 配列で返す.
+        ゴミ箱内の Task / Project / Routine を `{ tasks, projects, routines }` の 3 配列で返す.
       responses:
         "200":
           description: OK
@@ -388,7 +393,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [tasks, projects]
+                required: [tasks, projects, routines]
                 properties:
                   tasks:
                     type: array
@@ -398,6 +403,10 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/TrashedProject"
+                  routines:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/TrashedRoutine"
         "401": { $ref: "#/components/responses/Unauthorized" }
     delete:
       tags: [trash]
@@ -415,9 +424,9 @@ paths:
       tags: [trash]
       summary: ゴミ箱からの復元（FR-061）
       description: |
-        ゴミ箱中のエンティティを復元する. id から Task / Project をサーバが判別する.
-        Task の場合は `dueDate` を `today` にリセットする. Project の場合はカスケード復元しない
-        （削除時に `null` 化された配下 Task の `projectId` は元へ戻さない）.
+        ゴミ箱中のエンティティを復元する. id から Task / Project / Routine をサーバが判別する.
+        Task の場合は `dueDate` を `today` にリセットする. Project / Routine の場合はカスケード復元
+        しない（削除時に `null` 化された配下 Task の `projectId` / `routineId` は元へ戻さない）.
         復元経路はこの 1 本に一本化されている（per-entity の restore path は存在しない）.
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -425,7 +434,8 @@ paths:
       responses:
         "200":
           description: |
-            OK. Task 復元時は `{ task }`, Project 復元時は `{ project }` を返す.
+            OK. Task 復元時は `{ task }`, Project 復元時は `{ project }`, Routine 復元時は `{ routine }`
+            を返す.
           content:
             application/json:
               schema:
@@ -440,6 +450,11 @@ paths:
                     properties:
                       project:
                         $ref: "#/components/schemas/Project"
+                  - type: object
+                    required: [routine]
+                    properties:
+                      routine:
+                        $ref: "#/components/schemas/Routine"
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
@@ -1029,9 +1044,66 @@ components:
           nullable: true
         version:
           type: integer
+    TrashedRoutine:
+      type: object
+      description: |
+        ゴミ箱内 Routine の射影. `GET /trash` の `routines` 配列要素として返す.
+        Routine は `trashedReason` を持たない. `daysOfWeek` / `defaultPriority` は射影に含めない.
+      required:
+        - id
+        - name
+        - trashedAt
+        - version
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        trashedAt:
+          type: string
+          format: date-time
+          nullable: true
+        version:
+          type: integer
     Routine:
       type: object
-      description: ルーティン（同上）
+      description: |
+        ルーティン. 削除はゴミ箱化（soft delete）であり `trashedAt` に時刻をセットする.
+        Routine は `trashedReason` を持たない.
+      required:
+        - id
+        - name
+        - daysOfWeek
+        - defaultPriority
+        - version
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        daysOfWeek:
+          type: array
+          items:
+            type: integer
+          description: 0=日〜6=土. 重複排除済み.
+        defaultPriority:
+          type: string
+          enum: [highest, normal, later]
+        version:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        trashedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: ゴミ箱化された時刻. 通常状態は null.
     Counter:
       type: object
       description: |

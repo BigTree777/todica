@@ -184,4 +184,14 @@ export class DrizzleTaskRepository implements TaskRepository {
       .where(and(eq(tasks.routineId, routineId), isNull(tasks.trashedAt)))
       .run();
   }
+
+  async nullifyRoutineId(routineId: string): Promise<void> {
+    // BL-120 / FR-2 / D-4 デタッチ: 未ゴミ箱タスクの routine_id を null 化する.
+    // ゴミ箱状態のタスクには触れない. version / updatedAt は変更しない.
+    this.db
+      .update(tasks)
+      .set({ routineId: null })
+      .where(and(eq(tasks.routineId, routineId), isNull(tasks.trashedAt)))
+      .run();
+  }
 }

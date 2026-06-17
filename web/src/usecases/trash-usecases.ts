@@ -44,6 +44,8 @@ export function useTrashMutations(
     void queryClient.invalidateQueries({ queryKey: ["today"] });
     // BL-119: Project 復元時に通常の Project 一覧へ反映する.
     void queryClient.invalidateQueries({ queryKey: ["projects"] });
+    // BL-120: Routine 復元時に通常の Routine 一覧へ反映する.
+    void queryClient.invalidateQueries({ queryKey: ["routines"] });
     deps?.afterSuccess?.(queryClient, result);
   };
   const onError = (error: Error) => handleMutationError(error, deps, isConflict);

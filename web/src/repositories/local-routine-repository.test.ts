@@ -1,12 +1,10 @@
 /**
- * LocalRoutineRepository 単体テスト (BL-020 / FR-LOC-002)
+ * LocalRoutineRepository 単体テスト (BL-020 / BL-120 / FR-LOC-002)
  *
- * 受け入れ基準の出典: docs/developer/features/android-local-mode/spec.md
- *   - FR-LOC-002: LocalRoutineRepository は WebRoutineRepository インターフェースを満たす
- *   - T-16: LocalRoutineRepository の単体テスト
- *
- * NOTE: LocalRoutineRepository はまだ存在しない. このテストは意図的に失敗する (red).
- *       implementer が実装することで green 化する.
+ * 受け入れ基準の出典:
+ *   - docs/developer/features/android-local-mode/spec.md FR-LOC-002 / T-16
+ *   - docs/developer/features/routine-soft-delete/spec.md AC-15
+ *     (ローカル offline でも Routine 削除がゴミ箱化される = soft delete).
  *
  * モック方針 (NFR-LOC-003):
  *   @capacitor-community/sqlite は jsdom 環境で動作しないため vi.mock でモックする.
@@ -14,6 +12,12 @@
  * 特記事項:
  *   generateOnWeekdays（daysOfWeek）は SQLite に JSON 文字列として保存し、
  *   読み出し時に JSON.parse して配列として返す（plan.md §D-001）.
+ *
+ * BL-120 の偽 green 教訓:
+ *   delete() が物理削除 (DELETE) のままだと AC-15 (offline soft delete) を満たさない.
+ *   本テストは delete() が soft delete (UPDATE trashed_at) であることを期待し,
+ *   hard delete を見逃さない. R-3 (列名不整合) の全面修正はスコープ外で,
+ *   trashed_at の往復成立に焦点を絞る.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -91,6 +95,23 @@ describe("LocalRoutineRepository.list() (FR-LOC-002 / T-16)", () => {
 
     expect(result).toEqual([]);
   });
+
+  // BL-120 / AC-15: 通常一覧は trashed_at IS NULL で絞り込む.
+  it("シナリオ (AC-15): list() は trashed_at IS NULL で絞り込む SELECT を発行する", async () => {
+    const db = makeMockDb([]);
+    const repo = new LocalRoutineRepository(db as never);
+
+    await repo.list();
+
+    const queryCalls = db.query.mock.calls as [string, unknown[]?][];
+    const listQuery = queryCalls.find(
+      ([sql]) =>
+        typeof sql === "string" &&
+        sql.toLowerCase().includes("from routines") &&
+        sql.toLowerCase().includes("trashed_at is null"),
+    );
+    expect(listQuery).toBeDefined();
+  });
 });
 
 describe("LocalRoutineRepository.create() (FR-LOC-002 / T-16)", () => {
@@ -151,7 +172,7 @@ describe("LocalRoutineRepository.create() (FR-LOC-002 / T-16)", () => {
   });
 });
 
-describe("LocalRoutineRepository.delete() (FR-LOC-002 / T-16)", () => {
+describe("LocalRoutineRepository.delete() (BL-120 / AC-15 ゴミ箱送り)", () => {
   let db: ReturnType<typeof makeMockDb>;
   let repo: LocalRoutineRepository;
 
@@ -172,8 +193,11 @@ describe("LocalRoutineRepository.delete() (FR-LOC-002 / T-16)", () => {
     repo = new LocalRoutineRepository(db as never);
   });
 
-  // plan.md §T-05: delete(id, ifMatch) でルーティンが物理削除される
-  it("シナリオ: delete(id, ifMatch) でルーティンが物理削除される", async () => {
+  // BL-120 / AC-15 / FR-1 / FR-061: delete(id, ifMatch) は物理削除ではなく
+  // 論理削除 (ゴミ箱送り) でなければならない. trashed_at をセットする UPDATE を
+  // 発行し, DELETE は発行しないことを検証する. 物理削除すると復元不能で
+  // ゴミ箱に出ないため AC-15 違反になる (offline soft delete 往復が成立しない).
+  it("シナリオ (AC-15): delete(id, ifMatch) でルーティンが論理削除 (ゴミ箱送り) される", async () => {
     db.query.mockResolvedValueOnce({
       values: [
         {
@@ -192,14 +216,29 @@ describe("LocalRoutineRepository.delete() (FR-LOC-002 / T-16)", () => {
 
     await repo.delete({ id: "routine-1", ifMatch: 1 });
 
-    // run または execute に DELETE 文が呼ばれること
     const allCalls = [
       ...(db.run.mock.calls as [string, unknown[]][]),
-      ...(db.execute.mock.calls as unknown as [string][]),
+      ...(db.execute.mock.calls as unknown as [string, unknown[]][]),
     ];
+
+    // 物理削除 (DELETE) は発行されないこと.
     const deleteCall = allCalls.find(
       ([sql]) => typeof sql === "string" && sql.toUpperCase().includes("DELETE"),
     );
-    expect(deleteCall).toBeDefined();
+    expect(deleteCall).toBeUndefined();
+
+    // trashed_at をセットする UPDATE が routines に対して発行されること.
+    const softDeleteCall = allCalls.find(
+      ([sql]) =>
+        typeof sql === "string" &&
+        sql.toUpperCase().includes("UPDATE") &&
+        sql.toLowerCase().includes("routines") &&
+        sql.toLowerCase().includes("trashed_at"),
+    );
+    expect(softDeleteCall).toBeDefined();
+
+    // 対象 id が WHERE 条件として渡されること.
+    const [, values] = softDeleteCall as [string, unknown[]];
+    expect(values).toContain("routine-1");
   });
 });
