@@ -9,18 +9,12 @@
  *
  * 本実装: `server/src/infra/persistence/drizzle/drizzle-settings-repository.ts` (DrizzleSettingsRepository).
  * テスト用 in-memory 実装: `server/__tests__/helpers/in-memory-repositories.ts`.
+ *
+ * Settings 型は `@todica/domain/settings` に集約済み (server / web 共通).
  */
+import type { Settings } from "@todica/domain/settings";
 
-export interface Settings {
-  /** 単一レコードを示す固定値 "singleton". */
-  id: string;
-  /** 境界時刻. "HH:MM" 形式 (例: "04:00", "23:30"). デフォルト "04:00" (FR-042). */
-  dayBoundaryTime: string;
-  /** ISO 8601. 最後に update された時刻. */
-  updatedAt: string;
-  /** 楽観ロック用. update のたびに +1. */
-  version: number;
-}
+export type { Settings };
 
 export interface SettingsRepository {
   /**

@@ -42,6 +42,10 @@
       "types": "./dist/focus-selection/index.d.ts",
       "import": "./dist/focus-selection/index.js"
     },
+    "./settings": {
+      "types": "./dist/settings/index.d.ts",
+      "import": "./dist/settings/index.js"
+    },
     "./trash": {
       "types": "./dist/trash/index.d.ts",
       "import": "./dist/trash/index.js"
