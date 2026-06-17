@@ -430,7 +430,10 @@ describe("FocusView (BL-037 REQ-7 起票フォーム無し)", () => {
 
     // 起票関連の入力要素 / ボタンが存在しないこと.
     expect(screen.queryByLabelText(/タスク名/)).toBeNull();
-    expect(screen.queryByLabelText(/プロジェクト/)).toBeNull();
+    // BL-108 で TaskCard 表示側にもプロジェクト変更 `<select>` が居るため
+    // queryByLabelText(/プロジェクト/) は focusedTask カード内の control を拾う.
+    // ここでは「起票フォームの projectId input が無いこと」を id="create-project" で代替確認する.
+    expect(document.getElementById("create-project")).toBeNull();
     expect(screen.queryByLabelText(/期限/)).toBeNull();
     expect(screen.queryByLabelText(/優先度/)).toBeNull();
     expect(screen.queryByRole("button", { name: /追加|起票|登録|送信/ })).toBeNull();

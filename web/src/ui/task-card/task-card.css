@@ -157,9 +157,10 @@
 /*
  * BL-066 (task-form-select-compact) REQ-1 / D-003:
  * 起票カード (.task-card--form) の header 段にあるプロジェクト `<select>` の box を縮小し,
- * TaskCard 表示側の `.project-chip` と視覚言語を揃える.
- * TaskCard 表示側 (`<TaskCard>`) の `.task-card__header` 配下には `<select>` が DOM 構造上
- * 存在しないため (= chip は `<span>`), このセレクタは起票カードにのみマッチする (D-001).
+ * 視覚言語をコンパクトに揃える.
+ * BL-108 (task-card-project-change) で `<TaskCard>` (表示) の `.task-card__header` 配下にも
+ * プロジェクト変更用の `<select>` が現れる. 本ルールは `<TaskCard>` と `<TaskFormCard>` の
+ * いずれにも適用される.
  * appearance: none で OS デフォルト矢印を消す. 矢印代替の描画は本 BL のスコープ外 (D-002).
  */
 .task-card__header select {

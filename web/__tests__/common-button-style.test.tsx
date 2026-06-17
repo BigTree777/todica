@@ -527,6 +527,8 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
           <TaskCard
             task={makeTask({ origin: "manual" })}
             project={null}
+            projects={[]}
+            onChangeProject={() => {}}
             showPriority={false}
             showSetFocus
             actionSet="full"
@@ -878,6 +880,8 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
         <TaskCard
           task={makeTask({ origin: "manual" })}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           showSetFocus
           actionSet="full"
@@ -974,6 +978,8 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
         <TaskCard
           task={makeTask({ origin: "manual" })}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           showSetFocus
           actionSet="full"
@@ -1254,6 +1260,8 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
         <TaskCard
           task={makeTask({ origin: "manual" })}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           actionSet="minimal"
           onDelete={() => {}}
@@ -1278,6 +1286,8 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
         <TaskCard
           task={makeTask({ origin: "manual" })}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           actionSet="minimal"
           onDelete={() => {}}
@@ -1472,6 +1482,8 @@ describe("共通ボタンスタイル (BL-067 / common-button-style)", () => {
         <TaskCard
           task={makeTask({ origin: "manual" })}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           actionSet="minimal"
           onDelete={onDelete}

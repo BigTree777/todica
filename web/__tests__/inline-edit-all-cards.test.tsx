@@ -483,6 +483,8 @@ describe("BL-070 inline-edit-all-cards / 全カードのインライン常時編
         <TaskCard
           task={task}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           actionSet="full"
           dueDateMode="today"
@@ -510,6 +512,8 @@ describe("BL-070 inline-edit-all-cards / 全カードのインライン常時編
         <TaskCard
           task={task}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           actionSet="full"
           dueDateMode="today"
@@ -550,6 +554,8 @@ describe("BL-070 inline-edit-all-cards / 全カードのインライン常時編
         <TaskCard
           task={task}
           project={null}
+          projects={[]}
+          onChangeProject={() => {}}
           showPriority={false}
           actionSet="full"
           dueDateMode="today"

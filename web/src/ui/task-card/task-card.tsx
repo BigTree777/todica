@@ -28,8 +28,22 @@ import "./task-card.css";
 export interface TaskCardProps {
   /** 表示対象タスク. */
   task: Task;
-  /** 紐づくプロジェクト (chip 表示用). */
+  /**
+   * 紐づくプロジェクト. BL-108 で表示側 chip は撤去されたため
+   * 直接の表示用途は無いが, API 互換と将来の強調表示拡張のために維持する (D-006).
+   */
   project: Project | null;
+  /**
+   * BL-108 (task-card-project-change) REQ-9 / D-004:
+   * `<select>` の option 列挙用. 先頭に「プロジェクトなし」を加えた上で
+   * このリストの順序通りに `<option>` を並べる. 親が並び順 / フィルタを管理する.
+   */
+  projects: Project[];
+  /**
+   * BL-108 REQ-5 / D-003: `<select>` の選択値変更ハンドラ.
+   * 「プロジェクトなし」 (value="") を選んだ場合は `null` に変換して呼ぶ.
+   */
+  onChangeProject: (next: string | null) => void;
   /** 強調 variant 切替 (D-002). default の default 値は "default". */
   variant?: "default" | "focus";
   /** PriorityStars を出すか (default: true). tomorrow-view では false (D-003). */
@@ -61,7 +75,9 @@ export interface TaskCardProps {
 export function TaskCard(props: TaskCardProps): JSX.Element {
   const {
     task,
-    project,
+    project: _project,
+    projects,
+    onChangeProject,
     variant = "default",
     showPriority = true,
     showSetFocus = false,
@@ -76,6 +92,8 @@ export function TaskCard(props: TaskCardProps): JSX.Element {
     as = "li",
     "aria-label": ariaLabel,
   } = props;
+  // _project: BL-108 (D-006) で表示用途を持たないが API 互換のため受け取り続ける. void で未使用警告を回避.
+  void _project;
 
   const className = `task-card${variant === "focus" ? " task-card--focus" : ""}`;
   // D-010: routine 由来タスクは期限切替不可 (BL-017 / BL-042 仕様維持).
@@ -84,10 +102,34 @@ export function TaskCard(props: TaskCardProps): JSX.Element {
   // P-002: as prop に応じて root tag を切替.
   const Tag = as as "li";
 
+  // BL-108 REQ-10 / D-009: id は task id を含めて衝突回避.
+  const projectSelectId = `task-project-${task.id}`;
+
   return (
     <Tag className={className} aria-label={ariaLabel}>
       <div className="task-card__header">
-        {project && <span className="project-chip">{project.name}</span>}
+        {/* BL-108 REQ-1 / REQ-10: 旧 `<span class="project-chip">` を
+            visually-hidden な `<label>` + `<select>` 構造に置換.
+            REQ-2 / D-002: 先頭 option は「プロジェクトなし」 (value="").
+            REQ-5 / D-003: 空文字を null に変換して親に渡す. */}
+        <label htmlFor={projectSelectId} className="visually-hidden">
+          プロジェクト
+        </label>
+        <select
+          id={projectSelectId}
+          value={task.projectId ?? ""}
+          onChange={(e) => {
+            const v = e.currentTarget.value;
+            onChangeProject(v === "" ? null : v);
+          }}
+        >
+          <option value="">プロジェクトなし</option>
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
         {showPriority && onSetPriority && (
           <div className="task-card__header__priority">
             <PriorityStars

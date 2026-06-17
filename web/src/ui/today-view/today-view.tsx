@@ -443,6 +443,27 @@ export function TodayView(props: TodayViewProps): JSX.Element {
     [updateMutation],
   );
 
+  // BL-108 (task-card-project-change) REQ-5 / REQ-6 / REQ-7 / D-005:
+  //   - カード `<select>` の選択値を受けて PATCH /api/v1/tasks/:id { projectId } を発行.
+  //   - 同値短絡 (next === task.projectId) は親側で行う (D-005).
+  //   - 既存 updateMutation を流用し ConflictDialog / offline-queue / notifyError 経路を共有.
+  const handleChangeProject = useCallback(
+    async (task: Task, next: string | null) => {
+      if (task.projectId === next) return; // REQ-7 同値短絡.
+      const cmd: UpdateTaskCommand = {
+        id: task.id,
+        ifMatch: task.version,
+        patch: { projectId: next },
+      };
+      try {
+        await updateMutation.mutateAsync(cmd);
+      } catch {
+        // onError で処理済み (ConflictDialog / notifyError).
+      }
+    },
+    [updateMutation],
+  );
+
   // BL-070 REQ-9 / D-001 / D-002: name 編集は input blur 経由.
   //   - 空文字 → 短絡 (元値復元 / D-002).
   //   - 同値 → 短絡 (PATCH 抑制 / D-001).
@@ -521,6 +542,8 @@ export function TodayView(props: TodayViewProps): JSX.Element {
               aria-label="現在のタスク"
               task={focusedTask}
               project={focusedProject}
+              projects={projects}
+              onChangeProject={(next) => handleChangeProject(focusedTask, next)}
               showPriority
               showSetFocus={false}
               actionSet="full"
@@ -565,6 +588,8 @@ export function TodayView(props: TodayViewProps): JSX.Element {
               variant="default"
               task={task}
               project={project}
+              projects={projects}
+              onChangeProject={(next) => handleChangeProject(task, next)}
               showPriority
               showSetFocus
               actionSet="full"
