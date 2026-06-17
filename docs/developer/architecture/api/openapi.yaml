@@ -8,6 +8,12 @@ info:
     本ファイルは骨格定義. 共通のプロトコル要素（認証 / 冪等性キー / 楽観ロック / 共通エラー）は
     アーキテクチャ段階で確定済み. 個別エンドポイントのリクエスト / レスポンススキーマは
     各 feature spec の進行に合わせて追記する（仕様策定方針: ADR-0010）.
+
+    `x-internal: true` 規約: operation に付与する拡張プロパティで,
+    「サーバ実装には存在するが, クライアント（web / android）は呼んではならない内部 endpoint」を表す.
+    `x-internal` の有無に関わらず, 当該 (path, method) は実装側にも存在しなければならない
+    （ドリフト検出: __tests__/structure/openapi-drift.test.ts は内部 endpoint も一致検証の対象とする）.
+    現行付与対象は `/healthz` と `/test/clock` 系（テストクロック）.
   version: 0.1.0
   contact:
     name: Todica Owner
@@ -19,6 +25,8 @@ security:
   - BearerAuth: []
 
 tags:
+  - name: health
+    description: ヘルスチェック（運用監視用・内部）
   - name: tasks
     description: タスク（FR-001 〜 FR-009, FR-014, FR-061）
   - name: today
@@ -45,6 +53,30 @@ tags:
       のみ存在する. 本番起動では unrouted となり 404 を返す. クライアント実装は呼ばないこと.
 
 paths:
+  # ========== Health ==========
+  /healthz:
+    summary: ヘルスチェック（内部）
+    get:
+      tags: [health]
+      summary: サーバの稼働確認用エンドポイント
+      description: |
+        運用監視用. `/api/v1` 配下ではなくルート直下に存在する.
+        クライアント（web / android）は呼ばない内部エンドポイントのため `x-internal: true`.
+      x-internal: true
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    enum: ["ok"]
+
   # ========== Tasks ==========
   /tasks:
     summary: タスク一覧 / 起票
@@ -171,21 +203,6 @@ paths:
                   task:
                     $ref: "#/components/schemas/Task"
         "400": { $ref: "#/components/responses/BadRequest" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-        "412": { $ref: "#/components/responses/PreconditionFailed" }
-
-  /tasks/{id}/restore:
-    parameters:
-      - $ref: "#/components/parameters/EntityId"
-    post:
-      tags: [tasks]
-      summary: ゴミ箱からのタスク復元（FR-061）
-      parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
-        - $ref: "#/components/parameters/IfMatch"
-      responses:
-        "200": { description: OK }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
         "412": { $ref: "#/components/responses/PreconditionFailed" }
@@ -319,21 +336,6 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "412": { $ref: "#/components/responses/PreconditionFailed" }
 
-  /projects/{id}/restore:
-    parameters:
-      - $ref: "#/components/parameters/EntityId"
-    post:
-      tags: [projects]
-      summary: プロジェクト復元
-      parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
-        - $ref: "#/components/parameters/IfMatch"
-      responses:
-        "200": { description: OK }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-        "412": { $ref: "#/components/responses/PreconditionFailed" }
-
   # ========== Routines ==========
   /routines:
     get:
@@ -378,21 +380,6 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "412": { $ref: "#/components/responses/PreconditionFailed" }
 
-  /routines/{id}/restore:
-    parameters:
-      - $ref: "#/components/parameters/EntityId"
-    post:
-      tags: [routines]
-      summary: ルーティン復元（FR-061）
-      parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
-        - $ref: "#/components/parameters/IfMatch"
-      responses:
-        "200": { description: OK }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-        "412": { $ref: "#/components/responses/PreconditionFailed" }
-
   # ========== Trash ==========
   /trash:
     summary: ゴミ箱一覧 / 手動空にする
@@ -410,6 +397,34 @@ paths:
       responses:
         "204": { description: No Content }
         "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /trash/{id}/restore:
+    parameters:
+      - $ref: "#/components/parameters/EntityId"
+    post:
+      tags: [trash]
+      summary: ゴミ箱からの復元（FR-061）
+      description: |
+        ゴミ箱中のエンティティを復元する. タスクの場合は `dueDate` を `today` にリセットする.
+        復元経路はこの 1 本に一本化されている（per-entity の restore path は存在しない）.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/IfMatch"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [task]
+                properties:
+                  task:
+                    $ref: "#/components/schemas/Task"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "412": { $ref: "#/components/responses/PreconditionFailed" }
 
   # ========== Counter ==========
   /counter:
