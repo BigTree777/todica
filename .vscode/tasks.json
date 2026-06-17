@@ -34,7 +34,7 @@
     {
       "label": "server-dev",
       "type": "shell",
-      "command": "node --inspect --env-file-if-exists=.env node_modules/vite-node/vite-node.mjs --watch server/src/main.ts",
+      "command": "node --inspect --env-file-if-exists=.env node_modules/vite-node/dist/cli.mjs --watch server/src/main.ts",
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -58,6 +58,39 @@
           "endsPattern": "Todica server listening"
         }
       }
+    },
+    {
+      "label": "server-run",
+      "type": "shell",
+      "command": "npm run dev -w server",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "echo": true,
+        "showReuseMessage": true,
+        "revealProblems": "onProblem",
+        "clear": true
+      },
+      "problemMatcher": {
+        "owner": "todica-server",
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".",
+          "endsPattern": "Todica server listening"
+        }
+      }
+    },
+    {
+      "label": "dev-all",
+      "dependsOn": ["server-run", "vite-dev"],
+      "dependsOrder": "parallel"
     }
   ]
 }

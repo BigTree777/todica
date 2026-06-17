@@ -2,6 +2,14 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "type": "chrome",
+      "request": "launch",
+      "name": "設定画面を確認",
+      "url": "http://localhost:5173/settings",
+      "webRoot": "${workspaceFolder}/web",
+      "preLaunchTask": "dev-all"
+    },
+    {
       "type": "node",
       "request": "attach",
       "name": "Server: デバッガを attach",
