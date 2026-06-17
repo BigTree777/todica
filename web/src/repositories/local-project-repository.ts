@@ -82,6 +82,17 @@ export class LocalProjectRepository implements ProjectRepository {
     const row = (result.values ?? [])[0];
     if (!row) throw new Error(`Project not found: ${cmd.id}`);
 
-    await this.db.run("DELETE FROM projects WHERE id = ?", [cmd.id]);
+    const now = new Date().toISOString();
+    const newVersion = (row.version as number) + 1;
+
+    // カスケード NULL: 紐付くタスクの project_id を NULL 化する (タスクはゴミ箱化しない).
+    // server 側の deleteProject (カスケード NULL 固定) と挙動を揃える.
+    await this.db.run("UPDATE tasks SET project_id = NULL WHERE project_id = ?", [cmd.id]);
+
+    // 論理削除 (ゴミ箱送り): trashed_at をセットし version を +1 する.
+    await this.db.run(
+      "UPDATE projects SET trashed_at = ?, updated_at = ?, version = ? WHERE id = ?",
+      [now, now, newVersion, cmd.id],
+    );
   }
 }

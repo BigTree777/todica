@@ -12,6 +12,8 @@ export interface Project {
   version: number;
   createdAt: string;
   updatedAt: string;
+  /** ゴミ箱化された時刻 (ISO8601). 通常状態は null. */
+  trashedAt: string | null;
 }
 
 const MAX_NAME_LENGTH = 200;
@@ -68,6 +70,7 @@ export function createProject(id: string, name: string, clock: Clock): Project {
     version: 1,
     createdAt: now,
     updatedAt: now,
+    trashedAt: null,
   };
 }
 
@@ -81,4 +84,40 @@ export function updateProject(current: Project, name: string, clock: Clock): Pro
     version: current.version + 1,
     updatedAt: clock.now(),
   };
+}
+
+/**
+ * プロジェクトをゴミ箱に入れる (DELETE = 論理削除). trashedAt をセットし version+1.
+ * 既にゴミ箱状態の場合は no-op (同じ値を返す) で冪等とする (trashTask と同型).
+ * Project は trashedReason を持たない (D-6).
+ */
+export function trashProject(current: Project, clock: Clock): Project {
+  if (current.trashedAt !== null) {
+    return { ...current };
+  }
+  const now = clock.now();
+  return {
+    ...current,
+    trashedAt: now,
+    updatedAt: now,
+    version: current.version + 1,
+  };
+}
+
+/**
+ * ゴミ箱プロジェクトを復元する. trashedAt を null に戻し version+1, updatedAt 更新.
+ * カスケード復元はしない (D-4).
+ */
+export function restoreProject(current: Project, clock: Clock): Project {
+  return {
+    ...current,
+    trashedAt: null,
+    updatedAt: clock.now(),
+    version: current.version + 1,
+  };
+}
+
+/** 既にゴミ箱状態か判定するヘルパ. */
+export function isTrashed(project: Project): boolean {
+  return project.trashedAt !== null;
 }

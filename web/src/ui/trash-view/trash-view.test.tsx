@@ -69,6 +69,9 @@ function makeMockRepository(initial: TrashedTask[] = []): TrashRepository & {
   let state = [...initial];
 
   const listMock = vi.fn(async (): Promise<TrashedTask[]> => [...state]);
+  // BL-119 (project-soft-delete): TrashView は Project セクション用に listProjects() も呼ぶ.
+  // 本 describe の Task 系シナリオでは Project は常に空とする.
+  const listProjectsMock = vi.fn(async () => []);
   const restoreMock = vi.fn(async (cmd: RestoreTaskCommand): Promise<TrashedTask> => {
     const task = state.find((t) => t.id === cmd.id);
     if (!task) throw new Error("task not found");
@@ -81,11 +84,16 @@ function makeMockRepository(initial: TrashedTask[] = []): TrashRepository & {
 
   return {
     list: listMock,
+    listProjects: listProjectsMock,
     restore: restoreMock,
     empty: emptyMock,
     listMock,
     restoreMock,
     emptyMock,
+  } as unknown as TrashRepository & {
+    listMock: ReturnType<typeof vi.fn>;
+    restoreMock: ReturnType<typeof vi.fn>;
+    emptyMock: ReturnType<typeof vi.fn>;
   };
 }
 

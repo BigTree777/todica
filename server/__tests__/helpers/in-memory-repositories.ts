@@ -10,7 +10,7 @@ import type { Task } from "@todica/domain/task";
 import type { Counter, CounterRepository } from "../../src/data/counter-repository.js";
 import type { FocusRepository, FocusSelection } from "../../src/data/focus-repository.js";
 import type { IdempotencyRecord, IdempotencyStore } from "../../src/data/idempotency-store.js";
-import type { ProjectRepository } from "../../src/data/project-repository.js";
+import type { Project, ProjectRepository } from "../../src/data/project-repository.js";
 // BL-017: RoutineRepository インターフェース（未実装のため型のみ参照）
 import type { Routine, RoutineRepository } from "../../src/data/routine-repository.js";
 import type { Settings, SettingsRepository } from "../../src/data/settings-repository.js";
@@ -206,12 +206,16 @@ export class InMemoryRoutineRepository implements RoutineRepository {
 }
 
 // BL-016 で使用する Project 型（ProjectRepository 拡張前の暫定定義）
+// BL-119 (project-soft-delete): trashedAt を任意フィールドとして許容する.
+// 既存 seed (trashedAt 未指定) は通常状態 (null 相当) として扱い,
+// ゴミ箱状態の Project を seedProject で投入できるようにする.
 export interface ProjectRecord {
   id: string;
   name: string;
   version: number;
   createdAt: string;
   updatedAt: string;
+  trashedAt?: string | null;
 }
 
 export class InMemoryProjectRepository implements ProjectRepository {
@@ -231,16 +235,27 @@ export class InMemoryProjectRepository implements ProjectRepository {
     this.ids.add(project.id);
   }
 
-  // BL-016: findById
-  async findById(id: string): Promise<ProjectRecord | null> {
+  // BL-016: findById (trashedAt は必須 null に正規化して返す)
+  async findById(id: string): Promise<Project | null> {
     const p = this.store.get(id);
-    return p ? { ...p } : null;
+    // trashedAt 未指定の seed は通常状態 (null) として正規化する.
+    return p ? { ...p, trashedAt: p.trashedAt ?? null } : null;
   }
 
   // BL-016: list (name 昇順, Unicode コードポイント順 = BINARY コレーション相当)
-  async list(): Promise<ProjectRecord[]> {
+  // BL-119: 通常状態 (trashedAt が null / 未指定) のみを返す.
+  async list(): Promise<Project[]> {
     return Array.from(this.store.values())
-      .map((p) => ({ ...p }))
+      .filter((p) => (p.trashedAt ?? null) === null)
+      .map((p) => ({ ...p, trashedAt: p.trashedAt ?? null }))
+      .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  }
+
+  // BL-119: listTrashed (ゴミ箱状態 trashedAt != null のみ)
+  async listTrashed(): Promise<Project[]> {
+    return Array.from(this.store.values())
+      .filter((p) => (p.trashedAt ?? null) !== null)
+      .map((p) => ({ ...p, trashedAt: p.trashedAt ?? null }))
       .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
   }
 
@@ -253,6 +268,16 @@ export class InMemoryProjectRepository implements ProjectRepository {
   async delete(id: string): Promise<void> {
     this.store.delete(id);
     this.ids.delete(id);
+  }
+
+  // BL-119: deleteAllTrashed (ゴミ箱状態を全件物理削除)
+  async deleteAllTrashed(): Promise<void> {
+    for (const [id, project] of this.store.entries()) {
+      if ((project.trashedAt ?? null) !== null) {
+        this.store.delete(id);
+        this.ids.delete(id);
+      }
+    }
   }
 
   /** テスト補助: ID のみで seed（既存 BL-001 tests 互換）. */

@@ -42,6 +42,8 @@ export function useTrashMutations(
   const onSuccess = (result: unknown) => {
     void queryClient.invalidateQueries({ queryKey: ["trash"] });
     void queryClient.invalidateQueries({ queryKey: ["today"] });
+    // BL-119: Project 復元時に通常の Project 一覧へ反映する.
+    void queryClient.invalidateQueries({ queryKey: ["projects"] });
     deps?.afterSuccess?.(queryClient, result);
   };
   const onError = (error: Error) => handleMutationError(error, deps, isConflict);

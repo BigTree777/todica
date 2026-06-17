@@ -213,3 +213,116 @@ describe("LocalTrashRepository.empty() (FR-LOC-002 / T-17)", () => {
     expect(deleteCall).toBeDefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Project 経路 (BL-119 / FR-061 / D-2 / D-3 / D-6)
+//   offline (local) モードでも Project の論理削除・復元・物理削除を扱う.
+//   local-project-repository.delete には依存せず, trashed な project 行を
+//   直接 seed して LocalTrashRepository 単体の経路を検証する.
+// ---------------------------------------------------------------------------
+
+describe("LocalTrashRepository.listProjects() (FR-LOC-002 / BL-119 / D-2)", () => {
+  // trashed_at IS NOT NULL の project を TrashedProject として返す.
+  it("シナリオ: listProjects() が trashed な project を返す", async () => {
+    const trashedProjects: Row[] = [
+      {
+        id: "proj-trash-1",
+        name: "ゴミ箱プロジェクト",
+        created_at: "2026-06-08T00:00:00.000Z",
+        updated_at: "2026-06-08T09:00:00.000Z",
+        trashed_at: "2026-06-08T09:00:00.000Z",
+        version: 2,
+      },
+    ];
+    const db = makeMockDb(trashedProjects);
+    const repo = new LocalTrashRepository(db as never);
+
+    const result = await repo.listProjects();
+
+    expect(result.length).toBe(1);
+    expect(result[0]?.id).toBe("proj-trash-1");
+    expect(result[0]?.name).toBe("ゴミ箱プロジェクト");
+    expect(result[0]?.trashedAt).toBe("2026-06-08T09:00:00.000Z");
+    // Project は trashedReason を持たない (D-6).
+    expect((result[0] as unknown as Record<string, unknown>).trashedReason).toBeUndefined();
+  });
+});
+
+describe("LocalTrashRepository.restore() — Project 分岐 (FR-LOC-002 / BL-119 / D-3 / D-6)", () => {
+  let db: ReturnType<typeof makeMockDb>;
+  let repo: LocalTrashRepository;
+
+  beforeEach(() => {
+    db = makeMockDb();
+    repo = new LocalTrashRepository(db as never);
+  });
+
+  // Task として該当無し → Project として trashed_at を NULL に戻す.
+  it("シナリオ: restore(id, ifMatch) で project が復元される (trashed_at=NULL)", async () => {
+    // 1) tasks 検索: 該当無し (Project 分岐に進む).
+    db.query.mockResolvedValueOnce({ values: [] });
+    // 2) projects 検索: trashed な project が見つかる.
+    db.query.mockResolvedValueOnce({
+      values: [
+        {
+          id: "proj-1",
+          name: "復元対象プロジェクト",
+          created_at: "2026-06-08T00:00:00.000Z",
+          updated_at: "2026-06-08T09:00:00.000Z",
+          trashed_at: "2026-06-08T09:00:00.000Z",
+          version: 2,
+        },
+      ],
+    });
+    // 3) UPDATE 後の再取得: trashed_at=null の状態.
+    db.query.mockResolvedValueOnce({
+      values: [
+        {
+          id: "proj-1",
+          name: "復元対象プロジェクト",
+          created_at: "2026-06-08T00:00:00.000Z",
+          updated_at: "2026-06-08T10:00:00.000Z",
+          trashed_at: null,
+          version: 3,
+        },
+      ],
+    });
+
+    const restored = await repo.restore({ id: "proj-1", ifMatch: 2 });
+
+    // projects テーブルを trashed_at=NULL に更新する run が呼ばれること.
+    const runCalls = db.run.mock.calls as [string, unknown[]][];
+    const projectRestore = runCalls.find(
+      ([sql]) =>
+        typeof sql === "string" &&
+        sql.toLowerCase().includes("update projects") &&
+        sql.toLowerCase().includes("trashed_at = null"),
+    );
+    expect(projectRestore).toBeDefined();
+
+    // 復元後は trashed_at=null, version+1.
+    expect((restored as unknown as { id: string }).id).toBe("proj-1");
+    expect((restored as unknown as { trashedAt: string | null }).trashedAt).toBeNull();
+    expect(restored.version).toBe(3);
+  });
+});
+
+describe("LocalTrashRepository.empty() — projects 物理削除 (FR-LOC-002 / BL-119)", () => {
+  // empty() は trashed な tasks に加え trashed な projects も物理削除する.
+  it("シナリオ: empty() で trashed な projects に対する DELETE が発行される", async () => {
+    const db = makeMockDb();
+    const repo = new LocalTrashRepository(db as never);
+
+    await repo.empty();
+
+    const runCalls = db.run.mock.calls as [string, unknown[]][];
+    const projectDelete = runCalls.find(
+      ([sql]) =>
+        typeof sql === "string" &&
+        sql.toUpperCase().includes("DELETE") &&
+        sql.toLowerCase().includes("from projects") &&
+        sql.toLowerCase().includes("trashed_at is not null"),
+    );
+    expect(projectDelete).toBeDefined();
+  });
+});

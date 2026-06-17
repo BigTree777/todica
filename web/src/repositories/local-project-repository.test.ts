@@ -194,8 +194,11 @@ describe("LocalProjectRepository.delete() (FR-LOC-002 / T-15)", () => {
     repo = new LocalProjectRepository(db as never);
   });
 
-  // plan.md §T-04: delete(id, ifMatch) でプロジェクトが物理削除される
-  it("シナリオ: delete(id, ifMatch) でプロジェクトが物理削除される", async () => {
+  // AC-1 / AC-11 / FR-061: delete(id, ifMatch) は物理削除ではなく
+  // 論理削除 (ゴミ箱送り) でなければならない. trashed_at をセットする
+  // UPDATE を発行し, DELETE は発行しないことを検証する.
+  // 物理削除すると復元不能でゴミ箱に出ないため AC-1/AC-11/FR-061 違反になる.
+  it("シナリオ: delete(id, ifMatch) でプロジェクトが論理削除 (ゴミ箱送り) される", async () => {
     db.query.mockResolvedValueOnce({
       values: [
         {
@@ -211,14 +214,29 @@ describe("LocalProjectRepository.delete() (FR-LOC-002 / T-15)", () => {
 
     await repo.delete({ id: "proj-1", ifMatch: 1 });
 
-    // run または execute に DELETE 文が呼ばれること
     const allCalls = [
       ...(db.run.mock.calls as [string, unknown[]][]),
-      ...(db.execute.mock.calls as unknown as [string][]),
+      ...(db.execute.mock.calls as unknown as [string, unknown[]][]),
     ];
+
+    // 物理削除 (DELETE) は発行されないこと.
     const deleteCall = allCalls.find(
       ([sql]) => typeof sql === "string" && sql.toUpperCase().includes("DELETE"),
     );
-    expect(deleteCall).toBeDefined();
+    expect(deleteCall).toBeUndefined();
+
+    // trashed_at をセットする UPDATE が発行されること.
+    const softDeleteCall = allCalls.find(
+      ([sql]) =>
+        typeof sql === "string" &&
+        sql.toUpperCase().includes("UPDATE") &&
+        sql.toLowerCase().includes("trashed_at"),
+    );
+    expect(softDeleteCall).toBeDefined();
+
+    // 対象 id が WHERE 条件として渡され, version が +1 されること.
+    const [, values] = softDeleteCall as [string, unknown[]];
+    expect(values).toContain("proj-1");
+    expect(values).toContain(2);
   });
 });
