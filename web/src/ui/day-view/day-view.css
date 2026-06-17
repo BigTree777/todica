@@ -31,6 +31,10 @@
   margin: 0;
   /* BL-111: 全 view の h1 を左右中央揃えで統一する. */
   text-align: center;
+  /* 行幅を h1 に確保して text-align: center を有効化する. row flex の親 (tomorrow) で
+     h1 が intrinsic 幅のままだとテキストが左寄せに見える対症. column flex の親 (today)
+     では align-items: stretch で既に full-width なので無害. */
+  flex: 1;
 }
 
 .day-view__list {

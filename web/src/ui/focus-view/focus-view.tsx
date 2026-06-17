@@ -304,7 +304,7 @@ export function FocusView(props: FocusViewProps): JSX.Element {
 
   return (
     <section aria-label="現在のタスク" className="focus-view">
-      <h1>現在のタスク</h1>
+      <h1>現在</h1>
       {/* BL-059 / REQ-6: focusedTask があれば <TaskCard variant="focus" actionSet="minimal" />.
           無ければ「現在のタスクはありません」placeholder を維持 (D-007 / 空状態維持). */}
       {focusedTask ? (

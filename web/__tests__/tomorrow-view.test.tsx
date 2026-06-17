@@ -1121,8 +1121,8 @@ describe("TomorrowView (BL-038 REQ-6 空状態)", () => {
       <TomorrowView repository={repo} projectRepository={makeMockProjectRepository()} />,
     );
 
-    // 見出し「明日のタスク」 (placeholder と新実装で共通) が描画される.
-    expect(await screen.findByRole("heading", { name: "明日のタスク" })).toBeInTheDocument();
+    // 見出し「明日」 (placeholder と新実装で共通) が描画される.
+    expect(await screen.findByRole("heading", { name: "明日" })).toBeInTheDocument();
 
     // 空状態テキスト.
     expect(await screen.findByText("明日のタスクはありません")).toBeInTheDocument();

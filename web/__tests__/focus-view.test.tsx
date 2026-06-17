@@ -292,10 +292,8 @@ describe("FocusView (BL-037 REQ-1 表示: フォーカス対象あり)", () => {
 
     renderWithQueryClient(<FocusView repository={repo} projectRepository={projectRepo} />);
 
-    // 見出し「現在のタスク」(<h1>) が描画される.
-    expect(
-      await screen.findByRole("heading", { name: "現在のタスク", level: 1 }),
-    ).toBeInTheDocument();
+    // 見出し「現在」(<h1>) が描画される.
+    expect(await screen.findByRole("heading", { name: "現在", level: 1 })).toBeInTheDocument();
 
     // BL-070 追従: タスク名 "牛乳" は input value に表示される.
     expect(await screen.findByDisplayValue("牛乳")).toBeInTheDocument();
@@ -363,9 +361,7 @@ describe("FocusView (BL-037 REQ-2 空状態: フォーカス対象なし)", () =
     );
 
     // 見出し「現在のタスク」は引き続き表示される.
-    expect(
-      await screen.findByRole("heading", { name: "現在のタスク", level: 1 }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "現在", level: 1 })).toBeInTheDocument();
 
     // 空状態テキスト.
     expect(await screen.findByText("現在のタスクはありません")).toBeInTheDocument();

@@ -76,8 +76,8 @@ test.describe("focus-view (/focus) のシナリオ", () => {
 
     await gotoFocusViaSidebar(page);
 
-    // 見出し <h1>現在のタスク</h1> が描画されている (placeholder と新実装で共通の文言).
-    await expect(page.getByRole("heading", { name: "現在のタスク", level: 1 })).toBeVisible();
+    // 見出し <h1>現在</h1> が描画されている (placeholder と新実装で共通の文言).
+    await expect(page.getByRole("heading", { name: "現在", level: 1 })).toBeVisible();
 
     // BL-070 (inline-edit-all-cards) 追従: タスク名は <input value={name}> として描画される.
     // 「現在のタスク」ランドマーク内にタスク名 input が表示されている (= 大表示の枠の中).

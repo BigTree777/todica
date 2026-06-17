@@ -58,8 +58,8 @@ test.describe("tomorrow-view (/tomorrow) のシナリオ", () => {
   test("シナリオ P (REQ-2): /tomorrow で起票したタスクが一覧に出る", async ({ page }) => {
     await gotoTomorrowViaSidebar(page);
 
-    // 見出し <h1>明日のタスク</h1> が描画されている (placeholder と新実装で共通の文言).
-    await expect(page.getByRole("heading", { name: "明日のタスク", level: 1 })).toBeVisible();
+    // 見出し <h1>明日</h1> が描画されている (placeholder と新実装で共通の文言).
+    await expect(page.getByRole("heading", { name: "明日", level: 1 })).toBeVisible();
 
     // BL-104 追従: 起票フォームは + ボタンで初めて開く.
     const taskName = `TOMORROW起票 ${Date.now()}`;
