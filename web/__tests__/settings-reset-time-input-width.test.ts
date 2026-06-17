@@ -37,17 +37,16 @@ function extractRuleBody(css: string, selector: string): string {
 }
 
 describe("BL-113 / settings-reset-time-input-width: settings-view.css 文面検証", () => {
-  it("AC-1 (REQ-1): .settings-view__field-row input ルール本文に flex: 0 1 50% を含む", () => {
+  it("AC-1 (REQ-1): .settings-view__field-row input ルール本文に flex: 1 を含む", () => {
     const css = readCss();
     const body = extractRuleBody(css, ".settings-view__field-row input");
-    expect(body).toMatch(/flex:\s*0\s+1\s+50%/);
+    expect(body).toMatch(/flex:\s*1\s*;/);
   });
 
-  it("AC-2 (REQ-2): .settings-view__field-row input ルール本文に旧 flex: 1 が単独で残らない", () => {
+  it("AC-2 (REQ-2): .settings-view__field-spacer ルール本文に flex: 1 を含む", () => {
     const css = readCss();
-    const body = extractRuleBody(css, ".settings-view__field-row input");
-    // `flex: 1;` の単独宣言が残らないこと (`flex: 0 1 50%` 内の "1" は許容).
-    expect(body).not.toMatch(/flex:\s*1\s*;/);
+    const body = extractRuleBody(css, ".settings-view__field-spacer");
+    expect(body).toMatch(/flex:\s*1\s*;/);
   });
 
   it("AC-3 (REQ-3): .settings-view__field-row input ルール本文に font-size と padding の既存宣言が保存される", () => {
