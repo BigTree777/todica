@@ -43,8 +43,13 @@
 
 .settings-view__field-row input {
   flex: 1;
+  box-sizing: border-box;
   font-size: var(--font-size-h2);
   padding: var(--space-xs) var(--space-sm);
+}
+
+.settings-view__field-row button {
+  flex-shrink: 0;
 }
 
 .settings-view__field-spacer {
