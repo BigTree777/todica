@@ -749,7 +749,9 @@ describe("TaskCard / TaskFormCard 実機遺漏の一括 hotfix (BL-063 / task-ca
         />,
       );
       const buttons = Array.from(container.querySelectorAll(".task-card__actions button"));
-      const deleteBtn = buttons.find((b) => (b.textContent ?? "").includes("削除"));
+      const deleteBtn = buttons.find((b) =>
+        (b.getAttribute("aria-label") ?? b.textContent ?? "").includes("削除"),
+      );
       expect(deleteBtn, "「削除」 button が見つからない").toBeDefined();
       expect(
         deleteBtn?.classList.contains("task-card__actions__delete"),
@@ -776,7 +778,9 @@ describe("TaskCard / TaskFormCard 実機遺漏の一括 hotfix (BL-063 / task-ca
         />,
       );
       const buttons = Array.from(container.querySelectorAll(".task-card__actions button"));
-      const completeBtn = buttons.find((b) => (b.textContent ?? "").includes("完了"));
+      const completeBtn = buttons.find((b) =>
+        (b.getAttribute("aria-label") ?? b.textContent ?? "").includes("完了"),
+      );
       expect(completeBtn, "「完了」 button が見つからない").toBeDefined();
       expect(
         completeBtn?.classList.contains("task-card__actions__complete"),
@@ -803,8 +807,12 @@ describe("TaskCard / TaskFormCard 実機遺漏の一括 hotfix (BL-063 / task-ca
         />,
       );
       const buttons = Array.from(container.querySelectorAll(".task-card__actions button"));
-      const setFocusBtn = buttons.find((b) => (b.textContent ?? "").includes("現在のタスクにする"));
-      const toggleBtn = buttons.find((b) => (b.textContent ?? "").includes("明日にする"));
+      const setFocusBtn = buttons.find((b) =>
+        (b.getAttribute("aria-label") ?? b.textContent ?? "").includes("現在のタスクにする"),
+      );
+      const toggleBtn = buttons.find((b) =>
+        (b.getAttribute("aria-label") ?? b.textContent ?? "").includes("明日にする"),
+      );
       expect(setFocusBtn, "「現在のタスクにする」 button が見つからない").toBeDefined();
       expect(toggleBtn, "「明日にする」 button が見つからない").toBeDefined();
       expect(
@@ -854,10 +862,14 @@ describe("TaskCard / TaskFormCard 実機遺漏の一括 hotfix (BL-063 / task-ca
         />,
       );
       const buttons = Array.from(container.querySelectorAll(".task-card__actions button"));
-      const labels = buttons.map((b) => b.textContent ?? "");
+      const labels = buttons.map((b) => b.getAttribute("aria-label") ?? b.textContent ?? "");
 
-      const deleteBtn = buttons.find((b) => (b.textContent ?? "").includes("削除"));
-      const completeBtn = buttons.find((b) => (b.textContent ?? "").includes("完了"));
+      const deleteBtn = buttons.find((b) =>
+        (b.getAttribute("aria-label") ?? b.textContent ?? "").includes("削除"),
+      );
+      const completeBtn = buttons.find((b) =>
+        (b.getAttribute("aria-label") ?? b.textContent ?? "").includes("完了"),
+      );
       expect(deleteBtn, "「削除」 button が見つからない").toBeDefined();
       expect(completeBtn, "「完了」 button が見つからない").toBeDefined();
       expect(deleteBtn?.classList.contains("task-card__actions__delete")).toBe(true);
@@ -1026,18 +1038,14 @@ describe("TaskCard / TaskFormCard 実機遺漏の一括 hotfix (BL-063 / task-ca
       const actions = container.querySelector(".task-card__actions");
       expect(actions, ".task-card__actions が見つからない").not.toBeNull();
       const buttons = Array.from(actions?.querySelectorAll("button") ?? []);
-      // BL-104 / REQ-5 追従: .task-card__actions には「キャンセル」 (type="button") と
-      // 「追加」 (type="submit") の 2 ボタンが並ぶ.
-      expect(buttons.length, `actions 内の button 数が 2 ではない (実際: ${buttons.length})`).toBe(
-        2,
+      // BL-114 追従: .task-card__actions には「追加」 (type="submit") の 1 ボタンのみ.
+      // 「キャンセル」は右上 ✕ button (.task-card__close) に移設され .task-card__actions 外にある.
+      expect(buttons.length, `actions 内の button 数が 1 ではない (実際: ${buttons.length})`).toBe(
+        1,
       );
       const submitButton = buttons.find((b) => b.getAttribute("type") === "submit");
       expect(submitButton).not.toBeUndefined();
-      expect(submitButton?.textContent ?? "").toContain("追加");
-      const cancelButton = buttons.find(
-        (b) => b.getAttribute("type") === "button" && (b.textContent ?? "").includes("キャンセル"),
-      );
-      expect(cancelButton).not.toBeUndefined();
+      expect(submitButton?.getAttribute("aria-label") ?? "").toContain("追加");
     });
   });
 
@@ -1074,10 +1082,14 @@ describe("TaskCard / TaskFormCard 実機遺漏の一括 hotfix (BL-063 / task-ca
       const actions = container.querySelector(".task-card__actions");
       expect(actions, "focus-view の .task-card__actions が見つからない").not.toBeNull();
       const buttons = Array.from(actions?.querySelectorAll("button") ?? []);
-      const labels = buttons.map((b) => b.textContent ?? "");
+      const labels = buttons.map((b) => b.getAttribute("aria-label") ?? b.textContent ?? "");
 
-      const deleteBtn = buttons.find((b) => (b.textContent ?? "").includes("削除"));
-      const completeBtn = buttons.find((b) => (b.textContent ?? "").includes("完了"));
+      const deleteBtn = buttons.find((b) =>
+        (b.getAttribute("aria-label") ?? b.textContent ?? "").includes("削除"),
+      );
+      const completeBtn = buttons.find((b) =>
+        (b.getAttribute("aria-label") ?? b.textContent ?? "").includes("完了"),
+      );
       expect(deleteBtn, "focus-view に「削除」 button が無い").toBeDefined();
       expect(completeBtn, "focus-view に「完了」 button が無い").toBeDefined();
       expect(

@@ -26,7 +26,35 @@
 }
 
 .project-card--form {
-  /* 本 BL 時点では .project-card と同じ. 将来差異が出たらここに. */
+  /* BL-114 (card-buttons-iconify) D-005:
+   * 右上「閉じる ✕」 button を absolute 配置するための起点.
+   * padding-top を拡張して close button (44px) と input 段との視覚的重なりを避ける. */
+  position: relative;
+  padding-top: calc(var(--space-md) + 44px);
+}
+
+/*
+ * BL-114 (card-buttons-iconify) D-004 / NFR-5:
+ * カード系 icon button の共通クラス. タッチ領域 44 × 44 px を保証する.
+ * 3 系統 (task / project / routine) で同形宣言 (= ペア専用 CSS の系統独立方針を維持).
+ */
+.card-action-button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: var(--space-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/*
+ * BL-114 D-005:
+ * 起票カード右上の「閉じる ✕」 button. .project-card--form root に対する absolute 配置.
+ */
+.project-card__close {
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-sm);
 }
 
 /* .project-card--editing modifier / .project-card__name span /

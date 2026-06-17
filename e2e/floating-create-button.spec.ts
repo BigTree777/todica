@@ -157,8 +157,8 @@ test.describe("BL-104 AC-6: キャンセルボタンで閉じる", () => {
     const nameInput = form.getByLabel(/タスク名/);
     await nameInput.fill("一時入力テキスト");
 
-    // 「キャンセル」ボタンを押す (REQ-5).
-    await form.getByRole("button", { name: "キャンセル" }).click();
+    // 「閉じる」ボタンを押す (REQ-5).
+    await form.getByRole("button", { name: "閉じる" }).click();
 
     // フォームが消える.
     await expect(createFormLocator(page, "today")).toHaveCount(0);

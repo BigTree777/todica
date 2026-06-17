@@ -485,7 +485,9 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設", () => {
       const actions = container.querySelector(".routine-card__actions");
       expect(actions, ".routine-card__actions が見つからない").not.toBeNull();
       const buttons = Array.from(actions?.querySelectorAll("button") ?? []);
-      const labels = buttons.map((b) => b.textContent?.trim() ?? "");
+      const labels = buttons.map((b) =>
+        (b.getAttribute("aria-label") ?? b.textContent ?? "").trim(),
+      );
       expect(labels, "「変更」 button が残存").not.toContain("変更");
       expect(labels.filter((t) => t === "削除").length, "「削除」 button が 1 個ではない").toBe(1);
     });
@@ -522,7 +524,7 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設", () => {
         />,
       );
       const deleteButton = Array.from(container.querySelectorAll("button")).find(
-        (b) => (b.textContent ?? "").trim() === "削除",
+        (b) => (b.getAttribute("aria-label") ?? b.textContent ?? "").trim() === "削除",
       );
       expect(deleteButton, "「削除」 button が無い").toBeDefined();
       deleteButton?.click();
@@ -628,8 +630,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設", () => {
           onDelete={() => {}}
         />,
       );
-      const labels = Array.from(container.querySelectorAll("button")).map(
-        (b) => b.textContent?.trim() ?? "",
+      const labels = Array.from(container.querySelectorAll("button")).map((b) =>
+        (b.getAttribute("aria-label") ?? b.textContent ?? "").trim(),
       );
       expect(labels, "「保存」 button が残存").not.toContain("保存");
       expect(labels, "「キャンセル」 button が残存").not.toContain("キャンセル");
@@ -687,8 +689,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設", () => {
           onDelete={() => {}}
         />,
       );
-      const labels = Array.from(container.querySelectorAll("button")).map(
-        (b) => b.textContent?.trim() ?? "",
+      const labels = Array.from(container.querySelectorAll("button")).map((b) =>
+        (b.getAttribute("aria-label") ?? b.textContent ?? "").trim(),
       );
       expect(labels, "「変更」 button が残存").not.toContain("変更");
     });
@@ -787,7 +789,9 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設", () => {
       expect(input?.getAttribute("type")).toBe("text");
       // 「追加」 submit button.
       const buttons = Array.from(container.querySelectorAll("button"));
-      const submit = buttons.find((b) => (b.textContent ?? "").trim() === "追加");
+      const submit = buttons.find(
+        (b) => (b.getAttribute("aria-label") ?? b.textContent ?? "").trim() === "追加",
+      );
       expect(submit, "form 内に「追加」 submit button が無い").toBeDefined();
       expect(submit?.getAttribute("type")).toBe("submit");
     });
@@ -941,8 +945,8 @@ describe("RoutineCard / RoutineFormCard コンポーネント新設", () => {
           onDelete={() => {}}
         />,
       );
-      const labels = Array.from(container.querySelectorAll("button")).map(
-        (b) => b.textContent?.trim() ?? "",
+      const labels = Array.from(container.querySelectorAll("button")).map((b) =>
+        (b.getAttribute("aria-label") ?? b.textContent ?? "").trim(),
       );
       expect(labels, "「変更」 button が残存").not.toContain("変更");
       expect(labels, "「名称変更」 button が残存").not.toContain("名称変更");

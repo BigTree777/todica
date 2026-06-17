@@ -416,7 +416,7 @@ describe("RoutineCard ヘッダレイアウト刷新", () => {
       expect(nameInput, "起票カードの name input が無い").not.toBeNull();
       // 追加 submit.
       const submit = Array.from(container.querySelectorAll("button[type='submit']")).find(
-        (b) => (b.textContent ?? "").trim() === "追加",
+        (b) => (b.getAttribute("aria-label") ?? b.textContent ?? "").trim() === "追加",
       );
       expect(submit, "「追加」 submit button が無い").toBeDefined();
       // 曜日 checkbox 7 個.
@@ -608,7 +608,7 @@ describe("RoutineCard ヘッダレイアウト刷新", () => {
         />,
       );
       const deleteButton = Array.from(container.querySelectorAll("button")).find(
-        (b) => (b.textContent ?? "").trim() === "削除",
+        (b) => (b.getAttribute("aria-label") ?? b.textContent ?? "").trim() === "削除",
       );
       expect(deleteButton, "「削除」 button が見つからない").toBeDefined();
       deleteButton?.click();

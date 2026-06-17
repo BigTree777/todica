@@ -692,7 +692,7 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
 
       // actions に 3 ボタン (manual origin / dueDateMode=today なので「明日にする」).
       const actionBtns = Array.from(actions?.querySelectorAll("button") ?? []).map(
-        (b) => b.textContent ?? "",
+        (b) => b.getAttribute("aria-label") ?? b.textContent ?? "",
       );
       expect(actionBtns.some((t) => t.includes("削除"))).toBe(true);
       expect(actionBtns.some((t) => t.includes("明日にする"))).toBe(true);
@@ -718,7 +718,7 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
       );
       const actions = container.querySelector(".task-card__actions");
       const actionBtns = Array.from(actions?.querySelectorAll("button") ?? []).map(
-        (b) => b.textContent ?? "",
+        (b) => b.getAttribute("aria-label") ?? b.textContent ?? "",
       );
       expect(actionBtns.some((t) => t.includes("今日にする"))).toBe(true);
       expect(actionBtns.some((t) => t.includes("明日にする"))).toBe(false);
@@ -847,7 +847,7 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
       const actions = container.querySelector(".task-card__actions");
       expect(actions, ".task-card__actions が見つからない").not.toBeNull();
       const labels = Array.from(actions?.querySelectorAll("button") ?? []).map(
-        (b) => b.textContent ?? "",
+        (b) => b.getAttribute("aria-label") ?? b.textContent ?? "",
       );
       expect(
         labels.some((t) => t.includes("現在のタスクにする")),
@@ -873,7 +873,7 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
       );
       const actions = container.querySelector(".task-card__actions");
       const labels = Array.from(actions?.querySelectorAll("button") ?? []).map(
-        (b) => b.textContent ?? "",
+        (b) => b.getAttribute("aria-label") ?? b.textContent ?? "",
       );
       expect(labels.some((t) => t.includes("現在のタスクにする"))).toBe(false);
     });
@@ -908,7 +908,7 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
       const actions = container.querySelector(".task-card__actions");
       expect(actions, ".task-card__actions が見つからない").not.toBeNull();
       const labels = Array.from(actions?.querySelectorAll("button") ?? []).map(
-        (b) => b.textContent ?? "",
+        (b) => b.getAttribute("aria-label") ?? b.textContent ?? "",
       );
       expect(labels.some((t) => t.includes("削除"))).toBe(true);
       expect(labels.some((t) => t.includes("完了"))).toBe(true);
@@ -948,7 +948,7 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
       );
       const actions = container.querySelector(".task-card__actions");
       const labels = Array.from(actions?.querySelectorAll("button") ?? []).map(
-        (b) => b.textContent ?? "",
+        (b) => b.getAttribute("aria-label") ?? b.textContent ?? "",
       );
       expect(labels.some((t) => t.includes("明日にする"))).toBe(false);
       expect(labels.some((t) => t.includes("今日にする"))).toBe(false);
@@ -1114,7 +1114,8 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
       expect(actions, ".task-card__actions が見つからない").not.toBeNull();
       const submit = actions?.querySelector('button[type="submit"]');
       expect(submit, "actions 段に submit button が無い").not.toBeNull();
-      expect(submit?.textContent ?? "").toContain("追加");
+      // BL-114: 追加 button は Lucide Plus アイコン + aria-label="追加" に置換.
+      expect(submit?.getAttribute("aria-label") ?? "").toContain("追加");
     });
 
     it("onSubmit prop が <form onSubmit> として渡される", async () => {
@@ -1556,7 +1557,7 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
         "focus-view の .task-card__actions が見つからない (REQ-6 違反)",
       ).not.toBeNull();
       const labels = Array.from(actions?.querySelectorAll("button") ?? []).map(
-        (b) => b.textContent ?? "",
+        (b) => b.getAttribute("aria-label") ?? b.textContent ?? "",
       );
       expect(labels.some((t) => t.includes("削除"))).toBe(true);
       expect(labels.some((t) => t.includes("完了"))).toBe(true);

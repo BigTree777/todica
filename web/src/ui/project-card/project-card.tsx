@@ -20,6 +20,7 @@
  *   - D-009: input id は `project-name-{project.id}` で起票側 `project-name` と衝突回避.
  *     visually-hidden label を付与し getByLabelText("プロジェクト名") で a11y を維持.
  */
+import { Trash2 } from "lucide-react";
 import type { JSX } from "react";
 import type { Project } from "../../repositories/project-repository.js";
 import "./project-card.css";
@@ -69,10 +70,11 @@ export function ProjectCard(props: ProjectCardProps): JSX.Element {
       <div className="project-card__actions">
         <button
           type="button"
-          className="button button--danger project-card__actions__delete"
+          className="button button--danger card-action-button project-card__actions__delete"
+          aria-label="削除"
           onClick={onDelete}
         >
-          削除
+          <Trash2 size={18} aria-hidden="true" />
         </button>
       </div>
     </Tag>

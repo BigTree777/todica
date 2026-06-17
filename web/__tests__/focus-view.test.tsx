@@ -410,7 +410,7 @@ describe("FocusView (BL-037 REQ-4 アクション数の規約)", () => {
     expect(buttons).toHaveLength(2);
     // 注: Array.prototype.sort() は UTF-16 code unit 順で比較する.
     // 削 (U+524A) < 完 (U+5B8C) のため sort 結果は ["削除", "完了"] になる.
-    const labels = buttons.map((b) => b.textContent ?? "").sort();
+    const labels = buttons.map((b) => b.getAttribute("aria-label") ?? b.textContent ?? "").sort();
     expect(labels).toEqual(["削除", "完了"]);
   });
 });
