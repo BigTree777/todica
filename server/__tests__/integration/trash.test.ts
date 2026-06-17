@@ -1,4 +1,3 @@
-import type { FakeClock } from "@todica/domain/clock";
 import type { DueDate, Priority, Task, TrashedReason } from "@todica/domain/task";
 import type { Hono } from "hono";
 /**
@@ -12,7 +11,7 @@ import type { Hono } from "hono";
  *       まだ実装されていないため, すべて失敗する想定.
  *       implementer がエンドポイントを実装することで green 化する.
  */
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   authHeaders,
   buildTestApp,
@@ -21,7 +20,6 @@ import {
 } from "../helpers/build-test-app.js";
 import type {
   InMemoryCounterRepository,
-  InMemorySettingsRepository,
   InMemoryTaskRepository,
 } from "../helpers/in-memory-repositories.js";
 
@@ -40,8 +38,6 @@ const TODAY_BOUNDARY_AT = "2026-06-08T04:00:00.000Z";
 let app: Hono;
 let taskRepo: InMemoryTaskRepository;
 let counterRepo: InMemoryCounterRepository;
-let settingsRepo: InMemorySettingsRepository;
-let clock: FakeClock;
 
 /** Task のテストフィクスチャ. デフォルトは today / normal / active. */
 function makeTask(overrides: Partial<Task> & { id: string }): Task {
@@ -79,8 +75,6 @@ beforeEach(() => {
   app = built.app;
   taskRepo = built.taskRepository;
   counterRepo = built.counterRepository;
-  settingsRepo = built.settingsRepository;
-  clock = built.clock;
 });
 
 // ============================================================
@@ -614,6 +608,17 @@ describe("DELETE /api/v1/trash (BL-011 ゴミ箱を空にする)", () => {
 // ============================================================
 
 describe("purgeTrash（日次清算 BL-011 / FR-062）", () => {
+  // BL-112 plan.md D-004: 既存シナリオは UTC ベースで書かれているため, CI runner の TZ 設定に
+  // 暗黙依存しないように "UTC" を明示する. 挙動の意図変更ではなく前提の明示化であり,
+  // 既存 assert はそのまま green を保つ.
+  beforeEach(() => {
+    vi.stubEnv("TZ", "UTC");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("シナリオ: POST /api/v1/reset で dayBoundaryTime を超えた状態でリセット実行 → 境界時刻より古い trashedAt を持つゴミ箱タスクが物理削除される", async () => {
     // spec.md §「前日の境界時刻より古いゴミ箱タスクが物理削除される」
     //   Given dayBoundaryTime = "04:00"
