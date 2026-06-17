@@ -42,11 +42,13 @@
 }
 
 .settings-view__field-row input {
-  /* BL-113: input が row 残り幅を独占して「変更」 button が次行へ折り返されるのを防ぐ.
-     grow なし / shrink あり / basis 50% で行幅の半分に固定する. */
-  flex: 0 1 50%;
+  flex: 1;
   font-size: var(--font-size-h2);
   padding: var(--space-xs) var(--space-sm);
+}
+
+.settings-view__field-spacer {
+  flex: 1;
 }
 
 .settings-view__section {
