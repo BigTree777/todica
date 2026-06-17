@@ -98,14 +98,25 @@ FocusSelection: 「現在のタスク」参照（単一レコード）
 | 項目 | 採用 | 代替案 |
 | --- | --- | --- |
 | 永続化機構 | SQLite（**`@capacitor-community/sqlite`** プラグイン経由） | Room / sqflite / drift |
-| 接続ライブラリ | Capacitor SQLite プラグインの JS API（`web/src/repositories/local-db.ts` で薄くラップし生 SQL を `execute` / `query` で直接実行） | `drizzle-orm` の sqlite-proxy ドライバ（採用しない: サーバ schema との同期は手動運用） |
+| 接続ライブラリ | Capacitor SQLite プラグインの JS API（`web/src/repositories/local-db.ts` で薄くラップし, マイグレーション定義の `up()` から生 SQL を `execute` / `query` / `run` で実行） | `drizzle-orm` の sqlite-proxy ドライバ（採用しない: サーバ schema との同期は手動運用） |
 | 配置 | Android 端末のアプリプライベートストレージ | （他アプリ・他端末から見える領域は採らない） |
-| マイグレーションツール | 起動時に `CREATE TABLE IF NOT EXISTS` を冪等実行（`local-db.ts` 内で管理） | `drizzle-kit` 生成 SQL の流用（採用しない: スキーマ進行を Android 側で追跡しない） |
+| マイグレーションツール | `web/src/repositories/local-migrations/` 配下に「1 ファイル = 1 バージョン」のマイグレーション定義を置き, `__local_migrations` テーブルで適用済みバージョンを記録する自前 version runner が起動時に順方向適用する（`drizzle-kit` を流用しない自前管理） | `drizzle-kit` 生成 SQL の流用（採用しない: スキーマ進行を Android 側で独立に追跡する） |
 | マイグレーション実行タイミング | アプリ起動時に自動適用 | （別案は採らない） |
+
+#### マイグレーション機構（version runner）
+
+Android ローカル側は, サーバ側の `drizzle-kit` を流用せず, 自前の version runner で順方向のスキーマ移行を管理する.
+
+- 定義配置: `web/src/repositories/local-migrations/` 配下に「1 ファイル = 1 バージョン」でマイグレーションを置く. 各定義は `{ version: number; name: string; up(db): Promise<void> }` の形を持つ. 初期スキーマ（6 テーブルの `CREATE TABLE IF NOT EXISTS` と `counter` / `settings` / `focus_selection` の singleton `INSERT OR IGNORE`）は `v001-initial.ts` が `v001` として保持する.
+- 登録一覧: `local-migrations/index.ts` の `migrations` 配列が本番の適用対象を列挙する.
+- 適用済み管理: `__local_migrations` テーブル（`version` INTEGER PRIMARY KEY NOT NULL / `applied_at` TEXT NOT NULL / `name` TEXT 任意）で適用済みバージョンを記録する. runner は `SELECT MAX(version)`（不在 / NULL は 0 とみなす）を基準値とし, それより大きいバージョンの定義だけをバージョン昇順に `up()` 適用して記録する.
+- 起動経路: `local-db.ts` の接続初期化が `runMigrations(conn)` を呼ぶ. テストは runner にダミー定義一覧を注入できる.
+- トランザクション境界: 1 バージョン = 1 トランザクション（`begin` → `up()` → `__local_migrations` 記録 → `commit`, 失敗時は `rollback` して例外を伝播）.
+- 方向: 順方向（up）のみ. down / rollback は提供しない（[`migration-policy.md`](migration-policy.md) §2 のロールバック非対応と整合）.
 
 ## 9. 物理スキーマ
 
-スキーマは **TypeScript 上で Drizzle の `sqliteTable` で定義する**（サーバ側）. `drizzle-kit` が CREATE TABLE / インデックス SQL を生成し, マイグレーションファイルとしてリポジトリに保存する. Android ローカル側は同等の論理スキーマを `local-db.ts` 内で生 SQL の `CREATE TABLE IF NOT EXISTS` として独立に管理する（サーバ schema との同期は手動運用）.
+スキーマは **TypeScript 上で Drizzle の `sqliteTable` で定義する**（サーバ側）. `drizzle-kit` が CREATE TABLE / インデックス SQL を生成し, マイグレーションファイルとしてリポジトリに保存する. Android ローカル側は同等の論理スキーマを `local-migrations/` 配下のマイグレーション定義（生 SQL の `CREATE TABLE IF NOT EXISTS` 等）として独立に管理し, version runner で順方向適用する（サーバ schema との同期は手動運用. §8.2「マイグレーション機構」参照）.
 
 ### テーブル一覧（[`schema.md`](schema.md) と対応）
 

@@ -17,7 +17,7 @@
 
 ## 2. ツール
 
-- マイグレーションツールはサーバ側で **`drizzle-kit`** を採用する（[`overview.md`](overview.md) §8.1）. TypeScript で定義したスキーマから SQL マイグレーションを生成する. Android ローカル側はマイグレーションファイルを持たず, `local-db.ts` 内で起動時に `CREATE TABLE IF NOT EXISTS` を冪等実行する（[`overview.md`](overview.md) §8.2）.
+- マイグレーションツールはサーバ側で **`drizzle-kit`** を採用する（[`overview.md`](overview.md) §8.1）. TypeScript で定義したスキーマから SQL マイグレーションを生成する. Android ローカル側は `drizzle-kit` を流用せず, `local-migrations/` 配下に「1 ファイル = 1 バージョン」のマイグレーション定義を持ち, `__local_migrations` テーブルで適用済みバージョンを記録する自前 version runner で順方向適用する（[`overview.md`](overview.md) §8.2）.
 - 実行タイミング:
   - サーバ側: サーバ起動時に自動実行, または明示コマンドで実行.
   - Android ローカル側: アプリ起動時に自動実行.
@@ -30,7 +30,7 @@
   - 連番はスキーマバージョン番号と一致させる（4 桁ゼロ埋め, 例: `0000`, `0001`, `0002`）.
   - `<short_description>` は英語 snake_case.
   - 拡張子は `.sql` 固定.
-- Android ローカル側はマイグレーションファイル自体を持たない（§2 参照）.
+- Android ローカル側は SQL ファイルではなく `local-migrations/` 配下の TypeScript マイグレーション定義（`vNNN-...` 形式. 各定義が `version` / `name` / `up()` を持つ）で管理する（§2 参照）. ファイル名のバージョン番号は `__local_migrations` に記録される `version` と一致させる.
 
 ## 4. 運用ルール
 
