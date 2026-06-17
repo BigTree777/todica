@@ -2468,7 +2468,7 @@ describe("TodayView (BL-047 完了タスク数カウンタの配置見直し)", 
     );
 
     // 描画完了を待つ（空状態でも「現在のタスクはありません」が表示される）.
-    await screen.findByRole("heading", { name: "現在のタスク", level: 1 });
+    await screen.findByRole("heading", { name: "現在", level: 1 });
 
     // focus-view には完了数カウンタが存在しない（REQ-4 非波及）.
     expect(screen.queryByLabelText("今日の完了タスク数")).toBeNull();
@@ -2571,8 +2571,8 @@ describe("TodayView (BL-047 完了タスク数カウンタの配置見直し)", 
     );
 
     // 描画完了を待つ（tomorrow-view の見出しが表示されるまで）.
-    // tomorrow-view の h1 は「明日のタスク」.
-    await screen.findByRole("heading", { name: "明日のタスク" });
+    // tomorrow-view の h1 は「明日」.
+    await screen.findByRole("heading", { name: "明日" });
 
     // tomorrow-view には完了数カウンタが存在しない（REQ-4 非波及）.
     expect(screen.queryByLabelText("今日の完了タスク数")).toBeNull();

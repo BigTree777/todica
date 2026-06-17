@@ -108,7 +108,7 @@ test.describe("secondary-views-shell (BL-045) のスタイル統一", () => {
   test("AC-3: 4 view の <h1> の font-size が /tomorrow の <h1> と同値である", async ({ page }) => {
     // Given: /tomorrow の <h1> の computed font-size を期待値として記録する.
     await page.goto("/tomorrow");
-    const tomorrowH1 = page.getByRole("heading", { name: "明日のタスク", level: 1 });
+    const tomorrowH1 = page.getByRole("heading", { name: "明日", level: 1 });
     await expect(tomorrowH1).toBeVisible();
     const expected = (await computedStyle(tomorrowH1, ["font-size"]))["font-size"];
     // サニティ: 参照基準の /tomorrow が仕様の暫定値 24px であること (spec.md AC-3 の括弧書き).

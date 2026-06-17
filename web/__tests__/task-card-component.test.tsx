@@ -1337,9 +1337,9 @@ describe("TaskCard / TaskFormCard コンポーネント新設 (BL-059 / task-car
       expect(tsx).not.toMatch(/className=["'][^"']*focus-view__card[^"']*["']/);
     });
 
-    it("focus-view.tsx に <h1>現在のタスク</h1> が引き続き含まれる (REQ-6 / 6-4)", () => {
+    it("focus-view.tsx に <h1>現在</h1> が引き続き含まれる (REQ-6 / 6-4)", () => {
       const tsx = readFileSync(focusViewTsxPath, "utf-8");
-      expect(tsx).toMatch(/<h1>\s*現在のタスク\s*<\/h1>/);
+      expect(tsx).toMatch(/<h1>\s*現在\s*<\/h1>/);
     });
   });
 

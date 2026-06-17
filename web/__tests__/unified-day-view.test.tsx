@@ -351,7 +351,7 @@ describe("BL-051 / unified-day-view: AC-2 (1 段目 header の統一)", () => {
     expect(first!.querySelector(".today-view__completion-count")).not.toBeNull();
   });
 
-  it("/tomorrow 1 段目に <header class='day-view__header'> があり, h1 ' 明日のタスク' のみを含む", async () => {
+  it("/tomorrow 1 段目に <header class='day-view__header'> があり, h1 '明日' のみを含む", async () => {
     const repo = makeMockTaskRepository([
       makeTask({ id: "t1", name: "x", dueDate: "tomorrow", version: 1 }),
     ]);
@@ -371,7 +371,7 @@ describe("BL-051 / unified-day-view: AC-2 (1 段目 header の統一)", () => {
 
     const h1 = first!.querySelector("h1");
     expect(h1).not.toBeNull();
-    expect(h1!.textContent ?? "").toContain("明日のタスク");
+    expect(h1!.textContent ?? "").toBe("明日");
 
     // tomorrow には today-view__completion-count 等の補助情報は存在しない.
     expect(first!.querySelector(".today-view__completion-count")).toBeNull();

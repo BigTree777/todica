@@ -453,7 +453,7 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
           today-view と同じ 1 段目構造に揃える. 旧 <section aria-label="明日のタスク">
           ランドマークは <main> に統合 (h1 が見出しとして十分なため aria-label は撤去). */}
       <header className="day-view__header">
-        <h1>明日のタスク</h1>
+        <h1>明日</h1>
       </header>
 
       {/* BL-059 / REQ-5-2: 起票フォームを <TaskFormCard> に置換 (V-6 / V-7 反映).
