@@ -326,3 +326,128 @@ describe("LocalTrashRepository.empty() — projects 物理削除 (FR-LOC-002 / B
     expect(projectDelete).toBeDefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Routine 経路 (BL-120 / FR-061 / D-2 / D-3 / D-6)
+//   offline (local) モードでも Routine の論理削除・復元・物理削除を扱う.
+//   local-routine-repository.delete には依存せず, trashed な routine 行を
+//   直接 seed して LocalTrashRepository 単体の経路を検証する.
+//
+//   注意: 本ファイルは TDD の "red" を作るためのテスト. LocalTrashRepository は
+//         listRoutines() を持たず, restore の Routine 分岐 / empty の routines 削除も
+//         未実装のため red になる. implementer が repository を拡張して green 化する.
+// ---------------------------------------------------------------------------
+
+describe("LocalTrashRepository.listRoutines() (FR-LOC-002 / BL-120 / D-2)", () => {
+  // trashed_at IS NOT NULL の routine を TrashedRoutine として返す.
+  it("シナリオ: listRoutines() が trashed な routine を返す", async () => {
+    const trashedRoutines: Row[] = [
+      {
+        id: "routine-trash-1",
+        name: "ゴミ箱ルーティン",
+        generate_on_weekdays: "[1,2,3]",
+        default_priority: "normal",
+        created_at: "2026-06-08T00:00:00.000Z",
+        updated_at: "2026-06-08T09:00:00.000Z",
+        trashed_at: "2026-06-08T09:00:00.000Z",
+        version: 2,
+      },
+    ];
+    const db = makeMockDb(trashedRoutines);
+    const repo = new LocalTrashRepository(db as never);
+
+    const result = await repo.listRoutines();
+
+    expect(result.length).toBe(1);
+    expect(result[0]?.id).toBe("routine-trash-1");
+    expect(result[0]?.name).toBe("ゴミ箱ルーティン");
+    expect(result[0]?.trashedAt).toBe("2026-06-08T09:00:00.000Z");
+    // Routine は trashedReason を持たない (D-6).
+    expect((result[0] as unknown as Record<string, unknown>).trashedReason).toBeUndefined();
+  });
+});
+
+describe("LocalTrashRepository.restore() — Routine 分岐 (FR-LOC-002 / BL-120 / D-3 / D-6)", () => {
+  let db: ReturnType<typeof makeMockDb>;
+  let repo: LocalTrashRepository;
+
+  beforeEach(() => {
+    db = makeMockDb();
+    repo = new LocalTrashRepository(db as never);
+  });
+
+  // Task / Project として該当無し → Routine として trashed_at を NULL に戻す.
+  it("シナリオ: restore(id, ifMatch) で routine が復元される (trashed_at=NULL)", async () => {
+    // 1) tasks 検索: 該当無し.
+    db.query.mockResolvedValueOnce({ values: [] });
+    // 2) projects 検索: 該当無し (Routine 分岐に進む).
+    db.query.mockResolvedValueOnce({ values: [] });
+    // 3) routines 検索: trashed な routine が見つかる.
+    db.query.mockResolvedValueOnce({
+      values: [
+        {
+          id: "routine-1",
+          name: "復元対象ルーティン",
+          generate_on_weekdays: "[1,2,3]",
+          default_priority: "normal",
+          created_at: "2026-06-08T00:00:00.000Z",
+          updated_at: "2026-06-08T09:00:00.000Z",
+          trashed_at: "2026-06-08T09:00:00.000Z",
+          version: 2,
+        },
+      ],
+    });
+    // 4) UPDATE 後の再取得: trashed_at=null の状態.
+    db.query.mockResolvedValueOnce({
+      values: [
+        {
+          id: "routine-1",
+          name: "復元対象ルーティン",
+          generate_on_weekdays: "[1,2,3]",
+          default_priority: "normal",
+          created_at: "2026-06-08T00:00:00.000Z",
+          updated_at: "2026-06-08T10:00:00.000Z",
+          trashed_at: null,
+          version: 3,
+        },
+      ],
+    });
+
+    const restored = await repo.restore({ id: "routine-1", ifMatch: 2 });
+
+    // routines テーブルを trashed_at=NULL に更新する run が呼ばれること.
+    const runCalls = db.run.mock.calls as [string, unknown[]][];
+    const routineRestore = runCalls.find(
+      ([sql]) =>
+        typeof sql === "string" &&
+        sql.toLowerCase().includes("update routines") &&
+        sql.toLowerCase().includes("trashed_at = null"),
+    );
+    expect(routineRestore).toBeDefined();
+
+    // 復元後は trashed_at=null, version+1.
+    expect((restored as unknown as { id: string }).id).toBe("routine-1");
+    expect((restored as unknown as { trashedAt: string | null }).trashedAt).toBeNull();
+    expect(restored.version).toBe(3);
+  });
+});
+
+describe("LocalTrashRepository.empty() — routines 物理削除 (FR-LOC-002 / BL-120)", () => {
+  // empty() は trashed な tasks / projects に加え trashed な routines も物理削除する.
+  it("シナリオ: empty() で trashed な routines に対する DELETE が発行される", async () => {
+    const db = makeMockDb();
+    const repo = new LocalTrashRepository(db as never);
+
+    await repo.empty();
+
+    const runCalls = db.run.mock.calls as [string, unknown[]][];
+    const routineDelete = runCalls.find(
+      ([sql]) =>
+        typeof sql === "string" &&
+        sql.toUpperCase().includes("DELETE") &&
+        sql.toLowerCase().includes("from routines") &&
+        sql.toLowerCase().includes("trashed_at is not null"),
+    );
+    expect(routineDelete).toBeDefined();
+  });
+});

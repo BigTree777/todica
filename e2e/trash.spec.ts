@@ -98,4 +98,42 @@ test.describe("ゴミ箱", () => {
     await page.goto("/projects");
     await expect(page.locator(`.project-card input[value="${projectName}"]`)).toBeVisible();
   });
+
+  // BL-120 (routine-soft-delete) D-8:
+  //   Routine 削除 → /trash の Routine セクションで復元 → /routines に戻る往復シナリオ.
+  test("ゴミ箱からルーティンを復元すると一覧に戻る (routine-soft-delete D-8)", async ({ page }) => {
+    const routineName = `復元ルーティン ${Date.now()}`;
+
+    // 1. ルーティン作成 (曜日チェック付き).
+    await page.goto("/routines");
+    await openCreateForm(page, "routines");
+    const form = createFormLocator(page, "routines");
+    await form.getByLabel("ルーティン名").fill(routineName);
+    await form.getByLabel("月", { exact: true }).check();
+    await form.getByRole("button", { name: "追加" }).click();
+    // BL-070 追従: ルーティン名は表示モードの input.value で表示される.
+    await expect(page.locator(`.routine-card input[value="${routineName}"]`)).toBeVisible();
+
+    // 2. ルーティン削除 (ゴミ箱化).
+    const routineRow = page
+      .locator(`.routine-card input[value="${routineName}"]`)
+      .first()
+      .locator("xpath=ancestor::li[1]");
+    await routineRow.getByRole("button", { name: "削除" }).click();
+    await expect(page.locator(`.routine-card input[value="${routineName}"]`)).toHaveCount(0);
+
+    // 3. /trash の Routine セクションで復元.
+    await page.goto("/trash");
+    const trashedRoutineRow = page
+      .getByRole("list", { name: "ゴミ箱のルーティン一覧" })
+      .getByRole("listitem")
+      .filter({ hasText: routineName });
+    await expect(trashedRoutineRow).toBeVisible();
+    await trashedRoutineRow.getByRole("button", { name: "復元" }).click();
+    await expect(trashedRoutineRow).toHaveCount(0);
+
+    // 4. /routines 一覧に戻る.
+    await page.goto("/routines");
+    await expect(page.locator(`.routine-card input[value="${routineName}"]`)).toBeVisible();
+  });
 });

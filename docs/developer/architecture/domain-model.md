@@ -190,6 +190,7 @@ stateDiagram-v2
 ```
 
 - Project をゴミ箱に入れる際, 配下 Task はゴミ箱化せず `projectId` を `null` にする（**カスケード NULL 固定**. [`database/schema.md`](database/schema.md) §確定事項）. UI 確認やカスケード選択は無い. Project の復元はカスケード復元しない（`null` 化された `projectId` は元へ戻さない）. Project は `trashedReason` を持たない.
+- Routine をゴミ箱に入れる際も同型に, 配下の未ゴミ箱 Task はゴミ箱化せず `routineId` を `null` にする（**デタッチ = カスケード NULL 固定**. 既にゴミ箱状態の Task には触れない）. Routine の復元はカスケード復元しない（`null` 化された `routineId` は元へ戻さない）. Routine は `trashedReason` を持たない. ゴミ箱状態の Routine は通常一覧および当日の生成対象判定から除外される.
 
 ### 3.3 リセット処理の全体（参考）
 

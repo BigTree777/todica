@@ -26,6 +26,14 @@ export interface TrashedProject {
   version: number;
 }
 
+/** ゴミ箱内 Routine の射影 (BL-120 / D-2). Routine は trashedReason を持たない (D-6). */
+export interface TrashedRoutine {
+  id: string;
+  name: string;
+  trashedAt: string | null;
+  version: number;
+}
+
 export interface RestoreTaskCommand {
   id: string;
   ifMatch: number;
@@ -35,6 +43,8 @@ export interface TrashRepository {
   list(): Promise<TrashedTask[]>;
   /** ゴミ箱内 Project を一覧する (BL-119). */
   listProjects(): Promise<TrashedProject[]>;
+  /** ゴミ箱内 Routine を一覧する (BL-120). */
+  listRoutines(): Promise<TrashedRoutine[]>;
   restore(cmd: RestoreTaskCommand): Promise<TrashedTask>;
   empty(): Promise<void>;
 }
@@ -81,7 +91,7 @@ function uuidV4(): string {
 export class HttpTrashRepository implements TrashRepository {
   constructor(readonly baseUrl: string) {}
 
-  /** GET /api/v1/trash → { tasks: TrashedTask[], projects: TrashedProject[] } */
+  /** GET /api/v1/trash → { tasks: TrashedTask[], projects: TrashedProject[], routines: TrashedRoutine[] } */
   async list(): Promise<TrashedTask[]> {
     const body = await this.fetchTrash();
     return body.tasks;
@@ -93,22 +103,36 @@ export class HttpTrashRepository implements TrashRepository {
     return body.projects ?? [];
   }
 
-  /** GET /api/v1/trash を 1 回呼び { tasks, projects } を読む. */
-  private async fetchTrash(): Promise<{ tasks: TrashedTask[]; projects: TrashedProject[] }> {
+  /** GET /api/v1/trash の routines 配列を返す (BL-120 / D-2). */
+  async listRoutines(): Promise<TrashedRoutine[]> {
+    const body = await this.fetchTrash();
+    return body.routines ?? [];
+  }
+
+  /** GET /api/v1/trash を 1 回呼び { tasks, projects, routines } を読む. */
+  private async fetchTrash(): Promise<{
+    tasks: TrashedTask[];
+    projects: TrashedProject[];
+    routines: TrashedRoutine[];
+  }> {
     const res = await authedFetch(`${this.baseUrl}/api/v1/trash`, {
       method: "GET",
     });
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: failed to list trash`);
     }
-    return (await res.json()) as { tasks: TrashedTask[]; projects: TrashedProject[] };
+    return (await res.json()) as {
+      tasks: TrashedTask[];
+      projects: TrashedProject[];
+      routines: TrashedRoutine[];
+    };
   }
 
   /**
    * POST /api/v1/trash/:id/restore
    * Idempotency-Key (UUID v4) と If-Match ヘッダを付ける.
-   * サーバは Task / Project を判別し 200 で { task } または { project } を返す (D-3).
-   * 412 時は body の { task } または { project } を使って RestoreConflictError を throw する.
+   * サーバは Task / Project / Routine を判別し 200 で { task } / { project } / { routine } を返す (D-3).
+   * 412 時は body の { task } / { project } / { routine } を使って RestoreConflictError を throw する.
    */
   async restore(cmd: RestoreTaskCommand): Promise<TrashedTask> {
     const idemKey = uuidV4();
@@ -121,15 +145,25 @@ export class HttpTrashRepository implements TrashRepository {
     });
 
     if (res.status === 412) {
-      const body = (await res.json()) as { task?: TrashedTask; project?: TrashedProject };
-      throw new RestoreConflictError((body.task ?? body.project) as unknown as TrashedTask);
+      const body = (await res.json()) as {
+        task?: TrashedTask;
+        project?: TrashedProject;
+        routine?: TrashedRoutine;
+      };
+      throw new RestoreConflictError(
+        (body.task ?? body.project ?? body.routine) as unknown as TrashedTask,
+      );
     }
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: failed to restore`);
     }
-    const body = (await res.json()) as { task?: TrashedTask; project?: TrashedProject };
-    // Task 復元時は { task }, Project 復元時は { project } を返す. 戻り値型は共用.
-    return (body.task ?? body.project) as unknown as TrashedTask;
+    const body = (await res.json()) as {
+      task?: TrashedTask;
+      project?: TrashedProject;
+      routine?: TrashedRoutine;
+    };
+    // Task 復元時は { task }, Project 復元時は { project }, Routine 復元時は { routine } を返す. 戻り値型は共用.
+    return (body.task ?? body.project ?? body.routine) as unknown as TrashedTask;
   }
 
   /**

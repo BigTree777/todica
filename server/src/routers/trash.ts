@@ -6,15 +6,15 @@ import { saveAndReturn } from "./_shared.js";
 export function trashRouter(deps: AppDeps): Hono {
   const router = new Hono();
   // ---------- GET /api/v1/trash (BL-011 / BL-119 / FR-062 ゴミ箱閲覧) ----------
-  // ゴミ箱にある Task / Project を { tasks, projects } で返す (D-2).
+  // ゴミ箱にある Task / Project / Routine を { tasks, projects, routines } で返す (D-2).
   // 認証必須 (middleware 済み) / 読取専用 (If-Match / Idempotency-Key 不要).
   router.get("/", async (c) => {
-    const { tasks, projects } = await listTrash(deps);
-    return c.json({ tasks, projects }, 200);
+    const { tasks, projects, routines } = await listTrash(deps);
+    return c.json({ tasks, projects, routines }, 200);
   });
 
-  // ---------- POST /api/v1/trash/:id/restore (BL-011 / BL-119 / FR-061 復元) ----------
-  // Task / Project を id から判別して復元する (D-3). Task は dueDate を 'today' にリセット.
+  // ---------- POST /api/v1/trash/:id/restore (BL-011 / BL-119 / BL-120 / FR-061 復元) ----------
+  // Task / Project / Routine を id から判別して復元する (D-3). Task は dueDate を 'today' にリセット.
   // 認証必須 / Idempotency-Key 必須 / If-Match で楽観ロック.
   router.post("/:id/restore", async (c) => {
     const id = c.req.param("id");
@@ -42,14 +42,24 @@ export function trashRouter(deps: AppDeps): Hono {
       case "invalid":
         return saveAndReturn(c, deps, 400, { code: result.code, message: result.message });
       case "conflict":
-        // Task 復元時は { task }, Project 復元時は { project } を返す (oneOf).
-        return result.current.entity === "task"
-          ? saveAndReturn(c, deps, 412, { task: result.current.task })
-          : saveAndReturn(c, deps, 412, { project: result.current.project });
+        // Task 復元時は { task }, Project 復元時は { project }, Routine 復元時は { routine } を返す (oneOf).
+        switch (result.current.entity) {
+          case "task":
+            return saveAndReturn(c, deps, 412, { task: result.current.task });
+          case "project":
+            return saveAndReturn(c, deps, 412, { project: result.current.project });
+          default:
+            return saveAndReturn(c, deps, 412, { routine: result.current.routine });
+        }
       default:
-        return result.value.entity === "task"
-          ? saveAndReturn(c, deps, 200, { task: result.value.task })
-          : saveAndReturn(c, deps, 200, { project: result.value.project });
+        switch (result.value.entity) {
+          case "task":
+            return saveAndReturn(c, deps, 200, { task: result.value.task });
+          case "project":
+            return saveAndReturn(c, deps, 200, { project: result.value.project });
+          default:
+            return saveAndReturn(c, deps, 200, { routine: result.value.routine });
+        }
     }
   });
 

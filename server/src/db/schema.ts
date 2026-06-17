@@ -137,6 +137,7 @@ export const routines = sqliteTable("routines", {
   version: integer("version").notNull().default(1),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
+  trashedAt: text("trashed_at"),
 });
 
 /**

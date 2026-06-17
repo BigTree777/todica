@@ -107,7 +107,7 @@ FocusSelection: 「現在のタスク」参照（単一レコード）
 
 Android ローカル側は, サーバ側の `drizzle-kit` を流用せず, 自前の version runner で順方向のスキーマ移行を管理する.
 
-- 定義配置: `web/src/repositories/local-migrations/` 配下に「1 ファイル = 1 バージョン」でマイグレーションを置く. 各定義は `{ version: number; name: string; up(db): Promise<void> }` の形を持つ. 初期スキーマ（6 テーブルの `CREATE TABLE IF NOT EXISTS` と `counter` / `settings` / `focus_selection` の singleton `INSERT OR IGNORE`）は `v001-initial.ts` が `v001` として保持する.
+- 定義配置: `web/src/repositories/local-migrations/` 配下に「1 ファイル = 1 バージョン」でマイグレーションを置く. 各定義は `{ version: number; name: string; up(db): Promise<void> }` の形を持つ. 初期スキーマ（6 テーブルの `CREATE TABLE IF NOT EXISTS` と `counter` / `settings` / `focus_selection` の singleton `INSERT OR IGNORE`）は `v001-initial.ts` が `v001` として保持する. `routines.trashed_at` 列の追加は `v002-routines-trashed-at.ts` が `v002` として保持する（`ALTER TABLE routines ADD COLUMN trashed_at TEXT` を冪等に適用する）.
 - 登録一覧: `local-migrations/index.ts` の `migrations` 配列が本番の適用対象を列挙する.
 - 適用済み管理: `__local_migrations` テーブル（`version` INTEGER PRIMARY KEY NOT NULL / `applied_at` TEXT NOT NULL / `name` TEXT 任意）で適用済みバージョンを記録する. runner は `SELECT MAX(version)`（不在 / NULL は 0 とみなす）を基準値とし, それより大きいバージョンの定義だけをバージョン昇順に `up()` 適用して記録する.
 - 起動経路: `local-db.ts` の接続初期化が `runMigrations(conn)` を呼ぶ. テストは runner にダミー定義一覧を注入できる.

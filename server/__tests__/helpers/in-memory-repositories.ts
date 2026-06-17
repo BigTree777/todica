@@ -142,6 +142,19 @@ export class InMemoryTaskRepository implements TaskRepository {
     }
   }
 
+  /**
+   * 指定 routineId に紐付く未ゴミ箱タスクの routineId を NULL に更新する
+   * (BL-120 / FR-2 / D-4 デタッチ = カスケード NULL). ゴミ箱状態のタスクには触れない.
+   * version / updatedAt は変更しない (nullifyProjectId と同型).
+   */
+  async nullifyRoutineId(routineId: string): Promise<void> {
+    for (const [id, task] of this.store.entries()) {
+      if (task.routineId === routineId && task.trashedAt === null) {
+        this.store.set(id, { ...task, routineId: null });
+      }
+    }
+  }
+
   /** テスト補助: 直接投入する. */
   seed(task: Task): void {
     this.store.set(task.id, { ...task });
@@ -161,46 +174,83 @@ export class InMemoryTaskRepository implements TaskRepository {
 // 型は後で合わせる（実装が入ってから import 解決される）.
 // ============================================================
 
+// BL-120 (routine-soft-delete): trashedAt を任意フィールドとして許容する.
+// 既存 seed (trashedAt 未指定) は通常状態 (null 相当) として扱い,
+// ゴミ箱状態の Routine を seed で投入できるようにする (ProjectRecord と同型).
+// domain Routine に trashedAt が入るまでの暫定型.
+export interface RoutineRecord {
+  id: string;
+  name: string;
+  daysOfWeek: number[];
+  defaultPriority: "highest" | "normal" | "later";
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+  trashedAt?: string | null;
+}
+
 export class InMemoryRoutineRepository implements RoutineRepository {
-  private store = new Map<string, Routine>();
+  private store = new Map<string, RoutineRecord>();
 
   async create(routine: Routine): Promise<void> {
-    this.store.set(routine.id, { ...routine });
+    const r = routine as RoutineRecord;
+    this.store.set(routine.id, { ...r, trashedAt: r.trashedAt ?? null });
   }
 
+  // BL-120: 通常状態 (trashedAt が null / 未指定) のみを返す.
   async list(): Promise<Routine[]> {
     // name 昇順（BINARY コレーション相当）
     return Array.from(this.store.values())
-      .map((r) => ({ ...r }))
+      .filter((r) => (r.trashedAt ?? null) === null)
+      .map((r) => ({ ...r, trashedAt: r.trashedAt ?? null }) as Routine)
+      .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  }
+
+  // BL-120: listTrashed (ゴミ箱状態 trashedAt != null のみ)
+  async listTrashed(): Promise<Routine[]> {
+    return Array.from(this.store.values())
+      .filter((r) => (r.trashedAt ?? null) !== null)
+      .map((r) => ({ ...r, trashedAt: r.trashedAt ?? null }) as Routine)
       .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
   }
 
   async findById(id: string): Promise<Routine | null> {
     const r = this.store.get(id);
-    return r ? { ...r } : null;
+    return r ? ({ ...r, trashedAt: r.trashedAt ?? null } as Routine) : null;
   }
 
   async update(routine: Routine): Promise<void> {
-    this.store.set(routine.id, { ...routine });
+    const r = routine as RoutineRecord;
+    this.store.set(routine.id, { ...r, trashedAt: r.trashedAt ?? null });
   }
 
   async delete(id: string): Promise<void> {
     this.store.delete(id);
   }
 
+  // BL-120: deleteAllTrashed (ゴミ箱状態を全件物理削除)
+  async deleteAllTrashed(): Promise<void> {
+    for (const [id, routine] of this.store.entries()) {
+      if ((routine.trashedAt ?? null) !== null) {
+        this.store.delete(id);
+      }
+    }
+  }
+
   async findByDayOfWeek(day: number): Promise<Routine[]> {
     return Array.from(this.store.values())
+      .filter((r) => (r.trashedAt ?? null) === null)
       .filter((r) => r.daysOfWeek.includes(day))
-      .map((r) => ({ ...r }));
+      .map((r) => ({ ...r, trashedAt: r.trashedAt ?? null }) as Routine);
   }
 
   /** テスト補助: 直接投入する. */
-  seed(routine: Routine): void {
+  seed(routine: RoutineRecord): void {
     this.store.set(routine.id, { ...routine });
   }
 
   /** テスト補助: 全件を取り出す. */
-  all(): Routine[] {
+  all(): RoutineRecord[] {
     return Array.from(this.store.values()).map((r) => ({ ...r }));
   }
 }

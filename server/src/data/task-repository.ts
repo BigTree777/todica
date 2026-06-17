@@ -67,4 +67,11 @@ export interface TaskRepository {
    * ルーティン削除時のカスケード削除に使用する（plan.md D-003）.
    */
   deleteByRoutineId(routineId: string): Promise<void>;
+
+  /**
+   * 指定 routineId に紐付く未ゴミ箱タスクの routineId を null に更新する
+   * (BL-120 / FR-2 / D-4 デタッチ = カスケード NULL). ゴミ箱状態のタスクには触れない.
+   * version / updatedAt は変更しない.
+   */
+  nullifyRoutineId(routineId: string): Promise<void>;
 }

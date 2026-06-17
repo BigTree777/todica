@@ -100,6 +100,7 @@ function makeMockTrashRepository(): TrashRepository {
   return {
     list: vi.fn(async () => []),
     listProjects: vi.fn(async () => []),
+    listRoutines: vi.fn(async () => []),
     restore: vi.fn(async () => {
       throw new Error("not implemented");
     }),
