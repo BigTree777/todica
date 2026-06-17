@@ -46,6 +46,8 @@
 .project-card__input {
   /* V-2: 残り幅を占有. */
   flex: 1;
+  /* BL-110: タスクカードのタスク名 (.task-card__title) と font-size を揃える. */
+  font-size: var(--font-size-h2);
 }
 
 .project-card__input::placeholder {
