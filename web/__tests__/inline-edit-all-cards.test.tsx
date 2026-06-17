@@ -69,6 +69,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Project, ProjectRepository } from "../src/repositories/project-repository.js";
 import { ProjectConflictError } from "../src/repositories/project-repository.js";
 import type { WebRoutine, WebRoutineRepository } from "../src/repositories/routine-repository.js";
+import { RoutineConflictError } from "../src/repositories/routine-repository.js";
 import type {
   CompleteTaskCommand,
   Counter,
@@ -1452,6 +1453,57 @@ describe("BL-070 inline-edit-all-cards / 全カードのインライン常時編
         { timeout: 2000 },
       );
       expect(dialog, "ConflictDialog が開いていない (AC-20 違反)").toBeDefined();
+    });
+
+    /**
+     * 回帰 (RoutinesView 412 → RoutineConflictError → ConflictDialog):
+     *   RoutinesView の name blur 経由 updateMutation が 412 で RoutineConflictError を
+     *   throw したとき, ProjectsView と同様に ConflictDialog が開くことを固定する。
+     *
+     *   mutation ロジックの実装場所が view 直構成から application 層へ移っても,
+     *   この 412 → ConflictDialog の外形的振る舞いは維持される必要がある。
+     *   したがって本ケースは「現在 green」であり, 移設後も green のままであることが
+     *   回帰の担保となる。
+     *
+     *   Given /routines を render し ルーティン R (version=1) が表示されている
+     *    かつ サーバ側で別タブが R の version を 2 に進めた
+     *   When  input の value を変更し blur する (= updateMutation 412 → RoutineConflictError)
+     *   Then  ConflictDialog が開く (既存 BL-031 / BL-033 経路 / RoutineConflictError 版)
+     */
+    it("RoutinesView で update が RoutineConflictError を throw すると ConflictDialog が開く", async () => {
+      const R1 = makeRoutine({
+        id: "r1",
+        name: "朝散歩",
+        daysOfWeek: [1, 2],
+        defaultPriority: "normal",
+        version: 1,
+      });
+      const repo = makeMockRoutineRepository([R1]);
+      // update を RoutineConflictError で reject する。
+      const serverRoutine: WebRoutine = {
+        id: "r1",
+        name: "朝散歩 (サーバで変更済)",
+        daysOfWeek: [1, 2],
+        defaultPriority: "normal",
+        version: 2,
+        createdAt: NOW,
+        updatedAt: NOW,
+      };
+      repo.update = vi.fn(async () => {
+        throw new RoutineConflictError(serverRoutine);
+      });
+      renderWithQueryClient(<RoutinesView repository={repo} />);
+
+      const input = (await screen.findByDisplayValue("朝散歩")) as HTMLInputElement;
+      fireEvent.change(input, { target: { value: "夜散歩" } });
+      fireEvent.blur(input);
+
+      const dialog = await screen.findByRole(
+        "dialog",
+        { name: /競合|変更が衝突|サーバ/ },
+        { timeout: 2000 },
+      );
+      expect(dialog, "ConflictDialog が開いていない (RoutineConflictError 経路)").toBeDefined();
     });
   });
 

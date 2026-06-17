@@ -23,6 +23,7 @@ import type {
   TrashedTask,
   TrashRepository,
 } from "../../repositories/trash-repository.js";
+import { RestoreConflictError } from "../../repositories/trash-repository.js";
 import { TrashView } from "./trash-view.js";
 
 // ============================================================
@@ -246,5 +247,149 @@ describe("TrashView", () => {
     renderWithQueryClient(<TrashView repository={repo} />);
 
     expect(await screen.findByRole("heading", { name: "ゴミ箱" })).toBeInTheDocument();
+  });
+});
+
+// ============================================================
+// 回帰テスト: mutation の online / offline 分岐 + 412 競合
+// ============================================================
+//
+// 本 describe は TrashView の mutation の現在の振る舞いを固定する回帰テスト。
+// mutation ロジックの実装場所が view 直構成から application 層へ移っても
+// この外形的振る舞い (online で repository を呼ぶ / offline で呼ばない /
+// 412 で ConflictDialog が開く) は維持される必要がある。
+//
+// したがって本 describe は「現在 green」であり, mutation 移設後も green の
+// ままであることが回帰の担保となる。
+describe("TrashView: mutation online / offline 分岐 + 412 競合 (回帰)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // 既定はオンライン (jsdom の navigator.onLine = true) に揃える。
+    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+  });
+
+  /**
+   * シナリオ (online restore): online のとき restore が repository.restore() を
+   *   正しい引数 ({ id, ifMatch: version }) で 1 回呼ぶ。
+   *   Given navigator.onLine === true
+   *   And   TrashRepository.list() がタスク [T1 (version=3)] を返す
+   *   When  T1 の「復元」ボタンをクリックする
+   *   Then  TrashRepository.restore({ id: "t1", ifMatch: 3 }) が 1 回呼ばれる
+   */
+  it("シナリオ (online restore): online のとき restore({ id, ifMatch }) が 1 回呼ばれる", async () => {
+    const T1 = makeTrashedTask({ id: "t1", name: "復元するタスク", version: 3 });
+    const repo = makeMockRepository([T1]);
+    const user = userEvent.setup();
+
+    renderWithQueryClient(<TrashView repository={repo} />);
+    await screen.findByText("復元するタスク");
+
+    const restoreButton = await screen.findByRole("button", { name: /復元/ });
+    await user.click(restoreButton);
+
+    expect(repo.restoreMock).toHaveBeenCalledTimes(1);
+    const arg = repo.restoreMock.mock.calls[0]?.[0] as RestoreTaskCommand;
+    expect(arg.id).toBe("t1");
+    expect(arg.ifMatch).toBe(3);
+  });
+
+  /**
+   * シナリオ (offline restore): offline のとき restore は repository.restore() を
+   *   呼ばず, 楽観的にキューへ enqueue するだけにとどまる。
+   *   Given navigator.onLine === false
+   *   And   TrashRepository.list() がタスク [T1] を返す
+   *   When  T1 の「復元」ボタンをクリックする
+   *   Then  TrashRepository.restore() が呼ばれない
+   */
+  it("シナリオ (offline restore): offline のとき repository.restore() が呼ばれない", async () => {
+    Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
+
+    const T1 = makeTrashedTask({ id: "t1", name: "復元するタスク", version: 3 });
+    const repo = makeMockRepository([T1]);
+    const user = userEvent.setup();
+
+    renderWithQueryClient(<TrashView repository={repo} />);
+    await screen.findByText("復元するタスク");
+
+    const restoreButton = await screen.findByRole("button", { name: /復元/ });
+    await user.click(restoreButton);
+
+    // 楽観 enqueue のみ。online API は叩かない。
+    expect(repo.restoreMock).not.toHaveBeenCalled();
+
+    Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+  });
+
+  /**
+   * シナリオ (412 restore): restore が 412 (RestoreConflictError) を受けると
+   *   ConflictDialog が開く。
+   *   Given navigator.onLine === true
+   *   And   TrashRepository.restore() が RestoreConflictError(currentTask) を throw する
+   *   When  「復元」ボタンをクリックする
+   *   Then  ConflictDialog (role="dialog", aria-label="変更が衝突しました") が開く
+   */
+  it("シナリオ (412 restore): restore が RestoreConflictError を throw すると ConflictDialog が開く", async () => {
+    const T1 = makeTrashedTask({ id: "t1", name: "復元するタスク", version: 3 });
+    const repo = makeMockRepository([T1]);
+    // restore を RestoreConflictError で reject する。
+    const serverTask = makeTrashedTask({
+      id: "t1",
+      name: "復元するタスク (サーバで変更済)",
+      version: 5,
+    });
+    repo.restoreMock.mockImplementation(async () => {
+      throw new RestoreConflictError(serverTask);
+    });
+    const user = userEvent.setup();
+
+    // handleRestore は mutateAsync の reject を try/catch で握るため通常は
+    // unhandled rejection は出ないが, 環境差による検証対象外の rejection で
+    // vitest が false positive にならないよう保険として握りつぶす。
+    // ダイアログ表示 (onError 経路) の検証が本ケースの対象。
+    const onUnhandled = (reason: unknown): void => {
+      void reason;
+    };
+    process.on("unhandledRejection", onUnhandled);
+
+    try {
+      renderWithQueryClient(<TrashView repository={repo} />);
+      await screen.findByText("復元するタスク");
+
+      const restoreButton = await screen.findByRole("button", { name: /復元/ });
+      await user.click(restoreButton);
+
+      const dialog = await screen.findByRole(
+        "dialog",
+        { name: /競合|変更が衝突|サーバ/ },
+        { timeout: 2000 },
+      );
+      expect(dialog).toBeInTheDocument();
+      // unhandled rejection が flush されるのを待ってから listener を外す。
+      await new Promise((r) => setTimeout(r, 0));
+    } finally {
+      process.off("unhandledRejection", onUnhandled);
+    }
+  });
+
+  /**
+   * シナリオ (online empty): online のとき empty が repository.empty() を 1 回呼ぶ。
+   *   Given navigator.onLine === true
+   *   And   TrashRepository.list() がタスク [T1, T2] を返す
+   *   When  「ゴミ箱を空にする」ボタンをクリックする
+   *   Then  TrashRepository.empty() が 1 回呼ばれる
+   */
+  it("シナリオ (online empty): online のとき empty() が 1 回呼ばれる", async () => {
+    const T1 = makeTrashedTask({ id: "t1", name: "タスクA", version: 1 });
+    const T2 = makeTrashedTask({ id: "t2", name: "タスクB", version: 2 });
+    const repo = makeMockRepository([T1, T2]);
+    const user = userEvent.setup();
+
+    renderWithQueryClient(<TrashView repository={repo} />);
+    await screen.findByText("タスクA");
+
+    const emptyButton = await screen.findByRole("button", { name: /ゴミ箱を空にする/ });
+    await user.click(emptyButton);
+
+    expect(repo.emptyMock).toHaveBeenCalledTimes(1);
   });
 });

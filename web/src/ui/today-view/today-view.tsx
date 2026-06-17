@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import type { DueDate, Priority, Task } from "@todica/domain/task";
 import type { JSX } from "react";
 /**
@@ -34,11 +34,9 @@ import type { JSX } from "react";
  */
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { notifyError } from "../../error-notification.js";
 import "./today-view.css";
 import "../day-view/day-view.css";
 import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
-import { ConflictError, dequeue, enqueue, findEntryByKey, getAll } from "../../offline-queue.js";
 import type { Project, ProjectRepository } from "../../repositories/project-repository.js";
 import type {
   CompleteTaskCommand,
@@ -49,7 +47,8 @@ import type {
   TaskRepository,
   UpdateTaskCommand,
 } from "../../repositories/task-repository.js";
-import { OptimisticLockError } from "../../repositories/task-repository.js";
+import { generateId } from "../../usecases/mutation-helpers.js";
+import { useTaskMutations } from "../../usecases/task-usecases.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
 import { TaskCard } from "../task-card/task-card.js";
 import { TaskFormCard } from "../task-card/task-form-card.js";
@@ -59,18 +58,8 @@ export interface TodayViewProps {
   projectRepository: ProjectRepository;
 }
 
-/** UUID v4 風の文字列を生成する. crypto.randomUUID が無い jsdom 環境向けのフォールバック. */
-function generateId(): string {
-  const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
-  if (c?.randomUUID) return c.randomUUID();
-  const random = (n: number) => Math.floor(Math.random() * n);
-  const hex = (n: number) => Array.from({ length: n }, () => random(16).toString(16)).join("");
-  return `${hex(8)}-${hex(4)}-4${hex(3)}-8${hex(3)}-${hex(12)}`;
-}
-
 export function TodayView(props: TodayViewProps): JSX.Element {
   const { repository, projectRepository } = props;
-  const queryClient = useQueryClient();
   const conflictDialog = useConflictDialog();
 
   // today() でタスク一覧・nextTaskId・completionCount を取得
@@ -157,220 +146,17 @@ export function TodayView(props: TodayViewProps): JSX.Element {
     };
   }, [formOpen, closeForm, focusCreateButton]);
 
-  /** mutation 成功時に today / focus を再フェッチする */
-  const invalidateAll = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ["today"] });
-    void queryClient.invalidateQueries({ queryKey: ["focus"] });
-  }, [queryClient]);
-
-  const repo = repository as { baseUrl?: string };
-  const baseUrl = repo.baseUrl ?? "";
-
-  /** enqueue を安全に呼び出す。IDB が利用できない環境ではエラーを無視する。 */
-  const safeEnqueue = async (entry: Parameters<typeof enqueue>[0]) => {
-    try {
-      await enqueue(entry);
-    } catch {
-      // IDB が利用できない環境（テスト環境等）ではキューへの保存をスキップ
-    }
-  };
-
-  /** dequeue を安全に呼び出す。IDB が利用できない環境ではエラーを無視する。 */
-  const safeDequeueByKey = async (idempotencyKey: string) => {
-    try {
-      const all = await getAll();
-      const match = all.find((e) => e.idempotencyKey === idempotencyKey);
-      if (match?.id !== undefined) await dequeue(match.id);
-    } catch {
-      // IDB が利用できない環境ではスキップ
-    }
-  };
-
-  const createMutation = useMutation({
-    mutationFn: async (cmd: CreateTaskCommand) => {
-      const idempotencyKey = generateId();
-      // キューへの書込は非同期で行う（書込完了を待たない）
-      void safeEnqueue({
-        url: `${baseUrl}/api/v1/tasks`,
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Idempotency-Key": idempotencyKey,
-        },
-        body: JSON.stringify({ ...cmd }),
-        idempotencyKey,
-      });
-      if (!navigator.onLine) {
-        // オフライン時: キューに保存のみ（楽観的に成功を返す）
-        return undefined;
-      }
-      const result = await repository.create(cmd);
-      // 成功したら対応キューエントリを削除（非同期・結果は待たない）
-      void safeDequeueByKey(idempotencyKey);
-      return result;
-    },
-    onSuccess: invalidateAll,
-    onError: (error) => {
-      if (error instanceof ConflictError) {
-        conflictDialog.openDialog(error.entry, error.serverValue);
-        return;
-      }
-      notifyError("通信に失敗しました");
-    },
-    networkMode: "offlineFirst",
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: async (cmd: UpdateTaskCommand) => {
-      const idempotencyKey = generateId();
-      void safeEnqueue({
-        url: `${baseUrl}/api/v1/tasks/${cmd.id}`,
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Idempotency-Key": idempotencyKey,
-          "If-Match": String(cmd.ifMatch),
-        },
-        body: JSON.stringify(cmd.patch),
-        idempotencyKey,
-      });
-      if (!navigator.onLine) {
-        return undefined;
-      }
-      try {
-        const result = await repository.update(cmd);
-        void safeDequeueByKey(idempotencyKey);
-        return result;
-      } catch (error) {
-        // online 412 で repository が OptimisticLockError を throw する.
-        // ConflictDialog を開くために queue 内の entry を引いて ConflictError に変換する.
-        if (error instanceof OptimisticLockError) {
-          const entry = await findEntryByKey(idempotencyKey);
-          if (entry) throw new ConflictError(entry, error.currentTask ?? {});
-        }
-        throw error;
-      }
-    },
-    onSuccess: invalidateAll,
-    onError: (error) => {
-      if (error instanceof ConflictError) {
-        conflictDialog.openDialog(error.entry, error.serverValue);
-        return;
-      }
-      notifyError("通信に失敗しました");
-    },
-    networkMode: "offlineFirst",
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (cmd: DeleteTaskCommand) => {
-      const idempotencyKey = generateId();
-      void safeEnqueue({
-        url: `${baseUrl}/api/v1/tasks/${cmd.id}`,
-        method: "DELETE",
-        headers: {
-          "Idempotency-Key": idempotencyKey,
-          "If-Match": String(cmd.ifMatch),
-        },
-        body: null,
-        idempotencyKey,
-      });
-      if (!navigator.onLine) {
-        return undefined;
-      }
-      try {
-        const result = await repository.delete(cmd);
-        void safeDequeueByKey(idempotencyKey);
-        return result;
-      } catch (error) {
-        if (error instanceof OptimisticLockError) {
-          const entry = await findEntryByKey(idempotencyKey);
-          if (entry) throw new ConflictError(entry, error.currentTask ?? {});
-        }
-        throw error;
-      }
-    },
-    onSuccess: invalidateAll,
-    onError: (error) => {
-      if (error instanceof ConflictError) {
-        conflictDialog.openDialog(error.entry, error.serverValue);
-        return;
-      }
-      notifyError("通信に失敗しました");
-    },
-    networkMode: "offlineFirst",
-  });
-
-  const completeMutation = useMutation({
-    mutationFn: async (cmd: CompleteTaskCommand) => {
-      const idempotencyKey = generateId();
-      void safeEnqueue({
-        url: `${baseUrl}/api/v1/tasks/${cmd.id}/complete`,
-        method: "POST",
-        headers: {
-          "Idempotency-Key": idempotencyKey,
-          "If-Match": String(cmd.ifMatch),
-        },
-        body: null,
-        idempotencyKey,
-      });
-      if (!navigator.onLine) {
-        return undefined;
-      }
-      try {
-        const result = await repository.complete(cmd);
-        void safeDequeueByKey(idempotencyKey);
-        return result;
-      } catch (error) {
-        if (error instanceof OptimisticLockError) {
-          const entry = await findEntryByKey(idempotencyKey);
-          if (entry) throw new ConflictError(entry, error.currentTask ?? {});
-        }
-        throw error;
-      }
-    },
-    onSuccess: invalidateAll,
-    onError: (error) => {
-      if (error instanceof ConflictError) {
-        conflictDialog.openDialog(error.entry, error.serverValue);
-        return;
-      }
-      notifyError("通信に失敗しました");
-    },
-    networkMode: "offlineFirst",
-  });
-
-  // BL-043 / FR-012: 明示 focus 設定 (PUT /api/v1/focus).
-  //   - ConflictDialog は task エントリ前提の機構のため FocusSelection には適用しない (plan D-006).
-  //   - 失敗時 (412 / ネットワークエラー) も ["focus"] を invalidate して最新 version を
-  //     取り直し, 再試行可能にする (plan D-005. 旧 BL-006 実装からの改善点).
-  const setFocusMutation = useMutation({
-    mutationFn: async (cmd: SetFocusCommand) => {
-      const idempotencyKey = generateId();
-      void safeEnqueue({
-        url: `${baseUrl}/api/v1/focus`,
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Idempotency-Key": idempotencyKey,
-          "If-Match": String(cmd.ifMatch),
-        },
-        body: JSON.stringify({ taskId: cmd.taskId }),
-        idempotencyKey,
-      });
-      if (!navigator.onLine) {
-        return undefined;
-      }
-      const result = await repository.setFocus(cmd);
-      void safeDequeueByKey(idempotencyKey);
-      return result;
-    },
-    onSuccess: invalidateAll,
-    onError: () => {
-      notifyError("通信に失敗しました");
-      void queryClient.invalidateQueries({ queryKey: ["focus"] });
-    },
-    networkMode: "offlineFirst",
+  // BL-118: task mutation 群はアプリケーション層 (task-usecases) へ集約.
+  //   - 標準 invalidate は ["today"] / ["focus"] (today-view 相当).
+  //   - 衝突時は conflictDialog.openDialog を onConflict として注入する.
+  const {
+    create: createMutation,
+    update: updateMutation,
+    delete: deleteMutation,
+    complete: completeMutation,
+    setFocus: setFocusMutation,
+  } = useTaskMutations(repository, {
+    onConflict: conflictDialog.openDialog,
   });
 
   const handleCreate = useCallback(

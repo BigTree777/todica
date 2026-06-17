@@ -21,16 +21,11 @@
  *     (result が Project) のみ onCreated(result) で親へ自動選択を伝える (plan D-003).
  */
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { JSX } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { notifyError } from "../../error-notification.js";
-import { dequeue, enqueue, getAll } from "../../offline-queue.js";
-import type {
-  CreateProjectCommand,
-  Project,
-  ProjectRepository,
-} from "../../repositories/project-repository.js";
+import type { Project, ProjectRepository } from "../../repositories/project-repository.js";
+import { generateId } from "../../usecases/mutation-helpers.js";
+import { useProjectMutations } from "../../usecases/project-usecases.js";
 import "./project-create-dialog.css";
 
 export interface ProjectCreateDialogProps {
@@ -42,24 +37,11 @@ export interface ProjectCreateDialogProps {
   onCreated: (project: Project) => void;
 }
 
-/** UUID v4 風の文字列を生成する. crypto.randomUUID が無い jsdom 環境向けのフォールバック. */
-function generateId(): string {
-  const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
-  if (c?.randomUUID) return c.randomUUID();
-  const random = (n: number) => Math.floor(Math.random() * n);
-  const hex = (n: number) => Array.from({ length: n }, () => random(16).toString(16)).join("");
-  return `${hex(8)}-${hex(4)}-4${hex(3)}-8${hex(3)}-${hex(12)}`;
-}
-
 export function ProjectCreateDialog(props: ProjectCreateDialogProps): JSX.Element {
   const { repository, open, onClose, onCreated } = props;
-  const queryClient = useQueryClient();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState("");
-
-  const repo = repository as { baseUrl?: string };
-  const baseUrl = repo.baseUrl ?? "";
 
   // open prop と <dialog> の実 DOM 状態を同期する (spec REQ-2).
   // 閉鎖時 (成功 / キャンセル / Escape) は入力 state を破棄する (spec REQ-5).
@@ -78,60 +60,17 @@ export function ProjectCreateDialog(props: ProjectCreateDialogProps): JSX.Elemen
     }
   }, [open]);
 
-  /** enqueue を安全に呼び出す。IDB が利用できない環境ではエラーを無視する。 */
-  const safeEnqueue = async (entry: Parameters<typeof enqueue>[0]) => {
-    try {
-      await enqueue(entry);
-    } catch {
-      // IDB が利用できない環境（テスト環境等）ではキューへの保存をスキップ
-    }
-  };
-
-  /** dequeue を安全に呼び出す。IDB が利用できない環境ではエラーを無視する。 */
-  const safeDequeueByKey = async (idempotencyKey: string) => {
-    try {
-      const all = await getAll();
-      const match = all.find((e) => e.idempotencyKey === idempotencyKey);
-      if (match?.id !== undefined) await dequeue(match.id);
-    } catch {
-      // IDB が利用できない環境ではスキップ
-    }
-  };
-
-  const createMutation = useMutation({
-    mutationFn: async (cmd: CreateProjectCommand) => {
-      const idempotencyKey = generateId();
-      // キューへの書込は非同期で行う（書込完了を待たない）
-      void safeEnqueue({
-        url: `${baseUrl}/api/v1/projects`,
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Idempotency-Key": idempotencyKey,
-        },
-        body: JSON.stringify({ ...cmd }),
-        idempotencyKey,
-      });
-      if (!navigator.onLine) {
-        // オフライン時: キューに保存のみ（楽観成功. spec REQ-8）
-        return undefined;
-      }
-      const result = await repository.create(cmd);
-      void safeDequeueByKey(idempotencyKey);
-      return result;
-    },
-    onSuccess: (result) => {
-      void queryClient.invalidateQueries({ queryKey: ["projects"] });
+  // BL-118: create mutation はアプリケーション層 (project-usecases) へ集約.
+  //   - 標準 invalidate ["projects"] に加え, 成功時の入力クリア / 自動選択 / close を
+  //     afterSuccess で行う (spec REQ-4 / REQ-7 / REQ-8). create は If-Match を持たず
+  //     412 が発生しないため onConflict は注入しない.
+  const { create: createMutation } = useProjectMutations(repository, {
+    afterSuccess: (_queryClient, result) => {
       setName("");
       // オンライン成功時 (Project が返ったとき) のみ自動選択を親へ伝える (spec REQ-4 / REQ-8).
-      if (result) onCreated(result);
+      if (result) onCreated(result as Project);
       onClose();
     },
-    onError: () => {
-      // 失敗時はダイアログを閉じず入力を保持し, 再試行可能にする (spec REQ-7).
-      notifyError("通信に失敗しました");
-    },
-    networkMode: "offlineFirst",
   });
 
   const handleSubmit = useCallback(

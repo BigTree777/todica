@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Priority, Task } from "@todica/domain/task";
 import type { JSX } from "react";
 /**
@@ -30,9 +30,7 @@ import type { JSX } from "react";
  */
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { notifyError } from "../../error-notification.js";
 import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
-import { ConflictError, dequeue, enqueue, findEntryByKey, getAll } from "../../offline-queue.js";
 import type { Project, ProjectRepository } from "../../repositories/project-repository.js";
 import type {
   CompleteTaskCommand,
@@ -41,7 +39,8 @@ import type {
   TaskRepository,
   UpdateTaskCommand,
 } from "../../repositories/task-repository.js";
-import { OptimisticLockError } from "../../repositories/task-repository.js";
+import { generateId } from "../../usecases/mutation-helpers.js";
+import { useTaskMutations } from "../../usecases/task-usecases.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
 import { TaskCard } from "../task-card/task-card.js";
 import { TaskFormCard } from "../task-card/task-form-card.js";
@@ -50,15 +49,6 @@ import "../day-view/day-view.css";
 export interface TomorrowViewProps {
   repository: TaskRepository;
   projectRepository: ProjectRepository;
-}
-
-/** UUID v4 風の文字列を生成する. crypto.randomUUID が無い jsdom 環境向けのフォールバック. */
-function generateId(): string {
-  const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
-  if (c?.randomUUID) return c.randomUUID();
-  const random = (n: number) => Math.floor(Math.random() * n);
-  const hex = (n: number) => Array.from({ length: n }, () => random(16).toString(16)).join("");
-  return `${hex(8)}-${hex(4)}-4${hex(3)}-8${hex(3)}-${hex(12)}`;
 }
 
 export function TomorrowView(props: TomorrowViewProps): JSX.Element {
@@ -138,19 +128,11 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
     };
   }, [formOpen, closeForm, focusCreateButton]);
 
-  // 起票成功時: ["tomorrow"] のみ invalidate (D-005).
-  const invalidateTomorrow = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ["tomorrow"] });
-  }, [queryClient]);
-
   // 「今日にする」/「完了」成功時: ["tomorrow"] / ["today"] / ["focus"] を invalidate (D-004 / BL-042).
   // ["today"] / ["focus"] は TomorrowView 内に observer がいないため, invalidate だけでは
   // 再フェッチが走らない. queryClient.fetchQuery で明示的にフェッチして, today カウンタの
   // 更新 (BL-042 spec AC-6) と focus 状態の更新 (今日に移動した場合の繰上げ) を確実に伝搬する.
-  const invalidateAfterMoveToToday = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ["tomorrow"] });
-    void queryClient.invalidateQueries({ queryKey: ["today"] });
-    void queryClient.invalidateQueries({ queryKey: ["focus"] });
+  const fetchTodayAndFocus = useCallback(() => {
     void queryClient.fetchQuery({
       queryKey: ["today"],
       queryFn: () => repository.today(),
@@ -161,188 +143,18 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
     });
   }, [queryClient, repository]);
 
-  const repo = repository as { baseUrl?: string };
-  const baseUrl = repo.baseUrl ?? "";
-
-  /** enqueue を安全に呼び出す. IDB 不可環境ではエラーを無視. */
-  const safeEnqueue = async (entry: Parameters<typeof enqueue>[0]) => {
-    try {
-      await enqueue(entry);
-    } catch {
-      // IDB が利用できない環境 (テスト等) ではスキップ.
-    }
-  };
-
-  /** dequeue を安全に呼び出す. */
-  const safeDequeueByKey = async (idempotencyKey: string) => {
-    try {
-      const all = await getAll();
-      const match = all.find((e) => e.idempotencyKey === idempotencyKey);
-      if (match?.id !== undefined) await dequeue(match.id);
-    } catch {
-      // IDB が利用できない環境ではスキップ.
-    }
-  };
-
-  const createMutation = useMutation({
-    mutationFn: async (cmd: CreateTaskCommand) => {
-      const idempotencyKey = generateId();
-      void safeEnqueue({
-        url: `${baseUrl}/api/v1/tasks`,
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Idempotency-Key": idempotencyKey,
-        },
-        body: JSON.stringify({ ...cmd }),
-        idempotencyKey,
-      });
-      if (!navigator.onLine) {
-        return undefined;
-      }
-      try {
-        const result = await repository.create(cmd);
-        void safeDequeueByKey(idempotencyKey);
-        return result;
-      } catch (error) {
-        if (error instanceof OptimisticLockError) {
-          const entry = await findEntryByKey(idempotencyKey);
-          if (entry) throw new ConflictError(entry, error.currentTask ?? {});
-        }
-        throw error;
-      }
-    },
-    onSuccess: invalidateTomorrow,
-    onError: (error) => {
-      if (error instanceof ConflictError) {
-        conflictDialog.openDialog(error.entry, error.serverValue);
-        return;
-      }
-      notifyError("通信に失敗しました");
-    },
-    networkMode: "offlineFirst",
+  // BL-118: task mutation 群はアプリケーション層 (task-usecases) へ集約.
+  //   - 起票 / 削除は ["tomorrow"] のみ invalidate (D-005 / D-006).
+  //   - 「今日にする」/「完了」は ["tomorrow"] / ["today"] / ["focus"] を invalidate し,
+  //     observer 不在の ["today"] / ["focus"] を fetchQuery で明示再フェッチする (D-004).
+  const { create: createMutation, delete: deleteMutation } = useTaskMutations(repository, {
+    onConflict: conflictDialog.openDialog,
+    invalidateKeys: [["tomorrow"]],
   });
-
-  const updateMutation = useMutation({
-    mutationFn: async (cmd: UpdateTaskCommand) => {
-      const idempotencyKey = generateId();
-      void safeEnqueue({
-        url: `${baseUrl}/api/v1/tasks/${cmd.id}`,
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Idempotency-Key": idempotencyKey,
-          "If-Match": String(cmd.ifMatch),
-        },
-        body: JSON.stringify(cmd.patch),
-        idempotencyKey,
-      });
-      if (!navigator.onLine) {
-        return undefined;
-      }
-      try {
-        const result = await repository.update(cmd);
-        void safeDequeueByKey(idempotencyKey);
-        return result;
-      } catch (error) {
-        if (error instanceof OptimisticLockError) {
-          const entry = await findEntryByKey(idempotencyKey);
-          if (entry) throw new ConflictError(entry, error.currentTask ?? {});
-        }
-        throw error;
-      }
-    },
-    onSuccess: invalidateAfterMoveToToday,
-    onError: (error) => {
-      if (error instanceof ConflictError) {
-        conflictDialog.openDialog(error.entry, error.serverValue);
-        return;
-      }
-      notifyError("通信に失敗しました");
-    },
-    networkMode: "offlineFirst",
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (cmd: DeleteTaskCommand) => {
-      const idempotencyKey = generateId();
-      void safeEnqueue({
-        url: `${baseUrl}/api/v1/tasks/${cmd.id}`,
-        method: "DELETE",
-        headers: {
-          "Idempotency-Key": idempotencyKey,
-          "If-Match": String(cmd.ifMatch),
-        },
-        body: null,
-        idempotencyKey,
-      });
-      if (!navigator.onLine) {
-        return undefined;
-      }
-      try {
-        const result = await repository.delete(cmd);
-        void safeDequeueByKey(idempotencyKey);
-        return result;
-      } catch (error) {
-        if (error instanceof OptimisticLockError) {
-          const entry = await findEntryByKey(idempotencyKey);
-          if (entry) throw new ConflictError(entry, error.currentTask ?? {});
-        }
-        throw error;
-      }
-    },
-    onSuccess: invalidateTomorrow,
-    onError: (error) => {
-      if (error instanceof ConflictError) {
-        conflictDialog.openDialog(error.entry, error.serverValue);
-        return;
-      }
-      notifyError("通信に失敗しました");
-    },
-    networkMode: "offlineFirst",
-  });
-
-  // tomorrow カードに「完了」 button を追加するため completeMutation を追加.
-  // today-view と同形 (BL-031 ConflictDialog 経路 + BL-034 notifyError 経路に接続).
-  // 成功時は ["tomorrow"] / ["today"] / ["focus"] の 3 つを invalidate する
-  // (今日の completionCount が +1 されるため ["today"] 再フェッチが必要 / D-1 / plan).
-  const completeMutation = useMutation({
-    mutationFn: async (cmd: CompleteTaskCommand) => {
-      const idempotencyKey = generateId();
-      void safeEnqueue({
-        url: `${baseUrl}/api/v1/tasks/${cmd.id}/complete`,
-        method: "POST",
-        headers: {
-          "Idempotency-Key": idempotencyKey,
-          "If-Match": String(cmd.ifMatch),
-        },
-        body: null,
-        idempotencyKey,
-      });
-      if (!navigator.onLine) {
-        return undefined;
-      }
-      try {
-        const result = await repository.complete(cmd);
-        void safeDequeueByKey(idempotencyKey);
-        return result;
-      } catch (error) {
-        if (error instanceof OptimisticLockError) {
-          const entry = await findEntryByKey(idempotencyKey);
-          if (entry) throw new ConflictError(entry, error.currentTask ?? {});
-        }
-        throw error;
-      }
-    },
-    onSuccess: invalidateAfterMoveToToday,
-    onError: (error) => {
-      if (error instanceof ConflictError) {
-        conflictDialog.openDialog(error.entry, error.serverValue);
-        return;
-      }
-      notifyError("通信に失敗しました");
-    },
-    networkMode: "offlineFirst",
+  const { update: updateMutation, complete: completeMutation } = useTaskMutations(repository, {
+    onConflict: conflictDialog.openDialog,
+    invalidateKeys: [["tomorrow"], ["today"], ["focus"]],
+    afterSuccess: fetchTodayAndFocus,
   });
 
   const handleCreate = useCallback(
