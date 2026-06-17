@@ -92,18 +92,14 @@ export interface TodayViewResponse {
 }
 
 /**
- * BL-006 / FR-012: FocusSelection エンティティ (Web 側ミラー).
+ * BL-006 / FR-012: FocusSelection エンティティ.
  *
+ * FocusSelection 型は `@todica/domain/focus-selection` に集約済み (server / web 共通).
  * 仕様: docs/developer/features/focus-task/spec.md.
- * 本型は test-designer が追加した「型のみのスタブ」.
- * HttpTaskRepository.getFocus / setFocus / UI 連携は implementer が green 化する.
  */
-export interface FocusSelection {
-  id: string;
-  currentTaskId: string | null;
-  version: number;
-  updatedAt: string;
-}
+import type { FocusSelection } from "@todica/domain/focus-selection";
+
+export type { FocusSelection };
 
 /**
  * BL-008 / FR-040: Counter エンティティ.

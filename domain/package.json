@@ -38,6 +38,10 @@
       "types": "./dist/counter/index.d.ts",
       "import": "./dist/counter/index.js"
     },
+    "./focus-selection": {
+      "types": "./dist/focus-selection/index.d.ts",
+      "import": "./dist/focus-selection/index.js"
+    },
     "./trash": {
       "types": "./dist/trash/index.d.ts",
       "import": "./dist/trash/index.js"

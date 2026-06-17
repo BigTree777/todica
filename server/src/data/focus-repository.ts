@@ -10,17 +10,12 @@
  *
  * 本ファイルはインターフェース定義. 物理スキーマ (drizzle) を含む本実装は
  * `server/src/infra/persistence/drizzle/drizzle-focus-repository.ts` にある.
+ *
+ * FocusSelection 型は `@todica/domain/focus-selection` に集約済み (server / web 共通).
  */
-export interface FocusSelection {
-  /** 単一レコードを示す固定値 "singleton". */
-  id: string;
-  /** 現在のタスク id. 明示未選択時は null. */
-  currentTaskId: string | null;
-  /** ISO 8601. 最後に update された時刻. */
-  updatedAt: string;
-  /** 楽観ロック用. update のたびに +1. */
-  version: number;
-}
+import type { FocusSelection } from "@todica/domain/focus-selection";
+
+export type { FocusSelection };
 
 export interface FocusRepository {
   /**
