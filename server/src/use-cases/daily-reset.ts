@@ -5,6 +5,8 @@
  * 設計: docs/developer/features/daily-reset/plan.md
  */
 import type { Clock } from "@todica/domain/clock";
+import { resetCompletedCount } from "@todica/domain/counter";
+import { calcTodayBoundaryAt, needsDailyReset } from "@todica/domain/settings";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type { CounterRepository } from "../data/counter-repository.js";
 import type { RoutineRepository } from "../data/routine-repository.js";
@@ -14,70 +16,18 @@ import type { schema } from "../db/schema.js";
 import { purgeTrash } from "./purge-trash.js";
 
 /**
- * 今日の境界時刻（ISO 8601）を算出する純関数.
- *
- * nowIso を timeZone 上の壁時計日付として解釈し、その日の dayBoundaryTime に
- * 対応する UTC ISO 文字列を返す。DST は考慮せず、当日正午の UTC オフセットを使う。
+ * 既存呼び出し側 (server/__tests__/unit/daily-reset.test.ts 等) の import 経路を維持するため
+ * domain/settings から re-export する.
  */
-export function calcTodayBoundaryAt(
-  nowIso: string,
-  dayBoundaryTime: string,
-  timeZone = "UTC",
-): string {
-  const formatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-  const getPart = (parts: Intl.DateTimeFormatPart[], type: Intl.DateTimeFormatPartTypes) =>
-    Number.parseInt(parts.find((part) => part.type === type)?.value ?? "0", 10);
-
-  const nowParts = formatter.formatToParts(new Date(nowIso));
-  const year = getPart(nowParts, "year");
-  const month = getPart(nowParts, "month");
-  const day = getPart(nowParts, "day");
-  const [hourString, minuteString] = dayBoundaryTime.split(":");
-  const hour = Number.parseInt(hourString ?? "0", 10);
-  const minute = Number.parseInt(minuteString ?? "0", 10);
-
-  const noonUtc = new Date(Date.UTC(year, month - 1, day, 12));
-  const noonParts = formatter.formatToParts(noonUtc);
-  const noonLocalAsUtc = Date.UTC(
-    getPart(noonParts, "year"),
-    getPart(noonParts, "month") - 1,
-    getPart(noonParts, "day"),
-    getPart(noonParts, "hour"),
-    getPart(noonParts, "minute"),
-  );
-  const offsetMs = noonLocalAsUtc - noonUtc.getTime();
-  const boundaryLocalAsUtc = Date.UTC(year, month - 1, day, hour, minute);
-
-  return new Date(boundaryLocalAsUtc - offsetMs).toISOString();
-}
-
-export function getServerTimeZone(): string {
-  return process.env.TZ ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
-}
+export { calcTodayBoundaryAt, needsDailyReset } from "@todica/domain/settings";
 
 /**
- * リセットが必要かどうかを判定する純関数.
- *
- * plan.md D-001 リセット判定式:
- *   needsReset = clock.now() >= todayBoundaryAt
- *             && (lastResetExecutedAt === null || lastResetExecutedAt < todayBoundaryAt)
+ * サーバプロセスのタイムゾーン (IANA) を返す.
+ * process.env.TZ を参照する I/O のため domain 層には置けず, server 側に残す
+ * (module-boundaries.md §2 ドメイン層は I/O を持たない原則).
  */
-export function needsDailyReset(
-  nowIso: string,
-  lastResetExecutedAt: string | null,
-  todayBoundaryAt: string,
-): boolean {
-  if (nowIso < todayBoundaryAt) return false; // 境界時刻を超えていない
-  if (lastResetExecutedAt === null) return true; // 初回
-  return lastResetExecutedAt < todayBoundaryAt; // 今日の境界時刻より前にリセット済み
+export function getServerTimeZone(): string {
+  return process.env.TZ ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
 export interface DailyResetResult {
@@ -174,13 +124,7 @@ export async function maybeRunDailyReset(deps: DailyResetDeps): Promise<DailyRes
   }
 
   // counter.completedCount を 0 にリセットし、lastResetExecutedAt を now にする（FR-051）.
-  const updatedCounter = {
-    ...counter,
-    completedCount: 0,
-    lastResetExecutedAt: now,
-    updatedAt: now,
-    version: counter.version + 1,
-  };
+  const updatedCounter = resetCompletedCount(counter, now, now);
   await deps.counterRepository.update(updatedCounter);
 
   // purgeTrash を呼び出す（plan.md D-002 d / D-005）.

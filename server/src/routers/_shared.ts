@@ -1,3 +1,4 @@
+import { setCurrentTask, shouldClearFocus } from "@todica/domain/focus-selection";
 import type { Task } from "@todica/domain/task";
 import type { Context } from "hono";
 import type { AppDeps } from "../app.js";
@@ -12,13 +13,8 @@ export function errorJson(c: Context, status: number, code: string, message: str
  */
 export async function clearFocusIfMatches(deps: AppDeps, targetId: string): Promise<void> {
   const focus = await deps.focusRepository.get();
-  if (focus.currentTaskId !== targetId) return;
-  const updated = {
-    ...focus,
-    currentTaskId: null,
-    version: focus.version + 1,
-    updatedAt: deps.clock.now(),
-  };
+  if (!shouldClearFocus(focus, targetId)) return;
+  const updated = setCurrentTask(focus, null, deps.clock.now());
   await deps.focusRepository.update(updated);
 }
 

@@ -1,3 +1,4 @@
+import { setCurrentTask } from "@todica/domain/focus-selection";
 import { Hono } from "hono";
 import type { AppDeps } from "../app.js";
 import { saveAndReturn } from "./_shared.js";
@@ -87,12 +88,7 @@ export function focusRouter(deps: AppDeps): Hono {
       }
     }
 
-    const updated = {
-      ...current,
-      currentTaskId: taskId,
-      version: current.version + 1,
-      updatedAt: deps.clock.now(),
-    };
+    const updated = setCurrentTask(current, taskId, deps.clock.now());
     await deps.focusRepository.update(updated);
     return saveAndReturn(c, deps, 200, { focus: updated });
   });

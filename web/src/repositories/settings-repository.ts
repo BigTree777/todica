@@ -9,14 +9,10 @@
  * `auth-storage.clearToken()` + `todica:auth-expired` イベント dispatch を行う.
  * これにより期限切れ token を持つユーザは API 呼び出しから自動で LoginView に戻れる.
  */
+import type { Settings } from "@todica/domain/settings";
 import { authedFetch } from "../auth/authed-fetch.js";
 
-export interface Settings {
-  id: string;
-  dayBoundaryTime: string;
-  version: number;
-  updatedAt: string;
-}
+export type { Settings };
 
 export interface PatchSettingsCommand {
   dayBoundaryTime: string;

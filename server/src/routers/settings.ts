@@ -1,3 +1,4 @@
+import { validateDayBoundaryTime } from "@todica/domain/settings";
 import { Hono } from "hono";
 import type { AppDeps } from "../app.js";
 import { saveAndReturn } from "./_shared.js";
@@ -41,9 +42,8 @@ export function settingsRouter(deps: AppDeps): Hono {
       });
     }
 
-    // dayBoundaryTime 形式バリデーション: ^([01]\d|2[0-3]):[0-5]\d$
-    const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
-    if (!timePattern.test(dayBoundaryTime)) {
+    // dayBoundaryTime 形式バリデーション (domain/settings の純関数).
+    if (!validateDayBoundaryTime(dayBoundaryTime)) {
       return saveAndReturn(c, deps, 400, {
         code: "INVALID_DAY_BOUNDARY_TIME",
         message: "dayBoundaryTime must be in HH:MM format (00:00 - 23:59)",

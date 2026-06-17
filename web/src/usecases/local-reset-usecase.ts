@@ -16,93 +16,9 @@
  *      - ゴミ箱清算: trashedAt < 前回境界時刻 → DELETE
  */
 
+import { type Counter, resetCompletedCount } from "@todica/domain/counter";
+import { calcPreviousBoundaryAt } from "@todica/domain/settings";
 import type { LocalDb } from "../repositories/local-db.js";
-
-/**
- * 前回の境界時刻を計算する.
- *
- * now のタイムゾーン内での日付を使い、当日の境界時刻 UTC を計算する.
- * now が当日境界時刻を超えていれば当日境界時刻を、超えていなければ前日境界時刻を返す.
- */
-function calcPreviousBoundary(now: Date, boundaryTime: string, timezone: string): Date {
-  const [hStr, mStr] = boundaryTime.split(":");
-  const boundaryHour = Number.parseInt(hStr ?? "4", 10);
-  const boundaryMinute = Number.parseInt(mStr ?? "0", 10);
-
-  // now をタイムゾーンでフォーマットして現地の年月日を取得
-  const formatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-
-  const parts = formatter.formatToParts(now);
-  const getPart = (type: string) => parts.find((p) => p.type === type)?.value ?? "0";
-
-  const year = Number.parseInt(getPart("year"), 10);
-  const month = Number.parseInt(getPart("month"), 10);
-  const day = Number.parseInt(getPart("day"), 10);
-  const localHour = Number.parseInt(getPart("hour"), 10);
-  const localMinute = Number.parseInt(getPart("minute"), 10);
-
-  // 現在時刻の現地時間が境界時刻以上かどうかチェック
-  const localTimeMinutes = localHour * 60 + localMinute;
-  const boundaryMinutes = boundaryHour * 60 + boundaryMinute;
-
-  let targetYear = year;
-  let targetMonth = month;
-  let targetDay = day;
-
-  if (localTimeMinutes < boundaryMinutes) {
-    // 境界時刻より前なら前日の境界時刻
-    const prevDay = new Date(Date.UTC(year, month - 1, day - 1));
-    targetYear = prevDay.getUTCFullYear();
-    targetMonth = prevDay.getUTCMonth() + 1;
-    targetDay = prevDay.getUTCDate();
-  }
-
-  // targetDay の境界時刻を UTC に変換する
-  // Intl.DateTimeFormat を使って、その日のタイムゾーンオフセットを逆算する.
-  // 二分探索でオフセットを求める代わりに、単純アプローチ:
-  // UTC 時刻 = ローカル時刻 - UTC オフセット
-  // オフセットを推定するために候補日の正午で計算
-  const noonUtc = new Date(Date.UTC(targetYear, targetMonth - 1, targetDay, 12, 0, 0));
-  const noonLocal = formatter.formatToParts(noonUtc);
-  const getNoonPart = (type: string) => noonLocal.find((p) => p.type === type)?.value ?? "0";
-  const noonLocalHour = Number.parseInt(getNoonPart("hour"), 10);
-  const noonLocalDay = Number.parseInt(getNoonPart("day"), 10);
-  const noonLocalMonth = Number.parseInt(getNoonPart("month"), 10);
-  const noonLocalYear = Number.parseInt(getNoonPart("year"), 10);
-
-  // ローカルの正午から UTC の正午を引いてオフセット（分）を求める
-  const noonLocalMs = Date.UTC(
-    noonLocalYear,
-    noonLocalMonth - 1,
-    noonLocalDay,
-    noonLocalHour,
-    0,
-    0,
-  );
-  const offsetMs = noonLocalMs - noonUtc.getTime();
-
-  // 境界時刻のローカルタイムスタンプ（UTC で表現）
-  const boundaryLocalMs = Date.UTC(
-    targetYear,
-    targetMonth - 1,
-    targetDay,
-    boundaryHour,
-    boundaryMinute,
-    0,
-    0,
-  );
-  const boundaryUtcMs = boundaryLocalMs - offsetMs;
-
-  return new Date(boundaryUtcMs);
-}
 
 export class LocalResetUsecase {
   constructor(private readonly db: LocalDb) {}
@@ -123,16 +39,14 @@ export class LocalResetUsecase {
     const lastResetExecutedAt =
       (counterRow?.last_reset_executed_at as string | null | undefined) ?? null;
 
-    // 3. 前回の境界時刻を計算
-    const previousBoundary = calcPreviousBoundary(now, boundaryTime, timezone);
-    const previousBoundaryIso = previousBoundary.toISOString();
+    // 3. 前回の境界時刻を計算 (domain/settings の純関数を呼ぶ)
+    const nowIso = now.toISOString();
+    const previousBoundaryIso = calcPreviousBoundaryAt(nowIso, boundaryTime, timezone);
 
     // 4. 冪等性チェック: lastResetExecutedAt >= 前回境界時刻 なら何もしない
     if (lastResetExecutedAt !== null && lastResetExecutedAt >= previousBoundaryIso) {
       return;
     }
-
-    const nowIso = now.toISOString();
 
     // 5. トランザクションでリセット処理を実行
     await this.db.beginTransaction();
@@ -153,11 +67,23 @@ export class LocalResetUsecase {
 
       // 5-3. Counter: completedCount=0, lastResetExecutedAt=境界時刻
       // local-db.ts の getDb() が INSERT OR IGNORE でシングルトンレコードを保証する
-      const counterVersion = ((counterRow?.version as number | undefined) ?? 0) + 1;
+      const currentCounter: Counter = {
+        id: (counterRow?.id as string | undefined) ?? "singleton",
+        completedCount: (counterRow?.completed_count as number | undefined) ?? 0,
+        lastResetExecutedAt: lastResetExecutedAt,
+        updatedAt: (counterRow?.updated_at as string | undefined) ?? nowIso,
+        version: (counterRow?.version as number | undefined) ?? 0,
+      };
+      const updatedCounter = resetCompletedCount(currentCounter, previousBoundaryIso, nowIso);
       await this.db.run(
-        `UPDATE counter SET completed_count = 0, last_reset_executed_at = ?, updated_at = ?, version = ?
+        `UPDATE counter SET completed_count = ?, last_reset_executed_at = ?, updated_at = ?, version = ?
          WHERE id = 'singleton'`,
-        [previousBoundaryIso, nowIso, counterVersion],
+        [
+          updatedCounter.completedCount,
+          updatedCounter.lastResetExecutedAt,
+          updatedCounter.updatedAt,
+          updatedCounter.version,
+        ],
       );
 
       // 5-4. ゴミ箱清算: trashedAt IS NOT NULL AND trashedAt < 前回境界時刻 → DELETE
