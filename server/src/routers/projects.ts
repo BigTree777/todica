@@ -1,9 +1,18 @@
-import { createProject, updateProject, validateProjectName } from "@todica/domain/project";
-import { eq } from "drizzle-orm";
 import { Hono } from "hono";
+import { createProject, deleteProject, updateProject } from "../app/project-usecases.js";
 import type { AppDeps } from "../app.js";
-import { projects as projectsTable, tasks as tasksTable } from "../db/schema.js";
 import { saveAndReturn } from "./_shared.js";
+
+/** If-Match ヘッダを取得し, 存在有無とパース済みの数値を返す. */
+function parseIfMatch(c: { req: { header(name: string): string | undefined } }): {
+  present: boolean;
+  value: number | undefined;
+} {
+  const header = c.req.header("If-Match") ?? c.req.header("if-match");
+  if (!header) return { present: false, value: undefined };
+  const parsed = Number.parseInt(header, 10);
+  return { present: true, value: Number.isFinite(parsed) ? parsed : undefined };
+}
 
 export function projectsRouter(deps: AppDeps): Hono {
   const router = new Hono();
@@ -26,18 +35,15 @@ export function projectsRouter(deps: AppDeps): Hono {
         message: "id is required",
       });
     }
-    const name = body.name;
-    const nameError = validateProjectName(name);
-    if (nameError) {
+
+    const result = await createProject(deps, { id, name: body.name });
+    if (result.kind !== "ok") {
       return saveAndReturn(c, deps, 400, {
-        code: "INVALID_PROJECT_NAME",
-        message: "project name is invalid",
+        code: result.kind === "invalid" ? result.code : "INVALID_REQUEST_BODY",
+        message: result.kind === "invalid" ? result.message : "request is invalid",
       });
     }
-
-    const project = createProject(id, name as string, deps.clock);
-    await deps.projectRepository.insert(project);
-    return saveAndReturn(c, deps, 201, { project });
+    return saveAndReturn(c, deps, 201, { project: result.value });
   });
 
   // ---------- GET /api/v1/projects (BL-016) ----------
@@ -50,15 +56,14 @@ export function projectsRouter(deps: AppDeps): Hono {
   router.patch("/:id", async (c) => {
     const id = c.req.param("id");
 
-    const ifMatchHeader = c.req.header("If-Match") ?? c.req.header("if-match");
-    if (!ifMatchHeader) {
+    const ifMatch = parseIfMatch(c);
+    if (!ifMatch.present) {
       return saveAndReturn(c, deps, 400, {
         code: "MISSING_IF_MATCH",
         message: "If-Match header is required",
       });
     }
-    const ifMatch = Number.parseInt(ifMatchHeader, 10);
-    if (!Number.isFinite(ifMatch)) {
+    if (ifMatch.value === undefined) {
       return saveAndReturn(c, deps, 400, {
         code: "MISSING_IF_MATCH",
         message: "If-Match header must be a numeric version",
@@ -75,75 +80,46 @@ export function projectsRouter(deps: AppDeps): Hono {
       });
     }
 
-    const current = await deps.projectRepository.findById(id);
-    if (!current) {
-      return saveAndReturn(c, deps, 404, {
-        code: "PROJECT_NOT_FOUND",
-        message: "project not found",
-      });
+    const result = await updateProject(deps, { id, ifMatch: ifMatch.value, name: body.name });
+    switch (result.kind) {
+      case "notFound":
+        return saveAndReturn(c, deps, 404, { code: result.code, message: result.message });
+      case "conflict":
+        return saveAndReturn(c, deps, 412, { project: result.current });
+      case "invalid":
+        return saveAndReturn(c, deps, 400, { code: result.code, message: result.message });
+      default:
+        return saveAndReturn(c, deps, 200, { project: result.value });
     }
-
-    if (current.version !== ifMatch) {
-      return saveAndReturn(c, deps, 412, { project: current });
-    }
-
-    const name = body.name;
-    const nameError = validateProjectName(name);
-    if (nameError) {
-      return saveAndReturn(c, deps, 400, {
-        code: "INVALID_PROJECT_NAME",
-        message: "project name is invalid",
-      });
-    }
-
-    const updated = updateProject(current, name as string, deps.clock);
-    await deps.projectRepository.update(updated);
-    return saveAndReturn(c, deps, 200, { project: updated });
   });
 
   // ---------- DELETE /api/v1/projects/:id (BL-016 / FR-022) ----------
   router.delete("/:id", async (c) => {
     const id = c.req.param("id");
 
-    const ifMatchHeader = c.req.header("If-Match") ?? c.req.header("if-match");
-    if (!ifMatchHeader) {
+    const ifMatch = parseIfMatch(c);
+    if (!ifMatch.present) {
       return saveAndReturn(c, deps, 400, {
         code: "MISSING_IF_MATCH",
         message: "If-Match header is required",
       });
     }
-    const ifMatch = Number.parseInt(ifMatchHeader, 10);
-    if (!Number.isFinite(ifMatch)) {
+    if (ifMatch.value === undefined) {
       return saveAndReturn(c, deps, 400, {
         code: "MISSING_IF_MATCH",
         message: "If-Match header must be a numeric version",
       });
     }
 
-    const current = await deps.projectRepository.findById(id);
-    if (!current) {
-      return saveAndReturn(c, deps, 404, {
-        code: "PROJECT_NOT_FOUND",
-        message: "project not found",
-      });
+    const result = await deleteProject(deps, { id, ifMatch: ifMatch.value });
+    switch (result.kind) {
+      case "notFound":
+        return saveAndReturn(c, deps, 404, { code: result.code, message: result.message });
+      case "conflict":
+        return saveAndReturn(c, deps, 412, { project: result.current });
+      default:
+        return saveAndReturn(c, deps, 204, null);
     }
-
-    if (current.version !== ifMatch) {
-      return saveAndReturn(c, deps, 412, { project: current });
-    }
-
-    // カスケード NULL: 紐付くタスクの projectId を null に更新してから削除する.
-    // deps.db が存在する場合はトランザクション内で実行してアトミック性を保証する.
-    if (deps.db) {
-      deps.db.transaction((tx) => {
-        tx.update(tasksTable).set({ projectId: null }).where(eq(tasksTable.projectId, id)).run();
-        tx.delete(projectsTable).where(eq(projectsTable.id, id)).run();
-      });
-    } else {
-      await deps.taskRepository.nullifyProjectId(id);
-      await deps.projectRepository.delete(id);
-    }
-    return saveAndReturn(c, deps, 204, null);
   });
 
   return router;

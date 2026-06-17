@@ -1,15 +1,18 @@
-import {
-  createRoutine,
-  updateRoutine,
-  validateDaysOfWeek,
-  validateDefaultPriority,
-  validateRoutineName,
-} from "@todica/domain/routine";
-import { and, eq, isNull } from "drizzle-orm";
 import { Hono } from "hono";
+import { createRoutine, deleteRoutine, updateRoutine } from "../app/routine-usecases.js";
 import type { AppDeps } from "../app.js";
-import { routines as routinesTable, tasks as tasksTable } from "../db/schema.js";
 import { saveAndReturn } from "./_shared.js";
+
+/** If-Match ヘッダを取得し, 存在有無とパース済みの数値を返す. */
+function parseIfMatch(c: { req: { header(name: string): string | undefined } }): {
+  present: boolean;
+  value: number | undefined;
+} {
+  const header = c.req.header("If-Match") ?? c.req.header("if-match");
+  if (!header) return { present: false, value: undefined };
+  const parsed = Number.parseInt(header, 10);
+  return { present: true, value: Number.isFinite(parsed) ? parsed : undefined };
+}
 
 export function routinesRouter(deps: AppDeps): Hono {
   const router = new Hono();
@@ -35,51 +38,19 @@ export function routinesRouter(deps: AppDeps): Hono {
       });
     }
 
-    const nameError = validateRoutineName(body.name);
-    if (nameError) {
+    const result = await createRoutine(deps, routineRepo, {
+      id,
+      name: body.name,
+      daysOfWeek: body.daysOfWeek,
+      defaultPriority: body.defaultPriority,
+    });
+    if (result.kind !== "ok") {
       return saveAndReturn(c, deps, 400, {
-        code: nameError.code,
-        message: "routine name is invalid",
+        code: result.kind === "invalid" ? result.code : "INVALID_REQUEST_BODY",
+        message: result.kind === "invalid" ? result.message : "request is invalid",
       });
     }
-
-    const daysError = validateDaysOfWeek(body.daysOfWeek);
-    if (daysError) {
-      return saveAndReturn(c, deps, 400, {
-        code: daysError.code,
-        message: "daysOfWeek is invalid",
-      });
-    }
-
-    if (body.defaultPriority !== undefined) {
-      const priorityError = validateDefaultPriority(body.defaultPriority);
-      if (priorityError) {
-        return saveAndReturn(c, deps, 400, {
-          code: priorityError.code,
-          message: "defaultPriority is invalid",
-        });
-      }
-    }
-
-    const createResult = createRoutine(
-      {
-        id,
-        name: body.name as string,
-        daysOfWeek: body.daysOfWeek as number[],
-        defaultPriority: (body.defaultPriority as string) ?? "normal",
-      },
-      deps.clock,
-    );
-
-    if (!createResult.ok) {
-      return saveAndReturn(c, deps, 400, {
-        code: createResult.error.code,
-        message: "routine validation failed",
-      });
-    }
-
-    await routineRepo.create(createResult.routine);
-    return saveAndReturn(c, deps, 201, { routine: createResult.routine });
+    return saveAndReturn(c, deps, 201, { routine: result.value });
   });
 
   // ---------- GET /api/v1/routines (BL-017 / FR-030) ----------
@@ -92,15 +63,14 @@ export function routinesRouter(deps: AppDeps): Hono {
   router.patch("/:id", async (c) => {
     const id = c.req.param("id");
 
-    const ifMatchHeader = c.req.header("If-Match") ?? c.req.header("if-match");
-    if (!ifMatchHeader) {
+    const ifMatch = parseIfMatch(c);
+    if (!ifMatch.present) {
       return saveAndReturn(c, deps, 400, {
         code: "MISSING_IF_MATCH",
         message: "If-Match header is required",
       });
     }
-    const ifMatch = Number.parseInt(ifMatchHeader, 10);
-    if (!Number.isFinite(ifMatch)) {
+    if (ifMatch.value === undefined) {
       return saveAndReturn(c, deps, 400, {
         code: "MISSING_IF_MATCH",
         message: "If-Match header must be a numeric version",
@@ -117,80 +87,51 @@ export function routinesRouter(deps: AppDeps): Hono {
       });
     }
 
-    const current = await routineRepo.findById(id);
-    if (!current) {
-      return saveAndReturn(c, deps, 404, {
-        code: "ROUTINE_NOT_FOUND",
-        message: "routine not found",
-      });
-    }
-
-    if (current.version !== ifMatch) {
-      return saveAndReturn(c, deps, 412, { routine: current });
-    }
-
     const patch: { name?: string; daysOfWeek?: number[]; defaultPriority?: string } = {};
     if (body.name !== undefined) patch.name = body.name as string;
     if (body.daysOfWeek !== undefined) patch.daysOfWeek = body.daysOfWeek as number[];
     if (body.defaultPriority !== undefined) patch.defaultPriority = body.defaultPriority as string;
 
-    const updateResult = updateRoutine(current, patch, deps.clock);
-    if (!updateResult.ok) {
-      return saveAndReturn(c, deps, 400, {
-        code: updateResult.error.code,
-        message: "routine validation failed",
-      });
+    const result = await updateRoutine(deps, routineRepo, { id, ifMatch: ifMatch.value, patch });
+    switch (result.kind) {
+      case "notFound":
+        return saveAndReturn(c, deps, 404, { code: result.code, message: result.message });
+      case "conflict":
+        return saveAndReturn(c, deps, 412, { routine: result.current });
+      case "invalid":
+        return saveAndReturn(c, deps, 400, { code: result.code, message: result.message });
+      default:
+        return saveAndReturn(c, deps, 200, { routine: result.value });
     }
-
-    await routineRepo.update(updateResult.routine);
-    return saveAndReturn(c, deps, 200, { routine: updateResult.routine });
   });
 
   // ---------- DELETE /api/v1/routines/:id (BL-017 / FR-030 補足) ----------
   router.delete("/:id", async (c) => {
     const id = c.req.param("id");
 
-    const ifMatchHeader = c.req.header("If-Match") ?? c.req.header("if-match");
-    if (!ifMatchHeader) {
+    const ifMatch = parseIfMatch(c);
+    if (!ifMatch.present) {
       return saveAndReturn(c, deps, 400, {
         code: "MISSING_IF_MATCH",
         message: "If-Match header is required",
       });
     }
-    const ifMatch = Number.parseInt(ifMatchHeader, 10);
-    if (!Number.isFinite(ifMatch)) {
+    if (ifMatch.value === undefined) {
       return saveAndReturn(c, deps, 400, {
         code: "MISSING_IF_MATCH",
         message: "If-Match header must be a numeric version",
       });
     }
 
-    const current = await routineRepo.findById(id);
-    if (!current) {
-      return saveAndReturn(c, deps, 404, {
-        code: "ROUTINE_NOT_FOUND",
-        message: "routine not found",
-      });
+    const result = await deleteRoutine(deps, routineRepo, { id, ifMatch: ifMatch.value });
+    switch (result.kind) {
+      case "notFound":
+        return saveAndReturn(c, deps, 404, { code: result.code, message: result.message });
+      case "conflict":
+        return saveAndReturn(c, deps, 412, { routine: result.current });
+      default:
+        return saveAndReturn(c, deps, 204, null);
     }
-
-    if (current.version !== ifMatch) {
-      return saveAndReturn(c, deps, 412, { routine: current });
-    }
-
-    // カスケード削除: 紐付くタスクを先に削除してからルーティンを削除する.
-    // deps.db が存在する場合はトランザクション内でアトミックに実行する.
-    if (deps.db) {
-      deps.db.transaction((tx) => {
-        tx.delete(tasksTable)
-          .where(and(eq(tasksTable.routineId, id), isNull(tasksTable.trashedAt)))
-          .run();
-        tx.delete(routinesTable).where(eq(routinesTable.id, id)).run();
-      });
-    } else {
-      await deps.taskRepository.deleteByRoutineId(id);
-      await routineRepo.delete(id);
-    }
-    return saveAndReturn(c, deps, 204, null);
   });
 
   return router;

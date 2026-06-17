@@ -1,5 +1,5 @@
-import { validateDayBoundaryTime } from "@todica/domain/settings";
 import { Hono } from "hono";
+import { getSettings, updateDayBoundaryTime } from "../app/settings-usecases.js";
 import type { AppDeps } from "../app.js";
 import { saveAndReturn } from "./_shared.js";
 
@@ -7,9 +7,8 @@ export function settingsRouter(deps: AppDeps): Hono {
   const router = new Hono();
   // ---------- GET /api/v1/settings (BL-009 / FR-041 / FR-042) ----------
   // spec.md §「Settings の初期状態」: 認証必須 / 読取専用.
-  // settingsRepository.get() の戻り値をそのまま 200 OK で返す.
   router.get("/", async (c) => {
-    const settings = await deps.settingsRepository.get();
+    const settings = await getSettings(deps);
     return c.json({ settings }, 200);
   });
 
@@ -42,44 +41,24 @@ export function settingsRouter(deps: AppDeps): Hono {
       });
     }
 
-    // dayBoundaryTime 形式バリデーション (domain/settings の純関数).
-    if (!validateDayBoundaryTime(dayBoundaryTime)) {
-      return saveAndReturn(c, deps, 400, {
-        code: "INVALID_DAY_BOUNDARY_TIME",
-        message: "dayBoundaryTime must be in HH:MM format (00:00 - 23:59)",
-      });
-    }
-
-    // If-Match 検証.
+    // If-Match のパース (存在 / 数値検証はユースケースが現挙動の順序で行う).
     const ifMatchHeader = c.req.header("If-Match") ?? c.req.header("if-match");
-    if (!ifMatchHeader) {
-      return saveAndReturn(c, deps, 400, {
-        code: "MISSING_IF_MATCH",
-        message: "If-Match header is required",
-      });
-    }
-    const ifMatch = Number.parseInt(ifMatchHeader, 10);
-    if (!Number.isFinite(ifMatch)) {
-      return saveAndReturn(c, deps, 400, {
-        code: "MISSING_IF_MATCH",
-        message: "If-Match header must be a numeric version",
-      });
-    }
+    const ifMatchPresent = ifMatchHeader !== undefined;
+    const parsedIfMatch =
+      ifMatchHeader !== undefined ? Number.parseInt(ifMatchHeader, 10) : Number.NaN;
+    const ifMatch = Number.isFinite(parsedIfMatch) ? parsedIfMatch : undefined;
 
-    // 楽観ロック.
-    const current = await deps.settingsRepository.get();
-    if (current.version !== ifMatch) {
-      return saveAndReturn(c, deps, 412, { settings: current });
+    const result = await updateDayBoundaryTime(deps, { dayBoundaryTime, ifMatch, ifMatchPresent });
+    if (result.kind === "invalid") {
+      return saveAndReturn(c, deps, 400, { code: result.code, message: result.message });
     }
-
-    const updated = {
-      ...current,
-      dayBoundaryTime,
-      version: current.version + 1,
-      updatedAt: deps.clock.now(),
-    };
-    await deps.settingsRepository.update(updated);
-    return saveAndReturn(c, deps, 200, { settings: updated });
+    if (result.kind === "conflict") {
+      return saveAndReturn(c, deps, 412, { settings: result.current });
+    }
+    if (result.kind === "notFound") {
+      return saveAndReturn(c, deps, 404, { code: result.code, message: result.message });
+    }
+    return saveAndReturn(c, deps, 200, { settings: result.value });
   });
 
   return router;

@@ -1,5 +1,5 @@
-import { setCurrentTask } from "@todica/domain/focus-selection";
 import { Hono } from "hono";
+import { getFocus, setFocus } from "../app/focus-usecases.js";
 import type { AppDeps } from "../app.js";
 import { saveAndReturn } from "./_shared.js";
 
@@ -7,9 +7,8 @@ export function focusRouter(deps: AppDeps): Hono {
   const router = new Hono();
   // ---------- GET /api/v1/focus (BL-006 / FR-012) ----------
   // spec.md §「GET /api/v1/focus」: 認証必須 / 読取専用 (If-Match / Idempotency-Key 不要).
-  // focus-selection-repository.get() の戻り値をそのまま 200 OK で返す.
   router.get("/", async (c) => {
-    const focus = await deps.focusRepository.get();
+    const focus = await getFocus(deps);
     return c.json({ focus }, 200);
   });
 
@@ -59,38 +58,17 @@ export function focusRouter(deps: AppDeps): Hono {
       });
     }
 
-    // 楽観ロック.
-    const current = await deps.focusRepository.get();
-    if (current.version !== ifMatch) {
-      return saveAndReturn(c, deps, 412, { focus: current });
+    const result = await setFocus(deps, { taskId, ifMatch });
+    if (result.kind === "conflict") {
+      return saveAndReturn(c, deps, 412, { focus: result.current });
     }
-
-    // 設定値の妥当性検証 (null は解除なので skip).
-    if (taskId !== null) {
-      const task = await deps.taskRepository.findById(taskId);
-      if (!task) {
-        return saveAndReturn(c, deps, 400, {
-          code: "INVALID_FOCUS_TARGET",
-          message: "task not found",
-        });
-      }
-      if (task.trashedAt !== null) {
-        return saveAndReturn(c, deps, 400, {
-          code: "INVALID_FOCUS_TARGET",
-          message: "task is trashed",
-        });
-      }
-      if (task.dueDate !== "today") {
-        return saveAndReturn(c, deps, 400, {
-          code: "INVALID_FOCUS_TARGET",
-          message: "task dueDate is not today",
-        });
-      }
+    if (result.kind === "invalid") {
+      return saveAndReturn(c, deps, 400, { code: result.code, message: result.message });
     }
-
-    const updated = setCurrentTask(current, taskId, deps.clock.now());
-    await deps.focusRepository.update(updated);
-    return saveAndReturn(c, deps, 200, { focus: updated });
+    if (result.kind === "notFound") {
+      return saveAndReturn(c, deps, 404, { code: result.code, message: result.message });
+    }
+    return saveAndReturn(c, deps, 200, { focus: result.value });
   });
 
   return router;
