@@ -21,6 +21,7 @@
 | クライアント状態 | React 組込み（useState / useReducer / Context） | Zustand / Redux |
 | HTTP クライアント | 標準 `fetch` | Axios |
 | ルーティング | React Router | TanStack Router |
+| アイコン | lucide-react | Heroicons / Material Symbols / 手書き SVG |
 | 書込みキュー永続化 | IndexedDB（`idb` ラッパー経由） | localStorage |
 | Service Worker | `vite-plugin-pwa`（Workbox ベース） | 手書き SW |
 | テスト | Vitest | Jest |
