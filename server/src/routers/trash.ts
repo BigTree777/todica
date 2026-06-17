@@ -1,5 +1,5 @@
-import { restoreTask } from "@todica/domain/task";
 import { Hono } from "hono";
+import { listTrash, purgeTrash, restoreTask } from "../app/trash-usecases.js";
 import type { AppDeps } from "../app.js";
 import { saveAndReturn } from "./_shared.js";
 
@@ -9,7 +9,7 @@ export function trashRouter(deps: AppDeps): Hono {
   // ゴミ箱にあるタスク（trashedAt != null）をすべて返す.
   // 認証必須 (middleware 済み) / 読取専用 (If-Match / Idempotency-Key 不要).
   router.get("/", async (c) => {
-    const trashedTasks = await deps.taskRepository.list({ trashed: "true" });
+    const trashedTasks = await listTrash(deps);
     return c.json({ tasks: trashedTasks }, 200);
   });
 
@@ -35,37 +35,24 @@ export function trashRouter(deps: AppDeps): Hono {
       });
     }
 
-    const current = await deps.taskRepository.findById(id);
-    if (!current) {
-      return saveAndReturn(c, deps, 404, {
-        code: "TASK_NOT_FOUND",
-        message: "task not found",
-      });
+    const result = await restoreTask(deps, { id, ifMatch });
+    switch (result.kind) {
+      case "notFound":
+        return saveAndReturn(c, deps, 404, { code: result.code, message: result.message });
+      case "invalid":
+        return saveAndReturn(c, deps, 400, { code: result.code, message: result.message });
+      case "conflict":
+        return saveAndReturn(c, deps, 412, { task: result.current });
+      default:
+        return saveAndReturn(c, deps, 200, { task: result.value });
     }
-
-    // ゴミ箱に入っていないタスクへの復元は 400.
-    if (current.trashedAt === null) {
-      return saveAndReturn(c, deps, 400, {
-        code: "TASK_NOT_IN_TRASH",
-        message: "task is not in trash",
-      });
-    }
-
-    // 楽観ロック.
-    if (current.version !== ifMatch) {
-      return saveAndReturn(c, deps, 412, { task: current });
-    }
-
-    const restored = restoreTask(current, deps.clock);
-    await deps.taskRepository.update(restored);
-    return saveAndReturn(c, deps, 200, { task: restored });
   });
 
   // ---------- DELETE /api/v1/trash (BL-011 / FR-062 ゴミ箱を空にする) ----------
   // spec.md §「ゴミ箱を空にするとゴミ箱の全タスクが物理削除される」
   // 認証必須 / Idempotency-Key 必須.
   router.delete("/", async (c) => {
-    await deps.taskRepository.deleteAllTrashed();
+    await purgeTrash(deps);
     return saveAndReturn(c, deps, 204, null);
   });
 

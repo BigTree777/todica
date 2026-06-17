@@ -1,4 +1,3 @@
-import { setCurrentTask, shouldClearFocus } from "@todica/domain/focus-selection";
 import type { Task } from "@todica/domain/task";
 import type { Context } from "hono";
 import type { AppDeps } from "../app.js";
@@ -6,16 +5,6 @@ import { sortToday } from "../today.js";
 
 export function errorJson(c: Context, status: number, code: string, message: string) {
   return c.json({ code, message }, status as 400 | 401 | 404 | 412 | 500 | 501);
-}
-
-/**
- * focus.currentTaskId が targetId と一致する場合に選択を解除する.
- */
-export async function clearFocusIfMatches(deps: AppDeps, targetId: string): Promise<void> {
-  const focus = await deps.focusRepository.get();
-  if (!shouldClearFocus(focus, targetId)) return;
-  const updated = setCurrentTask(focus, null, deps.clock.now());
-  await deps.focusRepository.update(updated);
 }
 
 /**

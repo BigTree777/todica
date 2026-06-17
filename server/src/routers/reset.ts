@@ -1,6 +1,6 @@
 import { Hono } from "hono";
+import { runDailyResetIfNeeded } from "../app/reset-usecases.js";
 import type { AppDeps } from "../app.js";
-import { maybeRunDailyReset } from "../use-cases/daily-reset.js";
 import { saveAndReturn } from "./_shared.js";
 
 export function resetRouter(deps: AppDeps): Hono {
@@ -9,17 +9,10 @@ export function resetRouter(deps: AppDeps): Hono {
   // spec.md §「POST /api/v1/reset」:
   //   - 認証必須 (middleware 済み)
   //   - Idempotency-Key 必須 (middleware 済み)
-  //   - maybeRunDailyReset を呼んでリセット要否を判定・実行する
+  //   - リセット要否を判定・実行する
   //   - 200 OK { executed, appliedBoundaryAt }
   router.post("/", async (c) => {
-    const result = await maybeRunDailyReset({
-      taskRepository: deps.taskRepository,
-      counterRepository: deps.counterRepository,
-      settingsRepository: deps.settingsRepository,
-      clock: deps.clock,
-      db: deps.db,
-      routineRepository: deps.routineRepository,
-    });
+    const result = await runDailyResetIfNeeded(deps);
     return saveAndReturn(c, deps, 200, result);
   });
 
