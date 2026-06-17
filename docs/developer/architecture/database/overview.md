@@ -98,14 +98,14 @@ FocusSelection: 「現在のタスク」参照（単一レコード）
 | 項目 | 採用 | 代替案 |
 | --- | --- | --- |
 | 永続化機構 | SQLite（**`@capacitor-community/sqlite`** プラグイン経由） | Room / sqflite / drift |
-| 接続ライブラリ | Capacitor SQLite プラグインの JS API + **`drizzle-orm` の sqlite-proxy ドライバ**（サーバと同じスキーマ定義を共有） | 生 SQL |
+| 接続ライブラリ | Capacitor SQLite プラグインの JS API（`web/src/repositories/local-db.ts` で薄くラップし生 SQL を `execute` / `query` で直接実行） | `drizzle-orm` の sqlite-proxy ドライバ（採用しない: サーバ schema との同期は手動運用） |
 | 配置 | Android 端末のアプリプライベートストレージ | （他アプリ・他端末から見える領域は採らない） |
-| マイグレーションツール | **`drizzle-kit`**（サーバと共通. 生成された SQL を Capacitor SQLite プラグインの `executeSet` で実行） | プラグイン固有マイグレーション機構 |
+| マイグレーションツール | 起動時に `CREATE TABLE IF NOT EXISTS` を冪等実行（`local-db.ts` 内で管理） | `drizzle-kit` 生成 SQL の流用（採用しない: スキーマ進行を Android 側で追跡しない） |
 | マイグレーション実行タイミング | アプリ起動時に自動適用 | （別案は採らない） |
 
 ## 9. 物理スキーマ
 
-スキーマは **TypeScript 上で Drizzle の `sqliteTable` で定義する**（サーバ側 / Android ローカル側で同一の定義を共有）. `drizzle-kit` が CREATE TABLE / インデックス SQL を生成し, マイグレーションファイルとしてリポジトリに保存する.
+スキーマは **TypeScript 上で Drizzle の `sqliteTable` で定義する**（サーバ側）. `drizzle-kit` が CREATE TABLE / インデックス SQL を生成し, マイグレーションファイルとしてリポジトリに保存する. Android ローカル側は同等の論理スキーマを `local-db.ts` 内で生 SQL の `CREATE TABLE IF NOT EXISTS` として独立に管理する（サーバ schema との同期は手動運用）.
 
 ### テーブル一覧（[`schema.md`](schema.md) と対応）
 
