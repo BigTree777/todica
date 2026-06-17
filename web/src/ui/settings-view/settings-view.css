@@ -12,6 +12,8 @@
 .settings-view h1 {
   font-size: var(--font-size-h1);
   margin: 0 0 var(--space-md) 0;
+  /* BL-111: 全 view の h1 を左右中央揃えで統一する. */
+  text-align: center;
 }
 
 .settings-view h2 {
