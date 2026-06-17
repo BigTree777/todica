@@ -6,6 +6,7 @@
  */
 import {
   createProject as domainCreateProject,
+  trashProject as domainTrashProject,
   updateProject as domainUpdateProject,
   validateProjectName,
 } from "@todica/domain/project";
@@ -67,9 +68,10 @@ export interface DeleteProjectInput {
 }
 
 /**
- * プロジェクトを削除する.
+ * プロジェクトを削除する (ゴミ箱化 = soft delete).
  *   - findById → 楽観ロック.
- *   - 紐付くタスクの projectId NULL 化 + プロジェクト削除を同一トランザクション境界で実行する.
+ *   - 紐付くタスクの projectId NULL 化 (カスケード NULL 固定) + プロジェクトの trashedAt セットを
+ *     同一トランザクション境界で実行する. Project 自体は物理削除しない.
  *   - deps.db がない場合は Repository の順次呼び出しでフォールバックする.
  */
 export async function deleteProject(
@@ -84,7 +86,10 @@ export async function deleteProject(
     return { kind: "conflict", current };
   }
 
-  // カスケード NULL: 紐付くタスクの projectId を null に更新してから削除する.
+  // ドメイン純関数でゴミ箱化後の状態を算出する (trashedAt=now, version+1, updatedAt 更新).
+  const trashed = domainTrashProject(current, deps.clock);
+
+  // カスケード NULL: 紐付くタスクの projectId を null に更新する (タスクはゴミ箱化しない).
   // deps.db が存在する場合はトランザクション内で実行してアトミック性を保証する.
   if (deps.db) {
     deps.db.transaction((tx) => {
@@ -92,11 +97,18 @@ export async function deleteProject(
         .set({ projectId: null })
         .where(eq(tasksTable.projectId, input.id))
         .run();
-      tx.delete(projectsTable).where(eq(projectsTable.id, input.id)).run();
+      tx.update(projectsTable)
+        .set({
+          trashedAt: trashed.trashedAt,
+          version: trashed.version,
+          updatedAt: trashed.updatedAt,
+        })
+        .where(eq(projectsTable.id, input.id))
+        .run();
     });
   } else {
     await deps.taskRepository.nullifyProjectId(input.id);
-    await deps.projectRepository.delete(input.id);
+    await deps.projectRepository.update(trashed);
   }
-  return { kind: "ok", value: current };
+  return { kind: "ok", value: trashed };
 }

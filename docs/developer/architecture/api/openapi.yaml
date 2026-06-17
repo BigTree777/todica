@@ -317,19 +317,12 @@ paths:
       tags: [projects]
       summary: プロジェクト削除（ゴミ箱へ）
       description: |
-        配下 Task の扱いはクエリパラメータ `cascade` で指定する.
-        UI がユーザーに確認した結果をそのまま送る（カスケード or 独立化）.
+        Project をゴミ箱化（soft delete: `trashedAt = now`, `version + 1`）する. 物理削除はしない.
+        配下 Task はゴミ箱化せず `projectId` を `null` にする（カスケード NULL 固定）.
+        カスケードの選択や UI でのユーザー確認は無い.
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/IfMatch"
-        - name: cascade
-          in: query
-          required: true
-          schema:
-            type: string
-            enum: ["true", "false"]
-          description: |
-            `true` = 配下 Task もゴミ箱化. `false` = 配下 Task の `projectId` を `null` にする.
       responses:
         "204": { description: No Content }
         "401": { $ref: "#/components/responses/Unauthorized" }
@@ -386,8 +379,25 @@ paths:
     get:
       tags: [trash]
       summary: ゴミ箱一覧
+      description: |
+        ゴミ箱内の Task と Project を `{ tasks, projects }` の 2 配列で返す.
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tasks, projects]
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Task"
+                  projects:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/TrashedProject"
         "401": { $ref: "#/components/responses/Unauthorized" }
     delete:
       tags: [trash]
@@ -405,22 +415,31 @@ paths:
       tags: [trash]
       summary: ゴミ箱からの復元（FR-061）
       description: |
-        ゴミ箱中のエンティティを復元する. タスクの場合は `dueDate` を `today` にリセットする.
+        ゴミ箱中のエンティティを復元する. id から Task / Project をサーバが判別する.
+        Task の場合は `dueDate` を `today` にリセットする. Project の場合はカスケード復元しない
+        （削除時に `null` 化された配下 Task の `projectId` は元へ戻さない）.
         復元経路はこの 1 本に一本化されている（per-entity の restore path は存在しない）.
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/IfMatch"
       responses:
         "200":
-          description: OK
+          description: |
+            OK. Task 復元時は `{ task }`, Project 復元時は `{ project }` を返す.
           content:
             application/json:
               schema:
-                type: object
-                required: [task]
-                properties:
-                  task:
-                    $ref: "#/components/schemas/Task"
+                oneOf:
+                  - type: object
+                    required: [task]
+                    properties:
+                      task:
+                        $ref: "#/components/schemas/Task"
+                  - type: object
+                    required: [project]
+                    properties:
+                      project:
+                        $ref: "#/components/schemas/Project"
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
@@ -960,7 +979,56 @@ components:
     # ---------- 他エンティティ (feature spec で詳細化) ----------
     Project:
       type: object
-      description: プロジェクト（schema.md と整合. feature spec で詳細化）
+      description: |
+        プロジェクト（schema.md と整合）.
+        削除はゴミ箱化（soft delete）であり `trashedAt` に時刻をセットする. Project は
+        `trashedReason` を持たない（削除理由は "deleted" 固定相当）.
+      required:
+        - id
+        - name
+        - version
+        - createdAt
+        - updatedAt
+        - trashedAt
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        version:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        trashedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: ゴミ箱化された時刻. 通常状態は null.
+    TrashedProject:
+      type: object
+      description: |
+        ゴミ箱内 Project の射影. `GET /trash` の `projects` 配列要素として返す.
+        Project は `trashedReason` を持たない.
+      required:
+        - id
+        - name
+        - trashedAt
+        - version
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        trashedAt:
+          type: string
+          format: date-time
+          nullable: true
+        version:
+          type: integer
     Routine:
       type: object
       description: ルーティン（同上）

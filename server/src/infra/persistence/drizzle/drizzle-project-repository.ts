@@ -3,10 +3,10 @@
  *
  * BL-001: exists のみを実装していたが、BL-016 で CRUD を追加.
  */
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, isNotNull, isNull } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type { Project, ProjectRepository } from "../../../data/project-repository.js";
-import { projects, type schema, tasks } from "../../../db/schema.js";
+import { projects, type schema } from "../../../db/schema.js";
 
 export interface DrizzleProjectRepositoryDeps {
   db: BetterSQLite3Database<typeof schema>;
@@ -38,6 +38,7 @@ export class DrizzleProjectRepository implements ProjectRepository {
         version: project.version,
         createdAt: project.createdAt,
         updatedAt: project.updatedAt,
+        trashedAt: project.trashedAt,
       })
       .run();
   }
@@ -46,24 +47,29 @@ export class DrizzleProjectRepository implements ProjectRepository {
     const rows = this.db.select().from(projects).where(eq(projects.id, id)).all();
     const row = rows[0];
     if (!row) return null;
-    return {
-      id: row.id,
-      name: row.name,
-      version: row.version,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    };
+    return this.toProject(row);
   }
 
   async list(): Promise<Project[]> {
-    const rows = this.db.select().from(projects).orderBy(asc(projects.name)).all();
-    return rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      version: row.version,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    }));
+    // 通常状態 (trashedAt IS NULL) のみを name 昇順で返す.
+    const rows = this.db
+      .select()
+      .from(projects)
+      .where(isNull(projects.trashedAt))
+      .orderBy(asc(projects.name))
+      .all();
+    return rows.map((row) => this.toProject(row));
+  }
+
+  async listTrashed(): Promise<Project[]> {
+    // ゴミ箱状態 (trashedAt IS NOT NULL) を返す.
+    const rows = this.db
+      .select()
+      .from(projects)
+      .where(isNotNull(projects.trashedAt))
+      .orderBy(asc(projects.name))
+      .all();
+    return rows.map((row) => this.toProject(row));
   }
 
   async update(project: Project): Promise<void> {
@@ -73,6 +79,7 @@ export class DrizzleProjectRepository implements ProjectRepository {
         name: project.name,
         version: project.version,
         updatedAt: project.updatedAt,
+        trashedAt: project.trashedAt,
       })
       .where(eq(projects.id, project.id))
       .run();
@@ -80,5 +87,27 @@ export class DrizzleProjectRepository implements ProjectRepository {
 
   async delete(id: string): Promise<void> {
     this.db.delete(projects).where(eq(projects.id, id)).run();
+  }
+
+  async deleteAllTrashed(): Promise<void> {
+    this.db.delete(projects).where(isNotNull(projects.trashedAt)).run();
+  }
+
+  private toProject(row: {
+    id: string;
+    name: string;
+    version: number;
+    createdAt: string;
+    updatedAt: string;
+    trashedAt: string | null;
+  }): Project {
+    return {
+      id: row.id,
+      name: row.name,
+      version: row.version,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      trashedAt: row.trashedAt,
+    };
   }
 }

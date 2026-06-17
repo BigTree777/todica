@@ -189,7 +189,7 @@ stateDiagram-v2
     Trashed --> [*] : 完全削除（リセット FR-062 / 手動空にする）
 ```
 
-- Project をゴミ箱に入れる際, 配下 Task の扱いは **UI でユーザーに確認** する（[`database/schema.md`](database/schema.md) §確定事項）. データモデル上の自動カスケードは行わない.
+- Project をゴミ箱に入れる際, 配下 Task はゴミ箱化せず `projectId` を `null` にする（**カスケード NULL 固定**. [`database/schema.md`](database/schema.md) §確定事項）. UI 確認やカスケード選択は無い. Project の復元はカスケード復元しない（`null` 化された `projectId` は元へ戻さない）. Project は `trashedReason` を持たない.
 
 ### 3.3 リセット処理の全体（参考）
 

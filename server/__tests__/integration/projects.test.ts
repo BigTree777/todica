@@ -282,6 +282,41 @@ describe("GET /api/v1/projects (プロジェクト一覧取得)", () => {
     expect(body.projects[1]?.name).toBe("個人");
   });
 
+  it("シナリオ (AC-3): ゴミ箱化された Project は通常一覧から除外される", async () => {
+    // BL-119 (project-soft-delete) AC-3:
+    //   Given ゴミ箱化された Project P (trashedAt != null) と通常状態の Project Q が存在する
+    //   When  GET /api/v1/projects を実行する
+    //   Then  レスポンスの projects に P は含まれない
+    //   And   Q は含まれる
+    projectRepo.seedProject({
+      id: PROJECT_ID_1,
+      name: "ゴミ箱の仕事",
+      version: 2,
+      createdAt: TEST_INITIAL_TIME,
+      updatedAt: TEST_INITIAL_TIME,
+      trashedAt: "2026-06-07T08:00:00.000Z",
+    });
+    projectRepo.seedProject({
+      id: PROJECT_ID_2,
+      name: "通常の個人",
+      version: 1,
+      createdAt: TEST_INITIAL_TIME,
+      updatedAt: TEST_INITIAL_TIME,
+      trashedAt: null,
+    });
+
+    const res = await app.request("/api/v1/projects", {
+      method: "GET",
+      headers: authHeaders(),
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { projects: Array<{ id: string }> };
+    const ids = body.projects.map((p) => p.id);
+    expect(ids).not.toContain(PROJECT_ID_1);
+    expect(ids).toContain(PROJECT_ID_2);
+  });
+
   it("シナリオ: 正常系 - プロジェクトが 0 件のとき空配列が返る", async () => {
     // Given プロジェクトが 1 件も存在しない
     // When  GET /api/v1/projects を送信する
@@ -469,17 +504,21 @@ describe("PATCH /api/v1/projects/:id (プロジェクト名称変更 FR-021)", (
 // ============================================================
 
 describe("DELETE /api/v1/projects/:id (プロジェクト削除 FR-022)", () => {
-  it("シナリオ: 正常系 - プロジェクトを削除できる (204 + 一覧から消える)", async () => {
-    // Given プロジェクト（id: "p-1", version: 1）が存在し、紐付くタスクが 0 件である
-    // When  DELETE /api/v1/projects/p-1 に If-Match: 1, Idempotency-Key 付きで送信する
-    // Then  204 No Content が返る
-    // And   GET /api/v1/projects の一覧に "p-1" が含まれない
+  it("シナリオ (AC-1): プロジェクト削除はゴミ箱化される (204 + 物理削除されない + trashedAt!=null + version+1)", async () => {
+    // BL-119 (project-soft-delete) AC-1:
+    //   Given 通常状態の Project P (version=1) が存在する
+    //   When  DELETE /api/v1/projects/{P.id} を If-Match: 1 で実行する
+    //   Then  HTTP 204 が返る
+    //   And   P は物理削除されず trashedAt != null になる
+    //   And   P の version は 2 に増える
+    //   And   GET /api/v1/projects の一覧に P が含まれない (AC-3)
     projectRepo.seedProject({
       id: PROJECT_ID_1,
       name: "仕事",
       version: 1,
       createdAt: TEST_INITIAL_TIME,
       updatedAt: TEST_INITIAL_TIME,
+      trashedAt: null,
     });
 
     const res = await app.request(`/api/v1/projects/${PROJECT_ID_1}`, {
@@ -492,7 +531,7 @@ describe("DELETE /api/v1/projects/:id (プロジェクト削除 FR-022)", () => 
 
     expect(res.status).toBe(204);
 
-    // 一覧から消えている
+    // 通常一覧から消えている (ゴミ箱化されたため除外される).
     const listRes = await app.request("/api/v1/projects", {
       method: "GET",
       headers: authHeaders(),
@@ -500,23 +539,28 @@ describe("DELETE /api/v1/projects/:id (プロジェクト削除 FR-022)", () => 
     const list = (await listRes.json()) as { projects: Array<{ id: string }> };
     expect(list.projects.find((p) => p.id === PROJECT_ID_1)).toBeUndefined();
 
-    // ストアからも消えている
+    // 物理削除されず、ストアに trashedAt != null / version=2 で残っている.
     const stored = await projectRepo.findById(PROJECT_ID_1);
-    expect(stored).toBeNull();
+    expect(stored).not.toBeNull();
+    expect(stored?.trashedAt).not.toBeNull();
+    expect(stored?.version).toBe(2);
   });
 
-  it("シナリオ: カスケード NULL - 削除したプロジェクトに紐付くタスクの projectId が null になる (trashedAt は変わらない)", async () => {
-    // Given プロジェクト（id: "p-1", version: 1）が存在し、タスク（projectId: "p-1"）が 1 件存在する
-    // When  DELETE /api/v1/projects/p-1 に If-Match: 1, Idempotency-Key 付きで送信する
-    // Then  204 No Content が返る
-    // And   該当タスクの projectId が null になっている
-    // And   該当タスクはゴミ箱に移動していない（trashedAt = null のまま）
+  it("シナリオ (AC-2): カスケード NULL - 削除したプロジェクトに紐付くタスクの projectId が null になる (タスクはゴミ箱化されない)", async () => {
+    // BL-119 (project-soft-delete) AC-2:
+    //   Given Project P と, P に紐付くタスク T (projectId = P.id) が存在する
+    //   When  P を削除する
+    //   Then  T は削除されず残る
+    //   And   T.projectId が null になる
+    //   And   T はゴミ箱に移動していない（trashedAt = null のまま）
+    //   And   P 自身はゴミ箱化されて残る (trashedAt != null)
     projectRepo.seedProject({
       id: PROJECT_ID_1,
       name: "仕事",
       version: 1,
       createdAt: TEST_INITIAL_TIME,
       updatedAt: TEST_INITIAL_TIME,
+      trashedAt: null,
     });
     taskRepo.seed({
       id: TASK_ID_1,
@@ -548,8 +592,13 @@ describe("DELETE /api/v1/projects/:id (プロジェクト削除 FR-022)", () => 
     expect(task).not.toBeNull();
     expect(task?.projectId).toBeNull();
 
-    // trashedAt は変わっていない（ゴミ箱に移動していない）
+    // trashedAt は変わっていない（タスクはゴミ箱に移動していない）
     expect(task?.trashedAt).toBeNull();
+
+    // Project P 自身はゴミ箱化されて残る (物理削除されない).
+    const project = await projectRepo.findById(PROJECT_ID_1);
+    expect(project).not.toBeNull();
+    expect(project?.trashedAt).not.toBeNull();
   });
 
   it("シナリオ: 楽観ロック衝突 - If-Match が現行 version と不一致で 412 + 現行プロジェクトが返る", async () => {

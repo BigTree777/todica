@@ -17,8 +17,13 @@ import type { JSX } from "react";
 import { useCallback } from "react";
 import "./trash-view.css";
 import { useQuery } from "@tanstack/react-query";
+import { RotateCcw } from "lucide-react";
 import { useConflictDialog } from "../../hooks/use-conflict-dialog.js";
-import type { TrashedTask, TrashRepository } from "../../repositories/trash-repository.js";
+import type {
+  TrashedProject,
+  TrashedTask,
+  TrashRepository,
+} from "../../repositories/trash-repository.js";
 import { useTrashMutations } from "../../usecases/trash-usecases.js";
 import { ConflictDialog } from "../conflict-dialog/conflict-dialog.js";
 
@@ -37,6 +42,15 @@ export function TrashView(props: TrashViewProps): JSX.Element {
   });
   const tasks: TrashedTask[] = tasksData ?? [];
 
+  // BL-119: ゴミ箱内 Project の一覧. queryKey は ["trash", ...] のサブキーにして
+  // restore mutation の invalidate(["trash"]) で再取得されるようにする.
+  const { data: projectsData } = useQuery({
+    queryKey: ["trash", "projects"],
+    queryFn: () => repository.listProjects(),
+    networkMode: "offlineFirst",
+  });
+  const trashedProjects: TrashedProject[] = projectsData ?? [];
+
   // BL-118: restore / empty mutation はアプリケーション層 (trash-usecases) へ集約.
   //   - 標準 invalidate は ["trash"] / ["today"]. 衝突時は conflictDialog を起動する.
   const { restore: restoreMutation, empty: emptyMutation } = useTrashMutations(repository, {
@@ -50,6 +64,18 @@ export function TrashView(props: TrashViewProps): JSX.Element {
     async (task: TrashedTask) => {
       try {
         await restoreMutation.mutateAsync({ id: task.id, ifMatch: task.version });
+      } catch {
+        // onError で処理済み.
+      }
+    },
+    [restoreMutation],
+  );
+
+  // Project 復元も restore({ id, ifMatch }) で呼ぶ (サーバが Task/Project を判別する D-3).
+  const handleRestoreProject = useCallback(
+    async (project: TrashedProject) => {
+      try {
+        await restoreMutation.mutateAsync({ id: project.id, ifMatch: project.version });
       } catch {
         // onError で処理済み.
       }
@@ -74,9 +100,11 @@ export function TrashView(props: TrashViewProps): JSX.Element {
         </button>
       </header>
 
-      {tasks.length === 0 ? (
+      {tasks.length === 0 && trashedProjects.length === 0 ? (
         <p className="trash-view__empty">ゴミ箱は空です</p>
-      ) : (
+      ) : null}
+
+      {tasks.length > 0 ? (
         <ul aria-label="ゴミ箱のタスク一覧" className="trash-view__list">
           {tasks.map((task) => (
             <li key={task.id} className="trash-view__item">
@@ -91,7 +119,25 @@ export function TrashView(props: TrashViewProps): JSX.Element {
             </li>
           ))}
         </ul>
-      )}
+      ) : null}
+
+      {trashedProjects.length > 0 ? (
+        <ul aria-label="ゴミ箱のプロジェクト一覧" className="trash-view__list">
+          {trashedProjects.map((project) => (
+            <li key={project.id} className="trash-view__item">
+              <span>{project.name}</span>
+              <button
+                type="button"
+                className="button button--ghost"
+                aria-label="復元"
+                onClick={() => handleRestoreProject(project)}
+              >
+                <RotateCcw aria-hidden="true" size={16} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
 
       <ConflictDialog
         open={conflictDialog.dialogState.open}

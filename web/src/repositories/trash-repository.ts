@@ -18,6 +18,14 @@ export interface TrashedTask {
   version: number;
 }
 
+/** ゴミ箱内 Project の射影 (BL-119 / D-2). Project は trashedReason を持たない (D-6). */
+export interface TrashedProject {
+  id: string;
+  name: string;
+  trashedAt: string | null;
+  version: number;
+}
+
 export interface RestoreTaskCommand {
   id: string;
   ifMatch: number;
@@ -25,6 +33,8 @@ export interface RestoreTaskCommand {
 
 export interface TrashRepository {
   list(): Promise<TrashedTask[]>;
+  /** ゴミ箱内 Project を一覧する (BL-119). */
+  listProjects(): Promise<TrashedProject[]>;
   restore(cmd: RestoreTaskCommand): Promise<TrashedTask>;
   empty(): Promise<void>;
 }
@@ -71,22 +81,34 @@ function uuidV4(): string {
 export class HttpTrashRepository implements TrashRepository {
   constructor(readonly baseUrl: string) {}
 
-  /** GET /api/v1/trash → { tasks: TrashedTask[] } */
+  /** GET /api/v1/trash → { tasks: TrashedTask[], projects: TrashedProject[] } */
   async list(): Promise<TrashedTask[]> {
+    const body = await this.fetchTrash();
+    return body.tasks;
+  }
+
+  /** GET /api/v1/trash の projects 配列を返す (BL-119 / D-2). */
+  async listProjects(): Promise<TrashedProject[]> {
+    const body = await this.fetchTrash();
+    return body.projects ?? [];
+  }
+
+  /** GET /api/v1/trash を 1 回呼び { tasks, projects } を読む. */
+  private async fetchTrash(): Promise<{ tasks: TrashedTask[]; projects: TrashedProject[] }> {
     const res = await authedFetch(`${this.baseUrl}/api/v1/trash`, {
       method: "GET",
     });
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: failed to list trash`);
     }
-    const body = (await res.json()) as { tasks: TrashedTask[] };
-    return body.tasks;
+    return (await res.json()) as { tasks: TrashedTask[]; projects: TrashedProject[] };
   }
 
   /**
    * POST /api/v1/trash/:id/restore
    * Idempotency-Key (UUID v4) と If-Match ヘッダを付ける.
-   * 412 時は body の { task } を使って RestoreConflictError を throw する.
+   * サーバは Task / Project を判別し 200 で { task } または { project } を返す (D-3).
+   * 412 時は body の { task } または { project } を使って RestoreConflictError を throw する.
    */
   async restore(cmd: RestoreTaskCommand): Promise<TrashedTask> {
     const idemKey = uuidV4();
@@ -99,14 +121,15 @@ export class HttpTrashRepository implements TrashRepository {
     });
 
     if (res.status === 412) {
-      const body = (await res.json()) as { task: TrashedTask };
-      throw new RestoreConflictError(body.task);
+      const body = (await res.json()) as { task?: TrashedTask; project?: TrashedProject };
+      throw new RestoreConflictError((body.task ?? body.project) as unknown as TrashedTask);
     }
     if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: failed to restore task`);
+      throw new Error(`HTTP ${res.status}: failed to restore`);
     }
-    const body = (await res.json()) as { task: TrashedTask };
-    return body.task;
+    const body = (await res.json()) as { task?: TrashedTask; project?: TrashedProject };
+    // Task 復元時は { task }, Project 復元時は { project } を返す. 戻り値型は共用.
+    return (body.task ?? body.project) as unknown as TrashedTask;
   }
 
   /**
