@@ -43,10 +43,10 @@ describe("BL-113 / settings-reset-time-input-width: settings-view.css 文面検�
     expect(body).toMatch(/flex:\s*1\s*;/);
   });
 
-  it("AC-2 (REQ-2): .settings-view__field-spacer ルール本文に flex: 3 を含む", () => {
+  it("AC-2 (REQ-2): .settings-view__field-row input ルール本文に min-width: 0 を含む", () => {
     const css = readCss();
-    const body = extractRuleBody(css, ".settings-view__field-spacer");
-    expect(body).toMatch(/flex:\s*3\s*;/);
+    const body = extractRuleBody(css, ".settings-view__field-row input");
+    expect(body).toMatch(/min-width:\s*0\s*;/);
   });
 
   it("AC-3 (REQ-3): .settings-view__field-row input ルール本文に font-size と padding の既存宣言が保存される", () => {

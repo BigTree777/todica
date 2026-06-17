@@ -200,7 +200,6 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
                 setError(null);
               }}
             />
-            <span className="settings-view__field-spacer" aria-hidden />
             <button type="submit" className="button button--primary">
               変更
             </button>
