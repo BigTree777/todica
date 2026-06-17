@@ -39,6 +39,10 @@ tags:
     description: ログインパスワードとセッション
   - name: reset
     description: リセット処理（FR-043, NFR-020, 保守用）
+  - name: testing
+    description: |
+      テスト専用エンドポイント. `deps.testClock` が注入された場合 (= test ハーネス経由起動時)
+      のみ存在する. 本番起動では unrouted となり 404 を返す. クライアント実装は呼ばないこと.
 
 paths:
   # ========== Tasks ==========
@@ -584,6 +588,20 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "500": { $ref: "#/components/responses/InternalServerError" }
 
+  /logout:
+    summary: 現セッション破棄
+    post:
+      tags: [authentication]
+      summary: 現セッションを破棄して 204 を返す
+      description: |
+        Bearer 認証で到達し, Authorization ヘッダから抽出した token に対応する session レコードを
+        サーバから削除する. session が既に存在しなくても 204 を返す (冪等). レスポンス body は無し.
+      responses:
+        "204":
+          description: ログアウト成功（body 無し）
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "500": { $ref: "#/components/responses/InternalServerError" }
+
   # ========== Reset ==========
   /reset:
     summary: リセット処理の手動起動（保守用）
@@ -613,6 +631,93 @@ paths:
                   appliedBoundaryAt:
                     type: string
                     format: date-time
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ========== Testing (internal) ==========
+  # 以下 3 エンドポイントは `deps.testClock` が注入された場合 (= test ハーネス経由起動時)
+  # のみ存在する. 本番起動では unrouted となり 404 を返す. クライアント実装は呼ばないこと.
+  /test/clock:
+    summary: テストクロック現在時刻取得（内部）
+    get:
+      tags: [testing]
+      summary: テストクロックが保持する現在時刻 (ISO 8601) を返す
+      x-internal: true
+      responses:
+        "200":
+          description: 現在時刻
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [now]
+                properties:
+                  now:
+                    type: string
+                    format: date-time
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /test/clock/set:
+    summary: テストクロックの現在時刻を上書き（内部）
+    post:
+      tags: [testing]
+      summary: テストクロックの現在時刻を指定 ISO 8601 文字列に上書きする
+      x-internal: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [now]
+              properties:
+                now:
+                  type: string
+                  format: date-time
+      responses:
+        "200":
+          description: 上書き後の現在時刻
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [now]
+                properties:
+                  now:
+                    type: string
+                    format: date-time
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /test/clock/advance:
+    summary: テストクロックを指定ミリ秒だけ進める（内部）
+    post:
+      tags: [testing]
+      summary: テストクロックを `ms` ミリ秒だけ前進させる
+      x-internal: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ms]
+              properties:
+                ms:
+                  type: number
+                  description: 前進させるミリ秒. 有限の数値.
+      responses:
+        "200":
+          description: 前進後の現在時刻
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [now]
+                properties:
+                  now:
+                    type: string
+                    format: date-time
+        "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
 components:

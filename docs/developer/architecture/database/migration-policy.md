@@ -17,7 +17,7 @@
 
 ## 2. ツール
 
-- マイグレーションツールはサーバ側 / Android ローカル側で **共通の `drizzle-kit`** を採用する（[`overview.md`](overview.md) §2）. TypeScript で定義したスキーマから SQL マイグレーションを生成し, 両側で同じ SQL を走らせる.
+- マイグレーションツールはサーバ側で **`drizzle-kit`** を採用する（[`overview.md`](overview.md) §8.1）. TypeScript で定義したスキーマから SQL マイグレーションを生成する. Android ローカル側はマイグレーションファイルを持たず, `local-db.ts` 内で起動時に `CREATE TABLE IF NOT EXISTS` を冪等実行する（[`overview.md`](overview.md) §8.2）.
 - 実行タイミング:
   - サーバ側: サーバ起動時に自動実行, または明示コマンドで実行.
   - Android ローカル側: アプリ起動時に自動実行.
@@ -26,11 +26,11 @@
 ## 3. 命名規約
 
 - マイグレーションスクリプトの単位: スキーマバージョン（整数）.
-- ファイル名: `vNNN-<short-description>.<ext>` 形式.
-  - 連番はスキーマバージョン番号と一致させる.
-  - `<short-description>` は英語 kebab-case.
-  - 拡張子は採用ツール側の慣行に従う（具体は実装ドキュメント参照）.
-- Android ローカル側のファイル名も同形式を推奨する（採用するツールの命名規約に従って良い）.
+- ファイル名: `NNNN_<short_description>.sql` 形式（`drizzle-kit` が生成する命名規約）.
+  - 連番はスキーマバージョン番号と一致させる（4 桁ゼロ埋め, 例: `0000`, `0001`, `0002`）.
+  - `<short_description>` は英語 snake_case.
+  - 拡張子は `.sql` 固定.
+- Android ローカル側はマイグレーションファイル自体を持たない（§2 参照）.
 
 ## 4. 運用ルール
 

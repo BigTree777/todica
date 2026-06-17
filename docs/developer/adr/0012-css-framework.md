@@ -62,3 +62,10 @@ BL-035 の plan.md §「共通スタイル / トークン配置」では「vanil
   - `docs/developer/features/design-tokens/plan.md`
   - `docs/developer/features/ui-redesign-foundation/plan.md` §「共通スタイル / トークン配置」（D-006）
   - ADR-0008（web クライアント技術スタック）
+
+## 適用範囲
+
+本 ADR の「依存追加ゼロ」原則（§決定 理由 1）は **CSS フレームワーク** に対する原則である。
+UI アイコンライブラリ・テストランナー等, CSS と直接関係しない用途で `web/package.json` に
+依存を追加することは本原則の対象外とする（採用技術一覧は [ADR-0008](0008-web-client-tech-stack.md)
+§「採用ライブラリ・ツール（確定）」を正典とする）。

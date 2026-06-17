@@ -142,6 +142,7 @@ flowchart LR
 | モジュール | 所属層 | 責務 | 依存してよい先 |
 | --- | --- | --- | --- |
 | `web/ui/today-view` | UI | 今日ビュー（FR-010, FR-011） | `web/app/*` |
+| `web/ui/tomorrow-view` | UI | 明日ビュー（FR-005, FR-014） | `web/app/*` |
 | `web/ui/focus-view` | UI | 現在のタスク表示（FR-012, NFR-011） | `web/app/*` |
 | `web/ui/project` | UI | プロジェクト一覧 / 詳細（FR-020, FR-022） | `web/app/*` |
 | `web/ui/routine` | UI | ルーティン定義（FR-030, FR-035） | `web/app/*` |

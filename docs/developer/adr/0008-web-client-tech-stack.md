@@ -41,6 +41,7 @@
 | Lint / Format | Biome | 単一ツールで Lint + Format |
 | PWA | `vite-plugin-pwa`（Workbox ベース） | Service Worker / Manifest 生成 |
 | クライアント永続化 | IndexedDB（Service Worker 経由のキャッシュ + 書込キュー） | `idb` ライブラリ（薄いラッパー） |
+| アイコン | `lucide-react` | カード系アクション button のアイコン化（✓ / 🗑️ / 📌 / ⏭ / ⏮ / ✕ / +） |
 
 ### PWA としての配信
 
