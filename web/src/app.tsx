@@ -62,7 +62,7 @@ export function App({ config, repos: initialRepos, authStorage }: AppProps) {
 
   const navigate = useNavigate();
   const [baseUrl, setBaseUrl] = useState(config.baseUrl);
-  const [authToken, setAuthToken] = useState(config.authToken);
+  const [_authToken, setAuthToken] = useState(config.authToken);
   const [currentMode, setCurrentMode] = useState<AppMode>(config.mode);
   useForegroundReset(currentMode);
   const [repos, setRepos] = useState<Repositories>(initialRepos);

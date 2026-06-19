@@ -27,7 +27,7 @@
  *   用意し, routines テーブルの列集合と __local_migrations の記録を観測する.
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { LocalDb } from "../src/repositories/local-db.js";
 import { migrations, runMigrations } from "../src/repositories/local-migrations/index.js";
 

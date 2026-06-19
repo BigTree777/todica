@@ -52,7 +52,6 @@ describe("SwUpdateDialog", () => {
     if (originalServiceWorker) {
       Object.defineProperty(navigator, "serviceWorker", originalServiceWorker);
     } else {
-      // biome-ignore lint/performance/noDelete: 復元用
       delete (navigator as unknown as { serviceWorker?: unknown }).serviceWorker;
     }
     vi.restoreAllMocks();

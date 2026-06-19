@@ -89,7 +89,7 @@ const dayViewCssPath = resolve(webSrcRoot, "ui/day-view/day-view.css");
 // 旧 AC-10 / AC-17 内の ProjectToggle 不変性 assert もまとめて削除済み.
 const tokensCssPath = resolve(webSrcRoot, "styles/tokens.css");
 const todayViewTsxPath = resolve(webSrcRoot, "ui/today-view/today-view.tsx");
-const tomorrowViewTsxPath = resolve(webSrcRoot, "ui/tomorrow-view/tomorrow-view.tsx");
+const _tomorrowViewTsxPath = resolve(webSrcRoot, "ui/tomorrow-view/tomorrow-view.tsx");
 const priorityStarsTsxPath = resolve(webSrcRoot, "ui/priority-stars/priority-stars.tsx");
 
 const NOW = "2026-06-11T09:00:00.000Z";
@@ -165,7 +165,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
   };
 }
 
-function makeProject(overrides: Partial<Project> = {}): Project {
+function _makeProject(overrides: Partial<Project> = {}): Project {
   return {
     id: PROJECT_ID_P1,
     name: PROJECT_NAME_P1,

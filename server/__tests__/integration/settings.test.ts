@@ -18,7 +18,7 @@ import type { Hono } from "hono";
  *   - PATCH 後の GET で更新値が返ること
  */
 import { beforeEach, describe, expect, it } from "vitest";
-import { authHeaders, buildTestApp, TEST_INITIAL_TIME } from "../helpers/build-test-app.js";
+import { authHeaders, buildTestApp } from "../helpers/build-test-app.js";
 import type { InMemorySettingsRepository } from "../helpers/in-memory-repositories.js";
 
 let app: Hono;

@@ -52,7 +52,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { ComponentType } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -67,8 +67,8 @@ const webSrcRoot = resolve(repoRoot, "web/src");
 
 // 新規 (本 BL で新設) ファイル群.
 const projectCardCssPath = resolve(webSrcRoot, "ui/project-card/project-card.css");
-const projectCardTsxPath = resolve(webSrcRoot, "ui/project-card/project-card.tsx");
-const projectFormCardTsxPath = resolve(webSrcRoot, "ui/project-card/project-form-card.tsx");
+const _projectCardTsxPath = resolve(webSrcRoot, "ui/project-card/project-card.tsx");
+const _projectFormCardTsxPath = resolve(webSrcRoot, "ui/project-card/project-form-card.tsx");
 
 // 既存ファイル群 (撤去 / 維持 / 無改修 の対象).
 const projectsViewCssPath = resolve(webSrcRoot, "ui/projects-view/projects-view.css");
