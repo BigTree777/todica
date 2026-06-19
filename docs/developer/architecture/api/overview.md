@@ -41,15 +41,17 @@
 
 | リソース | 主な操作 | 由来 FR |
 | --- | --- | --- |
-| `/api/v1/tasks` | 一覧取得 / 起票 / 編集 / 完了（POST `:id/complete`） / 削除（DELETE `:id`. ゴミ箱に移す） / 復元（POST `:id/restore`） | FR-001 〜 FR-009, FR-014, FR-061 |
+| `/api/v1/tasks` | 一覧取得 / 起票 / 編集 / 完了（POST `:id/complete`） / 削除（DELETE `:id`. ゴミ箱に移す） | FR-001 〜 FR-009, FR-014 |
 | `/api/v1/today` | 今日ビュー（タスク一覧 + 並び順 + フォーカス参照）取得 | FR-010 〜 FR-013 |
 | `/api/v1/focus` | 現在のタスク参照（取得 / 更新） | FR-012, FR-013 |
 | `/api/v1/projects` | 一覧 / 作成 / 編集 / 削除（DELETE `:id`. ゴミ箱化 = soft delete. 配下 Task は `projectId` を `null` 化するカスケード NULL 固定） | FR-020, FR-022, FR-060, FR-061 |
-| `/api/v1/routines` | 一覧 / 作成 / 編集 / 削除（DELETE `:id`. ゴミ箱化 = soft delete. 配下の未ゴミ箱 Task は `routineId` を `null` 化するデタッチ = カスケード NULL 固定） / 復元 | FR-030, FR-031, FR-035, FR-060, FR-061 |
+| `/api/v1/routines` | 一覧 / 作成 / 編集 / 削除（DELETE `:id`. ゴミ箱化 = soft delete. 配下の未ゴミ箱 Task は `routineId` を `null` 化するデタッチ = カスケード NULL 固定） | FR-030, FR-031, FR-035, FR-060 |
 | `/api/v1/trash` | 一覧（`{ tasks, projects, routines }`） / 復元（POST `:id/restore`. Task / Project / Routine 共用. サーバが id から判別） / 手動空にする | FR-061, FR-062 |
 | `/api/v1/counter` | 今日の完了数取得 | FR-040 |
 | `/api/v1/settings` | 境界時刻設定の取得 / 更新 | FR-042 |
 | `/api/v1/reset` | リセット処理の手動起動（保守用. 通常は境界時刻で自動起動）| FR-043, NFR-020 |
+
+復元（FR-061）は各リソース個別の `:id/restore` ではなく `POST /api/v1/trash/{id}/restore` に一本化する（サーバが id から Task / Project / Routine を判別する）. OpenAPI 定義と実装ハンドラの path / method 集合一致はドリフト検出テストで担保する.
 
 すべての応答は **単一ユーザー前提のスキーマ**. ユーザー ID / テナント ID 等のフィールドは持たない.
 

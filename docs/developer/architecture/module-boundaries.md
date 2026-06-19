@@ -105,35 +105,36 @@ flowchart LR
 
 ## 4. モジュール一覧
 
-> 物理的なディレクトリ構成は実装時に確定する. ここでは概念単位のみを示す（実物のレイアウトはコンポーネント別の実装ドキュメント [`server/`](server/) / [`web-client/`](web-client/) / [`android-client/`](android-client/) / [`api/`](api/) / [`database/`](database/) を参照）.
+> 以下の表は責務の境界を主眼とし, 各モジュールに対応する実装の物理パスを併記する（詳細レイアウトはコンポーネント別の実装ドキュメント [`server/`](server/) / [`web-client/`](web-client/) / [`android-client/`](android-client/) / [`api/`](api/) / [`database/`](database/) を参照）.
 
 ### 4.1 サーバ
 
 | モジュール | 所属層 | 責務 | 依存してよい先 |
 | --- | --- | --- | --- |
-| `server/api/*` | API レイヤ | 各エンドポイント（/tasks, /today, /focus, /projects, /routines, /trash, /counter, /settings, /reset 等） | `server/app/*` |
-| `server/src/routers/*` | API レイヤ | リソース単位の HTTP ルータと入出力変換 | ドメイン層, データアクセス層のインターフェース |
-| `server/middleware/auth` | API レイヤ | 認証トークン検証 | （独立） |
-| `server/app/task-usecases` | アプリケーション | 起票・編集・期限変更・優先度変更・完了・削除（FR-001 〜 FR-009, FR-014） | `domain/*`, `server/data/*`（インターフェース） |
-| `server/app/focus-usecases` | アプリケーション | 現在のタスク選択・繰り上げ（FR-012, FR-013） | `domain/*`, `server/data/*` |
-| `server/app/project-usecases` | アプリケーション | プロジェクト作成・編集・削除（FR-020, FR-022） | `domain/*`, `server/data/*` |
-| `server/app/routine-usecases` | アプリケーション | ルーティン定義・編集・生成（FR-030, FR-031, FR-035） | `domain/*`, `server/data/*` |
-| `server/app/trash-usecases` | アプリケーション | ゴミ箱の閲覧・復元・手動空にする（FR-061, FR-062） | `domain/*`, `server/data/*` |
-| `server/app/reset-usecase` | アプリケーション | リセット処理オーケストレーション（FR-043, FR-051, FR-062, FR-033） | `domain/*`, `server/data/*`, `Clock` |
-| `server/app/settings-usecases` | アプリケーション | 境界時刻の設定（FR-042） | `domain/*`, `server/data/*` |
-| `server/data/repositories` | データアクセス | Repository インターフェース群 | `domain/*` |
-| `server/infra/persistence` | 永続化アダプタ | 永続化機構を用いた Repository の具象 | `server/data/repositories`, 永続化機構のクライアント |
+| `server/src/routers/*` | API レイヤ | 各エンドポイント（/tasks, /today, /focus, /projects, /routines, /trash, /counter, /settings, /reset 等）のリソース単位 HTTP ルータと入出力変換 | `server/src/app/*` |
+| `server/src/middleware.ts` | API レイヤ | 認証トークン検証（Bearer → `sessions` 照合）ほかミドルウェア | （独立） |
+| `server/src/app/task-usecases` | アプリケーション | 起票・編集・期限変更・優先度変更・完了・削除（FR-001 〜 FR-009, FR-014） | `domain/*`, `server/src/data/*`（インターフェース） |
+| `server/src/app/focus-usecases` | アプリケーション | 現在のタスク選択・繰り上げ（FR-012, FR-013） | `domain/*`, `server/src/data/*` |
+| `server/src/app/project-usecases` | アプリケーション | プロジェクト作成・編集・削除（FR-020, FR-022） | `domain/*`, `server/src/data/*` |
+| `server/src/app/routine-usecases` | アプリケーション | ルーティン定義・編集・生成（FR-030, FR-031, FR-035） | `domain/*`, `server/src/data/*` |
+| `server/src/app/trash-usecases` | アプリケーション | ゴミ箱の閲覧・復元・手動空にする（FR-061, FR-062） | `domain/*`, `server/src/data/*` |
+| `server/src/app/reset-usecases` | アプリケーション | リセット処理オーケストレーション（FR-043, FR-051, FR-062, FR-033）. 本体は `server/src/use-cases/daily-reset.ts` / `purge-trash.ts` | `domain/*`, `server/src/data/*`, `Clock` |
+| `server/src/app/settings-usecases` | アプリケーション | 境界時刻の設定（FR-042） | `domain/*`, `server/src/data/*` |
+| `server/src/data/*` | データアクセス | Repository インターフェース群 | `domain/*` |
+| `server/src/infra/persistence/drizzle/*` | 永続化アダプタ | 永続化機構を用いた Repository の具象（`drizzle-*-repository.ts`） | `server/src/data/*`, 永続化機構のクライアント |
 
 ### 4.2 ドメイン層（サーバ・クライアント共有候補）
 
 | モジュール | 所属層 | 責務 | 依存してよい先 |
 | --- | --- | --- | --- |
-| `domain/task` | ドメイン | Task エンティティと状態遷移 | （内部のみ） |
-| `domain/project` | ドメイン | Project エンティティ | `domain/task`（参照） |
-| `domain/routine` | ドメイン | Routine エンティティと生成判定 | `Clock`（抽象） |
-| `domain/trash` | ドメイン | ゴミ箱状態の表現と復元 / 完全削除のルール | `domain/task`, `domain/project` |
-| `domain/counter` | ドメイン | 今日の完了数（FR-040） | `Clock`（抽象） |
-| `domain/clock` | ドメイン | 「現在時刻」「境界時刻判定」の抽象 | （他に依存しない） |
+| `domain/src/task` | ドメイン | Task エンティティと状態遷移 | （内部のみ） |
+| `domain/src/project` | ドメイン | Project エンティティ | `domain/src/task`（参照） |
+| `domain/src/routine` | ドメイン | Routine エンティティと生成判定 | `Clock`（抽象） |
+| `domain/src/trash` | ドメイン | ゴミ箱状態の表現と復元 / 完全削除のルール | `domain/src/task`, `domain/src/project` |
+| `domain/src/counter` | ドメイン | 今日の完了数（FR-040） | `Clock`（抽象） |
+| `domain/src/settings` | ドメイン | 境界時刻設定値の検証（FR-042） | （内部のみ） |
+| `domain/src/focus-selection` | ドメイン | 現在のタスク参照と繰り上げ選択（FR-012, FR-013） | `domain/src/task`（参照） |
+| `domain/src/clock` | ドメイン | 「現在時刻」「境界時刻判定」の抽象 | （他に依存しない） |
 
 方針 Y を採る場合, このディレクトリは共通の共有モジュールとして置き, サーバ / クライアントが同じものを参照する.
 
@@ -141,17 +142,17 @@ flowchart LR
 
 | モジュール | 所属層 | 責務 | 依存してよい先 |
 | --- | --- | --- | --- |
-| `web/ui/today-view` | UI | 今日ビュー（FR-010, FR-011） | `web/app/*` |
-| `web/ui/tomorrow-view` | UI | 明日ビュー（FR-005, FR-014） | `web/app/*` |
-| `web/ui/focus-view` | UI | 現在のタスク表示（FR-012, NFR-011） | `web/app/*` |
-| `web/ui/project` | UI | プロジェクト一覧 / 詳細（FR-020, FR-022） | `web/app/*` |
-| `web/ui/routine` | UI | ルーティン定義（FR-030, FR-035） | `web/app/*` |
-| `web/ui/trash` | UI | ゴミ箱（FR-060, FR-061, FR-062） | `web/app/*` |
-| `web/ui/settings` | UI | 境界時刻設定（FR-042） | `web/app/*` |
-| `web/app/*-usecases` | アプリケーション | 各ユースケース（サーバ側と同名の責務. 楽観 UI 起動と API 呼び出し） | `domain/*`, `web/data/*` |
-| `web/data/repositories` | データソース抽象 | Repository インターフェース群（サーバ側と共有 or 別建て） | `domain/*` |
-| `web/infra/api-client` | API クライアントアダプタ | サーバ API の呼び出し | 通信ライブラリ |
-| `web/infra/cache` | 読み取りキャッシュ（任意） | クライアント側キャッシュ機構 | （実装側裁量） |
+| `web/src/ui/today-view` | UI | 今日ビュー（FR-010, FR-011） | `web/src/usecases/*` |
+| `web/src/ui/tomorrow-view` | UI | 明日ビュー（FR-005, FR-014） | `web/src/usecases/*` |
+| `web/src/ui/focus-view` | UI | 現在のタスク表示（FR-012, NFR-011） | `web/src/usecases/*` |
+| `web/src/ui/projects-view` | UI | プロジェクト一覧 / 詳細（FR-020, FR-022） | `web/src/usecases/*` |
+| `web/src/ui/routines-view` | UI | ルーティン定義（FR-030, FR-035） | `web/src/usecases/*` |
+| `web/src/ui/trash-view` | UI | ゴミ箱（FR-060, FR-061, FR-062） | `web/src/usecases/*` |
+| `web/src/ui/settings-view` | UI | 境界時刻設定（FR-042） | `web/src/usecases/*` |
+| `web/src/usecases/*` | アプリケーション | 各ユースケース（サーバ側と同名の責務. TanStack Query mutation で楽観 UI 起動と API 呼び出し） | `domain/*`, `web/src/repositories/*` |
+| `web/src/repositories/*` | データソース抽象 | Repository インターフェース群 + サーバ / ローカル両実装 | `domain/*` |
+| `web/src/auth/authed-fetch.ts` | API クライアントアダプタ | サーバ API の呼び出し（認証ヘッダ付与）. 各 repository が直接利用 | 通信ライブラリ（fetch） |
+| `web/src/query-client.ts` | 読み取りキャッシュ | TanStack Query のクライアント側キャッシュ機構 | （実装側裁量） |
 
 ### 4.4 Android クライアント
 
@@ -169,7 +170,7 @@ flowchart LR
 ### 5.1 共通
 
 - **上位レイヤ → 下位レイヤのみ**. 逆流は禁止.
-- **ドメイン層は外部 I/O（永続化・ネットワーク・UI・時刻取得 API 等）に直接依存しない**. 時刻が必要なら `domain/clock` を引数で受ける.
+- **ドメイン層は外部 I/O（永続化・ネットワーク・UI・時刻取得 API 等）に直接依存しない**. 時刻が必要なら `domain/src/clock` を引数で受ける.
 - **UI 層は直接 Repository / 永続化アダプタ / API クライアントを呼ばない**. 必ずアプリケーション層のユースケース経由.
 - **永続化アダプタ / API クライアントアダプタはドメインのルールを実行しない**. 状態の保存・取り出し / 通信だけを担う.
 - **横方向の参照は最小限**. 同一層内のモジュールどうしの参照は, 真に必要な場合に限る.
@@ -190,12 +191,12 @@ flowchart LR
 
 | 関心事 | 置き場所 | 補足 |
 | --- | --- | --- |
-| 現在時刻の取得 | `domain/clock`（抽象）+ 各層からの注入 | サーバ側はサーバ Clock, クライアント側はクライアント Clock を注入する（[ADR-0011](../adr/0011-day-boundary-time-source.md)） |
-| 境界時刻の判定 | `domain/clock` | 「今日 / 翌日」判定はすべてここを介す |
-| リセット処理のオーケストレーション | サーバ側 `server/app/reset-usecase`, ローカルモード Android 側 `android/app/reset-usecase` | 起動経路は ADR-0011 参照 |
+| 現在時刻の取得 | `domain/src/clock`（抽象）+ 各層からの注入 | サーバ側はサーバ Clock, クライアント側はクライアント Clock を注入する（[ADR-0011](../adr/0011-day-boundary-time-source.md)） |
+| 境界時刻の判定 | `domain/src/clock` | 「今日 / 翌日」判定はすべてここを介す |
+| リセット処理のオーケストレーション | サーバ側 `server/src/app/reset-usecases`（本体は `server/src/use-cases/daily-reset.ts` / `purge-trash.ts`）, ローカルモード Android 側 `web/src/usecases/local-reset-usecase.ts`（web 実装を共有） | 起動経路は ADR-0011 参照 |
 | トランザクション境界 | アプリケーション層が指定し, 永続化アダプタが実装 | 1 ユースケース = 1 トランザクションを基本に, 整合性要件（NFR-020）を満たす |
-| ゴミ箱経由処理 | `domain/trash` + 各エンティティの「ゴミ箱状態」 | すべての削除・完了はゴミ箱経由（FR-060） |
-| 認証 | サーバ: `server/middleware/auth` が `sessions` テーブル参照で token 検証. クライアント: ログインで取得した opaque token を localStorage / Preferences に保管しリクエストヘッダ付与 | パスワード bcrypt 照合で発行する opaque token を Bearer で送る方式（[ADR-0010](../adr/0010-api-design.md), [`api/overview.md`](api/overview.md) §3） |
+| ゴミ箱経由処理 | `domain/src/trash` + 各エンティティの「ゴミ箱状態」 | すべての削除・完了はゴミ箱経由（FR-060） |
+| 認証 | サーバ: `server/src/middleware.ts` が `sessions` テーブル参照で token 検証. クライアント: ログインで取得した opaque token を localStorage / Preferences に保管しリクエストヘッダ付与 | パスワード bcrypt 照合で発行する opaque token を Bearer で送る方式（[ADR-0010](../adr/0010-api-design.md), [`api/overview.md`](api/overview.md) §3） |
 | エラー表現 | ドメイン層は例外を投げず, 値（Result 型相当）で表すことを推奨. API レイヤで通信規約上のエラーへ変換. クライアント UI で人間向けメッセージに変換. | |
 
 ## 7. 境界をまたぐ際の約束
