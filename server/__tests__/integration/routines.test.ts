@@ -10,12 +10,7 @@ import type { Hono } from "hono";
  *       implementer がエンドポイントを実装することで green 化する.
  */
 import { beforeEach, describe, expect, it } from "vitest";
-import {
-  authHeaders,
-  buildTestApp,
-  TEST_AUTH_TOKEN,
-  TEST_INITIAL_TIME,
-} from "../helpers/build-test-app.js";
+import { authHeaders, buildTestApp, TEST_INITIAL_TIME } from "../helpers/build-test-app.js";
 import type {
   InMemoryIdempotencyStore,
   InMemoryRoutineRepository,

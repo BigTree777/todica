@@ -312,7 +312,7 @@ test.describe("set-focus-gesture (BL-043) のシナリオ", () => {
       await page.keyboard.press("Tab");
       reached = await page.evaluate((targetName) => {
         const el = document.activeElement as HTMLElement | null;
-        if (!el || el.tagName !== "BUTTON") return false;
+        if (el?.tagName !== "BUTTON") return false;
         // BL-114 追従: button は Lucide アイコン + aria-label に置換されたため
         // accessibleName は aria-label 属性から取る.
         const accName = (el.getAttribute("aria-label") ?? el.textContent ?? "").trim();

@@ -28,7 +28,7 @@ test("Service Worker が登録され activated 状態に到達する", async ({ 
   while (Date.now() < deadline) {
     const snapshot = (await page.evaluate(async () => {
       const reg = await navigator.serviceWorker.getRegistration("/");
-      if (!reg || !reg.active) return null;
+      if (!reg?.active) return null;
       return { scope: reg.scope, state: reg.active.state };
     })) as { scope: string; state: string } | null;
     if (snapshot?.state === "activated") {
