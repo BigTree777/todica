@@ -68,7 +68,7 @@ classDiagram
     class Routine {
         +Identifier id
         +Text name
-        +Enum(mon..sun)[] generateOnWeekdays
+        +Enum(mon..sun)[] daysOfWeek
         +Enum(highest, normal, later) defaultPriority
         +DateTime createdAt
         +DateTime updatedAt
