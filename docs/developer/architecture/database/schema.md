@@ -123,12 +123,13 @@ PWA + オフライン書込キュー + 楽観ロック（[ADR-0008](../../adr/00
 | --- | --- | --- | --- |
 | `id` | string | PK, 固定値 `"singleton"` | 単一レコード識別子 |
 | `dayBoundaryTime` | string ("HH:mm") | 必須 | 「今日」と「翌日」を切り替える境界時刻（FR-041, FR-042） |
-| `dayBoundaryTimezone` | string (IANA) \| null | 任意（Android ローカルモードのみ） | 境界時刻の解釈に用いるタイムゾーン |
+| `dayBoundaryTimezone` | string (IANA) | 必須（Android ローカルモードのみ） | 端末 TZ の参照情報. 列は NOT NULL だが, リセット判定には使わない |
 | `updatedAt` | string (ISO 8601) | 必須 | 更新日時 |
 
 - 既定値は **`"04:00"`**（早朝 4 時. ユーザーの大半が就寝中で日付境界の体感に近い時刻）. ユーザーが設定で変更可能.
 - Android のモード設定（ローカル / サーバ）は本テーブルに含めない（Android アプリ固有のローカル設定として別途持つ）.
-- サーバモードでは `dayBoundaryTimezone` を **持たない**. サーバプロセスの `process.env.TZ`（`getServerTimeZone()`）を境界時刻の解釈に用いる. [ADR-0011](../../adr/0011-day-boundary-time-source.md) のとおり「境界時刻 + タイムゾーンの解釈は両モードで同じ」だが, 値の保管場所がモードごとに異なる.
+- Android ローカルモードでは `dayBoundaryTimezone` 列は NOT NULL として端末 TZ を保持するが, リセット判定は常に実行時の端末 TZ（`Intl.DateTimeFormat().resolvedOptions().timeZone`）で行う. この列はリセットに未使用の参照情報.
+- サーバモードでは `dayBoundaryTimezone` を **持たない**. サーバプロセスの `process.env.TZ`（`getServerTimeZone()`）を境界時刻の解釈に用いる. [ADR-0011](../../adr/0011-day-boundary-time-source.md) のとおり「境界時刻 + タイムゾーンの解釈は両モードで同じ」だが, 値の解決元がモードごとに異なる.
 
 ---
 

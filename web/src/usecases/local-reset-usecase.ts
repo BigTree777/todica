@@ -5,7 +5,7 @@
  * 冪等性チェック: lastResetExecutedAt >= 前回境界時刻 なら何もしない.
  *
  * アルゴリズム (plan.md D-006):
- *   1. settings から dayBoundaryTime・dayBoundaryTimezone を取得
+ *   1. settings から dayBoundaryTime を取得 (TZ は実行時の端末 TZ を都度参照)
  *   2. counter から lastResetExecutedAt を取得
  *   3. 前回の境界時刻を計算
  *   4. lastResetExecutedAt >= 前回境界時刻 なら return（冪等性）
@@ -29,9 +29,9 @@ export class LocalResetUsecase {
     const settingsRow = (settingsResult.values ?? [])[0];
 
     const boundaryTime = (settingsRow?.day_boundary_time as string | undefined) ?? "04:00";
-    const timezone =
-      (settingsRow?.day_boundary_timezone as string | undefined) ??
-      Intl.DateTimeFormat().resolvedOptions().timeZone;
+    // ローカルモードは実行時の端末 TZ を境界判定に使う (BL-091 設計意図). 設定の保存値ではなく
+    // Intl の解決結果を都度参照することで, 端末ロケールに追従する.
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     // 2. counter から lastResetExecutedAt を取得
     const counterResult = await this.db.query("SELECT * FROM counter WHERE id = 'singleton'");
