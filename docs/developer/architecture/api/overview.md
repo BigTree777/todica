@@ -50,6 +50,12 @@
 | `/api/v1/counter` | 今日の完了数取得 | FR-040 |
 | `/api/v1/settings` | 境界時刻設定の取得 / 更新 | FR-042 |
 | `/api/v1/reset` | リセット処理の手動起動（保守用. 通常は境界時刻で自動起動）| FR-043, NFR-020 |
+| `/api/v1/auth-state` | 初期パスワード設定済みかの状態取得 | §3, ADR-0010 |
+| `/api/v1/login` | パスワード照合 → セッショントークン発行 | §3, ADR-0010 |
+| `/api/v1/password` | 初期パスワード設定 / パスワード変更（成功時に全セッション破棄） | §3, ADR-0010 |
+| `/api/v1/logout` | 現在のセッションを破棄 | §3, ADR-0010 |
+
+認証リソース群（`/auth-state` / `/login` / `/password` / `/logout`）はユーザー向け FR 由来ではなく, 本書 §3 と [ADR-0010](../../adr/0010-api-design.md) の認証方針に基づく.
 
 復元（FR-061）は各リソース個別の `:id/restore` ではなく `POST /api/v1/trash/{id}/restore` に一本化する（サーバが id から Task / Project / Routine を判別する）. OpenAPI 定義と実装ハンドラの path / method 集合一致はドリフト検出テストで担保する.
 
