@@ -73,7 +73,6 @@ classDiagram
         +DateTime createdAt
         +DateTime updatedAt
         +DateTime? trashedAt
-        +shouldGenerateFor(date) Boolean
         +edit(name, weekdays, priority)
         +moveToTrash()
         +restore()

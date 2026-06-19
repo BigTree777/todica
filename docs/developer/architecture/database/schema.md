@@ -50,7 +50,7 @@ PWA + オフライン書込キュー + 楽観ロック（[ADR-0008](../../adr/00
   - 起票 → 通常状態（`trashedAt = null`）.
   - 完了アクション（FR-006）: `trashedAt = now`, `trashedReason = "completed"`. 完了数カウントを +1.
   - 削除アクション（FR-007）: `trashedAt = now`, `trashedReason = "deleted"`. カウントには加算しない.
-  - 復元（FR-061）: `trashedAt = null`, `trashedReason = null`. 完了済み Task（`trashedReason = "completed"`）の復元も可能だが, **完了カウントは戻さない**（既に集計済みのため. NFR-020 整合）.
+  - 復元（FR-061）: `trashedAt = null`, `trashedReason = null`, `dueDate = "today"`（元の期限には戻さず today に固定. 復元タスクを即アクティブにするため. trash feature spec の確定事項）. 完了済み Task（`trashedReason = "completed"`）の復元も可能だが, **完了カウントは戻さない**（既に集計済みのため. NFR-020 整合）.
   - リセット時の自動完全削除（FR-062）: ストアから物理削除.
 - 検索の論理要件: 「期限と優先度の組合せで今日ビューに並べる」「プロジェクトで絞り込む」「ゴミ箱状態で絞り込む」が成り立つこと. 具体的なインデックス定義は [`overview.md`](overview.md).
 
