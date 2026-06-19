@@ -287,7 +287,17 @@ paths:
       tags: [projects]
       summary: プロジェクト一覧
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [projects]
+                properties:
+                  projects:
+                    type: array
+                    items: { $ref: "#/components/schemas/Project" }
         "401": { $ref: "#/components/responses/Unauthorized" }
     post:
       tags: [projects]
@@ -335,7 +345,17 @@ paths:
       tags: [routines]
       summary: ルーティン一覧
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [routines]
+                properties:
+                  routines:
+                    type: array
+                    items: { $ref: "#/components/schemas/Routine" }
         "401": { $ref: "#/components/responses/Unauthorized" }
     post:
       tags: [routines]
@@ -1162,10 +1182,14 @@ components:
         - currentTaskId: 明示的に選ばれた「現在のタスク」. null なら UI 側で nextTaskId を暗黙フォールバック.
         - version / updatedAt: 楽観ロック + 同期メタデータ.
       required:
+        - id
         - currentTaskId
         - version
         - updatedAt
       properties:
+        id:
+          type: string
+          example: singleton
         currentTaskId:
           type: string
           nullable: true
