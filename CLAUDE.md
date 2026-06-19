@@ -31,6 +31,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `test-designer` | 受け入れ基準からのテスト設計（TDD の失敗するテストを用意） |
 | `implementer` | テストを通す実装（実行手段は implementer の定義に従う） |
 | `auditor` | コードレビュー、仕様適合・品質の検証 |
+| `architecture-reviewer` | architecture（設計ドキュメント）と code（実装）の横断整合レビュー。乖離時に doc / code / spec のどれを直すかを双方向に判定する |
 
 #### 標準フロー
 
@@ -41,6 +42,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 3. `implementer` に、テストを通す（green 化する）実装を依頼。
 4. `auditor` に、仕様適合・テストの妥当性・品質の検証を依頼。
 5. 監査で差し戻しがあれば該当するサブエージェントへ戻し、完了条件を満たすまで繰り返す。
+
+`architecture-reviewer` は上記の per-feature フローとは別軸の **横断レビュー** である。リリース前・アーキ変更時・整合監査依頼時に管理者が起動し、`architecture` 全体と `code` 全体を直接突き合わせる。`auditor` が spec を正として code を検証するのに対し、`architecture-reviewer` は spec / architecture 自体の妥当性も疑い、乖離があれば doc・code・spec のどれを直すべきかを判定する（上方修正も提言できる）。
 
 ### 2. スペックドリブン開発
 
@@ -56,6 +59,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - テストが通ることをもって機能が実装されたとみなす。この対応関係を重視する。
 - したがってテストは仕様を正しく表現している必要がある。
+- ただしこの対応は **振る舞いテストを持つ成果物にのみ** 成立する。ツール・基盤・ドキュメント等、振る舞いテストを生まない成果物は「テスト green」では完了を判定できないため、`auditor` / `architecture-reviewer` が実在を直接確認する。
 
 ### 5. 実装の実行手段（管理者が選ぶ）
 
