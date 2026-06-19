@@ -66,6 +66,14 @@ function responseSchema(openapiPath: string, method: string, status: string): Sc
 /** OpenAPI 3.0 サブセットの strict validator. 不一致を path 付き文字列で返す. */
 function validate(value: unknown, schemaRaw: Schema, path = "$"): string[] {
   const schema = deref(schemaRaw);
+
+  if (Array.isArray(schema.oneOf)) {
+    const branches = schema.oneOf.map((b: Schema) => validate(value, b, path));
+    return branches.some((e: string[]) => e.length === 0)
+      ? []
+      : [`${path}: oneOf のどの branch にも一致しない`];
+  }
+
   const errors: string[] = [];
 
   if (value === null) {
@@ -147,11 +155,45 @@ const PROJECT_ID = "00000000-0000-4000-8000-0000000000a1";
 const ROUTINE_ID = "00000000-0000-4000-8000-0000000000b1";
 
 /** 各エンドポイントの seed + リクエスト + openapi 対応を定義する. */
+type Method = "get" | "post" | "patch" | "put" | "delete";
+
 interface Case {
   name: string;
   apiPath: string;
   openapiPath: string;
-  seed: (b: ReturnType<typeof buildTestApp>) => void;
+  method?: Method; // 既定 get
+  status?: string; // 期待 HTTP ステータス (既定 "200")
+  seed?: (b: ReturnType<typeof buildTestApp>) => void;
+  request?: (b: ReturnType<typeof buildTestApp>) => {
+    body?: unknown;
+    headers?: Record<string, string>;
+  };
+}
+
+/** 共通の Routine seed レコード (通常状態). */
+function routineSeed(trashedAt: string | null = null) {
+  return {
+    id: ROUTINE_ID,
+    name: "routine",
+    daysOfWeek: [1, 3, 5],
+    defaultPriority: "normal" as const,
+    version: 1,
+    createdAt: TEST_INITIAL_TIME,
+    updatedAt: TEST_INITIAL_TIME,
+    trashedAt,
+  };
+}
+
+/** 共通の Project seed レコード. */
+function projectSeed(trashedAt: string | null = null) {
+  return {
+    id: PROJECT_ID,
+    name: "proj",
+    createdAt: TEST_INITIAL_TIME,
+    updatedAt: TEST_INITIAL_TIME,
+    trashedAt,
+    version: 1,
+  };
 }
 
 const cases: Case[] = [
@@ -242,24 +284,179 @@ const cases: Case[] = [
     openapiPath: "/focus",
     seed: (b) => b.focusRepository.seed({ currentTaskId: ID(1) }),
   },
+
+  // ---- mutations (BL-127) ----
+  {
+    name: "POST /tasks (201)",
+    method: "post",
+    apiPath: "/api/v1/tasks",
+    openapiPath: "/tasks",
+    status: "201",
+    request: () => ({ body: { id: ID(9), name: "new", dueDate: "today", priority: "normal" } }),
+  },
+  {
+    name: "PATCH /tasks/{id} (200)",
+    method: "patch",
+    apiPath: `/api/v1/tasks/${ID(1)}`,
+    openapiPath: "/tasks/{id}",
+    status: "200",
+    seed: (b) => b.taskRepository.seed(makeTask({ id: ID(1) })),
+    request: () => ({ body: { name: "renamed" }, headers: { "If-Match": "1" } }),
+  },
+  {
+    name: "POST /tasks/{id}/complete (200)",
+    method: "post",
+    apiPath: `/api/v1/tasks/${ID(1)}/complete`,
+    openapiPath: "/tasks/{id}/complete",
+    status: "200",
+    seed: (b) => b.taskRepository.seed(makeTask({ id: ID(1) })),
+    request: () => ({ headers: { "If-Match": "1" } }),
+  },
+  {
+    name: "DELETE /tasks/{id} (204)",
+    method: "delete",
+    apiPath: `/api/v1/tasks/${ID(1)}`,
+    openapiPath: "/tasks/{id}",
+    status: "204",
+    seed: (b) => b.taskRepository.seed(makeTask({ id: ID(1) })),
+    request: () => ({ headers: { "If-Match": "1" } }),
+  },
+  {
+    name: "PUT /focus (200)",
+    method: "put",
+    apiPath: "/api/v1/focus",
+    openapiPath: "/focus",
+    status: "200",
+    seed: (b) => {
+      b.taskRepository.seed(makeTask({ id: ID(1) }));
+      b.focusRepository.seed({ currentTaskId: null });
+    },
+    request: () => ({ body: { taskId: ID(1) }, headers: { "If-Match": "1" } }),
+  },
+  {
+    name: "POST /projects (201)",
+    method: "post",
+    apiPath: "/api/v1/projects",
+    openapiPath: "/projects",
+    status: "201",
+    request: () => ({ body: { id: PROJECT_ID, name: "p" } }),
+  },
+  {
+    name: "PATCH /projects/{id} (200)",
+    method: "patch",
+    apiPath: `/api/v1/projects/${PROJECT_ID}`,
+    openapiPath: "/projects/{id}",
+    status: "200",
+    seed: (b) => b.projectRepository.seedProject(projectSeed()),
+    request: () => ({ body: { name: "p2" }, headers: { "If-Match": "1" } }),
+  },
+  {
+    name: "DELETE /projects/{id} (204)",
+    method: "delete",
+    apiPath: `/api/v1/projects/${PROJECT_ID}`,
+    openapiPath: "/projects/{id}",
+    status: "204",
+    seed: (b) => b.projectRepository.seedProject(projectSeed()),
+    request: () => ({ headers: { "If-Match": "1" } }),
+  },
+  {
+    name: "POST /routines (201)",
+    method: "post",
+    apiPath: "/api/v1/routines",
+    openapiPath: "/routines",
+    status: "201",
+    request: () => ({
+      body: { id: ROUTINE_ID, name: "r", daysOfWeek: [1, 3], defaultPriority: "normal" },
+    }),
+  },
+  {
+    name: "PATCH /routines/{id} (200)",
+    method: "patch",
+    apiPath: `/api/v1/routines/${ROUTINE_ID}`,
+    openapiPath: "/routines/{id}",
+    status: "200",
+    seed: (b) => b.routineRepository.seed(routineSeed()),
+    request: () => ({ body: { name: "r2" }, headers: { "If-Match": "1" } }),
+  },
+  {
+    name: "DELETE /routines/{id} (204)",
+    method: "delete",
+    apiPath: `/api/v1/routines/${ROUTINE_ID}`,
+    openapiPath: "/routines/{id}",
+    status: "204",
+    seed: (b) => b.routineRepository.seed(routineSeed()),
+    request: () => ({ headers: { "If-Match": "1" } }),
+  },
+  {
+    name: "POST /trash/{id}/restore (200, oneOf)",
+    method: "post",
+    apiPath: `/api/v1/trash/${ID(1)}/restore`,
+    openapiPath: "/trash/{id}/restore",
+    status: "200",
+    seed: (b) =>
+      b.taskRepository.seed(
+        makeTask({ id: ID(1), trashedAt: TEST_INITIAL_TIME, trashedReason: "deleted" }),
+      ),
+    request: () => ({ headers: { "If-Match": "1" } }),
+  },
+  {
+    name: "DELETE /trash (204)",
+    method: "delete",
+    apiPath: "/api/v1/trash",
+    openapiPath: "/trash",
+    status: "204",
+  },
+  {
+    name: "PATCH /settings (200)",
+    method: "patch",
+    apiPath: "/api/v1/settings",
+    openapiPath: "/settings",
+    status: "200",
+    seed: (b) => b.settingsRepository.seed({ dayBoundaryTime: "04:00" }),
+    request: () => ({ body: { dayBoundaryTime: "05:00" }, headers: { "If-Match": "1" } }),
+  },
+  {
+    name: "POST /reset (200)",
+    method: "post",
+    apiPath: "/api/v1/reset",
+    openapiPath: "/reset",
+    status: "200",
+  },
 ];
 
 function ID(n: number): string {
   return `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 }
 
-describe("BL-126 OpenAPI response schema contract", () => {
+describe("BL-126 / BL-127 OpenAPI response schema contract", () => {
   for (const c of cases) {
-    it(`${c.name} の実レスポンスが openapi response schema に一致する`, async () => {
+    const method: Method = c.method ?? "get";
+    const status = c.status ?? "200";
+    it(`${c.name} の実レスポンスが openapi ${status} response schema に一致する`, async () => {
       const built = buildTestApp();
-      c.seed(built);
+      c.seed?.(built);
       const app: Hono = built.app;
 
-      const res = await app.request(c.apiPath, { headers: authHeaders() });
-      expect(res.status).toBe(200);
-      const body = await res.json();
+      const req = c.request?.(built) ?? {};
+      const headers: Record<string, string> = { ...authHeaders(), ...(req.headers ?? {}) };
+      if (method !== "get" && !("Idempotency-Key" in headers)) {
+        headers["Idempotency-Key"] = crypto.randomUUID();
+      }
+      const init: RequestInit = { method: method.toUpperCase(), headers };
+      if (req.body !== undefined) init.body = JSON.stringify(req.body);
 
-      const schema = responseSchema(c.openapiPath, "get", "200");
+      const res = await app.request(c.apiPath, init);
+      const text = await res.clone().text();
+      expect(res.status, `予期しないステータス. body=${text}`).toBe(Number(status));
+
+      // 204 No Content はボディ無し: schema 照合をスキップし空ボディのみ確認する.
+      if (status === "204") {
+        expect(text.trim()).toBe("");
+        return;
+      }
+
+      const body = await res.json();
+      const schema = responseSchema(c.openapiPath, method, status);
       const errors = validate(body, schema);
       expect(errors, `${c.name} のフィールド不一致:\n${errors.join("\n")}`).toEqual([]);
     });
