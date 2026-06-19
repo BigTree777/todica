@@ -53,8 +53,9 @@ function makeMockDb(settingsRows: Row[] = []) {
 describe("LocalSettingsRepository.get() (FR-LOC-002 / T-18)", () => {
   // spec.md §FR-LOC-007 / plan.md §T-07:
   // Settings レコードが存在しない場合はデフォルト値を返す
-  it("シナリオ: get() で Settings レコードが存在しない場合はデフォルト値（dayBoundaryTime='04:00', dayBoundaryTimezone='Asia/Tokyo'）を返す", async () => {
+  it("シナリオ: get() で Settings レコードが存在しない場合はデフォルト値（dayBoundaryTime='04:00', dayBoundaryTimezone=端末 TZ）を返す", async () => {
     // Given settings テーブルが空
+    const deviceTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const db = makeMockDb([]);
     db.query.mockResolvedValueOnce({ values: [] }); // SELECT で空を返す
     // INSERT + 再SELECT のパターンを想定
@@ -64,7 +65,7 @@ describe("LocalSettingsRepository.get() (FR-LOC-002 / T-18)", () => {
         {
           id: "singleton",
           day_boundary_time: "04:00",
-          day_boundary_timezone: "Asia/Tokyo",
+          day_boundary_timezone: deviceTimeZone,
           updated_at: "2026-06-08T00:00:00.000Z",
           version: 1,
         },
@@ -78,10 +79,14 @@ describe("LocalSettingsRepository.get() (FR-LOC-002 / T-18)", () => {
 
     // Then デフォルト値が返る
     expect(settings.dayBoundaryTime).toBe("04:00");
+    expect(db.run).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO settings"), [
+      deviceTimeZone,
+      expect.any(String),
+    ]);
     // dayBoundaryTimezone が追加フィールドとして存在することを確認
-    expect(
-      (settings as unknown as Record<string, unknown>).dayBoundaryTimezone ?? "Asia/Tokyo",
-    ).toBe("Asia/Tokyo");
+    expect((settings as unknown as Record<string, unknown>).dayBoundaryTimezone).toBe(
+      deviceTimeZone,
+    );
   });
 
   // plan.md §T-07: Settings レコードが存在する場合はその値を返す
@@ -104,6 +109,7 @@ describe("LocalSettingsRepository.get() (FR-LOC-002 / T-18)", () => {
 
     // Then 保存されている値が返る
     expect(settings.dayBoundaryTime).toBe("06:00");
+    expect(settings.dayBoundaryTimezone).toBe("Asia/Tokyo");
     expect(settings.version).toBe(3);
   });
 });

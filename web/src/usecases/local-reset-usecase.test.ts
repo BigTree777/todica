@@ -21,7 +21,7 @@
  *   - 前回境界時刻の UTC 表現 = "2026-06-07T19:00:00.000Z"
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocalResetUsecase } from "./local-reset-usecase.js";
 
 // ---------------------------------------------------------------------------
@@ -41,6 +41,40 @@ vi.mock("@capacitor-community/sqlite", () => ({
 // → 前回の境界時刻 = 2026-06-08T04:00:00+09:00 = 2026-06-07T19:00:00.000Z
 const NOW = new Date("2026-06-08T01:00:00.000Z"); // 10:00 JST
 const BOUNDARY_UTC = "2026-06-07T19:00:00.000Z"; // 前回の境界時刻 UTC
+
+let savedIntlDateTimeFormat: typeof Intl.DateTimeFormat;
+
+function stubDeviceTimeZone(timeZone: string): void {
+  savedIntlDateTimeFormat = Intl.DateTimeFormat;
+  const RealIntlDateTimeFormat = savedIntlDateTimeFormat;
+  type DTFCtor = (typeof Intl)["DateTimeFormat"];
+  const stub = function (
+    this: unknown,
+    locales?: string | string[],
+    options?: Intl.DateTimeFormatOptions,
+  ) {
+    const inst = new RealIntlDateTimeFormat(locales, {
+      ...options,
+      timeZone: options?.timeZone ?? timeZone,
+    });
+    const originalResolvedOptions = inst.resolvedOptions.bind(inst);
+    inst.resolvedOptions = () => {
+      const resolved = originalResolvedOptions();
+      return { ...resolved, timeZone };
+    };
+    return inst;
+  } as unknown as DTFCtor;
+  (Intl as unknown as { DateTimeFormat: DTFCtor }).DateTimeFormat = stub;
+}
+
+beforeEach(() => {
+  stubDeviceTimeZone("Asia/Tokyo");
+});
+
+afterEach(() => {
+  (Intl as unknown as { DateTimeFormat: typeof Intl.DateTimeFormat }).DateTimeFormat =
+    savedIntlDateTimeFormat;
+});
 
 // ---------------------------------------------------------------------------
 // MockDBConnection

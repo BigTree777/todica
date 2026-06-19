@@ -10,11 +10,15 @@ import type { PatchSettingsCommand, Settings, SettingsRepository } from "./setti
 
 type Row = Record<string, unknown>;
 
+function getDeviceTimeZone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
+
 function rowToSettings(row: Row): Settings & { dayBoundaryTimezone: string } {
   return {
     id: row.id as string,
     dayBoundaryTime: row.day_boundary_time as string,
-    dayBoundaryTimezone: (row.day_boundary_timezone as string | undefined) ?? "Asia/Tokyo",
+    dayBoundaryTimezone: (row.day_boundary_timezone as string | undefined) ?? getDeviceTimeZone(),
     version: row.version as number,
     updatedAt: row.updated_at as string,
   };
@@ -33,10 +37,11 @@ export class LocalSettingsRepository implements SettingsRepository {
 
     // レコードが存在しない場合はデフォルト値を INSERT する
     const now = new Date().toISOString();
+    const deviceTimeZone = getDeviceTimeZone();
     await this.db.run(
       `INSERT INTO settings (id, day_boundary_time, day_boundary_timezone, updated_at, version)
-       VALUES ('singleton', '04:00', 'Asia/Tokyo', ?, 1)`,
-      [now],
+       VALUES ('singleton', '04:00', ?, ?, 1)`,
+      [deviceTimeZone, now],
     );
 
     const afterInsert = await this.db.query("SELECT * FROM settings WHERE id = 'singleton'");
@@ -49,7 +54,7 @@ export class LocalSettingsRepository implements SettingsRepository {
     return {
       id: "singleton",
       dayBoundaryTime: "04:00",
-      dayBoundaryTimezone: "Asia/Tokyo",
+      dayBoundaryTimezone: deviceTimeZone,
       version: 1,
       updatedAt: now,
     };

@@ -10,15 +10,13 @@
  *     LocalResetUsecase.runIfNeeded がリセット処理を実行する (= db.beginTransaction が呼ばれる).
  *
  * 補足:
- *   既存 local-reset-usecase.ts は dayBoundaryTimezone カラムをサーバ由来として
- *   読みに行き, 未設定の場合は端末 TZ をフォールバックとして使う.
- *   本テストでは dayBoundaryTimezone カラムを「未設定 (undefined)」にして,
- *   端末 TZ から自然に Asia/Tokyo が解決されるかを検証する.
- *   実装が dayBoundaryTimezone を "Asia/Tokyo" にハードコードしている現状ではこの
- *   検証パスは偶然成立してしまうので, より厳密な確認のため
- *   `settings.day_boundary_timezone` を未提供にしたうえで「端末 TZ フォールバック」を確認する.
+ *   local-reset-usecase.ts は dayBoundaryTimezone カラムをリセット判定に使わず,
+ *   実行時の端末 TZ を Intl.DateTimeFormat().resolvedOptions().timeZone から解決する.
+ *   本テストでは dayBoundaryTimezone カラムを「未設定 (undefined)」にしたうえで,
+ *   端末 TZ から Asia/Tokyo が解決されることを検証する.
  */
 
+import { calcPreviousBoundaryAt } from "@todica/domain/settings";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocalResetUsecase } from "./local-reset-usecase.js";
 
@@ -51,7 +49,7 @@ function makeMockDb(initialData: { settings?: Row[]; tasks?: Row[]; counter?: Ro
       {
         id: "singleton",
         day_boundary_time: "04:00",
-        // day_boundary_timezone は意図的に未設定 (端末 TZ フォールバックを期待する)
+        // day_boundary_timezone は意図的に未設定 (リセット判定には端末 TZ を使う)
         updated_at: "2026-06-07T00:00:00.000Z",
         version: 1,
       },
@@ -105,14 +103,14 @@ describe("LocalResetUsecase: 端末 TZ = Asia/Tokyo の解釈 (spec.md G-2)", ()
       locales?: string | string[],
       options?: Intl.DateTimeFormatOptions,
     ) {
-      const inst = new RealIntlDateTimeFormat(
-        locales,
-        options ? { ...options, timeZone: options.timeZone ?? "Asia/Tokyo" } : undefined,
-      );
+      const inst = new RealIntlDateTimeFormat(locales, {
+        ...options,
+        timeZone: options?.timeZone ?? "Asia/Tokyo",
+      });
       const originalResolvedOptions = inst.resolvedOptions.bind(inst);
       inst.resolvedOptions = () => {
         const r = originalResolvedOptions();
-        return { ...r, timeZone: r.timeZone ?? "Asia/Tokyo" };
+        return { ...r, timeZone: "Asia/Tokyo" };
       };
       return inst;
     } as unknown as DTFCtor;
@@ -127,7 +125,7 @@ describe("LocalResetUsecase: 端末 TZ = Asia/Tokyo の解釈 (spec.md G-2)", ()
     // spec.md §G-2 シナリオ「端末 TZ = JST のローカルモードで dayBoundaryTime = '04:00' のとき JST 04:01 でリセットが発火する」
     // Given Android ローカルモードで端末 TZ が Asia/Tokyo
     // And   settings.dayBoundaryTime = "04:00"
-    //       (day_boundary_timezone カラムは未提供 → 端末 TZ にフォールバック)
+    //       (day_boundary_timezone カラムは未提供。リセット判定には端末 TZ を使う)
     // And   counter.lastResetExecutedAt = null
     // And   now = JST 2026-06-08 04:01 = UTC "2026-06-07T19:01:00.000Z"
     // When  LocalResetUsecase.runIfNeeded(now) を呼ぶ
@@ -141,5 +139,40 @@ describe("LocalResetUsecase: 端末 TZ = Asia/Tokyo の解釈 (spec.md G-2)", ()
     expect(db.commitTransaction).toHaveBeenCalled();
     // 少なくとも 1 回は db.run が呼ばれる (counter / tasks のいずれかを更新する).
     expect(db.run).toHaveBeenCalled();
+  });
+
+  it("回帰ガード: settings.day_boundary_timezone に別 TZ が保存されていても端末 TZ (JST) で境界判定する", async () => {
+    // 旧バグ: dayBoundaryTimezone カラム (Asia/Tokyo ハードコード) を優先し端末 TZ を無視していた.
+    // 列に端末 TZ と異なる "America/New_York" を入れ, リセットが使う前回境界 (ゴミ箱清算 DELETE の
+    // 条件値) が「端末 TZ = JST」で計算した境界に一致する (= 列を無視する) ことを検証する.
+    const { db } = makeMockDb({
+      settings: [
+        {
+          id: "singleton",
+          day_boundary_time: "04:00",
+          day_boundary_timezone: "America/New_York",
+          updated_at: "2026-06-07T00:00:00.000Z",
+          version: 1,
+        },
+      ],
+    });
+
+    const usecase = new LocalResetUsecase(db as never);
+    await usecase.runIfNeeded(NOW_JST_0401);
+
+    const nowIso = NOW_JST_0401.toISOString();
+    const jstBoundary = calcPreviousBoundaryAt(nowIso, "04:00", "Asia/Tokyo");
+    const nyBoundary = calcPreviousBoundaryAt(nowIso, "04:00", "America/New_York");
+    // テストが意味を持つこと: 2 つの TZ で境界がそもそも異なる.
+    expect(jstBoundary).not.toBe(nyBoundary);
+
+    // ゴミ箱清算 DELETE (`trashed_at < ?`) の条件値が端末 TZ (JST) 境界に一致する.
+    const runCalls = db.run.mock.calls as [string, unknown[]][];
+    const purgeDelete = runCalls.find(
+      ([sql]) => /delete from tasks/i.test(sql) && /trashed_at\s*<\s*\?/i.test(sql),
+    );
+    expect(purgeDelete).toBeDefined();
+    const values = purgeDelete?.[1] as unknown[];
+    expect(values[0]).toBe(jstBoundary);
   });
 });

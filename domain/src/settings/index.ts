@@ -13,10 +13,10 @@
 /**
  * リセット時刻設定の単一レコード (id = "singleton").
  *
- * dayBoundaryTimezone は Android ローカルモード限定のフィールドのため
+ * dayBoundaryTimezone は Android ローカルモードの保存列互換フィールドのため
  * 共通の Settings 型には含めない (Android local 側で `Settings & { dayBoundaryTimezone: string }`
- * の intersection で拡張する). サーバモードでは process.env.TZ で代替する
- * (ADR-0011 / database/schema.md §Settings).
+ * の intersection で拡張する). ローカルのリセット判定は保存列ではなく実行時の端末 TZ を使い,
+ * サーバモードでは process.env.TZ で代替する (ADR-0011 / database/schema.md §Settings).
  */
 export interface Settings {
   id: string;
