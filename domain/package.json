@@ -1,6 +1,6 @@
 {
   "name": "@todica/domain",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Todica のドメイン共有層. サーバ・クライアントが共通参照する純粋ロジック.",
   "author": "BigTree777",
