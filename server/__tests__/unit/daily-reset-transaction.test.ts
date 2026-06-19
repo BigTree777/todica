@@ -136,7 +136,8 @@ describe("maybeRunDailyReset transaction (better-sqlite3 + drizzle)", () => {
     });
     await expect(counterRepository.get()).resolves.toMatchObject({
       completedCount: 0,
-      lastResetExecutedAt: NOW,
+      // BL-134: server も lastResetExecutedAt に「今回の境界時刻」を保存する (local と統一).
+      lastResetExecutedAt: "2026-06-08T04:00:00.000Z",
       updatedAt: NOW,
       version: 2,
     });

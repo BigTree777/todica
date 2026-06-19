@@ -68,6 +68,7 @@ export function calcDayOfWeek(nowIso: string): number {
 async function runDailyResetWrites(
   deps: DailyResetDeps,
   now: string,
+  todayBoundaryAt: string,
   counter: Awaited<ReturnType<CounterRepository["get"]>>,
 ): Promise<void> {
   // [新規 BL-017] FR-033: 前日ルーティンタスク削除
@@ -108,8 +109,9 @@ async function runDailyResetWrites(
     }
   }
 
-  // counter.completedCount を 0 にリセットし、lastResetExecutedAt を now にする（FR-051）.
-  const updatedCounter = resetCompletedCount(counter, now, now);
+  // counter.completedCount を 0 にリセットし、lastResetExecutedAt に今回の境界時刻を保存する（FR-051）.
+  // 境界時刻を保存することで needsDailyReset の判定が決定的になり, ローカルモードと一致する.
+  const updatedCounter = resetCompletedCount(counter, todayBoundaryAt, now);
   await deps.counterRepository.update(updatedCounter);
 
   // purgeTrash を呼び出す（plan.md D-002 d / D-005）.
@@ -128,7 +130,7 @@ async function runDailyResetWrites(
  * - リセット条件を満たさない場合は { executed: false, appliedBoundaryAt } を返す.
  * - リセット条件を満たす場合:
  *   1. dueDate === "tomorrow" かつ trashedAt === null のタスクを "today" に更新する（FR-043）.
- *   2. counter.completedCount を 0 にリセットし、lastResetExecutedAt を now にする（FR-051）.
+ *   2. counter.completedCount を 0 にリセットし、lastResetExecutedAt に今回の境界時刻を保存する（FR-051）.
  *   3. { executed: true, appliedBoundaryAt } を返す.
  */
 export async function maybeRunDailyReset(deps: DailyResetDeps): Promise<DailyResetResult> {
@@ -144,13 +146,13 @@ export async function maybeRunDailyReset(deps: DailyResetDeps): Promise<DailyRes
   }
 
   if (!deps.db) {
-    await runDailyResetWrites(deps, now, counter);
+    await runDailyResetWrites(deps, now, todayBoundaryAt, counter);
     return { executed: true, appliedBoundaryAt: todayBoundaryAt };
   }
 
   deps.db.run(sql`BEGIN`);
   try {
-    await runDailyResetWrites(deps, now, counter);
+    await runDailyResetWrites(deps, now, todayBoundaryAt, counter);
     deps.db.run(sql`COMMIT`);
   } catch (error) {
     deps.db.run(sql`ROLLBACK`);

@@ -40,11 +40,11 @@ export function incrementCompletedCount(counter: Counter, now: string): Counter 
  * completedCount を 0 にリセットし, lastResetExecutedAt を指定された値で更新する.
  * 日次リセット成功時にアプリ層から呼ぶ (BL-010 / FR-051).
  *
- * lastResetExecutedAt は呼び出し側で「何を保存するか」を決める引数として受け取る:
- * - server (daily-reset.ts): リセット実行時刻 (now)
- * - web local (local-reset-usecase.ts): 前回境界時刻 (previousBoundaryIso)
+ * lastResetExecutedAt には「今回適用した境界時刻」を保存する（呼び出し側が引数で渡す）:
+ * - server (daily-reset.ts): todayBoundaryAt
+ * - web local (local-reset-usecase.ts): previousBoundaryIso
  *
- * 両者とも「次回境界時刻まで needsDailyReset = false を保証する」点では機能等価.
+ * どちらも境界時刻なので「次回境界時刻まで needsDailyReset = false」が決定的に保証される.
  */
 export function resetCompletedCount(
   counter: Counter,

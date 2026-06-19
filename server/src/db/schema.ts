@@ -4,7 +4,7 @@
  * 論理スキーマ: docs/developer/architecture/database/schema.md
  * 物理スキーマ: docs/developer/architecture/database/overview.md §9
  *
- * - サーバ側 (better-sqlite3) と Android ローカル側 (sqlite-proxy) で共通.
+ * - サーバ側 (better-sqlite3) と Android ローカル側 (@capacitor-community/sqlite の生 SQL) で共通.
  * - カラム名は snake_case で統一. ドメイン Task (camelCase) ↔ DB カラム (snake_case) の
  *   変換は repository 層で行う.
  * - 列挙型は `text({ enum: [...] })` で型安全に表現する.
