@@ -47,9 +47,10 @@ export const tasks = sqliteTable(
 );
 
 /**
- * projects テーブル (最小).
+ * projects テーブル.
  *
- * BL-001 では Project の CRUD は対象外だが, tasks.project_id の FK 先として最小定義を持つ.
+ * docs/developer/architecture/database/schema.md §Project と一致.
+ * tasks.project_id の参照先でもある (カスケード NULL は repository / usecase 層で担保).
  */
 export const projects = sqliteTable("projects", {
   id: text("id").primaryKey().notNull(),
@@ -92,14 +93,12 @@ export const focusSelection = sqliteTable("focus_selection", {
 });
 
 /**
- * counter テーブル (BL-008 / completion-counter) — placeholder.
+ * counter テーブル (completion-counter).
  *
  * docs/developer/features/completion-counter/plan.md §「データモデル」.
  * - 単一レコード前提 (id = "singleton" 固定).
  * - completedCount は通常状態のタスクが完了に遷移した回数を表す (FR-040).
- * - lastResetExecutedAt は本 feature では値を書き込まない. BL-010 (日次リセット) で使う.
- * - 本定義は test-designer 段階の placeholder. 物理マイグレーション / 起動時 INSERT は
- *   implementer が green 化する.
+ * - lastResetExecutedAt は日次リセット (daily-reset) が最後に実行した境界時刻を保持する.
  */
 export const counter = sqliteTable("counter", {
   id: text("id").primaryKey().notNull(),
