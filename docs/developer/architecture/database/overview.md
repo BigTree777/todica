@@ -87,7 +87,7 @@ FocusSelection: 「現在のタスク」参照（単一レコード）
 | --- | --- | --- |
 | 永続化機構 | SQLite（WAL モード, サーバプロセス内蔵） | PostgreSQL / ファイル KVS |
 | 接続ライブラリ | **`better-sqlite3` + `drizzle-orm`** | Prisma / 生 SQL |
-| 配置 | サーバホスト上の単一ファイル `/var/lib/todica/todica.db` | （別案は採らない） |
+| 配置 | サーバホスト上の単一ファイル. パスは env `DATABASE_PATH` で指定（既定 `./todica.db`. 本番は `/var/lib/todica/todica.db` 等を推奨） | （別案は採らない） |
 | 動作モード | WAL（Write-Ahead Logging） | デフォルトのロールバックジャーナル |
 | マイグレーションツール | **`drizzle-kit`**（TypeScript スキーマ定義から SQL マイグレーションを生成） | 手書き SQL スクリプト |
 | マイグレーション実行タイミング | サーバ起動時に自動適用（`main.ts`）. 明示実行はリポジトリルートで `npm run migrate`（サーバを起動せず `server/src/migrate.ts` が drizzle `migrate()` を実行） | （別案は採らない） |

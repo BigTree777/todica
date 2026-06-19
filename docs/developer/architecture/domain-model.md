@@ -199,10 +199,10 @@ stateDiagram-v2
 stateDiagram-v2
     [*] --> Idle
     Idle --> Running : 境界時刻を超えた検出<br/>（サーバ: lazy 起動 / 定期実行<br/>　ローカル: 起動時 / フォアグラウンド到達時）
-    Running --> Running : Counter.completedCount = 0（FR-043）
-    Running --> Running : 未完了 manual Task の dueDate を翌日仕様で繰り越し（FR-051）
     Running --> Running : 未完了 routine Task を物理削除（FR-033）
+    Running --> Running : 未完了 manual Task の dueDate を翌日仕様で繰り越し（FR-051）
     Running --> Running : 当日生成すべき Routine から Task を生成（FR-031）
+    Running --> Running : Counter.completedCount = 0（FR-043）
     Running --> Running : ゴミ箱を空にする（FR-062）
     Running --> Idle : Counter.lastResetExecutedAt = 境界時刻<br/>（次回二重実行防止）
 

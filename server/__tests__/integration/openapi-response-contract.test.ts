@@ -351,6 +351,15 @@ const cases: Case[] = [
     request: () => ({ body: { name: "p2" }, headers: { "If-Match": "1" } }),
   },
   {
+    name: "PATCH /projects/{id} (412)",
+    method: "patch",
+    apiPath: `/api/v1/projects/${PROJECT_ID}`,
+    openapiPath: "/projects/{id}",
+    status: "412",
+    seed: (b) => b.projectRepository.seedProject(projectSeed()),
+    request: () => ({ body: { name: "p2" }, headers: { "If-Match": "999" } }),
+  },
+  {
     name: "DELETE /projects/{id} (204)",
     method: "delete",
     apiPath: `/api/v1/projects/${PROJECT_ID}`,
@@ -358,6 +367,15 @@ const cases: Case[] = [
     status: "204",
     seed: (b) => b.projectRepository.seedProject(projectSeed()),
     request: () => ({ headers: { "If-Match": "1" } }),
+  },
+  {
+    name: "DELETE /projects/{id} (412)",
+    method: "delete",
+    apiPath: `/api/v1/projects/${PROJECT_ID}`,
+    openapiPath: "/projects/{id}",
+    status: "412",
+    seed: (b) => b.projectRepository.seedProject(projectSeed()),
+    request: () => ({ headers: { "If-Match": "999" } }),
   },
   {
     name: "POST /routines (201)",
@@ -379,6 +397,15 @@ const cases: Case[] = [
     request: () => ({ body: { name: "r2" }, headers: { "If-Match": "1" } }),
   },
   {
+    name: "PATCH /routines/{id} (412)",
+    method: "patch",
+    apiPath: `/api/v1/routines/${ROUTINE_ID}`,
+    openapiPath: "/routines/{id}",
+    status: "412",
+    seed: (b) => b.routineRepository.seed(routineSeed()),
+    request: () => ({ body: { name: "r2" }, headers: { "If-Match": "999" } }),
+  },
+  {
     name: "DELETE /routines/{id} (204)",
     method: "delete",
     apiPath: `/api/v1/routines/${ROUTINE_ID}`,
@@ -386,6 +413,15 @@ const cases: Case[] = [
     status: "204",
     seed: (b) => b.routineRepository.seed(routineSeed()),
     request: () => ({ headers: { "If-Match": "1" } }),
+  },
+  {
+    name: "DELETE /routines/{id} (412)",
+    method: "delete",
+    apiPath: `/api/v1/routines/${ROUTINE_ID}`,
+    openapiPath: "/routines/{id}",
+    status: "412",
+    seed: (b) => b.routineRepository.seed(routineSeed()),
+    request: () => ({ headers: { "If-Match": "999" } }),
   },
   {
     name: "POST /trash/{id}/restore (200, oneOf)",
@@ -414,6 +450,27 @@ const cases: Case[] = [
     status: "200",
     seed: (b) => b.settingsRepository.seed({ dayBoundaryTime: "04:00" }),
     request: () => ({ body: { dayBoundaryTime: "05:00" }, headers: { "If-Match": "1" } }),
+  },
+  {
+    name: "PATCH /settings (412)",
+    method: "patch",
+    apiPath: "/api/v1/settings",
+    openapiPath: "/settings",
+    status: "412",
+    seed: (b) => b.settingsRepository.seed({ dayBoundaryTime: "04:00" }),
+    request: () => ({ body: { dayBoundaryTime: "05:00" }, headers: { "If-Match": "999" } }),
+  },
+  {
+    name: "PUT /focus (412)",
+    method: "put",
+    apiPath: "/api/v1/focus",
+    openapiPath: "/focus",
+    status: "412",
+    seed: (b) => {
+      b.taskRepository.seed(makeTask({ id: ID(1) }));
+      b.focusRepository.seed({ currentTaskId: null });
+    },
+    request: () => ({ body: { taskId: ID(1) }, headers: { "If-Match": "999" } }),
   },
   {
     name: "POST /reset (200)",

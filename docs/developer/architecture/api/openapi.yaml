@@ -279,7 +279,15 @@ paths:
                   focus: { $ref: "#/components/schemas/FocusSelection" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
-        "412": { $ref: "#/components/responses/PreconditionFailed" }
+        "412":
+          description: Precondition Failed (version 不一致)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [focus]
+                properties:
+                  focus: { $ref: "#/components/schemas/FocusSelection" }
 
   # ========== Projects ==========
   /projects:
@@ -304,6 +312,12 @@ paths:
       summary: プロジェクト作成
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectInput"
       responses:
         "201":
           description: Created
@@ -326,6 +340,12 @@ paths:
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectPatch"
       responses:
         "200":
           description: OK
@@ -338,7 +358,15 @@ paths:
                   project: { $ref: "#/components/schemas/Project" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
-        "412": { $ref: "#/components/responses/PreconditionFailed" }
+        "412":
+          description: Precondition Failed (version 不一致)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [project]
+                properties:
+                  project: { $ref: "#/components/schemas/Project" }
     delete:
       tags: [projects]
       summary: プロジェクト削除（ゴミ箱へ）
@@ -353,7 +381,15 @@ paths:
         "204": { description: No Content }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
-        "412": { $ref: "#/components/responses/PreconditionFailed" }
+        "412":
+          description: Precondition Failed (version 不一致)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [project]
+                properties:
+                  project: { $ref: "#/components/schemas/Project" }
 
   # ========== Routines ==========
   /routines:
@@ -378,6 +414,12 @@ paths:
       summary: ルーティン作成
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoutineInput"
       responses:
         "201":
           description: Created
@@ -400,6 +442,12 @@ paths:
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoutinePatch"
       responses:
         "200":
           description: OK
@@ -412,7 +460,15 @@ paths:
                   routine: { $ref: "#/components/schemas/Routine" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
-        "412": { $ref: "#/components/responses/PreconditionFailed" }
+        "412":
+          description: Precondition Failed (version 不一致)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [routine]
+                properties:
+                  routine: { $ref: "#/components/schemas/Routine" }
     delete:
       tags: [routines]
       summary: ルーティン削除（ゴミ箱へ）
@@ -428,7 +484,15 @@ paths:
         "204": { description: No Content }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
-        "412": { $ref: "#/components/responses/PreconditionFailed" }
+        "412":
+          description: Precondition Failed (version 不一致)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [routine]
+                properties:
+                  routine: { $ref: "#/components/schemas/Routine" }
 
   # ========== Trash ==========
   /trash:
@@ -648,6 +712,10 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "412":
           description: 初期パスワード設定が必要
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "500": { $ref: "#/components/responses/InternalServerError" }
 
   /password:
@@ -1044,6 +1112,27 @@ components:
           description: FR-004. 値域外は 400 INVALID_PRIORITY を返す.
 
     # ---------- 他エンティティ (feature spec で詳細化) ----------
+    ProjectInput:
+      type: object
+      description: プロジェクト作成時の入力. id はクライアント採番.
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+
+    ProjectPatch:
+      type: object
+      description: プロジェクト編集時の入力.
+      required:
+        - name
+      properties:
+        name:
+          type: string
+
     Project:
       type: object
       description: |
@@ -1117,6 +1206,43 @@ components:
           nullable: true
         version:
           type: integer
+
+    RoutineInput:
+      type: object
+      description: ルーティン作成時の入力. id はクライアント採番.
+      required:
+        - id
+        - name
+        - daysOfWeek
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        daysOfWeek:
+          type: array
+          items:
+            type: integer
+          description: 0=日〜6=土.
+        defaultPriority:
+          type: string
+          enum: [highest, normal, later]
+          default: normal
+
+    RoutinePatch:
+      type: object
+      description: ルーティン編集時の部分入力. 省略フィールドは変更しない.
+      properties:
+        name:
+          type: string
+        daysOfWeek:
+          type: array
+          items:
+            type: integer
+        defaultPriority:
+          type: string
+          enum: [highest, normal, later]
+
     Routine:
       type: object
       description: |
