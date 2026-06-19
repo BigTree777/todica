@@ -120,6 +120,8 @@ flowchart LR
 | `server/src/app/trash-usecases` | アプリケーション | ゴミ箱の閲覧・復元・手動空にする（FR-061, FR-062） | `domain/*`, `server/src/data/*` |
 | `server/src/app/reset-usecases` | アプリケーション | リセット処理オーケストレーション（FR-043, FR-051, FR-062, FR-033）. 本体は `server/src/use-cases/daily-reset.ts` / `purge-trash.ts` | `domain/*`, `server/src/data/*`, `Clock` |
 | `server/src/app/settings-usecases` | アプリケーション | 境界時刻の設定（FR-042） | `domain/*`, `server/src/data/*` |
+| `server/src/app/counter-usecases` | アプリケーション | 今日の完了数取得（FR-040） | `domain/*`, `server/src/data/*` |
+| `server/src/app/today-usecases` | アプリケーション | 今日ビュー組み立て + 自動リセット起動（FR-010, FR-011） | `domain/*`, `server/src/data/*` |
 | `server/src/data/*` | データアクセス | Repository インターフェース群 | `domain/*` |
 | `server/src/infra/persistence/drizzle/*` | 永続化アダプタ | 永続化機構を用いた Repository の具象（`drizzle-*-repository.ts`） | `server/src/data/*`, 永続化機構のクライアント |
 

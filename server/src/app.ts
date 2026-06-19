@@ -71,7 +71,6 @@ export function createApp(deps: AppDeps): Hono {
     cors({
       origin: (origin) => (allowedOrigins.includes(origin) ? origin : null),
       allowHeaders: ["Content-Type", "Authorization", "Idempotency-Key", "If-Match"],
-      exposeHeaders: ["ETag"],
       maxAge: 600,
     }),
   );
