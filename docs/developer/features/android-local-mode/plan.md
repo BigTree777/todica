@@ -36,7 +36,7 @@ DDL（CREATE TABLE IF NOT EXISTS）は起動時に 1 回だけ実行し、テー
 | --- | --- | --- |
 | Task | `tasks` | `dueDate` は TEXT（`"today"` / `"tomorrow"`）、`origin` は TEXT |
 | Project | `projects` | |
-| Routine | `routines` | `generateOnWeekdays` は JSON 文字列（`["mon","tue",...]` 形式で TEXT に保存） |
+| Routine | `routines` | `daysOfWeek` は `days_of_week` 列に JSON 文字列（`[1,3,5]` 形式で TEXT に保存） |
 | Counter | `counter` | 固定 id = `"singleton"` |
 | Settings | `settings` | 固定 id = `"singleton"` |
 | FocusSelection | `focus_selection` | 固定 id = `"singleton"` |
