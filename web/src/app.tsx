@@ -14,6 +14,7 @@ import {
   setupInitialPassword as setupInitialPasswordRequest,
 } from "./auth/password-client.js";
 import { buildHttpRepos } from "./bootstrap.js";
+import { useForegroundReset } from "./hooks/use-foreground-reset.js";
 import { useSyncQueue } from "./hooks/use-sync-queue.js";
 import type { ProjectRepository } from "./repositories/project-repository.js";
 import type { WebRoutineRepository } from "./repositories/routine-repository.js";
@@ -63,6 +64,7 @@ export function App({ config, repos: initialRepos, authStorage }: AppProps) {
   const [baseUrl, setBaseUrl] = useState(config.baseUrl);
   const [authToken, setAuthToken] = useState(config.authToken);
   const [currentMode, setCurrentMode] = useState<AppMode>(config.mode);
+  useForegroundReset(currentMode);
   const [repos, setRepos] = useState<Repositories>(initialRepos);
   // token 有無で起動分岐. server モードのみ token を必要とする.
   const [token, setToken] = useState<string | null>(config.authToken || null);
