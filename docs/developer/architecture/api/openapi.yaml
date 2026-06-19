@@ -82,11 +82,11 @@ paths:
     summary: タスク一覧 / 起票
     get:
       tags: [tasks]
-      summary: タスク一覧取得（BL-001 / FR-001）
+      summary: タスク一覧取得（FR-001）
       description: |
         ゴミ箱状態の絞り込みはクエリパラメータ `trashed` で指定する.
         並び順はサーバ側で「priority (highest→normal→later) → createdAt 昇順 → id 昇順」
-        に統一されている（BL-005 / plan.md D-003: 今日ビュー API と並び規則を共通化）.
+        に統一されている（今日ビュー API と並び規則を共通化）.
       parameters:
         - name: trashed
           in: query
@@ -187,7 +187,7 @@ paths:
       description: |
         対象タスクを完了状態（`trashedAt != null`, `trashedReason = "completed"`）に遷移させる.
         既にゴミ箱状態（`trashedReason` が `"completed"` / `"deleted"` のいずれか）の場合は
-        no-op 冪等扱いで 200 OK + 現行 task を返す（If-Match 検証もスキップする. BL-003 plan.md §D-003）.
+        no-op 冪等扱いで 200 OK + 現行 task を返す（If-Match 検証もスキップする）.
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/IfMatch"
@@ -469,7 +469,7 @@ paths:
       description: |
         Counter (singleton) を返す. 未存在ならデフォルト
         `{ completedCount: 0, lastResetExecutedAt: null, version: 1, ... }` を生成して返す.
-        日次リセットでカウントがクリアされる (BL-010 担当).
+        日次リセットでカウントがクリアされる.
       responses:
         "200":
           description: OK
@@ -832,7 +832,7 @@ components:
       description: |
         楽観ロックの version 不一致. レスポンスボディにサーバ側の現行エンティティを含めるため,
         クライアントは「サーバ値で上書き」or「クライアント値を強制再送」をユーザーに確認する.
-        BL-001 では `task` フィールドに現行 Task を返す. 他リソースは feature spec で確定する.
+        `task` フィールドに現行 Task を返す.
       content:
         application/json:
           schema:
@@ -858,7 +858,7 @@ components:
           type: integer
           format: int64
 
-    # ---------- Task 関連 (BL-001 で確定) ----------
+    # ---------- Task 関連 ----------
     Task:
       type: object
       description: |
@@ -947,12 +947,12 @@ components:
     TodayView:
       type: object
       description: |
-        BL-005 / FR-010 / FR-011: 今日ビューのレスポンス形状.
+        FR-010 / FR-011: 今日ビューのレスポンス形状.
         - tasks: dueDate = "today" かつ trashedAt = null のタスクを
           priority (highest→normal→later) → createdAt 昇順 → id 昇順 で並べた一覧.
         - nextTaskId: 並びの先頭タスクの id. tasks が空のとき null.
-          利用者・FocusSelection (BL-006) が「次の 1 つ」として参照する.
-        - currentTaskId: BL-006 で追加. FocusSelection.currentTaskId をそのまま同梱
+          利用者・FocusSelection が「次の 1 つ」として参照する.
+        - currentTaskId: FocusSelection.currentTaskId をそのまま同梱
           (UI が 1 リクエストで強調表示できるように. plan.md D-004 の保守側案を更新済).
       required:
         - tasks
@@ -972,7 +972,7 @@ components:
           nullable: true
         completionCount:
           type: integer
-          description: BL-008 / FR-040. 今日の完了数 (Counter.completedCount を同梱).
+          description: FR-040. 今日の完了数 (Counter.completedCount を同梱).
 
     TaskPatch:
       type: object
@@ -989,7 +989,7 @@ components:
         priority:
           type: string
           enum: [highest, normal, later]
-          description: BL-002 / FR-004. 値域外は 400 INVALID_PRIORITY を返す.
+          description: FR-004. 値域外は 400 INVALID_PRIORITY を返す.
 
     # ---------- 他エンティティ (feature spec で詳細化) ----------
     Project:
@@ -1107,9 +1107,9 @@ components:
     Counter:
       type: object
       description: |
-        BL-008 / FR-040: 今日の完了タスク数 (singleton).
-        - completedCount: 通常状態 → 完了 に遷移した回数の累計. 日次リセットで 0 にクリア (BL-010).
-        - lastResetExecutedAt: 最後にリセットを実行した時刻. BL-010 で使う.
+        FR-040: 今日の完了タスク数 (singleton).
+        - completedCount: 通常状態 → 完了 に遷移した回数の累計. 日次リセットで 0 にクリア.
+        - lastResetExecutedAt: 最後にリセットを実行した時刻.
         - version / updatedAt: 楽観ロック + 同期メタデータ.
       required:
         - id
@@ -1135,7 +1135,7 @@ components:
     Settings:
       type: object
       description: |
-        BL-009 / FR-041: 境界時刻設定 (singleton).
+        FR-041: 境界時刻設定 (singleton).
         - dayBoundaryTime: HH:MM 形式 (例: "04:00"). FR-041 / FR-042.
         - version / updatedAt: 楽観ロック + 同期メタデータ.
       required:
@@ -1158,7 +1158,7 @@ components:
     FocusSelection:
       type: object
       description: |
-        BL-006 / FR-012: 現在のタスク参照 (singleton).
+        FR-012: 現在のタスク参照 (singleton).
         - currentTaskId: 明示的に選ばれた「現在のタスク」. null なら UI 側で nextTaskId を暗黙フォールバック.
         - version / updatedAt: 楽観ロック + 同期メタデータ.
       required:
@@ -1179,20 +1179,30 @@ components:
     ErrorCode:
       type: string
       description: |
-        共通エラーコード. BL-001 では以下を使う.
-        他 feature が追加する場合は本 enum に追記する.
+        共通エラーコード. API が 4xx / 5xx 応答の `code` フィールドで返し得る値域.
+        エンドポイントを追加してエラーコードを増やす場合は本 enum に追記する.
       enum:
         - INVALID_REQUEST_BODY
         - INVALID_TASK_NAME
         - INVALID_DUE_DATE
         - INVALID_PRIORITY
+        - INVALID_PROJECT_NAME
+        - INVALID_ROUTINE_NAME
+        - INVALID_DAYS_OF_WEEK
+        - INVALID_DAY_BOUNDARY_TIME
         - INVALID_FOCUS_TARGET
-        - PROJECT_NOT_FOUND
+        - INVALID_PASSWORD
         - TASK_NOT_FOUND
+        - PROJECT_NOT_FOUND
+        - ROUTINE_NOT_FOUND
+        - TASK_NOT_IN_TRASH
+        - PROJECT_NOT_IN_TRASH
+        - ROUTINE_NOT_IN_TRASH
         - MISSING_IF_MATCH
         - MISSING_IDEMPOTENCY_KEY
         - UNAUTHORIZED
-        - INVALID_DAY_BOUNDARY_TIME
+        - INITIAL_SETUP_REQUIRED
+        - INTERNAL_ERROR
     Error:
       type: object
       description: |
