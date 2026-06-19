@@ -90,7 +90,7 @@ FocusSelection: 「現在のタスク」参照（単一レコード）
 | 配置 | サーバホスト上の単一ファイル `/var/lib/todica/todica.db` | （別案は採らない） |
 | 動作モード | WAL（Write-Ahead Logging） | デフォルトのロールバックジャーナル |
 | マイグレーションツール | **`drizzle-kit`**（TypeScript スキーマ定義から SQL マイグレーションを生成） | 手書き SQL スクリプト |
-| マイグレーション実行タイミング | サーバ起動時に自動適用（CLI: `npm run migrate`） | （別案は採らない） |
+| マイグレーション実行タイミング | サーバ起動時に自動適用（`main.ts`）. 明示実行はリポジトリルートで `npm run migrate`（サーバを起動せず `server/src/migrate.ts` が drizzle `migrate()` を実行） | （別案は採らない） |
 | バックアップ | SQLite ファイルの定期コピー（cron） | DB レベルのレプリケーション |
 
 ### 8.2 Android ローカルモード端末内永続化

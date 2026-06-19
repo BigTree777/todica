@@ -108,8 +108,6 @@ classDiagram
     class Clock {
         <<abstract>>
         +now() DateTime
-        +today(settings) Date
-        +isBoundaryCrossed(lastResetAt, settings) Boolean
     }
 
     Project "0..1" o-- "0..*" Task : 所属（projectId）
@@ -129,6 +127,8 @@ classDiagram
 | Routine ↔ Task | 1 つの Routine は 0 以上の Task を生成し得る. ルーティン由来 Task は 0 または 1 つの Routine を弱参照する. | 弱参照（履歴は持たない. FR-034） | FR-030, FR-031, FR-033 |
 | FocusSelection → Task | 同時に 1 つだけ. 未選択時は参照なし. | 一意参照 | FR-012, FR-013 |
 | Clock ← Routine / Counter / Settings | Clock 抽象を **参照** する（Clock は外部 I/O に依存しない純粋な抽象） | 依存関係 | NFR-020, ADR-0011 |
+
+Clock 抽象が公開するのは `now()` のみ. 「今日／翌日の境界時刻」「リセット要否」の判定は Clock のメソッドではなく `domain/settings` の純関数（`calcTodayBoundaryAt` / `calcPreviousBoundaryAt` / `needsDailyReset`）が `now()` と境界時刻設定を引数に取って行う.
 
 Settings.dayBoundaryTimezone は Android ローカル DB 上の必須フィールドだが, ローカルのリセット境界判定は保存値ではなく実行時の端末 TZ を参照する. サーバ側は Settings に TZ を持たず, サーバプロセス TZ を使う.
 
