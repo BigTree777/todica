@@ -53,7 +53,7 @@
 
 - [ ] `web/src/repositories/local-routine-repository.ts` を新規作成する
   - `WebRoutineRepository` インターフェースを実装する
-  - `generateOnWeekdays`（`daysOfWeek`）は JSON 文字列として SQLite に保存し、読み出し時に parse する
+  - `daysOfWeek` は `days_of_week` 列に JSON 文字列として保存し、読み出し時に parse する
   - `list()`: `routines` から `trashedAt IS NULL` のルーティンを返す
   - `create(cmd)`・`update(cmd)`・`delete(cmd)` を実装する（T-04 と同様の楽観ロック方針）
 
@@ -158,7 +158,7 @@
 ### T-16: LocalRoutineRepository の単体テスト
 
 - [ ] `web/src/repositories/local-routine-repository.test.ts` を新規作成する:
-  - `create()` と `list()` で `generateOnWeekdays`（`daysOfWeek`）が正しく JSON 変換されることを検証する
+  - `create()` と `list()` で `daysOfWeek`（`days_of_week` 列）が正しく JSON 変換されることを検証する
   - CRUD の基本動作を検証する
 
 ### T-17: LocalTrashRepository の単体テスト

@@ -2,8 +2,9 @@
  * LocalRoutineRepository — SQLite ローカル実装 (BL-020 / FR-LOC-002).
  *
  * WebRoutineRepository インターフェースを実装し、SQLite の routines テーブルを操作する.
- * generateOnWeekdays (daysOfWeek) は SQLite に JSON 文字列として保存し、
- * 読み出し時に JSON.parse して配列として返す.
+ * daysOfWeek は routines.days_of_week 列に JSON 文字列として保存し、
+ * 読み出し時に JSON.parse して配列として返す（列名はマイグレーション定義
+ * local-migrations/v001-initial.ts と一致させる）.
  */
 
 import type { LocalDb } from "./local-db.js";
@@ -19,7 +20,7 @@ type Row = Record<string, unknown>;
 
 function rowToWebRoutine(row: Row): WebRoutine {
   let daysOfWeek: number[] = [];
-  const rawDays = row.generate_on_weekdays;
+  const rawDays = row.days_of_week;
   if (typeof rawDays === "string") {
     try {
       daysOfWeek = JSON.parse(rawDays) as number[];
@@ -54,8 +55,8 @@ export class LocalRoutineRepository implements WebRoutineRepository {
     const daysJson = JSON.stringify(cmd.daysOfWeek);
 
     await this.db.run(
-      `INSERT INTO routines (id, name, generate_on_weekdays, default_priority, last_generated_for_date, created_at, updated_at, trashed_at, version)
-       VALUES (?, ?, ?, ?, NULL, ?, ?, NULL, 1)`,
+      `INSERT INTO routines (id, name, days_of_week, default_priority, created_at, updated_at, trashed_at, version)
+       VALUES (?, ?, ?, ?, ?, ?, NULL, 1)`,
       [cmd.id, cmd.name, daysJson, cmd.defaultPriority, now, now],
     );
 
@@ -83,13 +84,11 @@ export class LocalRoutineRepository implements WebRoutineRepository {
     const newVersion = (row.version as number) + 1;
     const newName = cmd.name ?? (row.name as string);
     const newDays =
-      cmd.daysOfWeek !== undefined
-        ? JSON.stringify(cmd.daysOfWeek)
-        : (row.generate_on_weekdays as string);
+      cmd.daysOfWeek !== undefined ? JSON.stringify(cmd.daysOfWeek) : (row.days_of_week as string);
     const newPriority = cmd.defaultPriority ?? (row.default_priority as string);
 
     await this.db.run(
-      "UPDATE routines SET name = ?, generate_on_weekdays = ?, default_priority = ?, updated_at = ?, version = ? WHERE id = ?",
+      "UPDATE routines SET name = ?, days_of_week = ?, default_priority = ?, updated_at = ?, version = ? WHERE id = ?",
       [newName, newDays, newPriority, now, newVersion, cmd.id],
     );
 
@@ -100,7 +99,7 @@ export class LocalRoutineRepository implements WebRoutineRepository {
     return {
       ...rowToWebRoutine(row),
       name: newName,
-      daysOfWeek: cmd.daysOfWeek ?? (row.generate_on_weekdays as unknown as number[]),
+      daysOfWeek: cmd.daysOfWeek ?? (row.days_of_week as unknown as number[]),
       defaultPriority: newPriority as "highest" | "normal" | "later",
       version: newVersion,
       updatedAt: now,

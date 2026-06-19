@@ -10,14 +10,14 @@
  *   @capacitor-community/sqlite は jsdom 環境で動作しないため vi.mock でモックする.
  *
  * 特記事項:
- *   generateOnWeekdays（daysOfWeek）は SQLite に JSON 文字列として保存し、
+ *   daysOfWeek は routines.days_of_week 列に JSON 文字列として保存し、
  *   読み出し時に JSON.parse して配列として返す（plan.md §D-001）.
+ *   列名はマイグレーション定義 (local-migrations/v001-initial.ts) と一致させる.
+ *   列集合の整合は local-routine-repository-schema.test.ts が別途担保する.
  *
- * BL-120 の偽 green 教訓:
- *   delete() が物理削除 (DELETE) のままだと AC-15 (offline soft delete) を満たさない.
- *   本テストは delete() が soft delete (UPDATE trashed_at) であることを期待し,
- *   hard delete を見逃さない. R-3 (列名不整合) の全面修正はスコープ外で,
- *   trashed_at の往復成立に焦点を絞る.
+ * 注記:
+ *   delete() は物理削除 (DELETE) ではなく soft delete (UPDATE trashed_at) であること
+ *   (AC-15 / offline soft delete) を本テストで担保する.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -59,15 +59,14 @@ function makeMockDb(routineRows: Row[] = []) {
 // ---------------------------------------------------------------------------
 
 describe("LocalRoutineRepository.list() (FR-LOC-002 / T-16)", () => {
-  // plan.md §D-001 / T-05: generateOnWeekdays は JSON パースされた配列で返す
-  it("シナリオ: list() が Routine 一覧を返す（generateOnWeekdays は JSON パースされた配列で返す）", async () => {
+  // plan.md §D-001 / T-05: daysOfWeek は JSON パースされた配列で返す
+  it("シナリオ: list() が Routine 一覧を返す（daysOfWeek は JSON パースされた配列で返す）", async () => {
     const db = makeMockDb([
       {
         id: "routine-1",
         name: "朝のルーティン",
-        generate_on_weekdays: JSON.stringify([1, 2, 3, 4, 5]), // JSON 文字列として保存
+        days_of_week: JSON.stringify([1, 2, 3, 4, 5]), // JSON 文字列として保存
         default_priority: "normal",
-        last_generated_for_date: null,
         created_at: "2026-06-08T00:00:00.000Z",
         updated_at: "2026-06-08T00:00:00.000Z",
         trashed_at: null,
@@ -81,7 +80,7 @@ describe("LocalRoutineRepository.list() (FR-LOC-002 / T-16)", () => {
     expect(result.length).toBe(1);
     expect(result[0]?.name).toBe("朝のルーティン");
 
-    // generateOnWeekdays（daysOfWeek）が JSON パース済みの配列として返る
+    // daysOfWeek が JSON パース済みの配列として返る
     const routine = result[0];
     expect(Array.isArray(routine?.daysOfWeek)).toBe(true);
     expect(routine?.daysOfWeek).toEqual([1, 2, 3, 4, 5]);
@@ -123,9 +122,9 @@ describe("LocalRoutineRepository.create() (FR-LOC-002 / T-16)", () => {
     repo = new LocalRoutineRepository(db as never);
   });
 
-  // plan.md §T-05: create(name, generateOnWeekdays) でルーティンが INSERT される
-  // generateOnWeekdays は JSON.stringify してから保存
-  it("シナリオ: create(name, generateOnWeekdays) でルーティンが INSERT される（generateOnWeekdays は JSON.stringify してから保存）", async () => {
+  // plan.md §T-05: create(name, daysOfWeek) でルーティンが INSERT される
+  // daysOfWeek は JSON.stringify してから保存
+  it("シナリオ: create(name, daysOfWeek) でルーティンが INSERT される（daysOfWeek は JSON.stringify してから保存）", async () => {
     const newId = crypto.randomUUID();
     db.run.mockResolvedValueOnce({ changes: { changes: 1, lastId: 1 } });
     db.query.mockResolvedValueOnce({
@@ -133,9 +132,8 @@ describe("LocalRoutineRepository.create() (FR-LOC-002 / T-16)", () => {
         {
           id: newId,
           name: "夕方ルーティン",
-          generate_on_weekdays: JSON.stringify([1, 3, 5]),
+          days_of_week: JSON.stringify([1, 3, 5]),
           default_priority: "normal",
-          last_generated_for_date: null,
           created_at: "2026-06-08T00:00:00.000Z",
           updated_at: "2026-06-08T00:00:00.000Z",
           trashed_at: null,
@@ -181,9 +179,8 @@ describe("LocalRoutineRepository.delete() (BL-120 / AC-15 ゴミ箱送り)", () 
       {
         id: "routine-1",
         name: "朝のルーティン",
-        generate_on_weekdays: JSON.stringify([1, 2, 3, 4, 5]),
+        days_of_week: JSON.stringify([1, 2, 3, 4, 5]),
         default_priority: "normal",
-        last_generated_for_date: null,
         created_at: "2026-06-08T00:00:00.000Z",
         updated_at: "2026-06-08T00:00:00.000Z",
         trashed_at: null,
@@ -203,9 +200,8 @@ describe("LocalRoutineRepository.delete() (BL-120 / AC-15 ゴミ箱送り)", () 
         {
           id: "routine-1",
           name: "朝のルーティン",
-          generate_on_weekdays: JSON.stringify([1, 2, 3, 4, 5]),
+          days_of_week: JSON.stringify([1, 2, 3, 4, 5]),
           default_priority: "normal",
-          last_generated_for_date: null,
           created_at: "2026-06-08T00:00:00.000Z",
           updated_at: "2026-06-08T00:00:00.000Z",
           trashed_at: null,

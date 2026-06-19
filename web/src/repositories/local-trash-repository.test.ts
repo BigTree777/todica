@@ -345,7 +345,7 @@ describe("LocalTrashRepository.listRoutines() (FR-LOC-002 / BL-120 / D-2)", () =
       {
         id: "routine-trash-1",
         name: "ゴミ箱ルーティン",
-        generate_on_weekdays: "[1,2,3]",
+        days_of_week: "[1,2,3]",
         default_priority: "normal",
         created_at: "2026-06-08T00:00:00.000Z",
         updated_at: "2026-06-08T09:00:00.000Z",
@@ -388,7 +388,7 @@ describe("LocalTrashRepository.restore() — Routine 分岐 (FR-LOC-002 / BL-120
         {
           id: "routine-1",
           name: "復元対象ルーティン",
-          generate_on_weekdays: "[1,2,3]",
+          days_of_week: "[1,2,3]",
           default_priority: "normal",
           created_at: "2026-06-08T00:00:00.000Z",
           updated_at: "2026-06-08T09:00:00.000Z",
@@ -403,7 +403,7 @@ describe("LocalTrashRepository.restore() — Routine 分岐 (FR-LOC-002 / BL-120
         {
           id: "routine-1",
           name: "復元対象ルーティン",
-          generate_on_weekdays: "[1,2,3]",
+          days_of_week: "[1,2,3]",
           default_priority: "normal",
           created_at: "2026-06-08T00:00:00.000Z",
           updated_at: "2026-06-08T10:00:00.000Z",
