@@ -1,0 +1,7 @@
+# gitleaks 設定: 全 git 履歴を走査する. 既定ルール (数百種) ＋ エントロピー検出を使う.
+# 既知の誤検出は .gitleaksignore で fingerprint 単位に管理する.
+
+title = "todica gitleaks config"
+
+[extend]
+useDefault = true

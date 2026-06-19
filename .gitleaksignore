@@ -1,0 +1,23 @@
+# gitleaks の既知の誤検出を fingerprint 単位でピン留めする.
+# ここに列挙した「その1件」だけが無視され, 同じファイルに本物が新規混入したら検出される.
+# fingerprint 形式: <commit>:<file>:<rule>:<line>
+# 各エントリは, gitleaks が検出した実際の値と, それが秘密でない理由を直上コメントに記す.
+
+# curl 例の Authorization ヘッダ. 検出値 "your-secret-token" は説明用プレースホルダで,
+# 利用者が自分のトークンに置き換える前提の文字列. 実トークンではない.
+bcb7d0fa333c76f7e338304ce9640e4b4936175b:docs/developer/setup/server.md:curl-auth-header:48
+
+# 冪等性テストの Idempotency-Key フィクスチャ. 検出値 "ikey-preserved-12345" は固定テストラベル.
+a08ab58d4ce8c7afb0d751735aac125c63f05d00:web/src/offline-queue.test.ts:generic-api-key:163
+
+# 冪等性テストの Idempotency-Key フィクスチャ. 検出値 "put-focus-clear-1" は人間可読のテストラベル.
+7d773a3f94932b7c4a5515a8dc88aa62863e97c0:server/__tests__/integration/focus.test.ts:generic-api-key:175
+
+# 冪等性テストの Idempotency-Key フィクスチャ. 検出値 "put-focus-idem-1" は人間可読のテストラベル.
+7d773a3f94932b7c4a5515a8dc88aa62863e97c0:server/__tests__/integration/focus.test.ts:generic-api-key:321
+
+# 設計ドキュメント本文. 検出値 "middleware/idempotency" はソースのモジュールパス参照で秘密ではない.
+8b4466b03efffcfc0cc3e904f083a6b372c31f16:docs/developer/features/task-crud/plan.md:generic-api-key:124
+
+# 設計ドキュメント本文. 検出値 "middleware/idempotency" はソースのモジュールパス参照で秘密ではない.
+8b4466b03efffcfc0cc3e904f083a6b372c31f16:docs/developer/features/task-crud/plan.md:generic-api-key:147
