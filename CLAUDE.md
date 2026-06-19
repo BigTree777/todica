@@ -60,6 +60,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - テストが通ることをもって機能が実装されたとみなす。この対応関係を重視する。
 - したがってテストは仕様を正しく表現している必要がある。
 - ただしこの対応は **振る舞いテストを持つ成果物にのみ** 成立する。ツール・基盤・ドキュメント等、振る舞いテストを生まない成果物は「テスト green」では完了を判定できないため、`auditor` / `architecture-reviewer` が実在を直接確認する。
+- 完了には、振る舞いテスト green に加えて **`npm run lint`（warning 0）と `npm run typecheck`（pass）** も必要とする。lint の warning は「テスト green」では捕まらず溜まりやすいため、完了判定に明示的に含めて防ぐ。
 
 ### 5. 実装の実行手段（管理者が選ぶ）
 
@@ -81,7 +82,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `main` は常にデプロイ可能な状態に保つ。`main` へ直接コミットしない。
 - 作業は `main` から短命なブランチを切って行う。ブランチ名は対象 feature と対応させる（例: `feature/<feature-name>` ↔ `docs/developer/features/<feature-name>/`）。
 - 変更は Pull Request 経由でレビューを受けてから `main` にマージする。
-- **マージ条件: テストが全て green（「テストが通る == 機能が実装されている」）＋ `auditor` の承認。**
+- **マージ条件: テストが全て green（「テストが通る == 機能が実装されている」）＋ lint clean（`npm run lint` で warning 0）＋ typecheck pass（`npm run typecheck`）＋ `auditor` の承認。**
 - リリースは `main` 上のタグ（`v0.1.0` など、セマンティックバージョニング）で表す。
 
 ### コミットメッセージ: Conventional Commits v1.0.0
