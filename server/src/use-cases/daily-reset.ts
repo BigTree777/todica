@@ -7,6 +7,7 @@
 import type { Clock } from "@todica/domain/clock";
 import { resetCompletedCount } from "@todica/domain/counter";
 import { calcTodayBoundaryAt, needsDailyReset } from "@todica/domain/settings";
+import { sql } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type { CounterRepository } from "../data/counter-repository.js";
 import type { RoutineRepository } from "../data/routine-repository.js";
@@ -42,7 +43,7 @@ export interface DailyResetDeps {
   clock: Clock;
   /**
    * plan.md D-004: トランザクション実行のための Drizzle DB インスタンス（オプショナル）.
-   * 指定された場合はトランザクション内でリセット処理を実行する（本番用）.
+   * 指定された場合は BEGIN / COMMIT / ROLLBACK でリセット書き込み処理を実行する（本番用）.
    * 未指定の場合は Repository の非同期メソッドを順次呼ぶフォールバック（テスト用）.
    */
   db?: BetterSQLite3Database<typeof schema>;
@@ -64,27 +65,11 @@ export function calcDayOfWeek(nowIso: string): number {
   return new Date(`${dateStr}T00:00:00.000Z`).getUTCDay();
 }
 
-/**
- * リセット要否を判定し、必要なら実行する.
- *
- * - リセット条件を満たさない場合は { executed: false, appliedBoundaryAt } を返す.
- * - リセット条件を満たす場合:
- *   1. dueDate === "tomorrow" かつ trashedAt === null のタスクを "today" に更新する（FR-043）.
- *   2. counter.completedCount を 0 にリセットし、lastResetExecutedAt を now にする（FR-051）.
- *   3. { executed: true, appliedBoundaryAt } を返す.
- */
-export async function maybeRunDailyReset(deps: DailyResetDeps): Promise<DailyResetResult> {
-  const now = deps.clock.now();
-  const settings = await deps.settingsRepository.get();
-  const todayBoundaryAt = calcTodayBoundaryAt(now, settings.dayBoundaryTime, getServerTimeZone());
-
-  const counter = await deps.counterRepository.get();
-  const needs = needsDailyReset(now, counter.lastResetExecutedAt, todayBoundaryAt);
-
-  if (!needs) {
-    return { executed: false, appliedBoundaryAt: todayBoundaryAt };
-  }
-
+async function runDailyResetWrites(
+  deps: DailyResetDeps,
+  now: string,
+  counter: Awaited<ReturnType<CounterRepository["get"]>>,
+): Promise<void> {
   // [新規 BL-017] FR-033: 前日ルーティンタスク削除
   // origin="routine" かつ dueDate="today" かつ trashedAt=null のタスクを物理削除する.
   if (deps.routineRepository) {
@@ -135,6 +120,42 @@ export async function maybeRunDailyReset(deps: DailyResetDeps): Promise<DailyRes
     deps.settingsRepository,
     deps.taskRepository,
   );
+}
+
+/**
+ * リセット要否を判定し、必要なら実行する.
+ *
+ * - リセット条件を満たさない場合は { executed: false, appliedBoundaryAt } を返す.
+ * - リセット条件を満たす場合:
+ *   1. dueDate === "tomorrow" かつ trashedAt === null のタスクを "today" に更新する（FR-043）.
+ *   2. counter.completedCount を 0 にリセットし、lastResetExecutedAt を now にする（FR-051）.
+ *   3. { executed: true, appliedBoundaryAt } を返す.
+ */
+export async function maybeRunDailyReset(deps: DailyResetDeps): Promise<DailyResetResult> {
+  const now = deps.clock.now();
+  const settings = await deps.settingsRepository.get();
+  const todayBoundaryAt = calcTodayBoundaryAt(now, settings.dayBoundaryTime, getServerTimeZone());
+
+  const counter = await deps.counterRepository.get();
+  const needs = needsDailyReset(now, counter.lastResetExecutedAt, todayBoundaryAt);
+
+  if (!needs) {
+    return { executed: false, appliedBoundaryAt: todayBoundaryAt };
+  }
+
+  if (!deps.db) {
+    await runDailyResetWrites(deps, now, counter);
+    return { executed: true, appliedBoundaryAt: todayBoundaryAt };
+  }
+
+  deps.db.run(sql`BEGIN`);
+  try {
+    await runDailyResetWrites(deps, now, counter);
+    deps.db.run(sql`COMMIT`);
+  } catch (error) {
+    deps.db.run(sql`ROLLBACK`);
+    throw error;
+  }
 
   return { executed: true, appliedBoundaryAt: todayBoundaryAt };
 }
