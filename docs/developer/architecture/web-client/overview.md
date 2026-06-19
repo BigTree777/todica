@@ -44,7 +44,7 @@
 - **オフライン書込みキュー**: 通信断時の書き込みは IndexedDB のキューに保存し, Service Worker の Background Sync API で接続復帰時に自動再送する. 各書き込みには冪等性キー（`Idempotency-Key` = エンティティの `id`）を付与し, サーバ側で二重実行を防ぐ（[ADR-0008](../../adr/0008-web-client-tech-stack.md) §「オフライン書込キュー」, [ADR-0010](../../adr/0010-api-design.md)）.
 - **楽観ロック + 競合解決 UI**: 書き込み時はクライアントが保持する `version` を `If-Match` で送り, サーバが衝突を検知したら 412 Precondition Failed を返す. レスポンスボディに含まれるサーバ側現行値をクライアントが受け取り, 「サーバ値で上書き / クライアント値を強制再送」をユーザーに確認する UI を出す.
 - **楽観 UI の位置**: 楽観 UI はクライアントのアプリケーション層（TanStack Query の mutation）で起動する. UI 層は直接 API クライアントを呼ばない（[`../module-boundaries.md`](../module-boundaries.md) §3, §5.1）.
-- **DTO 型の共有方法**: OpenAPI 定義（[`../api/openapi.yaml`](../api/openapi.yaml)）から `openapi-typescript` 等でクライアント型を生成する. OpenAPI が正本.
+- **DTO 型の共有方法**: `@todica/domain` の共有型と repository 層の型でクライアント側の API 型を表す. OpenAPI（[`../api/openapi.yaml`](../api/openapi.yaml)）は spec-first の正本で, 実装との整合は CI のドリフト検出テストで担保する（`openapi-typescript` による型生成は採用しない）.
 - **PWA インストール促進**: 初回訪問から数回後にインストールバナーを表示（プラットフォーム標準の install プロンプトを利用）.
 - **Service Worker のキャッシュ更新**: 新バージョン配信時はバージョン文字列をマニフェスト / SW に埋め込み, 新 SW が controller になる際に UI でユーザーへ更新通知を表示してリロード誘導する.
 - **Clock 抽象の注入**: 「今日 / 翌日」の判定はドメイン層の Clock 抽象を介す. UI 層から直接 `new Date()` などのプラットフォーム時刻 API を呼ばない（[`../module-boundaries.md`](../module-boundaries.md) §6）.
