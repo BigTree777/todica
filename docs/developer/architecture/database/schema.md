@@ -84,12 +84,12 @@ PWA + オフライン書込キュー + 楽観ロック（[ADR-0008](../../adr/00
 | `name` | string | 必須, 編集可（FR-035） | ルーティン名 |
 | `daysOfWeek` | number[] | 必須（1 つ以上）, 編集可（FR-035） | 生成する曜日（FR-030, FR-031）. 0=日, 1=月, ..., 6=土. 重複排除済み, 昇順. |
 | `defaultPriority` | "highest" \| "normal" \| "later" | 必須, 編集可（FR-035） | 生成時の既定優先度（FR-030） |
-| `lastGeneratedForDate` | string (YYYY-MM-DD) \| null | 任意 | 最後にタスクを生成した「Todica 上の日付」. 二重生成を防ぐ運用フラグ |
 | `createdAt` | string (ISO 8601) | 必須 | 作成日時 |
 | `updatedAt` | string (ISO 8601) | 必須 | 更新日時 |
 | `trashedAt` | string (ISO 8601) \| null | 任意 | ルーティン自体の削除. ゴミ箱経由（FR-060） |
 
 - ルーティン由来タスクは Task テーブルに `origin = "routine"` として生成する. ルーティン自体はそのまま残り, 翌日も同じ仕組みで生成される.
+- 当日分の二重生成は, リセット処理全体の冪等性（Counter の `lastResetExecutedAt`）と「当日・未ゴミ箱の同一 routine 由来 Task が既に存在するか」の存在チェックで防ぐ. Routine 自体は「最後に生成した日付」を保持するフラグを持たない.
 - ルーティン由来タスクが当日中に未実施でも, リセット時に持ち越さない（FR-033 / FR-043）. これは Task 側で「`origin = "routine"` かつ未完了」を判定して破棄することで実現する.
 - ルーティン削除はゴミ箱化（soft delete: `trashedAt = now`）であり, 紐づく未ゴミ箱 Task はゴミ箱化せず `routineId` を `null` にする（デタッチ = カスケード NULL 固定. 既にゴミ箱状態の Task には触れない. 詳細は本書 §確定事項）.
 - Routine は `trashedReason` を持たない（削除理由は "deleted" 固定相当. Task の "completed" に当たる状態が無いため. Project と同型）.

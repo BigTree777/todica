@@ -15,7 +15,7 @@
 | Identifier | エンティティを一意に識別する値 | Task の id, Project の id |
 | Text | 人間が読み書きする短い文字列 | name |
 | DateTime | タイムゾーンを含む日時 | createdAt, updatedAt, trashedAt |
-| Date | 日付（時刻なし） | lastGeneratedForDate |
+| Date | 日付（時刻なし） | （現状未使用） |
 | TimeOfDay | 時刻（日付なし） | dayBoundaryTime |
 | Timezone | タイムゾーン識別子 | dayBoundaryTimezone |
 | Count | 0 以上の整数値 | completedCount |
@@ -70,12 +70,10 @@ classDiagram
         +Text name
         +Enum(mon..sun)[] generateOnWeekdays
         +Enum(highest, normal, later) defaultPriority
-        +Date? lastGeneratedForDate
         +DateTime createdAt
         +DateTime updatedAt
         +DateTime? trashedAt
         +shouldGenerateFor(date) Boolean
-        +markGenerated(date)
         +edit(name, weekdays, priority)
         +moveToTrash()
         +restore()
