@@ -84,13 +84,13 @@
 | 仕様表現 | OpenAPI 3.x（[`openapi.yaml`](openapi.yaml)） | （別形式は採らない） |
 | エラー表現 | HTTP ステータスコード + JSON ボディ（例: `{ "code": "INVALID_DUE_DATE", "message": "..." }`） | （詳細フォーマットは feature spec / openapi.yaml で確定） |
 | 日時表現 | ISO 8601 文字列（タイムゾーン込み） | （別案は採らない） |
-| サーバ側 OpenAPI 統合 | Hono の zod-openapi / hono-openapi | 手書きの OpenAPI 同期 |
-| クライアント側型生成 | `openapi-typescript`（OpenAPI から TypeScript 型生成） | 手書きの型同期 |
+| サーバ側 OpenAPI 整合 | 手書き `openapi.yaml`（spec-first）+ 実装との集合一致を CI のドリフト検出テストで担保 | zod-openapi / hono-openapi での生成（採用しない） |
+| クライアント側 API 型 | `@todica/domain` の共有型 + repository 層の手書き型 | `openapi-typescript` での生成（採用しない） |
 
 ## 8. 実装上の注意点
 
 - **OpenAPI を正本にする**: 実装と OpenAPI のどちらが正かを迷わないために, **OpenAPI 定義に書かれていない API は存在しない** を運用原則とする. feature spec の進行に合わせて [`openapi.yaml`](openapi.yaml) を逐次追記する.
-- **DTO 型共有**: OpenAPI 定義（[`openapi.yaml`](openapi.yaml)）から `openapi-typescript` でクライアント側 TypeScript 型を生成する. サーバ実装は Hono の zod-openapi / hono-openapi 等で OpenAPI とハンドラ型を一致させる. **OpenAPI が正本**.
+- **DTO 型共有**: **OpenAPI が正本**（spec-first の手書き [`openapi.yaml`](openapi.yaml)）. 実装との整合は CI のドリフト検出テスト群（path/method の集合一致 / `ErrorCode` enum / response schema のフィールド照合）で担保する. spec から型・スキーマを生成する案（`openapi-typescript` / `zod-openapi` 等）は採用しない — path/method の集合一致担保には過剰で, 生成物の管理コストが増えるため. クライアント側の API 型は `@todica/domain` の共有型と repository 層の型で表す.
 - **Bearer トークンの取り扱い**: クライアント側はサーバから受け取った opaque token を localStorage / Preferences に保管し, 要求のヘッダ（`Authorization: Bearer <token>`）に付して送信する. サーバ側はミドルウェアで `sessions` テーブルを参照して有効性検証し, アプリケーション層には「認証済みかどうか」のフラグだけを渡す（ユーザー識別はしない）. パスワード平文や bcrypt ハッシュをリポジトリにコミットしない.
 - **HTTPS 必須**: 本番環境では TLS 終端を必ず通す. リバースプロキシでの終端を想定する. 「認証なし + プライベートネットワーク」構成（[ADR-0010](../../adr/0010-api-design.md) Au3 代替案）を採る場合のみ HTTP 公開を許容するが, インターネット越し公開は禁止.
 - **バージョニング運用**: 破壊的変更時は `/api/v2/...` を新設し, 旧バージョンを一定期間（個人運用なので 1 週間〜1 か月目安）並行運用する（[ADR-0010](../../adr/0010-api-design.md) §「バージョニング・互換性運用」）.

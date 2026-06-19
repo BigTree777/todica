@@ -58,8 +58,7 @@
     "typescript": "^5.7.2",
     "vite": "^8.0.16",
     "vite-node": "^6.0.0",
-    "vitest": "^4.1.9",
-    "zod": "^3.24.1"
+    "vitest": "^4.1.9"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.0",
