@@ -77,7 +77,7 @@ async function runDailyResetWrites(
     await deps.taskRepository.deleteRoutineTasksForToday();
   }
 
-  // dueDate === "tomorrow" かつ trashedAt === null のタスクを "today" に更新する（FR-043）.
+  // dueDate === "tomorrow" かつ trashedAt === null のタスクを "today" に更新する（FR-051）.
   const allTasks = await deps.taskRepository.list({ trashed: "all" });
   for (const task of allTasks) {
     if (task.dueDate === "tomorrow" && task.trashedAt === null) {
@@ -109,7 +109,7 @@ async function runDailyResetWrites(
     }
   }
 
-  // counter.completedCount を 0 にリセットし、lastResetExecutedAt に今回の境界時刻を保存する（FR-051）.
+  // counter.completedCount を 0 にリセットし、lastResetExecutedAt に今回の境界時刻を保存する（FR-043）.
   // 境界時刻を保存することで needsDailyReset の判定が決定的になり, ローカルモードと一致する.
   const updatedCounter = resetCompletedCount(counter, todayBoundaryAt, now);
   await deps.counterRepository.update(updatedCounter);
@@ -129,8 +129,8 @@ async function runDailyResetWrites(
  *
  * - リセット条件を満たさない場合は { executed: false, appliedBoundaryAt } を返す.
  * - リセット条件を満たす場合:
- *   1. dueDate === "tomorrow" かつ trashedAt === null のタスクを "today" に更新する（FR-043）.
- *   2. counter.completedCount を 0 にリセットし、lastResetExecutedAt に今回の境界時刻を保存する（FR-051）.
+ *   1. dueDate === "tomorrow" かつ trashedAt === null のタスクを "today" に更新する（FR-051）.
+ *   2. counter.completedCount を 0 にリセットし、lastResetExecutedAt に今回の境界時刻を保存する（FR-043）.
  *   3. { executed: true, appliedBoundaryAt } を返す.
  */
 export async function maybeRunDailyReset(deps: DailyResetDeps): Promise<DailyResetResult> {
