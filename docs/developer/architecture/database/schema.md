@@ -15,7 +15,7 @@
 
 ### 同期メタデータ（全エンティティ共通. サーバ側 / Android ローカル側ともに保持）
 
-PWA + オフライン書込キュー + 楽観ロック（[ADR-0008](../../adr/0008-web-client-tech-stack.md)）のため, 全エンティティ（Task / Project / Routine / Counter / Settings / FocusSelection）に次のフィールドを持たせる. 全エンティティの共通フィールドは `id` / `version` / `createdAt` / `updatedAt` の 4 つ. **`version` は本節の記述で代表し各表では繰り返さない. `id` / `createdAt` / `updatedAt` は各表で再掲する.**
+PWA + オフライン書込キュー + 楽観ロック（[ADR-0008](../../adr/0008-web-client-tech-stack.md)）のため, 全エンティティ（Task / Project / Routine / Counter / Settings / FocusSelection）に `id` / `version` / `updatedAt` を持たせる. `createdAt` は複数行エンティティ（Task / Project / Routine）のみが持ち, シングルトン（Counter / Settings / FocusSelection. 固定 ID `"singleton"`）は持たない（作成日時に意味が薄いため. 実装上 `focus_selection` だけ `created_at` 列を保持するが論理上は不要）. **`version` は本節の記述で代表し各表では繰り返さない. `id` / `updatedAt`（複数行エンティティは `createdAt` も）は各表で再掲する.**
 
 | フィールド | 型 | 制約 | 説明 |
 | --- | --- | --- | --- |
@@ -189,7 +189,7 @@ PWA + オフライン書込キュー + 楽観ロック（[ADR-0008](../../adr/00
 | `path` | string | 必須 | 記録した要求のパス |
 | `responseStatus` | number | 必須 | 再生する HTTP ステータス |
 | `responseBody` | string | 必須 | 再生する応答ボディ（JSON 文字列） |
-| `createdAt` | string (ISO 8601) | 必須 | 記録時刻 |
+| `createdAt` | string (SQLite `CURRENT_TIMESTAMP`. 厳密な ISO 8601 ではない) | 必須 | 記録時刻. 応答再生には未使用（`responseStatus` / `responseBody` のみ使う） |
 
 - 同期メタデータ（`version` / `updatedAt`）は持たない（エンティティではなく応答キャッシュのため）。
 - ローカルモードはサーバ書込キューを使わないため IdempotencyKey テーブルを使わない。
