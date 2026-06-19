@@ -177,6 +177,24 @@ PWA + オフライン書込キュー + 楽観ロック（[ADR-0008](../../adr/00
 
 ---
 
+## IdempotencyKey（書込 API の冪等応答キャッシュ）
+
+サーバ側のみ。書込 API（POST / PATCH / PUT / DELETE）の `Idempotency-Key` ごとに直近の応答（HTTP status + body JSON）を保存し、同一キーの再送に同じ応答を再生する（[ADR-0010](../../adr/0010-api-design.md)）。
+
+| フィールド | 型 | 制約 | 説明 |
+| --- | --- | --- | --- |
+| `key` | string | PK | クライアントが送る `Idempotency-Key`（エンティティ ID = UUID v4） |
+| `method` | string | 必須 | 記録した要求の HTTP メソッド |
+| `path` | string | 必須 | 記録した要求のパス |
+| `responseStatus` | number | 必須 | 再生する HTTP ステータス |
+| `responseBody` | string | 必須 | 再生する応答ボディ（JSON 文字列） |
+| `createdAt` | string (ISO 8601) | 必須 | 記録時刻 |
+
+- 同期メタデータ（`version` / `updatedAt`）は持たない（エンティティではなく応答キャッシュのため）。
+- ローカルモードはサーバ書込キューを使わないため IdempotencyKey テーブルを使わない。
+
+---
+
 ## サーバ側とローカルモード側の差分
 
 | 項目 | サーバ側 | Android ローカルモード |
