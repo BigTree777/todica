@@ -23,6 +23,7 @@
     "typecheck": "tsc -p domain/tsconfig.json --noEmit && tsc -p server/tsconfig.json --noEmit && tsc -p web/tsconfig.json --noEmit",
     "lint": "biome check .",
     "format": "biome format --write .",
+    "migrate": "node --env-file-if-exists=.env node_modules/vite-node/dist/cli.mjs server/src/migrate.ts",
     "android:sync": "npm run build -w web && npx cap sync android",
     "android:bundle": "npm run android:sync && cd android && ./gradlew bundleRelease",
     "clean": "rimraf -g test-results web/dev-dist .e2e-data \"**/*.tsbuildinfo\"",
