@@ -85,7 +85,7 @@ paths:
       summary: タスク一覧取得（FR-001）
       description: |
         ゴミ箱状態の絞り込みはクエリパラメータ `trashed` で指定する.
-        並び順はサーバ側で「priority (highest→normal→later) → createdAt 昇順 → id 昇順」
+        並び順はサーバ側で「priority (highest→normal→later) → createdAt 降順 → id 昇順」
         に統一されている（今日ビュー API と並び規則を共通化）.
       parameters:
         - name: trashed
@@ -212,7 +212,7 @@ paths:
     summary: 今日ビュー
     description: |
       期限=今日のタスク一覧（並び順込み）+ "次の 1 つ" を一括返却（FR-010 / FR-011 / NFR-013）.
-      並び順はサーバ側で priority (highest→normal→later) → createdAt 昇順 → id 昇順 に確定する.
+      並び順はサーバ側で priority (highest→normal→later) → createdAt 降順 → id 昇順 に確定する.
       クエリパラメータは存在しない（NFR-001 / spec.md §「並び順を変えるカスタマイズが存在しないこと」）.
     get:
       tags: [today]
@@ -1069,7 +1069,7 @@ components:
       description: |
         FR-010 / FR-011: 今日ビューのレスポンス形状.
         - tasks: dueDate = "today" かつ trashedAt = null のタスクを
-          priority (highest→normal→later) → createdAt 昇順 → id 昇順 で並べた一覧.
+          priority (highest→normal→later) → createdAt 降順 → id 昇順 で並べた一覧.
         - nextTaskId: 並びの先頭タスクの id. tasks が空のとき null.
           利用者・FocusSelection が「次の 1 つ」として参照する.
         - currentTaskId: FocusSelection.currentTaskId をそのまま同梱

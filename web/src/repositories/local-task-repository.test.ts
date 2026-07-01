@@ -168,34 +168,34 @@ describe("LocalTaskRepository.today() (AC-LOC-003 / FR-LOC-002)", () => {
     repo = new LocalTaskRepository(db as never);
   });
 
-  // spec.md §AC-LOC-003 / plan.md §D-002:
+  // spec.md (task-sort-newest-first) シナリオ「Android ローカルモードの today() が
+  // サーバと同じ順序を返す」/ plan.md D-001:
   // today() は dueDate='today' かつ trashedAt IS NULL のタスクを
-  // priority → createdAt → id 順で返す
-  it("シナリオ: today() が dueDate='today' かつ trashedAt=null のタスクを priority→createdAt→id 順で返す", async () => {
+  // priority (highest→normal→later) → createdAt 降順(新しい順) → id 昇順 で返す.
+  it("シナリオ: today() が priority→createdAt降順(新しい順)→id昇順 で返す (BL-141)", async () => {
     const result = await repo.today();
 
     // trashedAt != null のタスクは除外される
     expect(result.tasks.find((t) => t.id === "task-trashed")).toBeUndefined();
 
-    // highest が normal より先
-    expect(result.tasks[0]?.id === "task-a" || result.tasks[0]?.id === "task-b").toBe(true);
     const highestTasks = result.tasks.filter((t) => t.priority === "highest");
     const normalTasks = result.tasks.filter((t) => t.priority === "normal");
     expect(highestTasks.length).toBe(2);
     expect(normalTasks.length).toBe(1);
 
-    // highest 内は createdAt 昇順（task-b が task-a より早い）
-    const bIndex = result.tasks.findIndex((t) => t.id === "task-b");
-    const aIndex = result.tasks.findIndex((t) => t.id === "task-a");
-    expect(bIndex).toBeLessThan(aIndex);
+    // highest (task-a 02:00 が task-b 01:30 より新しい) → normal (task-c) の順.
+    //   task-a (highest, 02:00) → task-b (highest, 01:30) → task-c (normal, 01:00).
+    expect(result.tasks.map((t) => t.id)).toEqual(["task-a", "task-b", "task-c"]);
   });
 
-  // plan.md §D-002: nextTaskId は先頭タスクの id
-  it("シナリオ: today() の nextTaskId が先頭タスクの id を返す", async () => {
+  // spec.md (task-sort-newest-first) シナリオ「Android ローカルモードの today() が
+  // サーバと同じ順序を返す」: nextTaskId は先頭 (= 最新優先) タスクの id.
+  it("シナリオ: today() の nextTaskId が先頭 (最新) タスクの id を返す (BL-141)", async () => {
     const result = await repo.today();
 
     expect(result.nextTaskId).toBe(result.tasks[0]?.id ?? null);
-    expect(result.nextTaskId).not.toBeNull();
+    // 先頭は highest かつ最新の task-a.
+    expect(result.nextTaskId).toBe("task-a");
   });
 
   // plan.md §D-002: currentTaskId は focus_selection の currentTaskId を返す（未設定の場合は null）
@@ -225,6 +225,59 @@ describe("LocalTaskRepository.today() (AC-LOC-003 / FR-LOC-002)", () => {
     const result = await emptyRepo.today();
 
     expect(result.currentTaskId).toBeNull();
+  });
+});
+
+describe("LocalTaskRepository.list() (BL-141 明日ビューの並び順)", () => {
+  // spec.md (task-sort-newest-first) シナリオ「Android ローカルモードの list()(明日ビュー)が
+  // 並び順を適用する」/ plan.md D-001 (R-001):
+  //   list({ dueDate: "tomorrow" }) は DB 返却順ではなく共有比較器順
+  //   (priority → createdAt 降順 → id 昇順) で並べて返す.
+  //
+  // モック DB は WHERE を解釈せず tasks テーブルの行を挿入順でそのまま返すため,
+  // 「DB 返却順 != 期待順」を作り込むことで並び替えが実装されているかを検証できる.
+  // 列名は実マイグレーション (web/src/repositories/local-migrations/v001-initial.ts) の
+  // tasks テーブル列集合に一致させる.
+  it("シナリオ: list({ dueDate: 'tomorrow' }) が DB 返却順ではなく新しい順で並ぶ", async () => {
+    // 挿入順 (= DB 返却順): M が先, N が後. どちらも normal / tomorrow.
+    const mock = makeMockDb({
+      tasks: [
+        {
+          id: "task-m",
+          name: "M",
+          due_date: "tomorrow",
+          priority: "normal",
+          origin: "manual",
+          project_id: null,
+          routine_id: null,
+          created_at: "2026-01-01T10:00:00.000Z",
+          updated_at: "2026-01-01T10:00:00.000Z",
+          trashed_at: null,
+          trashed_reason: null,
+          version: 1,
+        },
+        {
+          id: "task-n",
+          name: "N",
+          due_date: "tomorrow",
+          priority: "normal",
+          origin: "manual",
+          project_id: null,
+          routine_id: null,
+          created_at: "2026-01-01T11:00:00.000Z",
+          updated_at: "2026-01-01T11:00:00.000Z",
+          trashed_at: null,
+          trashed_reason: null,
+          version: 1,
+        },
+      ],
+    });
+    const repo = new LocalTaskRepository(mock.db as never);
+
+    const result = await repo.list({ dueDate: "tomorrow" });
+
+    // DB 返却順は [M, N] だが, 新しい N が先頭になる.
+    expect(result.map((t) => t.id)).toEqual(["task-n", "task-m"]);
   });
 });
 

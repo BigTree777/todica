@@ -66,6 +66,13 @@ export type ValidationError =
 const DUE_DATES: readonly DueDate[] = ["today", "tomorrow"];
 const PRIORITIES: readonly Priority[] = ["highest", "normal", "later"];
 
+/** タスク表示順で使う優先度の数値順序. 値が小さいほど先頭に並ぶ. */
+export const TASK_VIEW_PRIORITY_ORDER = {
+  highest: 0,
+  normal: 1,
+  later: 2,
+} as const satisfies Record<Priority, number>;
+
 const MAX_NAME_LENGTH = 200;
 /**
  * 制御文字判定 (改行 / タブ / NUL を含む). plan.md D-005.
@@ -127,6 +134,37 @@ export function validatePriority(value: unknown): ValidationError | null {
     };
   }
   return null;
+}
+
+function priorityRank(priority: string): number {
+  if (priority in TASK_VIEW_PRIORITY_ORDER) {
+    return TASK_VIEW_PRIORITY_ORDER[priority as Priority];
+  }
+  return 99;
+}
+
+/**
+ * タスク表示順の比較器.
+ *
+ * priority (highest→normal→later) → createdAt 降順 → id 昇順で比較する.
+ */
+export function compareTasksForView(a: Task, b: Task): number {
+  const priorityDiff = priorityRank(a.priority) - priorityRank(b.priority);
+  if (priorityDiff !== 0) return priorityDiff;
+
+  const createdAtDiff = b.createdAt.localeCompare(a.createdAt);
+  if (createdAtDiff !== 0) return createdAtDiff;
+
+  return a.id.localeCompare(b.id);
+}
+
+/**
+ * タスク表示順で並べた新しい配列を返す.
+ *
+ * 入力配列は変更せず、priority (highest→normal→later) → createdAt 降順 → id 昇順で並べる.
+ */
+export function sortTasksForView(tasks: Task[]): Task[] {
+  return [...tasks].sort(compareTasksForView);
 }
 
 /**

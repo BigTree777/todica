@@ -215,8 +215,8 @@ describe("GET /api/v1/today (並び順: priority → createdAt → id)", () => {
     expect(body.tasks.map((t) => t.id)).toEqual([ID_003, ID_002, ID_001]);
   });
 
-  it("シナリオ: 同一優先度内では createdAt 昇順 (古い順) で並ぶ", async () => {
-    // spec.md §「並び順の本仕様」第 2 ケース.
+  it("シナリオ: 同一優先度内では createdAt 降順 (新しい順) で並ぶ (BL-141)", async () => {
+    // spec.md (task-sort-newest-first) シナリオ「同一優先度では作成日時が新しいタスクが先頭に並ぶ」.
     taskRepo.seed(
       makeTask({
         id: ID_001,
@@ -249,7 +249,8 @@ describe("GET /api/v1/today (並び順: priority → createdAt → id)", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as { tasks: Array<{ id: string; createdAt: string }> };
-    expect(body.tasks.map((t) => t.id)).toEqual([ID_001, ID_002, ID_003]);
+    // 新しい createdAt が先頭: ID_003 (08:00:02) → ID_002 (08:00:01) → ID_001 (08:00:00).
+    expect(body.tasks.map((t) => t.id)).toEqual([ID_003, ID_002, ID_001]);
   });
 
   it("シナリオ: 優先度と createdAt が同じなら id の昇順で並ぶ (NFR-013 決定論性の最終担保)", async () => {
@@ -328,13 +329,13 @@ describe("GET /api/v1/today (並び順: priority → createdAt → id)", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as { tasks: Array<{ id: string }> };
-    // 期待並び:
-    //   1. highest, createdAt 08:00:00, id ID_001 (id 昇順タイブレーク)
+    // 期待並び (BL-141: createdAt は降順, id は昇順のまま):
+    //   1. highest, createdAt 08:00:00, id ID_001 (createdAt 同値 → id 昇順タイブレーク)
     //   2. highest, createdAt 08:00:00, id ID_002
-    //   3. normal,  createdAt 08:00:01, id ID_003
-    //   4. normal,  createdAt 08:00:02, id ID_004
+    //   3. normal,  createdAt 08:00:02, id ID_004 (normal 内は新しい順が先頭)
+    //   4. normal,  createdAt 08:00:01, id ID_003
     //   5. later,   createdAt 08:00:00, id ID_005
-    expect(body.tasks.map((t) => t.id)).toEqual([ID_001, ID_002, ID_003, ID_004, ID_005]);
+    expect(body.tasks.map((t) => t.id)).toEqual([ID_001, ID_002, ID_004, ID_003, ID_005]);
   });
 
   it("シナリオ: 同じデータ状態であれば 2 回連続取得しても並び順は同一 (決定論性)", async () => {
@@ -438,8 +439,8 @@ describe("GET /api/v1/today (nextTaskId)", () => {
   });
 
   it("シナリオ: 先頭タスクを完了すると, 再取得で 2 番目だったタスクが先頭 (nextTaskId) になる", async () => {
-    // spec.md §「\"次の 1 つ\" の一意化」第 3 ケース.
-    // A, B, C を起き, A を complete してから再取得すると B が先頭になる.
+    // spec.md §「\"次の 1 つ\" の一意化」第 3 ケース (BL-141 の新しい順で並びを再構成).
+    // A, B は highest で B が新しい → 先頭は B. B を complete すると次は A.
     taskRepo.seed(
       makeTask({
         id: ID_001,
@@ -465,7 +466,7 @@ describe("GET /api/v1/today (nextTaskId)", () => {
       }),
     );
 
-    // 取得前の並びは A, B, C.
+    // 取得前の並びは B (新しい highest), A (古い highest), C (normal).
     const resBefore = await app.request("/api/v1/today", {
       method: "GET",
       headers: authHeaders(),
@@ -475,20 +476,20 @@ describe("GET /api/v1/today (nextTaskId)", () => {
       tasks: Array<{ id: string }>;
       nextTaskId: string | null;
     };
-    expect(before.tasks.map((t) => t.id)).toEqual([ID_001, ID_002, ID_003]);
-    expect(before.nextTaskId).toBe(ID_001);
+    expect(before.tasks.map((t) => t.id)).toEqual([ID_002, ID_001, ID_003]);
+    expect(before.nextTaskId).toBe(ID_002);
 
-    // A を完了.
-    const completeRes = await app.request(`/api/v1/tasks/${ID_001}/complete`, {
+    // 先頭 (B) を完了.
+    const completeRes = await app.request(`/api/v1/tasks/${ID_002}/complete`, {
       method: "POST",
       headers: authHeaders({
         "If-Match": "1",
-        "Idempotency-Key": "today-promote-complete-A",
+        "Idempotency-Key": "today-promote-complete-B",
       }),
     });
     expect(completeRes.status).toBe(200);
 
-    // 再取得すると B が先頭になり, nextTaskId も B の id になる.
+    // 再取得すると A が先頭になり, nextTaskId も A の id になる.
     const resAfter = await app.request("/api/v1/today", {
       method: "GET",
       headers: authHeaders(),
@@ -498,8 +499,8 @@ describe("GET /api/v1/today (nextTaskId)", () => {
       tasks: Array<{ id: string }>;
       nextTaskId: string | null;
     };
-    expect(after.tasks.map((t) => t.id)).toEqual([ID_002, ID_003]);
-    expect(after.nextTaskId).toBe(ID_002);
+    expect(after.tasks.map((t) => t.id)).toEqual([ID_001, ID_003]);
+    expect(after.nextTaskId).toBe(ID_001);
   });
 });
 
@@ -627,7 +628,7 @@ describe("GET /api/v1/tasks (BL-005 D-003: ソート規則統一)", () => {
     expect(body.tasks.map((t) => t.id)).toEqual([ID_002, ID_001]);
   });
 
-  it("シナリオ: priority が同じなら createdAt 昇順, 同じなら id 昇順 (一覧 API も同一規則)", async () => {
+  it("シナリオ: priority が同じなら createdAt 降順, 同じなら id 昇順 (一覧 API も同一規則) (BL-141)", async () => {
     taskRepo.seed(
       makeTask({
         id: ID_002,
@@ -657,8 +658,8 @@ describe("GET /api/v1/tasks (BL-005 D-003: ソート規則統一)", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as { tasks: Array<{ id: string }> };
-    // 同 priority 同 createdAt は id 昇順. その後 createdAt の遅い ID_003.
-    expect(body.tasks.map((t) => t.id)).toEqual([ID_001, ID_002, ID_003]);
+    // createdAt 降順: 新しい ID_003 (08:00:01) が先頭. 残りは同 createdAt で id 昇順 ID_001, ID_002.
+    expect(body.tasks.map((t) => t.id)).toEqual([ID_003, ID_001, ID_002]);
   });
 });
 
