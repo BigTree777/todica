@@ -1368,3 +1368,426 @@ describe("TomorrowView (BL-042 routine 由来タスクの扱い)", () => {
     expect(within(card).queryByRole("button", { name: /今日にする/ })).toBeNull();
   });
 });
+
+// ============================================================
+// BL-142 (tomorrow-task-priority): 明日ビューのタスク優先度の表示・変更
+//
+// spec.md (tomorrow-task-priority) §「受け入れ基準」 REQ-1 〜 REQ-6 + 回帰 と 1:1 対応する.
+// 実装は tomorrow-view.tsx の <TaskCard> を showPriority={true} + onSetPriority 配線に変更し,
+// 系統 A (invalidateKeys: [["tomorrow"]]) の update を優先度変更ハンドラ handleSetPriority で使う
+// (plan.md D-001 / D-002)。今日にする (系統 B: [["tomorrow"],["today"],["focus"]] +
+// fetchTodayAndFocus) との invalidate 差分が本 feature の設計上の要点 (REQ-5)。
+//
+// tomorrow-view.tsx は現状 showPriority={false} で優先度 UI を配線していないため,
+// 以下のテストはすべて red になる。implementer が green 化する。
+//
+// カード上の優先度 radiogroup は「起票フォームの radiogroup」と共存するため,
+// form.contains で form 内の radiogroup を除外してカード側だけを取り出す
+// (today-view.test.tsx の AC-5 / AC-6 と同じ流儀)。
+// ============================================================
+
+/** 起票フォーム外 (= カード上) の radiogroup だけを取り出す. */
+function getCardRadiogroups(): HTMLElement[] {
+  const allGroups = screen.getAllByRole("radiogroup");
+  const form = screen.getByRole("form", { name: /起票フォーム/ });
+  return allGroups.filter((g) => !form.contains(g));
+}
+
+describe("TomorrowView (BL-142 REQ-1 優先度の表示)", () => {
+  it("シナリオ: 明日ビューの各タスクカードに優先度星 (radiogroup + radio×3) が表示され, normal は星 2 つ点灯", async () => {
+    // 受け入れ基準 §「優先度の表示 (REQ-1)」 第 1 ケース.
+    const repo = makeMockRepository([
+      makeTask({
+        id: "task-A",
+        name: "AAA",
+        priority: "normal",
+        dueDate: "tomorrow",
+        version: 1,
+      }),
+    ]);
+
+    renderWithQueryClient(
+      <TomorrowView repository={repo} projectRepository={makeMockProjectRepository()} />,
+    );
+
+    await screen.findByDisplayValue("AAA");
+
+    // カード上の radiogroup が 1 つ存在する (起票フォームの radiogroup とは別).
+    const cardGroups = getCardRadiogroups();
+    expect(cardGroups).toHaveLength(1);
+
+    // その中に role="radio" の星 button が 3 つ.
+    const stars = within(cardGroups[0]!).getAllByRole("radio");
+    expect(stars).toHaveLength(3);
+
+    // 現在値 normal に対応して星 2 つが点灯 (data-lit="true").
+    const lit = cardGroups[0]!.querySelectorAll('[data-lit="true"]');
+    expect(lit).toHaveLength(2);
+  });
+
+  it("シナリオ: 優先度星は起票フォームとカードで別インスタンスとして共存する", async () => {
+    // 受け入れ基準 §「優先度の表示 (REQ-1)」 第 2 ケース.
+    // ?create=1 でフォームを開いた状態 (renderWithQueryClient の既定) で,
+    // 起票フォームの radiogroup と カード A の radiogroup が別要素として存在する.
+    const repo = makeMockRepository([
+      makeTask({
+        id: "task-A",
+        name: "AAA",
+        priority: "normal",
+        dueDate: "tomorrow",
+        version: 1,
+      }),
+    ]);
+
+    renderWithQueryClient(
+      <TomorrowView repository={repo} projectRepository={makeMockProjectRepository()} />,
+    );
+
+    await screen.findByDisplayValue("AAA");
+
+    const form = screen.getByRole("form", { name: /起票フォーム/ });
+    const allGroups = screen.getAllByRole("radiogroup");
+
+    // 起票フォーム内の radiogroup が 1 つ.
+    const formGroups = allGroups.filter((g) => form.contains(g));
+    expect(formGroups).toHaveLength(1);
+
+    // カード側の radiogroup が 1 つ (form の外).
+    const cardGroups = allGroups.filter((g) => !form.contains(g));
+    expect(cardGroups).toHaveLength(1);
+
+    // 別要素であること (id 衝突しない / idPrefix で回避).
+    expect(formGroups[0]).not.toBe(cardGroups[0]);
+  });
+});
+
+describe("TomorrowView (BL-142 REQ-2 優先度の変更)", () => {
+  it('シナリオ: カードの 3 番目の星 (highest) クリックで update({ patch: { priority: "highest" } }) が 1 回呼ばれる', async () => {
+    // 受け入れ基準 §「優先度の変更 (REQ-2)」.
+    const repo = makeMockRepository([
+      makeTask({
+        id: "task-A",
+        name: "AAA",
+        priority: "normal",
+        dueDate: "tomorrow",
+        version: 1,
+      }),
+    ]);
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <TomorrowView repository={repo} projectRepository={makeMockProjectRepository()} />,
+    );
+
+    await screen.findByDisplayValue("AAA");
+
+    const cardGroups = getCardRadiogroups();
+    const stars = within(cardGroups[0]!).getAllByRole("radio");
+    expect(stars).toHaveLength(3);
+    // 3 番目の星 = highest 直接指定.
+    await user.click(stars[2]!);
+
+    expect(repo.updateMock).toHaveBeenCalledTimes(1);
+    const arg = repo.updateMock.mock.calls[0]?.[0] as UpdateTaskCommand;
+    expect(arg.id).toBe("task-A");
+    expect(arg.ifMatch).toBe(1);
+    expect(arg.patch.priority).toBe("highest");
+    // patch に priority 以外は含まれない (部分上書き原則 / REQ-2).
+    expect(arg.patch.dueDate).toBeUndefined();
+    expect(arg.patch.name).toBeUndefined();
+    expect(arg.patch.projectId).toBeUndefined();
+  });
+});
+
+describe("TomorrowView (BL-142 REQ-3 同値クリックの no-op)", () => {
+  it("シナリオ: 現在値と同じ星 (2 番目 = normal) をクリックしても update は呼ばれない", async () => {
+    // 受け入れ基準 §「同値クリックの no-op (REQ-3)」.
+    const repo = makeMockRepository([
+      makeTask({
+        id: "task-A",
+        name: "AAA",
+        priority: "normal",
+        dueDate: "tomorrow",
+        version: 1,
+      }),
+    ]);
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <TomorrowView repository={repo} projectRepository={makeMockProjectRepository()} />,
+    );
+
+    await screen.findByDisplayValue("AAA");
+
+    const cardGroups = getCardRadiogroups();
+    const stars = within(cardGroups[0]!).getAllByRole("radio");
+    // 現在値 = normal → 2 番目の星をクリック (同値).
+    await user.click(stars[1]!);
+
+    // PATCH は出ない.
+    expect(repo.updateMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("TomorrowView (BL-142 REQ-4 変更後の並び追従)", () => {
+  it("シナリオ: 優先度変更後に list が再フェッチされ, サーバ順で一覧が再描画される (クライアント再ソートなし)", async () => {
+    // 受け入れ基準 §「変更後の並び追従 (REQ-4)」.
+    // 初期: A (later), B (later)。mock は createdAt 昇順で並べるため,
+    //   createdAt: B(...01) < A(...02) → 初期表示は BBB, AAA。
+    // A を highest にすると priority が最優先になり, 再フェッチ後は AAA, BBB に並び替わる.
+    const repo = makeMockRepository([
+      makeTask({
+        id: "task-A",
+        name: "AAA",
+        priority: "later",
+        dueDate: "tomorrow",
+        createdAt: "2026-06-09T08:00:02.000Z",
+        version: 1,
+      }),
+      makeTask({
+        id: "task-B",
+        name: "BBB",
+        priority: "later",
+        dueDate: "tomorrow",
+        createdAt: "2026-06-09T08:00:01.000Z",
+        version: 1,
+      }),
+    ]);
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <TomorrowView repository={repo} projectRepository={makeMockProjectRepository()} />,
+    );
+
+    await screen.findByDisplayValue("AAA");
+
+    // 初期表示は BBB, AAA の順.
+    const before = screen.getAllByRole("listitem");
+    const beforeValues = before.map(
+      (li) => (li.querySelector('input[type="text"]') as HTMLInputElement | null)?.value ?? "",
+    );
+    expect(beforeValues[0]).toContain("BBB");
+    expect(beforeValues[1]).toContain("AAA");
+
+    const listCallsBefore = repo.listMock.mock.calls.length;
+
+    // A のカード (input value = AAA) を特定し, その 3 番目の星 (highest) をクリック.
+    const aCard = before.find(
+      (li) => (li.querySelector('input[type="text"]') as HTMLInputElement | null)?.value === "AAA",
+    );
+    expect(aCard).toBeDefined();
+    const aGroup = within(aCard!).getByRole("radiogroup");
+    const aStars = within(aGroup).getAllByRole("radio");
+    await user.click(aStars[2]!);
+
+    // ["tomorrow"] が invalidate され list が再フェッチされる.
+    await waitFor(() => {
+      expect(repo.listMock.mock.calls.length).toBeGreaterThan(listCallsBefore);
+    });
+
+    // 再フェッチ後はサーバ側ソート (highest の A が先頭) の順で描画される.
+    await waitFor(() => {
+      const after = screen.getAllByRole("listitem");
+      const afterValues = after.map(
+        (li) => (li.querySelector('input[type="text"]') as HTMLInputElement | null)?.value ?? "",
+      );
+      expect(afterValues[0]).toContain("AAA");
+      expect(afterValues[1]).toContain("BBB");
+    });
+  });
+});
+
+describe("TomorrowView (BL-142 REQ-5 invalidate 対象は tomorrow のみ)", () => {
+  it("シナリオ: 優先度変更では listMock のみ増え, todayMock / getFocusMock は増えない", async () => {
+    // 受け入れ基準 §「invalidate 対象は tomorrow のみ (REQ-5)」 (最重要).
+    // 系統 A (invalidateKeys: [["tomorrow"]]) の update を使うため, today / focus は再フェッチしない.
+    const repo = makeMockRepository([
+      makeTask({
+        id: "task-A",
+        name: "AAA",
+        priority: "normal",
+        dueDate: "tomorrow",
+        version: 1,
+      }),
+    ]);
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <TomorrowView repository={repo} projectRepository={makeMockProjectRepository()} />,
+    );
+
+    await screen.findByDisplayValue("AAA");
+
+    const listCallsBefore = repo.listMock.mock.calls.length;
+    const todayCallsBefore = repo.todayMock.mock.calls.length;
+    const focusCallsBefore = repo.getFocusMock.mock.calls.length;
+
+    const cardGroups = getCardRadiogroups();
+    const stars = within(cardGroups[0]!).getAllByRole("radio");
+    // 3 番目の星 (highest) をクリックして優先度を変更 (異値なので update が走る).
+    await user.click(stars[2]!);
+
+    // ["tomorrow"] の再フェッチで listMock が増える.
+    await waitFor(() => {
+      expect(repo.listMock.mock.calls.length).toBeGreaterThan(listCallsBefore);
+    });
+
+    // update が確実に完了したことを確認 (patch: { priority }).
+    expect(repo.updateMock).toHaveBeenCalledTimes(1);
+
+    // ["today"] / ["focus"] は invalidate も fetchTodayAndFocus も行われない.
+    expect(repo.todayMock.mock.calls.length).toBe(todayCallsBefore);
+    expect(repo.getFocusMock.mock.calls.length).toBe(focusCallsBefore);
+  });
+
+  it("対照シナリオ: 「今日にする」は list / today / getFocus の 3 つとも再フェッチされる (系統 B との差分担保)", async () => {
+    // 受け入れ基準 §「invalidate 対象は tomorrow のみ (REQ-5)」 の対照 (D-004 踏襲).
+    // 優先度変更 (["tomorrow"] のみ) と「今日にする」(3 key + fetchTodayAndFocus) の差分を担保する.
+    const repo = makeMockRepository([
+      makeTask({
+        id: "task-A",
+        name: "AAA",
+        dueDate: "tomorrow",
+        version: 1,
+      }),
+    ]);
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <TomorrowView repository={repo} projectRepository={makeMockProjectRepository()} />,
+    );
+
+    await screen.findByDisplayValue("AAA");
+
+    const listCallsBefore = repo.listMock.mock.calls.length;
+    const todayCallsBefore = repo.todayMock.mock.calls.length;
+    const focusCallsBefore = repo.getFocusMock.mock.calls.length;
+
+    const items = screen.getAllByRole("listitem");
+    const moveButton = within(items[0]!).getByRole("button", { name: /今日にする/ });
+    await user.click(moveButton);
+
+    // list / today / getFocus のいずれも再フェッチされる.
+    await waitFor(() => {
+      expect(repo.listMock.mock.calls.length).toBeGreaterThan(listCallsBefore);
+    });
+    await waitFor(() => {
+      expect(repo.todayMock.mock.calls.length).toBeGreaterThan(todayCallsBefore);
+    });
+    await waitFor(() => {
+      expect(repo.getFocusMock.mock.calls.length).toBeGreaterThan(focusCallsBefore);
+    });
+  });
+});
+
+describe("TomorrowView (BL-142 REQ-6 エラー / オフライン経路の共有)", () => {
+  it("シナリオ: 優先度変更で online 412 が返ったとき ConflictDialog が開く", async () => {
+    // 受け入れ基準 §「エラー / オフライン経路 (REQ-6)」 第 1 ケース.
+    // 系統 A の update でも onConflict が配線されているため ConflictDialog が開く.
+    const repo = makeMockRepository(
+      [
+        makeTask({
+          id: "task-A",
+          name: "AAA",
+          priority: "normal",
+          dueDate: "tomorrow",
+          version: 1,
+        }),
+      ],
+      {
+        updateError: new OptimisticLockError(
+          "optimistic lock conflict on priority update",
+          makeTask({
+            id: "task-A",
+            name: "AAA (サーバ最新)",
+            priority: "highest",
+            dueDate: "tomorrow",
+            version: 5,
+          }),
+        ),
+      },
+    );
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <TomorrowView repository={repo} projectRepository={makeMockProjectRepository()} />,
+    );
+
+    await screen.findByDisplayValue("AAA");
+
+    const cardGroups = getCardRadiogroups();
+    const stars = within(cardGroups[0]!).getAllByRole("radio");
+    await user.click(stars[2]!);
+
+    const dialog = await screen.findByRole("dialog", { name: "変更が衝突しました" });
+    expect(dialog).toBeInTheDocument();
+  });
+
+  it('シナリオ: 優先度変更で一般エラー時は notifyError("通信に失敗しました") が呼ばれる', async () => {
+    // 受け入れ基準 §「エラー / オフライン経路 (REQ-6)」 第 2 ケース.
+    const notifySpy = vi.spyOn(ErrorNotification, "notifyError");
+
+    const repo = makeMockRepository(
+      [
+        makeTask({
+          id: "task-A",
+          name: "AAA",
+          priority: "normal",
+          dueDate: "tomorrow",
+          version: 1,
+        }),
+      ],
+      {
+        updateError: new Error("network failure"),
+      },
+    );
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <TomorrowView repository={repo} projectRepository={makeMockProjectRepository()} />,
+    );
+
+    await screen.findByDisplayValue("AAA");
+
+    const cardGroups = getCardRadiogroups();
+    const stars = within(cardGroups[0]!).getAllByRole("radio");
+    await user.click(stars[2]!);
+
+    await waitFor(() => {
+      expect(notifySpy).toHaveBeenCalledWith("通信に失敗しました");
+    });
+
+    notifySpy.mockRestore();
+  });
+});
+
+describe("TomorrowView (BL-142 回帰: カードのアクションボタン構成は不変)", () => {
+  it("シナリオ: 優先度星が表示されてもアクションボタンは「削除」「今日にする」「完了」の 3 つのまま", async () => {
+    // 受け入れ基準 §「既存の不変条件 (回帰防止)」 第 2 ケース.
+    // 優先度星は状態系コントロール (role=radio) でありアクションボタン数のカウント外.
+    const repo = makeMockRepository([
+      makeTask({
+        id: "task-A",
+        name: "AAA",
+        priority: "normal",
+        dueDate: "tomorrow",
+        version: 1,
+      }),
+    ]);
+
+    renderWithQueryClient(
+      <TomorrowView repository={repo} projectRepository={makeMockProjectRepository()} />,
+    );
+
+    const items = await screen.findAllByRole("listitem");
+    const card = items[0]!;
+
+    // 優先度 radiogroup が共存している (REQ-1 前提).
+    expect(within(card).getByRole("radiogroup")).toBeInTheDocument();
+
+    // アクションボタン構成は不変 (削除 / 今日にする / 完了 が各 1 個).
+    expect(within(card).getAllByRole("button", { name: "削除" })).toHaveLength(1);
+    expect(within(card).getAllByRole("button", { name: "今日にする" })).toHaveLength(1);
+    expect(within(card).getAllByRole("button", { name: "完了" })).toHaveLength(1);
+  });
+});
