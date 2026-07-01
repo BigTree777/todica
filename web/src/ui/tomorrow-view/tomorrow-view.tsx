@@ -9,7 +9,7 @@ import type { JSX } from "react";
  *   docs/developer/features/tomorrow-view/plan.md §「TomorrowView コンポーネント設計」.
  *
  * 役割:
- *   - `/tomorrow` ルートで `dueDate=tomorrow` のタスクを優先度順で一覧表示する.
+ *   - `/tomorrow` ルートで `dueDate=tomorrow` のタスクを優先度順で一覧表示し, 優先度を変更できる.
  *   - 起票フォーム: タスク名 / プロジェクト / 優先度 / 追加 の 4 要素 (期限 UI なし).
  *   - 各カードのアクションは「削除」「今日にする」「完了」の 3 ボタン (REQ-3 / BL-042 REQ-2).
  *   - 「今日にする」は `PATCH /api/v1/tasks/:id { dueDate: "today" }` を発行 (FR-014 逆方向).
@@ -20,6 +20,7 @@ import type { JSX } from "react";
  *   - D-003: query key を `["tomorrow"]` とする (today ビューの `["today"]` と対称).
  *   - D-004: 「今日にする」成功時は `["tomorrow"]` / `["today"]` / `["focus"]` を invalidate.
  *   - D-005: 起票成功時は `["tomorrow"]` のみ invalidate.
+ *   - 優先度変更成功時も `["tomorrow"]` のみ invalidate (tomorrow-task-priority plan D-002).
  *   - D-006: 削除成功時は `["tomorrow"]` のみ invalidate (明日タスクは focus 対象外).
  *   - D-012: 起票時 dueDate = "tomorrow" 固定 (UI には出さない).
  *
@@ -144,10 +145,15 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
   }, [queryClient, repository]);
 
   // BL-118: task mutation 群はアプリケーション層 (task-usecases) へ集約.
-  //   - 起票 / 削除は ["tomorrow"] のみ invalidate (D-005 / D-006).
+  //   - 起票 / 削除 / 優先度変更は ["tomorrow"] のみ invalidate
+  //     (起票 D-005 / 削除 D-006 / 優先度変更 tomorrow-task-priority plan D-002).
   //   - 「今日にする」/「完了」は ["tomorrow"] / ["today"] / ["focus"] を invalidate し,
   //     observer 不在の ["today"] / ["focus"] を fetchQuery で明示再フェッチする (D-004).
-  const { create: createMutation, delete: deleteMutation } = useTaskMutations(repository, {
+  const {
+    create: createMutation,
+    delete: deleteMutation,
+    update: updatePriorityMutation,
+  } = useTaskMutations(repository, {
     onConflict: conflictDialog.openDialog,
     invalidateKeys: [["tomorrow"]],
   });
@@ -225,6 +231,23 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
     [updateMutation],
   );
 
+  const handleSetPriority = useCallback(
+    async (task: Task, next: Priority) => {
+      if (task.priority === next) return;
+      const cmd: UpdateTaskCommand = {
+        id: task.id,
+        ifMatch: task.version,
+        patch: { priority: next },
+      };
+      try {
+        await updatePriorityMutation.mutateAsync(cmd);
+      } catch {
+        // onError で処理済み.
+      }
+    },
+    [updatePriorityMutation],
+  );
+
   // BL-108 (task-card-project-change) REQ-5 / REQ-6 / REQ-7:
   //   - 明日タスクのプロジェクト変更で PATCH /api/v1/tasks/:id { projectId } を発行.
   //   - 同値短絡 (next === task.projectId) は親側で行う.
@@ -299,8 +322,7 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
               const project = task.projectId
                 ? (projects.find((p) => p.id === task.projectId) ?? null)
                 : null;
-              // BL-059 / REQ-5-1: tomorrow-view は PriorityStars を持たない既存仕様
-              // (showPriority=false). dueDateMode="tomorrow" で「今日にする」ボタンを出す.
+              // dueDateMode="tomorrow" で「今日にする」ボタンを出す.
               // task.origin === "routine" のとき期限切替 button が非表示になる挙動は
               // <TaskCard> 内に内蔵 (D-010).
               return (
@@ -312,7 +334,8 @@ export function TomorrowView(props: TomorrowViewProps): JSX.Element {
                   project={project}
                   projects={projects}
                   onChangeProject={(next) => handleChangeProject(task, next)}
-                  showPriority={false}
+                  showPriority
+                  onSetPriority={(next) => handleSetPriority(task, next)}
                   showSetFocus={false}
                   actionSet="full"
                   dueDateMode="tomorrow"
