@@ -1592,6 +1592,72 @@ describe("GET /api/v1/tasks (BL-038 ?dueDate フィルタ)", () => {
 });
 
 // ============================================================
+// 明日ビューの並び順 (BL-141)
+//
+// spec.md (task-sort-newest-first) シナリオ「明日ビューでも新しい順のタイブレークが
+// 適用される」に 1:1 対応する. ?dueDate=tomorrow の一覧も
+// priority (highest→normal→later) → createdAt 降順(新しい順) → id 昇順 で並ぶ.
+// ============================================================
+
+describe("GET /api/v1/tasks?dueDate=tomorrow (BL-141 並び順)", () => {
+  it("シナリオ: 明日ビューでも新しい順のタイブレークが適用される", async () => {
+    // A (highest / 10:00), B (normal / 10:00), C (normal / 12:00) をすべて tomorrow で seed.
+    taskRepo.seed({
+      id: TASK_ID_1,
+      name: "A",
+      projectId: null,
+      dueDate: "tomorrow",
+      priority: "highest",
+      origin: "manual",
+      routineId: null,
+      createdAt: "2026-01-01T10:00:00.000Z",
+      updatedAt: "2026-01-01T10:00:00.000Z",
+      trashedAt: null,
+      trashedReason: null,
+      version: 1,
+    });
+    taskRepo.seed({
+      id: TASK_ID_2,
+      name: "B",
+      projectId: null,
+      dueDate: "tomorrow",
+      priority: "normal",
+      origin: "manual",
+      routineId: null,
+      createdAt: "2026-01-01T10:00:00.000Z",
+      updatedAt: "2026-01-01T10:00:00.000Z",
+      trashedAt: null,
+      trashedReason: null,
+      version: 1,
+    });
+    taskRepo.seed({
+      id: TASK_ID_3,
+      name: "C",
+      projectId: null,
+      dueDate: "tomorrow",
+      priority: "normal",
+      origin: "manual",
+      routineId: null,
+      createdAt: "2026-01-01T12:00:00.000Z",
+      updatedAt: "2026-01-01T12:00:00.000Z",
+      trashedAt: null,
+      trashedReason: null,
+      version: 1,
+    });
+
+    const res = await app.request("/api/v1/tasks?dueDate=tomorrow", {
+      method: "GET",
+      headers: authHeaders(),
+    });
+
+    expect(res.status).toBe(200);
+    const list = (await res.json()) as { tasks: Array<{ id: string }> };
+    // 期待: A (highest 先頭), C (normal 内は新しい方が前), B.
+    expect(list.tasks.map((t) => t.id)).toEqual([TASK_ID_1, TASK_ID_3, TASK_ID_2]);
+  });
+});
+
+// ============================================================
 // (補助) 認証ありの正常系で TEST_AUTH_TOKEN が一致することの確認
 // ============================================================
 

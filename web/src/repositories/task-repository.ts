@@ -64,7 +64,7 @@ export interface CompleteTaskCommand {
  * BL-005 / FR-010 / FR-011: 今日ビュー API のレスポンス形状.
  *
  * - `tasks`: dueDate = "today" かつ trashedAt = null のタスクを
- *   priority (highest→normal→later) → createdAt 昇順 → id 昇順 で並べた一覧.
+ *   priority (highest→normal→later) → createdAt 降順 → id 昇順 で並べた一覧.
  * - `nextTaskId`: 並びの先頭タスクの id. tasks が空のとき null (= 「次の 1 つ」が存在しない).
  * - `currentTaskId`: BL-006 / FR-012 で追加された FocusSelection.currentTaskId のミラー.
  *   サーバ側で FocusSelection.currentTaskId と等しい値を返す (明示未選択時は null).
@@ -150,7 +150,7 @@ export interface TaskRepository {
    * BL-005 / FR-010 / FR-011: 今日ビューの取得.
    *
    * GET /api/v1/today を叩き, `{ tasks, nextTaskId, currentTaskId? }` を返す.
-   * `tasks` はサーバ側で priority → createdAt → id の順に並べ替えられており,
+   * `tasks` はサーバ側で priority → createdAt 降順 → id 昇順の順に並べ替えられており,
    * クライアントは再ソートせずそのまま表示する (plan.md D-004).
    * BL-006 で `currentTaskId` が追加された (FocusSelection のミラー).
    * 本メソッドは test-designer が追加したインターフェース上のスタブ.
@@ -343,7 +343,7 @@ export class HttpTaskRepository implements TaskRepository {
    * BL-005 / FR-010 / FR-011: 今日ビュー取得.
    *
    * GET /api/v1/today を叩き, `{ tasks, nextTaskId }` を返す.
-   * tasks はサーバ側で priority → createdAt → id の順に並んでおり,
+   * tasks はサーバ側で priority → createdAt 降順 → id 昇順の順に並んでおり,
    * クライアントは再ソートせずそのまま表示する (plan.md D-004).
    */
   async today(): Promise<TodayViewResponse> {

@@ -9,7 +9,7 @@
 
 import { type Counter, incrementCompletedCount } from "@todica/domain/counter";
 import { type FocusSelection, setCurrentTask } from "@todica/domain/focus-selection";
-import type { DueDate, Priority, Task } from "@todica/domain/task";
+import { type DueDate, type Priority, sortTasksForView, type Task } from "@todica/domain/task";
 import type { LocalDb } from "./local-db.js";
 import type {
   CompleteTaskCommand,
@@ -43,13 +43,6 @@ function rowToTask(row: Row): Task {
   };
 }
 
-/** priority を数値に変換（ソート用: 小さいほど高優先度） */
-function priorityOrder(priority: string): number {
-  if (priority === "highest") return 0;
-  if (priority === "normal") return 1;
-  return 2; // later
-}
-
 export class LocalTaskRepository implements TaskRepository {
   constructor(private readonly db: LocalDb) {}
 
@@ -60,10 +53,10 @@ export class LocalTaskRepository implements TaskRepository {
         "SELECT * FROM tasks WHERE trashed_at IS NULL AND due_date = ?",
         [filter.dueDate],
       );
-      return (result.values ?? []).map(rowToTask);
+      return sortTasksForView((result.values ?? []).map(rowToTask));
     }
     const result = await this.db.query("SELECT * FROM tasks WHERE trashed_at IS NULL");
-    return (result.values ?? []).map(rowToTask);
+    return sortTasksForView((result.values ?? []).map(rowToTask));
   }
 
   async create(cmd: CreateTaskCommand): Promise<Task> {
@@ -203,18 +196,7 @@ export class LocalTaskRepository implements TaskRepository {
       (r) => r.due_date === "today" && (r.trashed_at === null || r.trashed_at === undefined),
     );
 
-    // priority → createdAt → id 順でソート
-    const sorted = rows.slice().sort((a, b) => {
-      const pa = priorityOrder(a.priority as string);
-      const pb = priorityOrder(b.priority as string);
-      if (pa !== pb) return pa - pb;
-      const ca = a.created_at as string;
-      const cb = b.created_at as string;
-      if (ca !== cb) return ca < cb ? -1 : 1;
-      return (a.id as string) < (b.id as string) ? -1 : 1;
-    });
-
-    const tasks = sorted.map(rowToTask);
+    const tasks = sortTasksForView(rows.map(rowToTask));
     const nextTaskId = tasks[0]?.id ?? null;
 
     // focus_selection から currentTaskId を取得

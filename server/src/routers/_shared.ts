@@ -22,7 +22,7 @@ export async function saveAndReturn(c: Context, deps: AppDeps, status: number, b
 }
 
 /**
- * タスクを priority, createdAt, id の順で並べる.
+ * タスクを priority (highest→normal→later), createdAt 降順, id 昇順で並べる.
  */
 export function sortTasks(tasks: Task[]): Task[] {
   return sortToday(tasks);
