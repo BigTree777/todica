@@ -56,13 +56,28 @@ export interface DailyResetDeps {
 }
 
 /**
- * 現在時刻の ISO 文字列から曜日（UTC）を取得する純関数.
+ * 現在時刻の ISO 文字列から timeZone 上の壁時計日付の曜日を取得する純関数.
  *
- * plan.md D-004: UTC 日付の曜日を返す（0=日, 1=月, ..., 6=土）.
+ * timeZone 上の壁時計日付を calcTodayBoundaryAt と同じ手法で求め、その曜日
+ * （0=日, 1=月, ..., 6=土）を返す。境界判定と同じ基準日で曜日を揃える。
+ * 設計: docs/developer/features/routine-day-of-week-tz/plan.md §設計詳細.
  */
-export function calcDayOfWeek(nowIso: string): number {
-  const dateStr = nowIso.slice(0, 10);
-  return new Date(`${dateStr}T00:00:00.000Z`).getUTCDay();
+export function calcDayOfWeek(nowIso: string, timeZone = "UTC"): number {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const getPart = (parts: Intl.DateTimeFormatPart[], type: Intl.DateTimeFormatPartTypes) =>
+    Number.parseInt(parts.find((part) => part.type === type)?.value ?? "0", 10);
+
+  const nowParts = formatter.formatToParts(new Date(nowIso));
+  const year = getPart(nowParts, "year");
+  const month = getPart(nowParts, "month");
+  const day = getPart(nowParts, "day");
+
+  return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
 }
 
 async function runDailyResetWrites(
@@ -92,7 +107,7 @@ async function runDailyResetWrites(
 
   // [新規 BL-017] FR-031: 当日分ルーティンタスク生成
   if (deps.routineRepository) {
-    const dayOfWeek = calcDayOfWeek(now);
+    const dayOfWeek = calcDayOfWeek(now, getServerTimeZone());
     const routines = await deps.routineRepository.findByDayOfWeek(dayOfWeek);
     for (const routine of routines) {
       const existing = await deps.taskRepository.findTodayRoutineTask(routine.id);
