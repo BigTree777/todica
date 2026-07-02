@@ -26,6 +26,6 @@
 }
 
 .initial-setup-view__error {
-  color: var(--color-danger, #c00);
+  color: var(--color-danger);
   padding: 0.5rem 0;
 }
