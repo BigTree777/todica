@@ -1,5 +1,8 @@
 # CI ゲート: typecheck / lint / vitest / playwright を 4 job 並列で実行する.
 # Pull Request と main への push をトリガとし, 同一 ref の古い実行はキャンセルする.
+# @todica/domain の exports は domain/dist/ を指すため, クリーンチェックアウトでは
+# typecheck / vitest / playwright の各 job で npm ci 直後に domain の build が必要
+# (lint は Biome がソーステキストのみを検査するため build 不要).
 name: CI
 
 on:
@@ -27,6 +30,8 @@ jobs:
           cache: 'npm'
       - name: install dependencies
         run: npm ci
+      - name: build domain
+        run: npm run build -w domain
       - name: run typecheck
         run: npm run typecheck
 
@@ -61,6 +66,8 @@ jobs:
           cache: 'npm'
       - name: install dependencies
         run: npm ci
+      - name: build domain
+        run: npm run build -w domain
       - name: run vitest
         run: npx vitest run
 
@@ -78,6 +85,8 @@ jobs:
           cache: 'npm'
       - name: install dependencies
         run: npm ci
+      - name: build domain
+        run: npm run build -w domain
       - name: cache playwright browsers
         uses: actions/cache@v4
         with:
