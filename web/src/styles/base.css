@@ -1,0 +1,14 @@
+/*
+ * ベースカラースタイル (BL-143 / dark-mode-base-colors).
+ *
+ * デザイントークンの背景色・前景色を document 全体へ適用する.
+ */
+
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+}
