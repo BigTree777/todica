@@ -28,7 +28,7 @@
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: rgba(0, 0, 0, 0.4); /* 半透明黒 - トークン化不可の値 */
+  background: var(--color-scrim);
 }
 
 /* メニューパネル：左端からスライドイン */

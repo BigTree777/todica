@@ -5,11 +5,12 @@
  * 注意: dialog の display は UA スタイル (dialog:not([open]) { display: none })
  * に委ねる。ここで display を上書きすると閉時にも表示されてしまう。
  *
- * 色の根拠:
- *   - 背景: --color-bg (#fff).
- *   - テキスト: --color-fg (#1a1a1a). WCAG AAA 18.9:1 on #fff.
- *   - 枠線: --color-fg-subtle (#595959). WCAG AAA 7.0:1 on #fff.
- *   - フォーカスリング: --color-focus-ring (#1d4ed8). WCAG AAA 7.2:1 on #fff.
+ * 色の指定:
+ *   - 背景: --color-bg (ダイアログ面の背景)
+ *   - テキスト: --color-fg (本文テキスト)
+ *   - 枠線: --color-fg-subtle (ダイアログの外枠)
+ *   - フォーカスリング: --color-focus-ring (入力のフォーカス表示)
+ * コントラスト根拠はライト / ダーク双方の値とともに tokens.css に集約する。
  */
 
 .project-create-dialog {
@@ -22,7 +23,7 @@
 
 /* 背面が操作対象でないことを示す薄暗幕. backdrop クリックでは閉じない (plan D-007). */
 .project-create-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--color-scrim);
 }
 
 .project-create-dialog__actions {

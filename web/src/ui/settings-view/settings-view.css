@@ -85,9 +85,11 @@
 }
 
 .settings-view__message--error {
-  color: #c00;
+  /* エラーメッセージ = danger トークン */
+  color: var(--color-danger);
 }
 
 .settings-view__message--success {
-  color: #060;
+  /* 成功メッセージ = success トークン */
+  color: var(--color-success);
 }

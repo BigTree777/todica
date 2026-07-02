@@ -39,4 +39,26 @@
   --color-accent-bg-subtle: #fef3c7;
   /* フォーカスリング (blue-700, WCAG AAA 7.2:1 on #fff) */
   --color-focus-ring: #1d4ed8;
+  /* 状態色 */
+  --color-danger: #c00;
+  --color-success: #060;
+  /* モーダル / ドロワー背後の暗幕 */
+  --color-scrim: rgba(0, 0, 0, 0.5);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* ---- カラー ---- */
+    --color-bg: #121212;
+    --color-fg: #e6e6e6;
+    --color-fg-subtle: #a3a3a3;
+    --color-border: #6f6f6f;
+    --color-border-subtle: #2a2a2a;
+    --color-accent: #fbbf24;
+    --color-accent-bg-subtle: #3f2d0f;
+    --color-focus-ring: #60a5fa;
+    --color-danger: #f87171;
+    --color-success: #4ade80;
+    --color-scrim: rgba(0, 0, 0, 0.6);
+  }
 }

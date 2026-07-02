@@ -71,13 +71,17 @@ describe("SettingsView 整理 (BL-094)", () => {
     expect(css).toMatch(/\.settings-view__label\s*\{[^}]*font-size:\s*var\(--font-size-h2\)/);
   });
 
-  it("メッセージのクラス: error は赤 (#c00), success は緑 (#060)", () => {
+  it("メッセージのクラス: error は danger トークン、success は success トークンを参照する", () => {
     const css = readFileSync(
       resolve(repoRoot, "web/src/ui/settings-view/settings-view.css"),
       "utf-8",
     );
-    expect(css).toMatch(/\.settings-view__message--error\s*\{[^}]*color:\s*#c00/);
-    expect(css).toMatch(/\.settings-view__message--success\s*\{[^}]*color:\s*#060/);
+    // error メッセージは危険色（赤系）を意味する --color-danger トークンを参照する
+    expect(css).toMatch(/\.settings-view__message--error\s*\{[^}]*color:\s*var\(--color-danger\)/);
+    // success メッセージは成功色（緑系）を意味する --color-success トークンを参照する
+    expect(css).toMatch(
+      /\.settings-view__message--success\s*\{[^}]*color:\s*var\(--color-success\)/,
+    );
   });
 
   it("FR-4: リセット時刻 input と変更ボタンが .settings-view__field-row 内に並ぶ", async () => {

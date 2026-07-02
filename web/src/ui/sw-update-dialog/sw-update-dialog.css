@@ -8,7 +8,7 @@
 }
 
 .sw-update-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--color-scrim);
 }
 
 .sw-update-dialog__message {
