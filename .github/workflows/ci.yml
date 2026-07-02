@@ -74,7 +74,9 @@ jobs:
   playwright:
     name: playwright
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # retries (CI: 2 回) を含む全テストの完走 + 失敗時の trace / report upload が
+    # timeout の cancel で打ち切られないよう, 実測に余裕を持たせる.
+    timeout-minutes: 30
     steps:
       - name: checkout
         uses: actions/checkout@v4
