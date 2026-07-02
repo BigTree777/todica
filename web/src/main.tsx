@@ -1,5 +1,6 @@
 import "./styles/tokens.css";
 import "./styles/button.css";
+import "./styles/base.css";
 import { registerSW } from "virtual:pwa-register";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
