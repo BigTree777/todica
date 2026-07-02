@@ -5,14 +5,15 @@
 ## 方針概要
 
 `.github/workflows/ci.yml` の typecheck / vitest / playwright の 3 job に,
-`install dependencies` の直後の step として `npm run build -w domain` を追加する.
-それ以外 (トリガ・並列構成・キャッシュ・job 名) は ci-automated-gate の構成を一切変えない.
+`install dependencies` の直後の step として `npm run build -w domain` を追加し,
+playwright job の `timeout-minutes` を 30 とする.
+それ以外 (トリガ・並列構成・キャッシュ・job 名) は ci-automated-gate の構成を変えない.
 
 ## 影響範囲
 
 | 領域 | 変更内容 |
 | --- | --- |
-| CI 定義 | `.github/workflows/ci.yml` の typecheck / vitest / playwright job に build step を 1 つずつ追加 (計 3 step) |
+| CI 定義 | `.github/workflows/ci.yml` の typecheck / vitest / playwright job に build step を 1 つずつ追加 (計 3 step). playwright job の `timeout-minutes` を 30 に設定 |
 | API | 変更なし |
 | DB | 変更なし |
 | モジュール | 変更なし (domain の build script `tsc` をそのまま使う) |
@@ -61,14 +62,23 @@
 - **ルート `npm run ci` script には手を入れない**: ローカルは `domain/dist/` が通常残存し,
   クリーン化したい場合も `npm run clean:dist` が domain 再ビルドまで行うため既存手段で足りる.
   scope を CI 定義のみに閉じる (spec の非ゴールとして明記済み).
+- **playwright job の `timeout-minutes` は 30 とする**: 30 は playwright が green である
+  前提の正常運用に十分な余裕を持たせた上限値であり, 正常時の所要時間を変えるものではない.
+  なお, この値は大量失敗の状態を救うものではない: 実測 (PR #193 の run 28565796297) では
+  timeout 30 分でも, e2e の残失敗 (spec の「切り分け済み」参照) × retries (CI では 2 回) の
+  再実行により完走せず cancel で終了した. timeout の cancel では `if: failure()` の
+  trace / report upload step も実行されないため, この状態では artifact も残らない.
+  大量失敗時の完走と調査材料の確保は timeout の延長ではなく, 失敗自体の解消 (BL-145) で行う.
 
 ## リスク / 代替案
 
 - リスク: 低 (CI 定義のみの変更で, アプリコード・テストコードに触れない).
-- CI が一度も green になったことが無いため, domain 起因の失敗を解消した後に別の潜在失敗が
-  順次露出する可能性がある (特に playwright job). その場合の扱いは spec の
-  「想定される追加失敗の扱い」に従う: 原因を切り分け, domain 非起因のものは backlog に
-  別項目として記録する. 本 feature の Done は 4 job green をもって判定する.
+- CI には success の run が無いため, domain 起因の失敗を解消すると別の潜在失敗が露出しうる.
+  扱いは spec の「想定される追加失敗の扱い」に従う: 原因を切り分け, domain 非起因のものは
+  backlog に別項目として記録する. 実測で playwright job の残失敗は e2e の `.env` 暗黙依存
+  (`VITE_API_BASE_URL` 未定義) と切り分け済みで, BL-145 (e2e-env-self-contained 想定) に
+  切り出している. 本 feature の Done は「typecheck / vitest / lint green + playwright が
+  テスト実行到達」で判定する (spec の受け入れ基準参照).
 - 代替案 (不採用): domain の `exports` を `src/` 直参照に変える案は, ビルド成果物を正とする
   現行のパッケージ設計 (server / web / vitest すべてが `dist/` 解決で動いている) を崩すため
   採らない.
@@ -80,10 +90,13 @@
 - 本成果物は CI 定義 (YAML) であり, 振る舞いテスト (vitest) を生まない. ガードテストも
   不採用 (上記「重要な決定」参照).
 - 検証は次の 2 点で行う.
-  1. **実 CI run**: 本変更の PR で typecheck / lint / vitest / playwright の 4 job が
-     success になること (spec の受け入れシナリオそのもの). run URL を tasks.md に記録する.
+  1. **実 CI run**: 本変更の PR で typecheck / vitest / lint の 3 job が success になり,
+     playwright job が domain 起因の起動失敗を脱してテスト実行に到達すること
+     (spec の受け入れシナリオそのもの). run URL を tasks.md に記録する.
+     playwright job の green 化は BL-145 の検証範囲とする.
   2. **auditor の実在確認**: `.github/workflows/ci.yml` に build step が仕様どおりの位置・
-     内容で存在し, lint job には無く, job 名が不変であることを直接確認する.
+     内容で存在し, lint job には無く, job 名が不変であり, playwright job の
+     `timeout-minutes` が 30 であることを直接確認する.
 - 補助的なローカル再現 (任意): `domain/dist/` を退避し `domain/tsconfig.tsbuildinfo` を
   削除した状態で `npm ci && npm run build -w domain && npm run typecheck` が exit 0 に
   なることを確認できる (原因調査時に再現確認済みの手順).
