@@ -112,6 +112,11 @@ export default defineConfig({
       port: 5173,
       timeout: 30_000,
       reuseExistingServer: !process.env.CI,
+      env: {
+        // e2e を gitignore 済みの root .env に依存させないため, web が参照する
+        // API ベース URL を config 内で明示する (server 側エントリの env と同型).
+        VITE_API_BASE_URL: "http://localhost:3000",
+      },
     },
     {
       // BL-032: PWA テスト用 prod build を vite preview で配信する (port 4173).
@@ -123,6 +128,11 @@ export default defineConfig({
       port: 4173,
       timeout: 120_000,
       reuseExistingServer: !process.env.CI,
+      env: {
+        // e2e を gitignore 済みの root .env に依存させないため, web が参照する
+        // API ベース URL を config 内で明示する (server 側エントリの env と同型).
+        VITE_API_BASE_URL: "http://localhost:3000",
+      },
     },
   ],
 });
